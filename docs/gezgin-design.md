@@ -52,8 +52,8 @@ Gezgin hiçbir DI'a bağlı değil. Codegen parça üretir (entry'ler, navigator
 - **Her route bir graph içinde** sarılı; graph iki türden biri (V1):
   - **`@NavGraph`** → **şeffaf** grup: üyeleri sırasız, **istenen üyesinden** girilir (container'a `@GoTo` **yasak** → yalnız üyeye); `@StartDestination` **yok**; stand-alone olabilir (birden çok yerden erişilir). Graph'ların çoğu bu.
   - **`@FlowGraph`** → **opak** transactional flow (§8.1): kara kutu, dışarıdan yalnız **container'a** girilir, `@StartDestination` **var**, `ResultFlow<T>` **yalnız** buna takılır.
-- **Üyelik = lexical nesting (E5):** route, nested olduğu graph'ın üyesidir; onun dışında **ikinci bir graph interface'i implement edemez** (derleme hatası) — flow opaklığı bu teklik kuralına dayanır.
-- `@StartDestination` (**yalnız `@FlowGraph`**) flow'un giriş üyesini işaretler. **Guardrail 1:** start, codegen'in argümansız kurabileceği bir şey olmalı (`data object`, ya da tüm param default/nullable) — aksi halde **derlenmez**.
+- **Üyelik = lexical nesting (E5):** route, nested olduğu graph'ın üyesidir; onun dışında **ikinci bir graph interface'i DOĞRUDAN implement edemez** (derleme hatası; kontrol direct supertype'ta — `OrderGraph : AppGraph` alt-graph deseni transitive miras yüzünden E5 tetiklemez) — flow opaklığı bu teklik kuralına dayanır.
+- `@StartDestination` (**yalnız `@FlowGraph`**) flow'un giriş üyesini işaretler. **Guardrail 1:** start, codegen'in argümansız kurabileceği bir şey olmalı (`data object`, ya da tüm param default/nullable — codegen default'suz nullable param'lara `null` geçer) — aksi halde **derlenmez**.
 - **V1 tek-stack** (Nav3'ün tek listesi). Paralel per-tab stack, tab switcher (`@TabGraph`), deep-link → **V2** (§17). Bottom-nav = uygulama-yönetimli (Gezgin `goTo`/`replaceTo` verir).
 
 ```kotlin
@@ -182,7 +182,7 @@ Transactional sub-journey (checkout, sign-up, KYC, walkthrough). Kara kutu:
 | `ResultFlow` container | ❌ **E1** | ❌ **E1** | ✅ | ❌ **E1** |
 | Herhangi bir flow'un **iç üyesi** | ❌ **E3** | ❌ **E3** | ❌ **E3** | ❌ **E3** |
 
-> **E1:** `ResultFlow`'a giriş yalnız `@GoForResult` (bekleyen caller şart) · **E2:** `@GoForResult` hedefi `ResultRoute`/`ResultFlow` olmalı · **E3:** flow kara kutu — iç üyeye dışarıdan edge yok · **E4:** flow üyesinde `clearUpTo` flow sınırını aşamaz · **E5:** route ikinci bir graph interface'i implement edemez (§3.1). Ayrıca: `@NoBack`+flow-start · `ResultFlow` non-`@FlowGraph`'ta · isimsiz edge çakışması (N9).
+> **E1:** `ResultFlow`'a giriş yalnız `@GoForResult` (bekleyen caller şart) · **E2:** `@GoForResult` hedefi `ResultRoute`/`ResultFlow` olmalı · **E3:** flow kara kutu — iç üyeye dışarıdan edge yok · **E4:** flow üyesinde `clearUpTo` flow sınırını aşamaz (üyelik **transitive** — flow içindeki nested `@NavGraph` üyeleri flow-içi sayılır) · **E5:** route ikinci bir graph interface'i implement edemez (§3.1). Ayrıca: `@NoBack`+flow-start · `ResultFlow` non-`@FlowGraph`'ta · isimsiz edge çakışması (N9).
 
 **Çıkışlar:**
 
@@ -334,7 +334,7 @@ nav.navigate(ProductRoute("42")); nav.back(); nav.replaceTo(HomeRoute)
 nav.backStack; nav.current                          // switchTo/activeTab/stackOf/handleDeepLink → V2
 
 runTest {
-    val r = async { nav.from<CheckoutRoute>().goToSelectAddressForResult() }
+    val r = async { nav.fromCheckout().goToSelectAddressForResult() }   // tipli erişim: üretilmiş fromX() (reified from<X>() codegen'siz mümkün değil)
     nav.deliverResult(SelectedAddress("1", "Ev"))
     r.await() shouldBe NavResult.Value(SelectedAddress("1", "Ev"))
 }
