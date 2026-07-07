@@ -99,14 +99,9 @@ class RawNavigator(
         dropCallers(removed)
     }
 
-    /** Value ile atomik kapat + caller'a teslim. */
+    /** Value ile atomik kapat + caller'a teslim. Flow içinde değilken sessiz no-op (quit() ile simetrik). */
     fun quitWith(result: Any?) {
-        val flowId = state.currentFlowId()
-        if (flowId == null) {
-            onRootBack()
-            _events.tryEmit(NavEvent.RootBack)
-            return
-        }
+        val flowId = state.currentFlowId() ?: return
         val removed = state.quitFlow(flowId)
         if (removed == null) {
             onRootBack()
@@ -127,12 +122,18 @@ class RawNavigator(
         popTopAndEmit()
     }
 
-    /** idempotent (§6): aynı (caller, edge) zaten in-flight ise push YAPMA. */
+    /** idempotent (§6): aynı (caller, edge) için slot varken (in-flight VEYA teslim edilmiş-tüketilmemiş) push YAPMA. */
     fun launchForResult(edgeId: String, route: Route) {
         val caller = state.stack.last().id
-        if (bus.slots.any { it.callerEntryId == caller && it.edgeId == edgeId && it.result == null }) return
-        val enterFlow = resolveEnterFlow(route)
+        // Pre-guard, bus.launch'un predicate'iyle birebir aynı (HERHANGİ bir slot — result durumu fark etmez):
+        // teslim edilmiş ama tüketilmemiş slot varken re-launch, slotsuz öksüz bir entry push'lardı.
+        if (bus.slots.any { it.callerEntryId == caller && it.edgeId == edgeId }) return
+        // @GoForResult edge'i DAİMA container-entry'dir → hedef flow için taze instance mint (spec §8.1
+        // re-entrancy sınırı: aynı flow tipine içten re-entry, dış instance'ın id'sini miras ALMAZ).
+        val enterFlow = topology.flowChain(route::class).isNotEmpty()
         val pushed = state.push(route, enterFlow = enterFlow, singleTop = true) ?: return
+        // Guard yukarıda bus.launch'un predicate'ini aynen uyguladı ve bu katman senkron/tek-yazar
+        // olduğu için buradaki launch false dönemez.
         bus.launch(caller, edgeId, pushed.id)
         refreshBackStack()
         _events.tryEmit(NavEvent.Pushed(pushed.route))

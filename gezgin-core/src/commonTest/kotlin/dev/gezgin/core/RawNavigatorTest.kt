@@ -110,4 +110,34 @@ class RawNavigatorTest {
         r.cancel()
         job.cancel()
     }
+
+    // (d) Re-entry into the same flow type via @GoForResult mints a NEW flow instance
+    // (spec §8.1 re-entrancy boundary). Discriminates an implementation that resolves
+    // enterFlow from the common-prefix rule (inheriting the outer instance id), which
+    // would make quitWith tear down BOTH instances.
+    @Test fun reentrantGoForResultMintsNewFlowInstance() = runTest {
+        val n = nav()
+        n.navigate(Catalog)
+        n.launchForResult("Catalog→CheckoutFlow", Cart)      // dış instance
+        n.navigate(Payment)
+        n.launchForResult("Catalog→CheckoutFlow", Cart)      // İÇTEN re-entry (caller = Payment)
+        n.quitWith(OrderId("inner"))                          // yalnız İÇ instance yıkılmalı
+        assertEquals(Payment, n.current)                      // dış flow DURUYOR
+        assertEquals(listOf<Route>(Feed, Catalog, Cart, Payment), n.backStack.value)
+    }
+
+    // (e) Re-launch while a delivered-but-unconsumed slot exists for the same (caller, edge)
+    // must NOT push — the pre-guard must match bus.launch's predicate (ANY slot, not only
+    // result == null). Discriminates a guard that only checks in-flight slots, which would
+    // push an orphan entry with no slot attached.
+    @Test fun relaunchWithUnconsumedResultDoesNotPushAgain() = runTest {
+        val n = nav()
+        n.navigate(Catalog)
+        n.launchForResult("Catalog→CheckoutFlow", Cart)
+        n.back()                                              // Canceled slota yazıldı, TÜKETİLMEDİ; caller yine top
+        val sizeBefore = n.backStack.value.size
+        n.launchForResult("Catalog→CheckoutFlow", Cart)       // slot hâlâ var → push YOK (guard)
+        assertEquals(sizeBefore, n.backStack.value.size)
+        assertEquals(NavResult.Canceled, n.results<OrderId>("Catalog→CheckoutFlow").first())
+    }
 }
