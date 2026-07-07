@@ -6,6 +6,7 @@ import dev.gezgin.core.compose.toNavEntry
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.Product
+import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -15,8 +16,13 @@ import kotlin.test.assertTrue
  * Task 3.1 — saf-JVM registry/adapter testleri. Composable içerikler burada hiç INVOKE EDİLMEZ
  * (yalnız kayıt/lookup mekaniği doğrulanır); Compose runtime'ın gerçek render davranışı Faz 3.2
  * desktop uiTest'inin işi.
+ *
+ * Task 3.2 devri: `toNavEntry(key)` → `toNavEntry(key, navigator)` (top-entry-drive, additive) —
+ * bu testlerde navigator yalnız parametre olarak geçiyor, hiçbir assertion navigator davranışına
+ * bakmıyor (o [dev.gezgin.core.compose.GezginDisplayTest]'in işi).
  */
 class GezginEntryScopeTest {
+    private val navigator = RawNavigator(start = Feed, topology = testTopology)
 
     @Test
     fun `register - iki route kaydeder, ikisi de registry'de ve kind'lari dogru`() {
@@ -58,7 +64,7 @@ class GezginEntryScopeTest {
         val key = GezginKey(route = Catalog, id = 1L)
 
         val error = assertFailsWith<IllegalStateException> {
-            scope.toNavEntry(key)
+            scope.toNavEntry(key, navigator)
         }
         assertTrue(
             error.message?.contains("Catalog") == true,
@@ -72,7 +78,7 @@ class GezginEntryScopeTest {
         scope.register<Feed> { }
         val key = GezginKey(route = Feed, id = 42L)
 
-        val navEntry = scope.toNavEntry(key)
+        val navEntry = scope.toNavEntry(key, navigator)
 
         assertEquals(42L, navEntry.contentKey)
     }
@@ -82,8 +88,8 @@ class GezginEntryScopeTest {
         val scope = GezginEntryScope()
         scope.register<Product> { }
 
-        val first = scope.toNavEntry(GezginKey(route = Product("a"), id = 1L))
-        val second = scope.toNavEntry(GezginKey(route = Product("a"), id = 2L))
+        val first = scope.toNavEntry(GezginKey(route = Product("a"), id = 1L), navigator)
+        val second = scope.toNavEntry(GezginKey(route = Product("a"), id = 2L), navigator)
 
         assertEquals(1L, first.contentKey)
         assertEquals(2L, second.contentKey)
