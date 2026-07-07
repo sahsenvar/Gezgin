@@ -1,14 +1,17 @@
 package dev.gezgin.processor
 
+import com.google.devtools.ksp.processing.Dependencies
+import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
-import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotated
+import dev.gezgin.processor.model.ModelReader
+import dev.gezgin.processor.model.dumpText
 
 /**
- * Trivial spike processor: only proves the KSP2 pipeline (kctfork harness + real Gradle
- * compilation) actually invokes our processor. Later tasks replace the body with real
- * code generation (route registries, entry points, etc.).
+ * Currently only reads the semantic [dev.gezgin.processor.model.GraphModel] (Task 2.2) and, when
+ * the test-only `gezgin.dumpModel=true` KSP option is set, writes it out as a deterministic text
+ * file (`GezginModelDump.txt`) for behavioral assertions. Later tasks add validation and codegen.
  */
 class GezginProcessor(
     private val environment: SymbolProcessorEnvironment,
@@ -24,6 +27,17 @@ class GezginProcessor(
             // guarantees visibility for the spike's assertion.
             environment.logger.info("Gezgin processor alive")
             environment.logger.warn("Gezgin processor alive")
+
+            val model = ModelReader(resolver, environment.logger).read()
+
+            if (environment.options["gezgin.dumpModel"].toBoolean()) {
+                environment.codeGenerator.createNewFile(
+                    dependencies = Dependencies.ALL_FILES,
+                    packageName = "",
+                    fileName = "GezginModelDump",
+                    extensionName = "txt",
+                ).use { it.write(model.dumpText().toByteArray()) }
+            }
         }
         return emptyList()
     }
