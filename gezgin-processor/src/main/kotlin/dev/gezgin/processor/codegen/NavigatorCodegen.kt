@@ -223,7 +223,7 @@ object NavigatorCodegen {
         routesByFq: Map<String, RouteModel>,
     ): Pair<List<FunSpec>, List<PropertySpec>> {
         val targetGraph = graphsByFq[edge.targetFq]
-        val id = edgeId(route, edge.targetFq, edge.name)
+        val id = edgeId(route.fqName, edge.targetFq, edge.name)
 
         val shape = if (targetGraph != null) {
             // Flow-mode: target is a @FlowGraph/ResultFlow<T> — push its @StartDestination, which
@@ -254,7 +254,10 @@ object NavigatorCodegen {
         }
         val (resultTypeFq, pushCall, launchParams, targetSimple) = shape
 
-        val x = edge.name.ifEmpty { stripSuffix(targetSimple) }
+        // X-substitution: a lowerCamel `name=` (e.g. "pickAddress") must still compose into
+        // idiomatic member names — UpperCamel where X sits mid-identifier (launchPickAddress /
+        // goToPickAddressForResult), lowerCamel where it leads (pickAddressResults).
+        val x = (edge.name.ifEmpty { stripSuffix(targetSimple) }).replaceFirstChar { it.uppercase() }
         val resultTypeName = ClassName.bestGuess(resultTypeFq)
         val navResultOfT = NAV_RESULT.parameterizedBy(resultTypeName)
 
@@ -383,13 +386,6 @@ object NavigatorCodegen {
             block.add("%N = null", p.name)
         }
         return block.add(")").build()
-    }
-
-    /** Must byte-for-byte match `TopologyCodegen`'s private `edgeId` — both key into the same maps. */
-    private fun edgeId(route: RouteModel, targetFq: String, name: String): String {
-        val targetSimple = targetFq.substringAfterLast('.')
-        val suffix = if (name.isNotEmpty()) "#$name" else ""
-        return "${route.simpleName}→$targetSimple$suffix"
     }
 
     private fun stripSuffix(simpleName: String): String =

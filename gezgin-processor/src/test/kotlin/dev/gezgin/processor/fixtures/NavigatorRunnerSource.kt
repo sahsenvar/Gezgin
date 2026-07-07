@@ -12,6 +12,8 @@ val RUNNER_SOURCE = """
     package dev.gezgin.shop
 
     import dev.gezgin.core.RawNavigator
+    import kotlinx.coroutines.flow.first
+    import kotlinx.coroutines.runBlocking
 
     /** Feed → launchCheckout(): pushes CheckoutFlow's start (Cart) and opens the result slot. */
     fun launchCheckout(raw: RawNavigator) {
@@ -25,6 +27,22 @@ val RUNNER_SOURCE = """
         cartNav.goToPayment()
         val paymentNav = raw.paymentNavigator(raw.currentEntryId)
         paymentNav.quitWith(OrderId("done"))
+    }
+
+    /**
+     * Screen-mode @GoForResult round-trip through the NAMED (name = "pickAddress") edge:
+     * Catalog → launchPickAddress(hint) pushes AddressPicker (nullable ctor param forwarded),
+     * the generated AddressPickerNavigator.backWithResult(OrderId(...)) delivers + pops, and the
+     * value is read back through the generated pickAddressResults property — all three members of
+     * the named-@GoForResult triple compile and run.
+     */
+    fun pickAddressScenario(raw: RawNavigator): Any? {
+        raw.navigate(HomeGraph.Catalog, singleTop = false)  // raw escape hatch: get Catalog on top
+        val catalogNav = raw.catalogNavigator(raw.currentEntryId)
+        catalogNav.launchPickAddress("work")
+        val pickerNav = raw.addressPickerNavigator(raw.currentEntryId)
+        pickerNav.backWithResult(OrderId("addr-1"))
+        return runBlocking { catalogNav.pickAddressResults.first() }
     }
 """.trimIndent()
 

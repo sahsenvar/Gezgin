@@ -66,7 +66,8 @@ class ModelReaderTest {
                     "parentFlow=dev.gezgin.shop.CheckoutFlow " +
                     "members=dev.gezgin.shop.CheckoutFlow.PayAuthFlow.Otp",
                 "graph dev.gezgin.shop.HomeGraph flow=false resultFlow=false resultType=- start=- " +
-                    "parentFlow=- members=dev.gezgin.shop.HomeGraph.AddressPicker," +
+                    "parentFlow=- members=dev.gezgin.shop.HomeGraph.About," +
+                    "dev.gezgin.shop.HomeGraph.AddressPicker," +
                     "dev.gezgin.shop.HomeGraph.Catalog,dev.gezgin.shop.HomeGraph.Deals," +
                     "dev.gezgin.shop.HomeGraph.Feed,dev.gezgin.shop.HomeGraph.Product," +
                     "dev.gezgin.shop.HomeGraph.Promo",
@@ -91,6 +92,8 @@ class ModelReaderTest {
                     "start=true noBack=false resultType=- params=-",
                 "route dev.gezgin.shop.CheckoutFlow.Payment graph=dev.gezgin.shop.CheckoutFlow " +
                     "chain=dev.gezgin.shop.CheckoutFlow start=false noBack=false resultType=- params=-",
+                "route dev.gezgin.shop.HomeGraph.About graph=dev.gezgin.shop.HomeGraph " +
+                    "chain=- start=false noBack=false resultType=- params=-",
                 "route dev.gezgin.shop.HomeGraph.AddressPicker graph=dev.gezgin.shop.HomeGraph " +
                     "chain=- start=false noBack=false resultType=dev.gezgin.shop.OrderId " +
                     "params=hint:kotlin.String?=",
@@ -115,6 +118,8 @@ class ModelReaderTest {
             listOf(
                 "edge dev.gezgin.shop.CheckoutFlow.Cart GO_TO dev.gezgin.shop.CheckoutFlow.Payment " +
                     "singleTop=true clearUpTo=- inclusive=false name=-",
+                "edge dev.gezgin.shop.HomeGraph.Catalog GO_FOR_RESULT dev.gezgin.shop.HomeGraph.AddressPicker " +
+                    "singleTop=false clearUpTo=- inclusive=false name=pickAddress",
                 "edge dev.gezgin.shop.HomeGraph.Deals GO_TO dev.gezgin.shop.HomeGraph.Catalog " +
                     "singleTop=true clearUpTo=- inclusive=false name=-",
                 "edge dev.gezgin.shop.HomeGraph.Deals GO_TO dev.gezgin.shop.HomeGraph.Product " +

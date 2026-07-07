@@ -115,9 +115,54 @@ class NavigatorCodegenTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
         assertNull(
-            result.generatedSourceFor("CatalogNavigator.kt"),
-            "Catalog declares no edges/back-annotations/result-contract — no navigator should be generated",
+            result.generatedSourceFor("AboutNavigator.kt"),
+            "About declares no edges/back-annotations/result-contract — no navigator should be generated",
         )
+    }
+
+    @Test
+    fun `screen-mode named GoForResult round-trip — launch, backWithResult, results property`() {
+        val result = compileGezgin(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            SourceFile.kotlin("Runner.kt", RUNNER_SOURCE),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val loader = result.classLoader
+        val topology = loader.loadClass("dev.gezgin.shop.GezginGeneratedKt")
+            .getMethod("getGezginTopology")
+            .invoke(null)
+        val feedInstance = loader.dataObjectInstance("dev.gezgin.shop.HomeGraph\$Feed") as Route
+        val raw = RawNavigator(start = feedInstance, topology = topology as dev.gezgin.core.GezginTopology)
+
+        val delivered = loader.loadClass("dev.gezgin.shop.RunnerKt")
+            .getMethod("pickAddressScenario", RawNavigator::class.java)
+            .invoke(null, raw)
+
+        assertTrue(delivered is NavResult.Value<*>, "expected a delivered Value, got $delivered")
+        val orderId = (delivered as NavResult.Value<*>).value
+        val innerValue = orderId!!.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(orderId)
+        assertEquals("addr-1", innerValue)
+        // backWithResult popped AddressPicker → stack is back to [Feed, Catalog].
+        assertEquals(2, raw.backStack.value.size)
+    }
+
+    @Test
+    fun `named GoForResult substitutes X across the generated triple — golden text`() {
+        val result = compileGezgin(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val catalogSource = result.generatedSourceFor("CatalogNavigator.kt")
+        assertNotNull(catalogSource, "Catalog now declares a @GoForResult edge — navigator expected")
+        val text = catalogSource.readText()
+        assertTrue("fun launchPickAddress(" in text, text)
+        assertTrue("val pickAddressResults:" in text, text)
+        assertTrue("fun goToPickAddressForResult(" in text, text)
+        assertTrue("\"Catalog→AddressPicker#pickAddress\"" in text, text)
     }
 
     @Test

@@ -147,7 +147,7 @@ object TopologyCodegen {
         val builder = CodeBlock.builder().add("mapOf(\n").indent()
         model.routes.forEach { route ->
             route.edges.filter { it.kind == EdgeKind.GO_FOR_RESULT }.forEach { edge ->
-                val id = edgeId(route, edge.targetFq, edge.name)
+                val id = edgeId(route.fqName, edge.targetFq, edge.name)
                 val resultTypeFq = graphsByFq[edge.targetFq]?.resultTypeFq
                     ?: routesByFq[edge.targetFq]?.resultTypeFq
                     ?: error(
@@ -165,12 +165,6 @@ object TopologyCodegen {
         }
         builder.unindent().add(")")
         return builder.build()
-    }
-
-    private fun edgeId(route: RouteModel, targetFq: String, name: String): String {
-        val targetSimple = targetFq.substringAfterLast('.')
-        val suffix = if (name.isNotEmpty()) "#$name" else ""
-        return "${route.simpleName}→$targetSimple$suffix"
     }
 
     // endregion

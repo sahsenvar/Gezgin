@@ -73,7 +73,15 @@ val SHOP_SOURCE = """
         @GoForResult(CheckoutFlow::class)
         data object Feed : HomeGraph
 
+        // Screen-mode @GoForResult (target = ResultRoute route, not a flow) with a name= override —
+        // exercises the named-@GoForResult X-substitution across Task 2.5's generated triple
+        // (launchPickAddress / pickAddressResults / goToPickAddressForResult).
+        @GoForResult(AddressPicker::class, name = "pickAddress")
         data object Catalog : HomeGraph
+
+        // Deliberately bare: no edges, no back-annotations, no result contract, no ResultFlow
+        // membership — pins that Task 2.5 generates NO navigator for such a route.
+        data object About : HomeGraph
 
         @NoBack
         @BackTo(Feed::class)
