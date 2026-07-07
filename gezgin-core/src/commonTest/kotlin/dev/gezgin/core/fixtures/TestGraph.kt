@@ -21,3 +21,10 @@ val testSerializersModule = SerializersModule {
         subclass(Cart::class); subclass(Payment::class)
     }
 }
+
+val checkoutFlow = dev.gezgin.core.FlowType("CheckoutFlow", isResultFlow = true)
+val testTopology = dev.gezgin.core.GezginTopology(
+    flowChains = mapOf(Cart::class to listOf(checkoutFlow), Payment::class to listOf(checkoutFlow)),
+    flowStarts = mapOf("CheckoutFlow" to Cart::class),
+    edges = mapOf("Catalog→CheckoutFlow" to dev.gezgin.core.EdgeSpec("Catalog→CheckoutFlow", OrderId.serializer())),
+)
