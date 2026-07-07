@@ -149,6 +149,9 @@ class ModelReader(
             EdgeModel(
                 kind = kind,
                 targetFq = targetFq,
+                // `?: false` fallback'leri savunma amaçlı — gerçek default'lar arguments+defaultArguments
+                // merge'ünden gelir; buraya sadece annotation'da o parametre hiç yoksa düşülür
+                // (ör. @GoForResult'ta singleTop/inclusive olmaması).
                 singleTop = annotation.boolArg("singleTop") ?: false,
                 clearUpToFq = clearUpToFq,
                 inclusive = annotation.boolArg("inclusive") ?: false,
@@ -162,6 +165,7 @@ class ModelReader(
                 BACK_TO_FQ -> BackEdgeModel(
                     kind = BackEdgeKind.BACK_TO,
                     targetFq = annotation.classArg("target")?.declaration?.qualifiedName?.asString(),
+                    // Savunma fallback'i — gerçek default arguments+defaultArguments merge'ünden gelir.
                     inclusive = annotation.boolArg("inclusive") ?: false,
                 )
 
