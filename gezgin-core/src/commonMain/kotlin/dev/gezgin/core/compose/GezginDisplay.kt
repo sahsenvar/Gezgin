@@ -5,16 +5,29 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.navigation3.runtime.NavEntryDecorator
+import androidx.navigation3.runtime.rememberDecoratedNavEntries
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.RawNavigator
+import dev.gezgin.core.Route
 
 /**
  * Nav3 `NavDisplay` adapter'ı (§2.1/§4.2/§12) — `entries` trailing lambda'sı [GezginEntryScope]
  * alıcısında `register<R> { ... }` çağrılarını (veya Faz 3.4'ün üreteceği `provideXEntry`'leri)
- * toplar; içerik (`GezginKey` listesi) HER ZAMAN `navigator.keys`'ten okunur — `navigator.backStack`
- * yalnız TETİKLEYİCİ olarak `collectAsState()` edilir (public `Route` listesi recompose'u tetikler,
- * gerçek entry inşası internal `keys`'in taşıdığı `id`'lerden — R2 contentKey sözleşmesi bunu
- * gerektirir; `backStack`'in kendisi `id` taşımaz).
+ * toplar; içerik (`GezginKey` listesi) HER ZAMAN `navigator.keysState`'ten (`id` taşır) okunur —
+ * `backStack` (public `Route`, id'siz) DEĞİL: `StateFlow` eşit-değer dedup'ı yüzünden `replaceTo`
+ * ile aynı-değer-farklı-id bir hedefe geçiş `backStack`'te emit üretmez, [keysState][RawNavigator.keysState]
+ * ise `id` farkıyla yeni liste yayar (R2 contentKey sözleşmesi; Task 3.3 deliverable 4a).
+ *
+ * **Decorator'lar (Task 3.3 deliverable 1):** entries `NavDisplay`'e verilmeden ÖNCE
+ * [rememberDecoratedNavEntries] ile decorate edilir. ORTAK: `rememberSaveableStateHolderNavEntryDecorator()`
+ * (saveable state = zorunlu; `rememberSaveable` her entry'de kendi `contentKey`=id slot'unda çalışır →
+ * eşit-değerli iki route AYRI saved state; R2 saved-state tarafı, desktop dahil). PLATFORM:
+ * [rememberPlatformEntryDecorators] — Android'de `rememberViewModelStoreNavEntryDecorator()` (per-entry
+ * VM store; `LocalViewModelStoreOwner` host Activity'den), desktop'ta boş (owner garanti değil). Sıra
+ * `[saveable] + platform`: VM store decorator'ı saveable'ın sağladığı `SavedStateRegistryOwner`'a
+ * bağımlı → saveable önce/OUTER.
  *
  * **Kuruluş guard'ı (§12) — `rememberNavigator`'ın YAPAMADIĞI kısım:** kind bilgisi yalnız burada
  * (entry-scope registry'sinde) mevcut. Register'lar toplandıktan SONRA, kök (`navigator.keys.first()`)
@@ -24,13 +37,6 @@ import dev.gezgin.core.RawNavigator
  * başlatarak ihlal etmeyi önler. Route HENÜZ kayıtlı değilse (kind lookup `null`) burada patlamaz —
  * o durumun daha açıklayıcı hatası [toNavEntry]'de (`route için entry kaydı yok`) zaten var. Faz 4'te
  * scene wiring gelince bu guard gevşetilecek (TODO).
- *
- * **Decorator'lar (kapsam kaydırması, bkz. task-3.2-report.md):** `rememberSaveableStateHolder` /
- * `rememberSavedState` / `rememberViewModelStore` `NavEntryDecorator`'ları bu görevde YOK. Task 3.0
- * spike'ının çıkardığı ortak `NavDisplay` parametre alt-kümesinde (android 1.1.4 ↔ JB desktop
- * alpha05) decorator alan bir parametre YOKTU (yalnız `entries`, `modifier`, `contentAlignment`,
- * `sizeTransform`, `transitionSpec`, `popTransitionSpec`, `predictivePopTransitionSpec`, `onBack`
- * ortak) — bu yüzden kapsam Faz 3.3'e kaydırıldı; BLOCKED değil.
  */
 @Composable
 fun GezginDisplay(
@@ -48,13 +54,41 @@ fun GezginDisplay(
             }
         }
     }
-    val stack by navigator.backStack.collectAsState()   // yalnız tetikleyici (KDoc'taki gerekçe)
-    val entryList = remember(stack) {
-        navigator.keys.map { key -> scope.toNavEntry(key, navigator) }
+    val keys by navigator.keysState.collectAsState()   // id taşır → id-only değişim de recompose eder (4a)
+    val entryList = remember(keys) {
+        val rootId = keys.firstOrNull()?.id
+        keys.map { key -> scope.toNavEntry(key, navigator, isRoot = key.id == rootId) }
     }
+    val decorators: List<NavEntryDecorator<Route>> =
+        listOf(rememberSaveableStateHolderNavEntryDecorator<Route>()) + rememberPlatformEntryDecorators()
+    val decoratedEntries = rememberDecoratedNavEntries(entryList, decorators)
     NavDisplay(
-        entries = entryList,
+        entries = decoratedEntries,
         modifier = modifier,
-        onBack = { navigator.back() },
+        onBack = gezginOnBack(navigator, scope),
     )
+}
+
+/**
+ * [NavDisplay] `onBack` lambda'sı — `@NoBack` runtime guard'ı (M5′, §4.2; Task 3.3 deliverable 3).
+ * Geri çağrıldığında CANLI top entry'yi (`navigator.keys.last()`, capture edilmiş stale değer değil)
+ * okur: top'un kaydı `noBack==true` VE top kök DEĞİLSE geri YUTULUR (pop yok) — aksi halde
+ * `navigator.back()`. **Kök muafiyeti:** stack tek entry'liyken (`keys.size <= 1`) `noBack` yok sayılır
+ * → `back()` (dipteyken `onRootBack`; kullanıcı app'e hapsolmaz).
+ *
+ * Desktop'ta `@NoBack`'in DAVRANIŞSAL taşıyıcısı budur (sistem-back/predictive yok, [GezginNoBackHandler]
+ * desktop'ta no-op). Android'de ayrıca gerçek entry-scoped [GezginNoBackHandler] kurulur; bu guard orada
+ * da bir emniyet ağı olarak `NavDisplay`'in kendi `onBack`'inde back'i yutar. `@Composable` DEĞİL →
+ * Compose kurulumu olmadan birim/uiTest ile pinlenebilir.
+ */
+internal fun gezginOnBack(navigator: RawNavigator, scope: GezginEntryScope): () -> Unit = {
+    val keys = navigator.keys
+    val top = keys.lastOrNull()
+    val isRoot = keys.size <= 1
+    val topNoBack = top != null && scope.registry[top.route::class]?.noBack == true
+    if (topNoBack && !isRoot) {
+        // @NoBack top entry (kök değil): Gezgin-sahipli geri-yutma — pop YOK (M5′).
+    } else {
+        navigator.back()
+    }
 }
