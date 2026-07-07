@@ -36,7 +36,7 @@ class GezginState(initial: List<GezginKey>, internal var nextId: Long, private v
     fun backTo(target: KClass<out Route>, inclusive: Boolean): List<GezginKey>? {
         val i = _stack.dropLast(1).indexOfLast { target.isInstance(it.route) }  // top hariç ara
         if (i < 0) return null
-        val keepUntil = if (inclusive) i else i + 1
+        val keepUntil = maxOf(if (inclusive) i else i + 1, 1)  // §8.1 empty-stack invariant: dip entry asla poplanmaz (inclusive dipte exclusive'e düşer)
         val removed = _stack.subList(keepUntil, _stack.size).toList()
         while (_stack.size > keepUntil) _stack.removeAt(_stack.lastIndex)
         return removed

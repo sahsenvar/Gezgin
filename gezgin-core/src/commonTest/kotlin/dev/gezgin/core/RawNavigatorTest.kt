@@ -40,10 +40,13 @@ class RawNavigatorTest {
         assertEquals(1, root); assertEquals(Feed, n.current)
     }
 
+    // Fix 5 sonrası: iki TOP-based launch farklı caller görür (ikincide top = Cart), guard'ı tetiklemez;
+    // idempotency artık (caller, edge) başınadır → caller'ı sabitle (açık overload). Bkz. explicitCallerGuardPreventsDoublePush.
     @Test fun duplicateLaunchDoesNotDoublePush() {
         val n = nav()
-        n.launchForResult("Catalog→CheckoutFlow", Cart)
-        n.launchForResult("Catalog→CheckoutFlow", Cart)             // idempotent
+        val caller = n.currentEntryId
+        n.launchForResult(caller, "Catalog→CheckoutFlow", Cart)
+        n.launchForResult(caller, "Catalog→CheckoutFlow", Cart)     // aynı caller/edge → idempotent
         assertEquals(2, n.backStack.value.size)                     // [Feed, Cart] — tek push
     }
 
@@ -139,5 +142,68 @@ class RawNavigatorTest {
         n.launchForResult("Catalog→CheckoutFlow", Cart)       // slot hâlâ var → push YOK (guard)
         assertEquals(sizeBefore, n.backStack.value.size)
         assertEquals(NavResult.Canceled, n.results<OrderId>("Catalog→CheckoutFlow").first())
+    }
+
+    // --- Final-review fix tests ---
+
+    @Test fun backToAcrossPendingTargetDeliversCanceledToSurvivingCaller() = runTest {
+        val n = nav()   // start=Feed
+        val callerId = n.currentEntryId
+        val r = async { n.navigateForResult<OrderId>(callerId, "Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        n.navigate(Payment)
+        n.backTo(Feed::class)                       // [Cart, Payment] kalkar; caller Feed hayatta
+        assertEquals(NavResult.Canceled, r.await()) // slot LEAK yok, await sonsuza dek asılı kalmaz
+    }
+
+    @Test fun nestedQuitWithDoesNotDeliverValueToInnerSlot() = runTest {
+        val n = nav()
+        n.navigate(Catalog)
+        val outerCaller = n.currentEntryId
+        val outer = async { n.navigateForResult<OrderId>(outerCaller, "Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        n.navigate(Payment)
+        val innerCaller = n.currentEntryId
+        val inner = async { n.navigateForResult<OrderId>(innerCaller, "Feed→AddressPick", Otp) }
+        runCurrent()
+        n.quitWith(OrderId("done"))                 // dış flow biter
+        assertEquals(NavResult.Value(OrderId("done")), outer.await())
+        assertFalse(inner.isCompleted)              // iç slota YANLIŞ tipte Value teslim edilmedi
+        inner.cancel()
+    }
+
+    @Test fun explicitCallerGuardPreventsDoublePush() = runTest {
+        val n = nav()
+        val callerId = n.currentEntryId
+        n.launchForResult(callerId, "Catalog→CheckoutFlow", Cart)
+        n.launchForResult(callerId, "Catalog→CheckoutFlow", Cart)   // AYNI explicit caller → guard
+        assertEquals(2, n.backStack.value.size)
+    }
+
+    @Test fun launchForResultOnDuplicateTopStillCreatesSlotAndEntry() = runTest {
+        val n = nav()
+        n.navigate(Catalog); n.navigate(Cart)       // Cart zaten top (normal @GoTo ile)
+        val callerId = n.currentEntryId
+        val r = async { n.navigateForResult<OrderId>(callerId, "Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        assertEquals(4, n.backStack.value.size)     // singleTop=false: yeni Cart instance push edildi
+        n.quitWith(OrderId("x"))
+        assertEquals(NavResult.Value(OrderId("x")), r.await())      // asılı kalmıyor
+    }
+
+    @Test fun successfulBackToEmitsPoppedTo() = runTest {
+        val n = nav()
+        n.navigate(Catalog); n.navigate(Product("1"))
+        val collected = mutableListOf<NavEvent>()
+        val job = launch { n.events.collect { collected += it } }
+        runCurrent()
+        n.backTo(Catalog::class)                    // [Product("1")] kalkar
+        runCurrent()
+        val ev = collected.filterIsInstance<NavEvent.PoppedTo>().singleOrNull()
+        assertNotNull(ev)
+        assertEquals("Catalog", ev.target)
+        assertEquals(listOf<Route>(Product("1")), ev.removed)
+        assertEquals(listOf<Route>(Feed, Catalog), n.backStack.value)
+        job.cancel()
     }
 }

@@ -4,11 +4,20 @@ import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.Product
 import dev.gezgin.core.fixtures.testTopology
+import dev.gezgin.core.Route
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class GezginStateBackToTest {
+    @Test fun backToBottomInclusiveKeepsBottom_neverEmpties() {
+        val s = GezginState(emptyList(), 0, testTopology)
+        s.push(Feed); s.push(Catalog); s.push(Product("1"))
+        val removed = s.backTo(Feed::class, inclusive = true)!!
+        assertEquals(listOf(Catalog, Product("1")), removed.map { it.route })
+        assertEquals(listOf<Route>(Feed), s.stack.map { it.route })
+    }
+
     @Test fun popsToNearestAncestorExclusive() {
         val s = GezginState(emptyList(), 0, testTopology)
         s.push(Product("A"), singleTop = false); s.push(Feed); s.push(Product("B"), singleTop = false); s.push(Catalog)
