@@ -6,9 +6,11 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.squareup.kotlinpoet.ksp.writeTo
+import dev.gezgin.processor.codegen.EntryCodegen
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.TestApiCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
+import dev.gezgin.processor.entry.EntryModelReader
 import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.dumpText
 
@@ -87,6 +89,19 @@ class GezginProcessor(
                 if (emitTestAccessors) {
                     TestApiCodegen.generate(model, packageName)
                         ?.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+                }
+
+                // Task 3.4: `provideXEntry` core-mode codegen — opt-OUT (default true, mirrors
+                // `gezgin.emitSerializers`). The opt-out exists purely for kctfork test infra where
+                // registering the compose-compiler plugin isn't wired up (see EntryCodegenTest);
+                // real (Gradle/AGP) builds always emit.
+                val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
+                if (emitEntries) {
+                    val (entries, entriesOk) = EntryModelReader(resolver, environment.logger, model).read()
+                    if (entriesOk) {
+                        EntryCodegen.generate(entries, packageName)
+                            .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
+                    }
                 }
             }
         }
