@@ -49,6 +49,22 @@ class ResultBusTest {
         assertTrue(bus.slots.isEmpty())
     }
 
+    @Test
+    fun concurrentCollectorsExactlyOneWinsPerDelivery() = runTest {
+        val bus = ResultBus()
+        bus.launch(1, "e", 9)
+        val a = async { bus.results<String>(1, "e").first() }
+        val b = async { bus.results<String>(1, "e").first() }
+        runCurrent()
+        bus.deliver(9, NavResult.Value("ilk")); runCurrent()
+        assertEquals(1, listOf(a, b).count { it.isCompleted })   // tam olarak biri aldı, diğeri beklemede
+        bus.launch(1, "e", 10)                                    // slot tüketildi → yeni istek meşru
+        bus.deliver(10, NavResult.Value("ikinci")); runCurrent()
+        assertTrue(a.isCompleted && b.isCompleted)                // kaybeden SONRAKİ teslimi alır (sıralı dağıtım)
+        val got = setOf((a.await() as NavResult.Value).value, (b.await() as NavResult.Value).value)
+        assertEquals(setOf("ilk", "ikinci"), got)
+    }
+
     // Additional test (a): canceled delivery replays
     @Test
     fun canceledDeliveryReplaysToLateCollector() = runTest {

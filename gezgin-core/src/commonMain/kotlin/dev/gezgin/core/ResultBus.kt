@@ -19,6 +19,12 @@ class ResultBus {
         return hit
     }
 
+    /**
+     * (callerEntryId, edgeId) slotunun sonuç akışı — replay-until-consumed.
+     * Her teslim EN FAZLA BİR collector'a gider (CAS ile). Sözleşme: anahtar başına aynı anda
+     * TEK canlı collector tutun (VM-init deseni bunu doğal sağlar). Birden çok collector varsa
+     * teslimler sırayla dağıtılır — sızdırılmış eski bir collector sonraki isteğin sonucunu alabilir.
+     */
     @Suppress("UNCHECKED_CAST")
     fun <T> results(callerEntryId: Long, edgeId: String): Flow<NavResult<T>> = state
         .mapNotNull { list -> list.firstOrNull { it.callerEntryId == callerEntryId && it.edgeId == edgeId && it.result != null } }
@@ -31,9 +37,8 @@ class ResultBus {
     }
 
     fun dropFor(callerEntryIds: Set<Long>): List<Slot> {
-        val dropped = state.value.filter { it.callerEntryId in callerEntryIds }
-        state.update { list -> list.filterNot { it.callerEntryId in callerEntryIds } }
-        return dropped
+        val before = state.getAndUpdate { list -> list.filterNot { it.callerEntryId in callerEntryIds } }
+        return before.filter { it.callerEntryId in callerEntryIds }
     }
 
     fun restore(slots: List<Slot>) { state.value = slots }
