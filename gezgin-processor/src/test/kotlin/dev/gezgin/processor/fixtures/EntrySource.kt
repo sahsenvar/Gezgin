@@ -15,6 +15,8 @@ package dev.gezgin.processor.fixtures
  * - `AboutScreen(route: About)` — no `nav:` param — `About` has NO navigator ([SHOP_SOURCE]'s
  *   deliberately-bare route); pins that a `route`-only composable never needs one.
  * - `PromoDialog(route: Promo, nav: PromoNavigator)` — `@Dialog` kind mapping.
+ * - `ProductScreen(route: Product)` — `Product` is [SHOP_SOURCE]'s `@NoBack` route; pins that the
+ *   generated `register` call carries `noBack = true` (M5′ flag, read from the route model).
  */
 val ENTRY_SOURCE = """
     package dev.gezgin.shopui
@@ -26,6 +28,7 @@ val ENTRY_SOURCE = """
     import dev.gezgin.shop.HomeGraph.Catalog
     import dev.gezgin.shop.HomeGraph.About
     import dev.gezgin.shop.HomeGraph.Promo
+    import dev.gezgin.shop.HomeGraph.Product
     import dev.gezgin.shop.FeedNavigator
     import dev.gezgin.shop.CatalogNavigator
     import dev.gezgin.shop.PromoNavigator
@@ -48,5 +51,10 @@ val ENTRY_SOURCE = """
     @Dialog
     @Composable
     fun PromoDialog(route: Promo, nav: PromoNavigator) {
+    }
+
+    @Screen
+    @Composable
+    fun ProductScreen(route: Product) {
     }
 """.trimIndent()

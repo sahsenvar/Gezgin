@@ -78,6 +78,23 @@ class EntryCodegenTest {
         // Promo: @Dialog → EntryKind.DIALOG.
         assertTrue(text.contains("register<HomeGraph.Promo>(kind = EntryKind.DIALOG, noBack = false) { route ->"), text)
         assertTrue(text.contains("PromoDialog(route, nav)"), text)
+
+        // Product: @NoBack route → register carries noBack = true (M5′ flag from the route model).
+        assertTrue(text.contains("register<HomeGraph.Product>(kind = EntryKind.SCREEN, noBack = true) { route ->"), text)
+        assertTrue(text.contains("ProductScreen(route)"), text)
+    }
+
+    @Test
+    fun `gezgin_emitEntries=false suppresses GezginEntries generation`() {
+        val result = compileGezgin(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            SourceFile.kotlin("EntrySource.kt", ENTRY_SOURCE),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false", "gezgin.emitEntries" to "false"),
+        )
+        // With entries suppressed nothing calls into compose-runtime — the backend ICE (class KDoc)
+        // never triggers, so a full-OK exit is expected here.
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        assertTrue(result.generatedSourceFor("GezginEntries.kt") == null, "GezginEntries.kt emitted despite opt-out")
     }
 
     @Test
@@ -166,6 +183,37 @@ class EntryCodegenTest {
             @Screen(About::class)
             @Composable
             fun AboutScreenAgain() {
+            }
+        """.trimIndent()
+
+        val result = compileGezgin(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            SourceFile.kotlin("Bad.kt", source),
+        )
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)
+        assertTrue(result.messages.contains("[SC4]"), result.messages)
+    }
+
+    @Test
+    fun `SC4 — cross-kind duplicate (@Screen + @Dialog) on the same route is rejected too`() {
+        // The duplicate check is keyed on the ROUTE, not the kind — a @Screen and a @Dialog both
+        // registering About would still be two register<About> calls (runtime crash) at display time.
+        val source = """
+            package dev.gezgin.shopui
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.annotation.Dialog
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.shop.HomeGraph.About
+
+            @Screen
+            @Composable
+            fun AboutScreen(route: About) {
+            }
+
+            @Dialog(About::class)
+            @Composable
+            fun AboutDialog() {
             }
         """.trimIndent()
 
