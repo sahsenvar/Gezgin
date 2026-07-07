@@ -254,4 +254,21 @@ class RawNavigatorTest {
         assertEquals(Cart, n.current)                          // untouched — navigate never ran
         assertEquals(listOf<Route>(Cart), n.backStack.value)
     }
+
+    // --- Task 2.6: entryIdOf (@GezginInternalApi) ---
+
+    @OptIn(GezginInternalApi::class)
+    @Test fun entryIdOfReturnsNearestMatchingEntry() {
+        val n = nav()
+        n.navigate(Product("1"))
+        n.navigate(Product("2"))                               // two Product entries on the stack now
+        val nearestId = n.entryIdOf(Product::class)
+        assertEquals(n.currentEntryId, nearestId)               // top one (Product("2")), not Product("1")
+    }
+
+    @OptIn(GezginInternalApi::class)
+    @Test fun entryIdOfReturnsNullWhenNoMatch() {
+        val n = nav()                                           // start=Feed, no Payment pushed
+        assertNull(n.entryIdOf(Payment::class))
+    }
 }

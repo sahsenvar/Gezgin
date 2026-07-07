@@ -189,6 +189,14 @@ class RawNavigator(
     val currentEntryId: Long get() = state.stack.last().id
 
     /**
+     * Task 2.6 — `:gezgin-test`'in tipli `fromX()` erişimi için minimal public kapı: [route]'u
+     * uygulayan EN YAKIN (stack'te en üstteki) entry'nin id'si, yoksa `null`. `keys` `internal`
+     * kalır; bu, üstüne kurulan tek [GezginInternalApi] opt-in üye.
+     */
+    @GezginInternalApi
+    fun entryIdOf(route: KClass<out Route>): Long? = keys.lastOrNull { route.isInstance(it.route) }?.id
+
+    /**
      * Açık-caller (Faz 2 kancası): idempotent (§6) — aynı (caller, edge) için slot varken (in-flight
      * VEYA teslim edilmiş-tüketilmemiş) push YAPMA. Aksi halde result isteği DAİMA yeni entry yaratır.
      */
