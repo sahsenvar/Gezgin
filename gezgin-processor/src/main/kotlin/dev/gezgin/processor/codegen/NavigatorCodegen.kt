@@ -57,6 +57,24 @@ object NavigatorCodegen {
         return model.routes.mapNotNull { route -> buildNavigatorFile(route, graphsByFq, routesByFq, packageName) }
     }
 
+    /**
+     * Task 2.6 hook (`TestApiCodegen`): the exact same "does this route earn a navigator at all"
+     * predicate [buildNavigatorFile] uses for its early-return, exposed so a SEPARATE codegen pass
+     * can decide whether a `fromX()` test accessor is even meaningful — a bare route (no navigator
+     * class) has nothing for `fromX()` to return.
+     */
+    internal fun hasNavigator(route: RouteModel, graphsByFq: Map<String, GraphModelNode>): Boolean =
+        route.edges.isNotEmpty() ||
+            route.backEdges.isNotEmpty() ||
+            innermostResultFlowResultTypeFq(route, graphsByFq) != null ||
+            route.resultTypeFq != null
+
+    /** `X` derivation (Task 2.6 hook) — see [buildNavigatorFile]'s use for the class-name rule. */
+    internal fun navigatorX(simpleName: String): String = stripSuffix(simpleName)
+
+    /** `RawNavigator.xNavigator(entryId)` factory name (Task 2.6 hook) — mirrors [buildNavigatorFile]. */
+    internal fun rawFactoryFunName(x: String): String = lowerFirst(x) + "Navigator"
+
     private fun buildNavigatorFile(
         route: RouteModel,
         graphsByFq: Map<String, GraphModelNode>,
@@ -95,10 +113,10 @@ object NavigatorCodegen {
             members += backWithResultFun(resultTypeFq)
         }
 
-        // A route generates a navigator only if it NEEDS one — a bare route with no declared edge,
-        // back-annotation, or result-contract would otherwise get an empty (or back()-only) class
-        // that's pure dead API surface. `back()` itself is added below as a bonus member on TOP of
-        // an already-justified generation, never as the sole justification for generating at all.
+        // A route generates a navigator only if it NEEDS one (see [hasNavigator]) — a bare route
+        // with no declared edge, back-annotation, or result-contract would otherwise get an empty
+        // (or back()-only) class that's pure dead API surface. `back()` itself is added below as a
+        // bonus member on TOP of an already-justified generation, never as the sole justification.
         if (members.isEmpty() && properties.isEmpty()) return null
 
         if (!route.noBack) members += backFun()

@@ -7,6 +7,7 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.squareup.kotlinpoet.ksp.writeTo
 import dev.gezgin.processor.codegen.NavigatorCodegen
+import dev.gezgin.processor.codegen.TestApiCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.dumpText
@@ -66,6 +67,15 @@ class GezginProcessor(
                 // corresponding method (unresolved reference), which is the core value proposition.
                 NavigatorCodegen.generate(model, packageName).forEach {
                     it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+                }
+
+                // Task 2.6: §13 typed test API (`GezginTestNavigator.fromX()`) — opt-IN (default
+                // false): production modules don't depend on `:gezgin-test`, only a test source
+                // set's KSP configuration sets `gezgin.emitTestAccessors=true`.
+                val emitTestAccessors = environment.options["gezgin.emitTestAccessors"].toBoolean()
+                if (emitTestAccessors) {
+                    TestApiCodegen.generate(model, packageName)
+                        ?.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
                 }
             }
         }
