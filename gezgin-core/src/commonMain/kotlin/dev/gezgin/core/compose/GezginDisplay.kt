@@ -9,6 +9,7 @@ import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
 
@@ -56,8 +57,7 @@ fun GezginDisplay(
     }
     val keys by navigator.keysState.collectAsState()   // id taşır → id-only değişim de recompose eder (4a)
     val entryList = remember(keys) {
-        val rootId = keys.firstOrNull()?.id
-        keys.map { key -> scope.toNavEntry(key, navigator, isRoot = key.id == rootId) }
+        keys.map { key -> scope.toNavEntry(key, navigator, isRoot = isRootEntry(keys, key.id)) }
     }
     val decorators: List<NavEntryDecorator<Route>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator<Route>()) + rememberPlatformEntryDecorators()
@@ -84,7 +84,7 @@ fun GezginDisplay(
 internal fun gezginOnBack(navigator: RawNavigator, scope: GezginEntryScope): () -> Unit = {
     val keys = navigator.keys
     val top = keys.lastOrNull()
-    val isRoot = keys.size <= 1
+    val isRoot = top == null || isRootEntry(keys, top.id)
     val topNoBack = top != null && scope.registry[top.route::class]?.noBack == true
     if (topNoBack && !isRoot) {
         // @NoBack top entry (kök değil): Gezgin-sahipli geri-yutma — pop YOK (M5′).
@@ -92,3 +92,10 @@ internal fun gezginOnBack(navigator: RawNavigator, scope: GezginEntryScope): () 
         navigator.back()
     }
 }
+
+/**
+ * Task 3.4 devri — [GezginDisplay]'in per-entry `isRoot` (`key.id == keys.first().id`) ile
+ * [gezginOnBack]'in eski `keys.size <= 1` predicate'i AYNI şeyi soruyordu (stack'in dibindeki entry
+ * TOP iken ikisi de tek entry'de eşitti — `size<=1` ⟺ top.id == first.id): tek yardımcıya birleştirildi.
+ */
+private fun isRootEntry(keys: List<GezginKey>, entryId: Long): Boolean = keys.firstOrNull()?.id == entryId

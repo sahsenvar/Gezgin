@@ -765,6 +765,30 @@ class ValidationTest {
         )
     }
 
+    @Test
+    fun `N10 - a name= override spelling a reserved navigator member is rejected`() {
+        // Task 3.4 devir: `name = "back"` would emit a goTo method literally named `back`, silently
+        // colliding with the navigator's own unconditional back() member.
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10reserved
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @GoTo(Detail::class, name = "back")
+                data object Feed : HomeGraph
+
+                data object Detail : HomeGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
     // endregion
 
     // region PKG — generated code needs a single common target package
