@@ -6,6 +6,7 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.squareup.kotlinpoet.ksp.writeTo
+import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.dumpText
@@ -59,6 +60,12 @@ class GezginProcessor(
                 if (emitSerializers) {
                     TopologyCodegen.generateSerializers(model, packageName)
                         .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+                }
+
+                // Task 2.5: typed per-source navigators — undeclared edges simply have no
+                // corresponding method (unresolved reference), which is the core value proposition.
+                NavigatorCodegen.generate(model, packageName).forEach {
+                    it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
                 }
             }
         }
