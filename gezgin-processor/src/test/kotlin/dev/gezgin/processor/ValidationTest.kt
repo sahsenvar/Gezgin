@@ -25,12 +25,174 @@ class ValidationTest {
         assertContains(result.messages, "[$code]", message = result.messages)
     }
 
+    private fun assertCompilesClean(source: String) {
+        val result = compileGezgin(SourceFile.kotlin("Source.kt", source))
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    }
+
     // region Shared positive
 
     @Test
     fun `SHOP_SOURCE fixture remains violation-free`() {
         val result = compileGezgin(SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE))
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    }
+
+    // endregion
+
+    // region Rule-boundary positives (spec §8.1/§4.2 adjudication — each must compile clean)
+
+    @Test
+    fun `positive - GoTo and ReplaceTo into a non-result FlowGraph container are allowed`() {
+        assertCompilesClean(
+            """
+            package dev.gezgin.pos.a
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.ReplaceTo
+            import dev.gezgin.core.annotation.StartDestination
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @GoTo(OnboardingFlow::class)
+                @ReplaceTo(OnboardingFlow::class)
+                data object Feed : HomeGraph
+            }
+
+            @FlowGraph
+            interface OnboardingFlow : Route {
+                @StartDestination
+                data object Welcome : OnboardingFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `positive - GoForResult from inside a flow to an external ResultRoute is allowed`() {
+        assertCompilesClean(
+            """
+            package dev.gezgin.pos.b
+
+            import dev.gezgin.core.ResultRoute
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoForResult
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.StartDestination
+
+            data class Picked(val v: String)
+
+            @NavGraph
+            interface HomeGraph : Route {
+                data object Picker : HomeGraph, ResultRoute<Picked>
+            }
+
+            @FlowGraph
+            interface CheckoutFlow : Route {
+                @StartDestination
+                @GoForResult(HomeGraph.Picker::class)
+                data object Cart : CheckoutFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `positive - QuitAndGoTo from a non-result flow member to a normal route is allowed`() {
+        assertCompilesClean(
+            """
+            package dev.gezgin.pos.c
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.QuitAndGoTo
+            import dev.gezgin.core.annotation.StartDestination
+
+            @NavGraph
+            interface HomeGraph : Route {
+                data object Landing : HomeGraph
+            }
+
+            @FlowGraph
+            interface OnboardingFlow : Route {
+                @StartDestination
+                data object Welcome : OnboardingFlow
+
+                @QuitAndGoTo(HomeGraph.Landing::class)
+                data object Done : OnboardingFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `positive - GoTo from a ResultFlow member to its own start is allowed (E1 inside-exemption)`() {
+        assertCompilesClean(
+            """
+            package dev.gezgin.pos.d
+
+            import dev.gezgin.core.ResultFlow
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.StartDestination
+
+            data class Res(val v: String)
+
+            @FlowGraph
+            interface CheckoutFlow : Route, ResultFlow<Res> {
+                @StartDestination
+                data object Cart : CheckoutFlow
+
+                @GoTo(Cart::class)
+                data object Payment : CheckoutFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `positive - graph extending another annotated graph does not trip E5 on its routes`() {
+        assertCompilesClean(
+            """
+            package dev.gezgin.pos.e
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface AppGraph : Route
+
+            @NavGraph
+            interface OrderGraph : AppGraph {
+                data object Orders : OrderGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `positive - FlowGraph start with only nullable ctor params is allowed (G1)`() {
+        assertCompilesClean(
+            """
+            package dev.gezgin.pos.f
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.StartDestination
+
+            @FlowGraph
+            interface CheckoutFlow : Route {
+                @StartDestination
+                data class Cart(val promoCode: String?) : CheckoutFlow
+            }
+            """.trimIndent(),
+        )
     }
 
     // endregion

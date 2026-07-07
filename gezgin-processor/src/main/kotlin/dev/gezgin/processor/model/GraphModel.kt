@@ -44,10 +44,11 @@ data class RouteModel(
     val edges: List<EdgeModel>,
     val backEdges: List<BackEdgeModel>,
     /**
-     * Every `@NavGraph`/`@FlowGraph`-annotated interface this route implements (transitively, via
-     * `getAllSuperTypes`), including [graphFq] itself. Task 2.3 (E5) needs this beyond the nesting
-     * relationship captured by [graphFq]: a route may additionally implement a *second*,
-     * non-enclosing graph interface, which is itself the violation.
+     * Every `@NavGraph`/`@FlowGraph`-annotated interface this route implements DIRECTLY (declared
+     * supertypes only — deliberately non-transitive so `OrderGraph : AppGraph`-style graph
+     * inheritance doesn't leak into routes), including [graphFq] itself. Task 2.3 (E5) needs this
+     * beyond the nesting relationship captured by [graphFq]: a route may additionally implement a
+     * *second*, non-enclosing graph interface, which is itself the violation.
      */
     val implementedGraphFqs: List<String>,
 )

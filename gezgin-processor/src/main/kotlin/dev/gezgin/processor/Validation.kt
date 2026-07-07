@@ -50,7 +50,11 @@ class GezginValidator(
 
     // region E1/E2 — ResultFlow entry must be via @GoForResult
 
-    /** @GoTo/@ReplaceTo/@QuitAndGoTo may never enter a ResultFlow — only @GoForResult may. */
+    /**
+     * @GoTo/@ReplaceTo/@QuitAndGoTo may never *enter* a ResultFlow from outside — only @GoForResult
+     * may. A source already inside the target flow is exempt (spec §8.1 "İçeride: serbest @GoTo" —
+     * entry rules constrain crossing the boundary, not movement within it).
+     */
     private fun checkE1(route: RouteModel) {
         route.edges
             .filter { it.kind == EdgeKind.GO_TO || it.kind == EdgeKind.REPLACE_TO || it.kind == EdgeKind.QUIT_AND_GO_TO }
@@ -58,8 +62,13 @@ class GezginValidator(
                 val target = edge.targetFq
                 val targetAsGraph = graphsByFq[target]
                 val parent = parentGraphOf(target)
-                val entersResultFlow = (targetAsGraph != null && targetAsGraph.isResultFlow) ||
-                    (parent != null && parent.isResultFlow && parent.startFq == target)
+                val entersResultFlow = (
+                    targetAsGraph != null && targetAsGraph.isResultFlow &&
+                        targetAsGraph.fqName !in route.flowChainFq
+                    ) || (
+                    parent != null && parent.isResultFlow && parent.startFq == target &&
+                        parent.fqName !in route.flowChainFq
+                    )
                 if (entersResultFlow) {
                     error(
                         "E1",
@@ -93,11 +102,13 @@ class GezginValidator(
     // region E3/E4 — flow-membership boundaries
 
     /**
-     * Any edge target that is a direct (non-start) member of a flow the source isn't itself part of
-     * is unreachable except through that flow's own entry point.
+     * Any forward-edge target that is a direct (non-start) member of a flow the source isn't itself
+     * part of is unreachable except through that flow's own entry point. Back-edges (`@BackTo`) are
+     * out of scope per spec §4.2: forward edges define topology, back edges walk existing history
+     * (a `@BackTo` whose target isn't on the back stack is a runtime no-op, not a topology error).
      */
     private fun checkE3(route: RouteModel) {
-        (route.edges.map { it.targetFq } + route.backEdges.mapNotNull { it.targetFq }).forEach { target ->
+        route.edges.map { it.targetFq }.forEach { target ->
             val parent = parentGraphOf(target) ?: return@forEach
             val isDirectNonStartMember = target != parent.startFq
             if (parent.isFlow && isDirectNonStartMember && parent.fqName !in route.flowChainFq) {
@@ -111,7 +122,12 @@ class GezginValidator(
         }
     }
 
-    /** `@ReplaceTo.clearUpTo` on a flow member must clear up to something within that same innermost flow. */
+    /**
+     * `@ReplaceTo.clearUpTo` on a flow member must clear up to something within that same innermost
+     * flow — TRANSITIVELY: a route nested in a `@NavGraph` (or sub-flow) inside the flow counts as a
+     * member too (its `flowChainFq` contains the source's innermost flow). Non-route `clearUpTo`
+     * targets (e.g. a graph interface) fall back to the direct `memberFq` check.
+     */
     private fun checkE4(route: RouteModel) {
         val innermostFlowFq = route.flowChainFq.lastOrNull() ?: return
         val innermostFlow = graphsByFq[innermostFlowFq] ?: return
@@ -120,7 +136,13 @@ class GezginValidator(
             .filter { it.kind == EdgeKind.REPLACE_TO && it.clearUpToFq != null }
             .forEach { edge ->
                 val clearUpTo = edge.clearUpToFq!!
-                if (clearUpTo !in innermostFlow.memberFq) {
+                val clearUpToRoute = routesByFq[clearUpTo]
+                val isMember = if (clearUpToRoute != null) {
+                    innermostFlowFq in clearUpToRoute.flowChainFq
+                } else {
+                    clearUpTo in innermostFlow.memberFq
+                }
+                if (!isMember) {
                     error(
                         "E4",
                         "@ReplaceTo.clearUpTo=${simple(clearUpTo)} kaynağın (${route.simpleName}) en " +
@@ -151,11 +173,15 @@ class GezginValidator(
 
     // region G1 — FlowGraph start must be parameterless-constructible
 
-    /** A `@FlowGraph`'s start must be constructible with no arguments (object, or all-defaulted ctor params). */
+    /**
+     * A `@FlowGraph`'s start must be constructible with no arguments: an object, or every ctor
+     * param either defaulted or nullable (spec-literal — codegen, Task 2.5, passes `null` to
+     * nullable params without defaults when constructing the start).
+     */
     private fun checkG1(graph: GraphModelNode) {
         if (!graph.isFlow) return
         val start = graph.startFq?.let { routesByFq[it] } ?: return
-        val requiredParams = start.ctorParams.filter { !it.hasDefault }
+        val requiredParams = start.ctorParams.filter { !it.hasDefault && !it.isNullable }
         if (requiredParams.isNotEmpty()) {
             error(
                 "G1",

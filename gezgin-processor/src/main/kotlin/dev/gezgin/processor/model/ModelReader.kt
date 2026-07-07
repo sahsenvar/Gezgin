@@ -117,10 +117,16 @@ class ModelReader(
         )
     }
 
-    /** Every `@NavGraph`/`@FlowGraph`-annotated interface [decl] implements, transitively. */
+    /**
+     * Every `@NavGraph`/`@FlowGraph`-annotated interface [decl] implements DIRECTLY (declared
+     * supertypes only, no transitive walk). Deliberately non-transitive for E5: a graph interface
+     * extending another annotated graph (`OrderGraph : AppGraph`, spec §3.1) makes each of its
+     * routes transitively implement the parent graph too — that inheritance must not read as the
+     * route "implementing a second graph".
+     */
     private fun implementedGraphFqsOf(decl: KSClassDeclaration): List<String> =
-        decl.getAllSuperTypes()
-            .map { it.declaration }
+        decl.superTypes
+            .map { it.resolve().declaration }
             .filterIsInstance<KSClassDeclaration>()
             .filter { it.hasAnnotation(NAV_GRAPH_FQ) || it.hasAnnotation(FLOW_GRAPH_FQ) }
             .mapNotNull { it.qualifiedName?.asString() }
