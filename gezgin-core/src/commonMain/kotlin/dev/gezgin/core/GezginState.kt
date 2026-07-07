@@ -1,5 +1,4 @@
 package dev.gezgin.core
-import kotlin.reflect.KClass
 
 class GezginState(initial: List<GezginKey>, internal var nextId: Long, private val topology: GezginTopology) {
     private val _stack = initial.toMutableList()

@@ -36,4 +36,23 @@ class GezginStatePushTest {
         val s = state(Feed); s.push(Cart, enterFlow = true)
         assertTrue(s.push(Product("x"))!!.flowPath.isEmpty())             // dış hedef miras almaz
     }
+    @Test fun nestedFlowEntryPreservesAncestorAndMintsOwnSegment() {
+        val s = GezginState(emptyList(), 0, testTopology)
+        s.push(Feed)
+        val cart = s.push(Cart, enterFlow = true)!!
+        val otp = s.push(Otp, enterFlow = true)!!                    // nested giriş
+        assertEquals(2, otp.flowPath.size)
+        assertEquals(cart.flowPath.single(), otp.flowPath.first())   // ata instance korunur
+        assertNotEquals(otp.flowPath[0], otp.flowPath[1])
+    }
+    @Test fun siblingNestedPushDoesNotInheritForeignInstanceId() {
+        val s = GezginState(emptyList(), 0, testTopology)
+        s.push(Feed)
+        s.push(Cart, enterFlow = true)
+        val otp = s.push(Otp, enterFlow = true)!!                    // [ckt, payAuth]
+        val gift = s.push(GiftPick)!!                                // raw-seviye: kardeş nested üyesine direkt push
+        assertEquals(2, gift.flowPath.size)
+        assertEquals(otp.flowPath.first(), gift.flowPath.first())    // ortak ata korunur
+        assertNotEquals(otp.flowPath[1], gift.flowPath[1])           // yabancı instance MİRAS ALINMAZ
+    }
 }
