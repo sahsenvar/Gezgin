@@ -45,10 +45,14 @@ class GezginState(initial: List<GezginKey>, internal var nextId: Long, private v
     fun currentFlowId(): Long? = _stack.lastOrNull()?.flowPath?.lastOrNull()
 
     fun quitFlow(flowInstanceId: Long): List<GezginKey>? {
+        val top = _stack.lastOrNull() ?: return null
+        if (flowInstanceId !in top.flowPath) return null   // quit yalnız içinde bulunulan flow için — orta-stack pop yok
         val first = _stack.indexOfFirst { flowInstanceId in it.flowPath }
-        if (first <= 0) return null                       // dipte (veya yok) → root guard: onRootBack
+        if (first <= 0) return null                        // dipte (root flow) → üst katman onRootBack'e çevirir
+        // Invariant (push'un miras kuralından): id'yi taşıyan entry'ler daima bitişik bir blok oluşturur
+        // ve top-guard sayesinde bu blok stack'in tepesinde biter → filter+removeAll = tepeden atomik pop.
         val removed = _stack.filter { flowInstanceId in it.flowPath }
-        _stack.removeAll { flowInstanceId in it.flowPath }  // atomik: tek mutasyon geçişi
+        _stack.removeAll { flowInstanceId in it.flowPath }
         return removed
     }
 }

@@ -70,4 +70,13 @@ class GezginStateQuitFlowTest {
         assertEquals(beforeSize, s.stack.size)
         assertEquals(Payment, s.stack.last().route)
     }
+
+    @Test fun quitFlowWhenTopIsOutsideFlow_returnsNull_noMutation() {
+        val s = GezginState(emptyList(), 0, testTopology)
+        s.push(Feed)
+        val cart = s.push(Cart, enterFlow = true)!!
+        s.push(Product("ext"))                             // round-trip dış hedef: boş flowPath, flow'un ÜSTÜNDE
+        assertNull(s.quitFlow(cart.flowPath.single()))     // orta-stack pop YOK
+        assertEquals(listOf<Route>(Feed, Cart, Product("ext")), s.stack.map { it.route })
+    }
 }
