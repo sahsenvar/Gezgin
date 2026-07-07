@@ -113,8 +113,19 @@ class ModelReader(
             resultTypeFq = resultTypeArgOf(routeDecl, RESULT_ROUTE_FQ),
             edges = edgesOf(routeDecl),
             backEdges = backEdgesOf(routeDecl),
+            implementedGraphFqs = implementedGraphFqsOf(routeDecl),
         )
     }
+
+    /** Every `@NavGraph`/`@FlowGraph`-annotated interface [decl] implements, transitively. */
+    private fun implementedGraphFqsOf(decl: KSClassDeclaration): List<String> =
+        decl.getAllSuperTypes()
+            .map { it.declaration }
+            .filterIsInstance<KSClassDeclaration>()
+            .filter { it.hasAnnotation(NAV_GRAPH_FQ) || it.hasAnnotation(FLOW_GRAPH_FQ) }
+            .mapNotNull { it.qualifiedName?.asString() }
+            .distinct()
+            .toList()
 
     private fun ctorParamsOf(decl: KSClassDeclaration): List<ParamModel> =
         decl.primaryConstructor?.parameters.orEmpty().map { param ->

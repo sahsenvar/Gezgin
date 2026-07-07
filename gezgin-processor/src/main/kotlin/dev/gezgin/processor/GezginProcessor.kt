@@ -9,9 +9,11 @@ import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.dumpText
 
 /**
- * Currently only reads the semantic [dev.gezgin.processor.model.GraphModel] (Task 2.2) and, when
- * the test-only `gezgin.dumpModel=true` KSP option is set, writes it out as a deterministic text
- * file (`GezginModelDump.txt`) for behavioral assertions. Later tasks add validation and codegen.
+ * Reads the semantic [dev.gezgin.processor.model.GraphModel] (Task 2.2), validates it against the
+ * Global Constraints rule list via [GezginValidator] (Task 2.3, KSP errors fail the compilation),
+ * and, when the test-only `gezgin.dumpModel=true` KSP option is set, writes the model out as a
+ * deterministic text file (`GezginModelDump.txt`) for behavioral assertions. A later task adds
+ * codegen.
  */
 class GezginProcessor(
     private val environment: SymbolProcessorEnvironment,
@@ -29,6 +31,8 @@ class GezginProcessor(
             environment.logger.warn("Gezgin processor alive")
 
             val model = ModelReader(resolver, environment.logger).read()
+
+            GezginValidator(model, environment.logger).validate()
 
             if (environment.options["gezgin.dumpModel"].toBoolean()) {
                 environment.codeGenerator.createNewFile(
