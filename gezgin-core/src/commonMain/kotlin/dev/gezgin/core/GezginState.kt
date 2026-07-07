@@ -30,6 +30,6 @@ class GezginState(initial: List<GezginKey>, internal var nextId: Long, private v
             if (inclusive) i else i + 1
         }
         while (_stack.size > cutFrom) _stack.removeAt(_stack.lastIndex)
-        return push(route, enterFlow = enterFlow, singleTop = false)!!
+        return push(route, enterFlow = enterFlow, singleTop = false)!!   // !! güvenli: singleTop=false → push null dönemez
     }
 }
