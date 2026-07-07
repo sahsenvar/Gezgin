@@ -41,4 +41,14 @@ class GezginState(initial: List<GezginKey>, internal var nextId: Long, private v
         while (_stack.size > keepUntil) _stack.removeAt(_stack.lastIndex)
         return removed
     }
+
+    fun currentFlowId(): Long? = _stack.lastOrNull()?.flowPath?.lastOrNull()
+
+    fun quitFlow(flowInstanceId: Long): List<GezginKey>? {
+        val first = _stack.indexOfFirst { flowInstanceId in it.flowPath }
+        if (first <= 0) return null                       // dipte (veya yok) → root guard: onRootBack
+        val removed = _stack.filter { flowInstanceId in it.flowPath }
+        _stack.removeAll { flowInstanceId in it.flowPath }  // atomik: tek mutasyon geçişi
+        return removed
+    }
 }
