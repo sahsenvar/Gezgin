@@ -80,7 +80,13 @@ class GezginDisplayTest {
     }
 
     @Test
-    fun `d - NavDisplay onBack navigator back'e bagli (kokte onRootBack tetiklenir)`() = runComposeUiTest {
+    fun `d - programatik navigator back kokte onRootBack tetikler (render altinda)`() = runComposeUiTest {
+        // Task 3.3 (4c) devri: eski ad `NavDisplay onBack navigator back'e bagli` YANLIŞTI — bu test
+        // NavDisplay'in `onBack`'ini HİÇ çağırmaz, doğrudan `navigator.back()`'i (programatik) çağırır.
+        // NavDisplay.onBack wiring'inin (`gezginOnBack`) davranışı artık [GezginOnBackTest]'te (saf-JVM,
+        // @NoBack guard dahil) pinlenir. Bu test yalnız: canlı bir NavDisplay render'ı altında kökte
+        // `navigator.back()` çağrısı `onRootBack`'i tetikler (regresyon guard'ı). Sistem seviyesinde geri
+        // jesti (desktop Esc → NavigationEvent) JB alpha05 desktop'ta güvenilir tetiklenemez (task-3.2).
         var rootBackCount = 0
         val nav = navigator(onRootBack = { rootBackCount++ })
         setContent {
@@ -89,11 +95,6 @@ class GezginDisplayTest {
             }
         }
 
-        // Programatik pinleme: navigator.back() kökte onRootBack'i tetikler — bu, NavDisplay'in
-        // `onBack = { navigator.back() }` wiring'inin (GezginDisplay.kt) davranışsal kanıtı. Sistem
-        // seviyesinde bir geri jesti (desktop'ta Esc → NavigationEvent) NavDisplay'in kendi
-        // navigationevent/predictive-back altyapısına bağlıdır ve bu görev kapsamında (JB alpha05
-        // desktop) güvenilir biçimde tetiklenemedi — kapsam kaydırıldı (bkz. task-3.2-report.md).
         nav.back()
         waitForIdle()
 
