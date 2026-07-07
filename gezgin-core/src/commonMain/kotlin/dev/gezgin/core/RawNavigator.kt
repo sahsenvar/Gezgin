@@ -7,18 +7,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json
 
 /**
  * Raw facade over [GezginState] + [ResultBus] + [NavEvent] — the untyped integration layer
  * Faz 2 (codegen) and Faz 3 (display) wrap. Single-writer: all mutation happens through the
  * methods below, each of which keeps [backStack] and [events] in sync with the underlying state.
+ *
+ * [restored] — PD (process death) simülasyonu: non-null ise stack + nextId + pending result
+ * slot'ları [SavedState]'ten geri yüklenir, `start` PUSH EDİLMEZ (§1.10).
  */
 class RawNavigator(
     start: Route,
     private val topology: GezginTopology,
     internal val onRootBack: () -> Unit = {},
+    restored: SavedState? = null,
 ) {
-    private val state = GezginState(emptyList(), nextId = 0, topology = topology)
+    private val state =
+        if (restored != null) GezginState(restored.keys, restored.nextId, topology)
+        else GezginState(emptyList(), nextId = 0, topology = topology)
     private val bus = ResultBus()
 
     private val _backStack = MutableStateFlow<List<Route>>(emptyList())
@@ -33,9 +41,47 @@ class RawNavigator(
     val current: Route get() = state.stack.last().route
 
     init {
-        val enterFlow = topology.flowChain(start::class).isNotEmpty()
-        state.push(start, enterFlow = enterFlow, singleTop = false)
+        if (restored != null) {
+            bus.restore(restored.pendingSlots.map(::decodeSlot))
+        } else {
+            val enterFlow = topology.flowChain(start::class).isNotEmpty()
+            state.push(start, enterFlow = enterFlow, singleTop = false)
+        }
         refreshBackStack()
+    }
+
+    /** slot payload'ı topology.edges[edgeId].resultSerializer ile encode → PD-güvenli anlık görüntü. */
+    @Suppress("UNCHECKED_CAST")
+    fun save(json: Json): SavedState {
+        val pendingSlots = bus.slots.map { slot ->
+            when (val result = slot.result) {
+                null -> SavedSlot(slot.callerEntryId, slot.edgeId, slot.targetEntryId, payloadJson = null, canceled = false)
+                NavResult.Canceled -> SavedSlot(slot.callerEntryId, slot.edgeId, slot.targetEntryId, payloadJson = null, canceled = true)
+                is NavResult.Value<*> -> {
+                    val serializer = requireNotNull(topology.edges[slot.edgeId]?.resultSerializer) {
+                        "Edge '${slot.edgeId}' için resultSerializer yok — teslim edilmiş Value slotu serialize edilemez."
+                    } as KSerializer<Any?>
+                    val payload = json.encodeToString(serializer, result.value)
+                    SavedSlot(slot.callerEntryId, slot.edgeId, slot.targetEntryId, payloadJson = payload, canceled = false)
+                }
+            }
+        }
+        return SavedState(keys = state.stack, nextId = state.nextId, pendingSlots = pendingSlots)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun decodeSlot(saved: SavedSlot): ResultBus.Slot {
+        val result: NavResult<Any?>? = when {
+            saved.canceled -> NavResult.Canceled
+            saved.payloadJson != null -> {
+                val serializer = requireNotNull(topology.edges[saved.edgeId]?.resultSerializer) {
+                    "Edge '${saved.edgeId}' için resultSerializer yok — Value payload'ı decode edilemez."
+                } as KSerializer<Any?>
+                NavResult.Value(Json.decodeFromString(serializer, saved.payloadJson))
+            }
+            else -> null
+        }
+        return ResultBus.Slot(saved.callerEntryId, saved.edgeId, saved.targetEntryId, result)
     }
 
     // ---- public ops ----
