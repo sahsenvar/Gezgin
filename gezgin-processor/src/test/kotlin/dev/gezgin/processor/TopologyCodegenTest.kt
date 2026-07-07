@@ -14,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
@@ -54,6 +55,13 @@ class TopologyCodegenTest {
             kspArgs = mapOf("gezgin.emitSerializers" to "false"),
         )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        // Pins the emitSerializers=false direction of the gate: the serializers file must NOT be
+        // generated (the =true direction is pinned by the golden-text test's assertNotNull below).
+        assertNull(
+            result.generatedSourceFor("GezginSerializers.kt"),
+            "gezgin.emitSerializers=false must suppress GezginSerializers.kt",
+        )
 
         val loader = result.classLoader
         val generatedFacade = loader.loadClass("dev.gezgin.shop.GezginGeneratedKt")
@@ -105,8 +113,10 @@ class TopologyCodegenTest {
         )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
+        // Pins the emitSerializers=true (default-equivalent) direction of the gate: the
+        // serializers file MUST be generated (=false direction is pinned by the live-load test).
         val serializersSource = result.generatedSourceFor("GezginSerializers.kt")
-        assertNotNull(serializersSource, "expected a generated GezginSerializers.kt")
+        assertNotNull(serializersSource, "gezgin.emitSerializers=true must generate GezginSerializers.kt")
         val text = serializersSource.readText()
 
         assertTrue("polymorphic(Route::class)" in text, text)
