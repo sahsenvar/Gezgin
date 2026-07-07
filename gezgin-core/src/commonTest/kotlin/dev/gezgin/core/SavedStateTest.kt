@@ -63,4 +63,18 @@ class SavedStateTest {
         val r = n2.results<OrderId>("Catalog→CheckoutFlow").first()
         assertEquals(NavResult.Canceled, r)
     }
+
+    // --- Review fix: encode/decode symmetry — açık polimorfik payload restore'da ctor json'ıyla decode edilir ---
+
+    @Test fun polymorphicResultSurvivesRestore_withModuleAwareJson() = runTest {
+        val n1 = RawNavigator(Feed, testTopology, json = json)
+        n1.launchForResult("Feed→AddressPick", Product("pick"))
+        n1.backWithResult(ChosenAddress("a1"))                          // Value(Pick) — açık polimorfik payload
+        val saved = json.encodeToString(SavedState.serializer(), n1.save(json))
+
+        val n2 = RawNavigator(Feed, testTopology, json = json,
+            restored = json.decodeFromString(SavedState.serializer(), saved))
+        val r = n2.results<Pick>("Feed→AddressPick").first()
+        assertEquals(NavResult.Value(ChosenAddress("a1")), r)
+    }
 }

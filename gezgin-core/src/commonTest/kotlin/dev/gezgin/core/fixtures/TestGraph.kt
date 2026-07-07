@@ -18,11 +18,15 @@ import kotlinx.serialization.modules.subclass
 @Serializable data object Otp : ShopGraph       // PayAuthFlow üyesi (nested: Checkout > PayAuth)
 @Serializable data object GiftPick : ShopGraph  // GiftFlow üyesi   (nested: Checkout > Gift)
 
+interface Pick                                                     // AÇIK polimorfizm — module ŞART
+@Serializable data class ChosenAddress(val id: String) : Pick
+
 val testSerializersModule = SerializersModule {
     polymorphic(Route::class) {
         subclass(Feed::class); subclass(Catalog::class); subclass(Product::class)
         subclass(Cart::class); subclass(Payment::class)
     }
+    polymorphic(Pick::class) { subclass(ChosenAddress::class) }
 }
 
 val checkoutFlow = dev.gezgin.core.FlowType("CheckoutFlow", isResultFlow = true)
@@ -39,5 +43,8 @@ val testTopology = dev.gezgin.core.GezginTopology(
         "PayAuthFlow" to Otp::class,
         "GiftFlow" to GiftPick::class,
     ),
-    edges = mapOf("Catalog→CheckoutFlow" to dev.gezgin.core.EdgeSpec("Catalog→CheckoutFlow", OrderId.serializer())),
+    edges = mapOf(
+        "Catalog→CheckoutFlow" to dev.gezgin.core.EdgeSpec("Catalog→CheckoutFlow", OrderId.serializer()),
+        "Feed→AddressPick" to dev.gezgin.core.EdgeSpec("Feed→AddressPick", kotlinx.serialization.PolymorphicSerializer(Pick::class)),
+    ),
 )

@@ -17,11 +17,14 @@ import kotlinx.serialization.json.Json
  *
  * [restored] — PD (process death) simülasyonu: non-null ise stack + nextId + pending result
  * slot'ları [SavedState]'ten geri yüklenir, `start` PUSH EDİLMEZ (§1.10).
+ * [json] — restore'da slot payload decode'u için (SerializersModule gerektiren result tipleri —
+ * açık polimorfizm/@Contextual — encode'daki modülle SİMETRİK decode edilsin diye).
  */
 class RawNavigator(
     start: Route,
     private val topology: GezginTopology,
     internal val onRootBack: () -> Unit = {},
+    private val json: Json = Json,
     restored: SavedState? = null,
 ) {
     private val state =
@@ -77,7 +80,7 @@ class RawNavigator(
                 val serializer = requireNotNull(topology.edges[saved.edgeId]?.resultSerializer) {
                     "Edge '${saved.edgeId}' için resultSerializer yok — Value payload'ı decode edilemez."
                 } as KSerializer<Any?>
-                NavResult.Value(Json.decodeFromString(serializer, saved.payloadJson))
+                NavResult.Value(json.decodeFromString(serializer, saved.payloadJson))
             }
             else -> null
         }
@@ -185,7 +188,10 @@ class RawNavigator(
         _events.tryEmit(NavEvent.Pushed(pushed.route))
     }
 
-    /** caller = ÇAĞRI ANINDAKİ top entry id. */
+    /**
+     * caller = ÇAĞRI ANINDAKİ top entry id. Restore sonrası geç re-attach bu yüzden ancak
+     * orijinal caller entry mevcut top iken çalışır (call-time-top sözleşmesi).
+     */
     fun <T> results(edgeId: String): Flow<NavResult<T>> {
         val caller = state.stack.last().id
         return bus.results(caller, edgeId)
