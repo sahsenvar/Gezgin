@@ -97,8 +97,10 @@ val SHOP_SOURCE = """
         @ReplaceTo(Product::class, clearUpTo = Feed::class, inclusive = false, name = "viaFeed")
         data object Promo : HomeGraph
 
-        // ResultRoute via intermediate base class + nullable, defaulted ctor param.
-        class AddressPicker(val hint: String? = null) : BasePicker(), HomeGraph
+        // ResultRoute via intermediate base class + nullable, defaulted ctor param + a GENERIC
+        // ctor param (`List<String>`) — pins that navigator codegen forwards the full parameterized
+        // type (`List<String>`), not its raw erasure (`List`), so the generated method compiles.
+        class AddressPicker(val hint: String? = null, val tags: List<String> = emptyList()) : BasePicker(), HomeGraph
     }
 
     @FlowGraph

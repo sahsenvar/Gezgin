@@ -31,15 +31,16 @@ val RUNNER_SOURCE = """
 
     /**
      * Screen-mode @GoForResult round-trip through the NAMED (name = "pickAddress") edge:
-     * Catalog → launchPickAddress(hint) pushes AddressPicker (nullable ctor param forwarded),
-     * the generated AddressPickerNavigator.backWithResult(OrderId(...)) delivers + pops, and the
-     * value is read back through the generated pickAddressResults property — all three members of
-     * the named-@GoForResult triple compile and run.
+     * Catalog → launchPickAddress(hint, tags) pushes AddressPicker (nullable + GENERIC `List<String>`
+     * ctor params forwarded — the generic param proves navigator codegen emits `List<String>`, not a
+     * raw `List`), the generated AddressPickerNavigator.backWithResult(OrderId(...)) delivers + pops,
+     * and the value is read back through the generated pickAddressResults property — all three
+     * members of the named-@GoForResult triple compile and run.
      */
     fun pickAddressScenario(raw: RawNavigator): Any? {
         raw.navigate(HomeGraph.Catalog, singleTop = false)  // raw escape hatch: get Catalog on top
         val catalogNav = raw.catalogNavigator(raw.currentEntryId)
-        catalogNav.launchPickAddress("work")
+        catalogNav.launchPickAddress("work", listOf("home", "billing"))
         val pickerNav = raw.addressPickerNavigator(raw.currentEntryId)
         pickerNav.backWithResult(OrderId("addr-1"))
         return runBlocking { catalogNav.pickAddressResults.first() }

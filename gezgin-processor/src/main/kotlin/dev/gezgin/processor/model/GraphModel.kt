@@ -1,9 +1,20 @@
 package dev.gezgin.processor.model
 
-/** A single constructor parameter of a route's primary constructor. */
+import com.squareup.kotlinpoet.TypeName
+
+/**
+ * A single constructor parameter of a route's primary constructor.
+ *
+ * [typeFq] is the parameter type's declaration fqName only (no type arguments) — kept for the
+ * `gezgin.dumpModel` text dump and back-compat. [typeName] is the FULL KotlinPoet type including
+ * generics/nullability (e.g. `List<String>`, `String?`), which navigator codegen forwards verbatim
+ * so a generic param compiles instead of degrading to its raw erasure. Carrying a KotlinPoet type
+ * makes this model processor-internal (no longer pure data) — an accepted trade for correctness.
+ */
 data class ParamModel(
     val name: String,
     val typeFq: String,
+    val typeName: TypeName,
     val isNullable: Boolean,
     val hasDefault: Boolean,
 )

@@ -69,7 +69,7 @@ class NavigatorCodegenTest {
         assertEquals(1, raw.backStack.value.size, "expected CheckoutFlow torn down back to [Feed]")
 
         val delivered: NavResult<Any?> = runBlocking {
-            raw.results<Any?>(feedEntryId, "Feed→CheckoutFlow").first()
+            raw.results<Any?>(feedEntryId, "dev.gezgin.shop.HomeGraph.Feed→dev.gezgin.shop.CheckoutFlow").first()
         }
         assertTrue(delivered is NavResult.Value<*>, "expected a delivered Value, got $delivered")
         val orderId = (delivered as NavResult.Value<*>).value
@@ -162,7 +162,10 @@ class NavigatorCodegenTest {
         assertTrue("fun launchPickAddress(" in text, text)
         assertTrue("val pickAddressResults:" in text, text)
         assertTrue("fun goToPickAddressForResult(" in text, text)
-        assertTrue("\"Catalog→AddressPicker#pickAddress\"" in text, text)
+        assertTrue(
+            "\"dev.gezgin.shop.HomeGraph.Catalog→dev.gezgin.shop.HomeGraph.AddressPicker#pickAddress\"" in text,
+            text,
+        )
     }
 
     @Test

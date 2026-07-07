@@ -9,7 +9,6 @@ import com.squareup.kotlinpoet.LONG
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
-import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import dev.gezgin.processor.model.BackEdgeKind
 import dev.gezgin.processor.model.BackEdgeModel
@@ -17,7 +16,6 @@ import dev.gezgin.processor.model.EdgeKind
 import dev.gezgin.processor.model.EdgeModel
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
-import dev.gezgin.processor.model.ParamModel
 import dev.gezgin.processor.model.RouteModel
 
 private const val CORE_PKG = "dev.gezgin.core"
@@ -370,10 +368,7 @@ object NavigatorCodegen {
     // region Shared helpers
 
     private fun paramSpecs(route: RouteModel): List<ParameterSpec> =
-        route.ctorParams.map { p -> ParameterSpec.builder(p.name, typeNameOf(p)).build() }
-
-    private fun typeNameOf(p: ParamModel): TypeName =
-        ClassName.bestGuess(p.typeFq).copy(nullable = p.isNullable)
+        route.ctorParams.map { p -> ParameterSpec.builder(p.name, p.typeName).build() }
 
     /** Every ctor param becomes a required navigator-method param — positional forwarding is safe. */
     private fun constructTargetCall(target: RouteModel): CodeBlock {

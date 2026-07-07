@@ -4,11 +4,14 @@ import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import dev.gezgin.processor.CompileHarness.compileGezgin
 import dev.gezgin.processor.CompileHarness.findGeneratedResource
+import dev.gezgin.processor.CompileHarness.generatedSourceFor
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
@@ -96,7 +99,7 @@ class ModelReaderTest {
                     "chain=- start=false noBack=false resultType=- params=-",
                 "route dev.gezgin.shop.HomeGraph.AddressPicker graph=dev.gezgin.shop.HomeGraph " +
                     "chain=- start=false noBack=false resultType=dev.gezgin.shop.OrderId " +
-                    "params=hint:kotlin.String?=",
+                    "params=hint:kotlin.String?=,tags:kotlin.collections.List=",
                 "route dev.gezgin.shop.HomeGraph.Catalog graph=dev.gezgin.shop.HomeGraph " +
                     "chain=- start=false noBack=false resultType=- params=-",
                 "route dev.gezgin.shop.HomeGraph.Deals graph=dev.gezgin.shop.HomeGraph " +
@@ -189,10 +192,10 @@ class ModelReaderTest {
             shopDump,
             "route dev.gezgin.shop.HomeGraph.AddressPicker graph=dev.gezgin.shop.HomeGraph " +
                 "chain=- start=false noBack=false resultType=dev.gezgin.shop.OrderId " +
-                "params=hint:kotlin.String?=",
+                "params=hint:kotlin.String?=,tags:kotlin.collections.List=",
             "AddressPicker implements ResultRoute<OrderId> only via BasePicker; its resultType " +
                 "must still resolve to OrderId and its nullable, defaulted ctor param must dump " +
-                "as hint:kotlin.String?=",
+                "as hint:kotlin.String?= (and the generic tags param as kotlin.collections.List=)",
         )
     }
 
@@ -214,6 +217,47 @@ class ModelReaderTest {
                 "members=dev.gezgin.shop.CheckoutFlow.CheckoutPages.GiftFlow",
             "CheckoutPages' parentFlow must be the enclosing CheckoutFlow",
         )
+    }
+
+    @Test
+    fun `reading rule - a nested abstract class is not a route (absent from routes and serializers)`() {
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "AbstractSource.kt",
+                """
+                package dev.gezgin.abstractroute
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                interface HomeGraph : Route {
+                    // Intermediate abstract base nested in the graph — NOT a navigable destination,
+                    // so it must not become a route nor a polymorphic `subclass()` registration.
+                    abstract class SharedBase : HomeGraph
+
+                    data object Feed : HomeGraph
+                }
+                """.trimIndent(),
+            ),
+            kspArgs = mapOf("gezgin.dumpModel" to "true", "gezgin.emitSerializers" to "true"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val routeLines = findGeneratedResource("GezginModelDump.txt")!!.readText().lines()
+            .filter { it.startsWith("route ") }
+        assertFalse(
+            routeLines.any { "SharedBase" in it },
+            "abstract nested class must not be read as a route: $routeLines",
+        )
+        assertTrue(
+            routeLines.any { "route dev.gezgin.abstractroute.HomeGraph.Feed" in it },
+            "the concrete Feed route must still be present: $routeLines",
+        )
+
+        val serializers = result.generatedSourceFor("GezginSerializers.kt")!!.readText()
+        assertFalse("SharedBase" in serializers, serializers)
+        assertTrue("subclass(HomeGraph.Feed::class)" in serializers, serializers)
     }
 
     // endregion

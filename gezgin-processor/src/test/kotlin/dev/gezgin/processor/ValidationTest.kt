@@ -628,4 +628,182 @@ class ValidationTest {
     }
 
     // endregion
+
+    // region E6 — forward-edge/@BackTo targets must resolve to a route or @FlowGraph
+
+    @Test
+    fun `E6 - GoTo into a NavGraph (which has no start) is rejected`() {
+        assertViolates(
+            "E6",
+            """
+            package dev.gezgin.e6navgraph
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @GoTo(OtherGraph::class)
+                data object Feed : HomeGraph
+            }
+
+            @NavGraph
+            interface OtherGraph : Route {
+                data object Landing : OtherGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `E6 - GoTo to a Route class outside every graph is rejected`() {
+        assertViolates(
+            "E6",
+            """
+            package dev.gezgin.e6external
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            // A Route subtype (so the annotation type-checks) but NOT nested in any graph — the
+            // model has no such route, so codegen could never resolve it.
+            data object Orphan : Route
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @GoTo(Orphan::class)
+                data object Feed : HomeGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `E6 - BackTo targeting a graph (not a route) is rejected`() {
+        assertViolates(
+            "E6",
+            """
+            package dev.gezgin.e6backto
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BackTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @BackTo(OtherGraph::class)
+                data object Feed : HomeGraph
+            }
+
+            @NavGraph
+            interface OtherGraph : Route {
+                data object Landing : OtherGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
+    // endregion
+
+    // region N10 — generated navigator name collisions
+
+    @Test
+    fun `N10 - two routes collapsing to the same navigator class name are rejected`() {
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10class
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface AGraph : Route {
+                @GoTo(AFoo::class)
+                data object Detail : AGraph
+
+                data object AFoo : AGraph
+            }
+
+            @NavGraph
+            interface BGraph : Route {
+                @GoTo(BFoo::class)
+                data object Detail : BGraph
+
+                data object BFoo : BGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `N10 - two edges producing the same member name (Detail + DetailRoute) are rejected`() {
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10member
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface HomeGraph : Route {
+                // goToDetail (from Detail) and goToDetail (from DetailRoute, 'Route' stripped) clash.
+                @GoTo(Detail::class)
+                @GoTo(DetailRoute::class)
+                data object Feed : HomeGraph
+
+                data object Detail : HomeGraph
+
+                data object DetailRoute : HomeGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
+    // endregion
+
+    // region PKG — generated code needs a single common target package
+
+    @Test
+    fun `PKG - routes split across unrelated top-level packages are rejected`() {
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "Alpha.kt",
+                """
+                package com.alpha
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                interface AGraph : Route {
+                    data object A : AGraph
+                }
+                """.trimIndent(),
+            ),
+            SourceFile.kotlin(
+                "Beta.kt",
+                """
+                package org.beta
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                interface BGraph : Route {
+                    data object B : BGraph
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        assertContains(result.messages, "[PKG]", message = result.messages)
+    }
+
+    // endregion
 }

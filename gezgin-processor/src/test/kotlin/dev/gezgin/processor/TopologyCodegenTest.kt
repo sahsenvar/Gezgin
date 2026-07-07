@@ -98,9 +98,9 @@ class TopologyCodegenTest {
         assertEquals(otp.java, topology.startOf("dev.gezgin.shop.CheckoutFlow.PayAuthFlow").java)
         assertEquals(giftPick.java, topology.startOf("dev.gezgin.shop.CheckoutFlow.CheckoutPages.GiftFlow").java)
 
-        val feedToCheckoutFlow = topology.edges["Feed→CheckoutFlow"]
+        val feedToCheckoutFlow = topology.edges["dev.gezgin.shop.HomeGraph.Feed→dev.gezgin.shop.CheckoutFlow"]
         assertNotNull(feedToCheckoutFlow, "expected a Feed→CheckoutFlow edge (Feed's @GoForResult(CheckoutFlow::class))")
-        assertEquals("Feed→CheckoutFlow", feedToCheckoutFlow.id)
+        assertEquals("dev.gezgin.shop.HomeGraph.Feed→dev.gezgin.shop.CheckoutFlow", feedToCheckoutFlow.id)
         // Presence only — never invoke the (test-stub) serializer.
         assertNotNull(feedToCheckoutFlow.resultSerializer)
     }

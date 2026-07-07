@@ -53,6 +53,17 @@ class GezginProcessor(
             // for (e.g. a @GoForResult edge with no resolvable result type, normally rejected by E2).
             if (validationOk && model.graphs.isNotEmpty()) {
                 val packageName = TopologyCodegen.targetPackage(model)
+                if (packageName.isEmpty()) {
+                    // All generated artifacts (topology, serializers, navigators, test accessors)
+                    // share ONE target package — the common prefix of every graph/route. When that
+                    // prefix is empty the nav sources sprawl across unrelated top-level packages and
+                    // there is no coherent home for the generated code; fail rather than emit into "".
+                    environment.logger.error(
+                        "[PKG] nav modülü route'ları ortak bir pakette olmalı — ortak paket öneki boş " +
+                            "(kaynaklar ayrışık top-level paketlere dağılmış)",
+                    )
+                    return emptyList()
+                }
 
                 TopologyCodegen.generateTopology(model, packageName)
                     .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)

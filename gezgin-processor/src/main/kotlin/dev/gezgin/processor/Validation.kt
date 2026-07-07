@@ -1,6 +1,7 @@
 package dev.gezgin.processor
 
 import com.google.devtools.ksp.processing.KSPLogger
+import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.model.BackEdgeKind
 import dev.gezgin.processor.model.EdgeKind
 import dev.gezgin.processor.model.EdgeModel
@@ -35,7 +36,9 @@ class GezginValidator(
             checkE3(route)
             checkE4(route)
             checkE5(route)
+            checkE6(route)
             checkN9(route)
+            checkN10Members(route)
             checkNB1(route)
             checkFX1(route)
             checkFX2(route)
@@ -45,6 +48,7 @@ class GezginValidator(
             checkR1(graph)
             checkSD1(graph)
         }
+        checkN10ClassNames()
         return ok
     }
 
@@ -165,6 +169,103 @@ class GezginValidator(
                 "${route.simpleName}, nested olduğu ${simple(route.graphFq)} dışında ikinci bir " +
                     "graph-arayüzü (${simple(second)}) implement ediyor — bir route yalnız kendi " +
                     "graph'ını implement edebilir",
+            )
+        }
+    }
+
+    // endregion
+
+    // region E6 — every forward-edge/@BackTo target must resolve to a real navigable
+
+    /**
+     * Every `@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo` target must be either a route in the
+     * model or a `@FlowGraph` (whose `@StartDestination` SD1 guarantees exists, so codegen can push
+     * it). A `@NavGraph` target has no start to navigate to, and a model-external/unresolved class
+     * is not navigable at all — both would make codegen crash (`getValue`/`requireNotNull`) with an
+     * ICE + half-written output, so they're rejected here first. `@BackTo`'s target must likewise be
+     * a real route in the model.
+     */
+    private fun checkE6(route: RouteModel) {
+        route.edges.forEach { edge ->
+            val target = edge.targetFq
+            val resolvable = target in routesByFq || graphsByFq[target]?.isFlow == true
+            if (!resolvable) {
+                error(
+                    "E6",
+                    "@${edge.kind.annotationName()} hedefi çözülemedi/geçersiz: $target " +
+                        "(kaynak: ${route.simpleName}) — hedef bir route ya da @FlowGraph olmalı",
+                )
+            }
+        }
+        route.backEdges
+            .filter { it.kind == BackEdgeKind.BACK_TO }
+            .forEach { backEdge ->
+                val target = backEdge.targetFq
+                if (target == null || target !in routesByFq) {
+                    error(
+                        "E6",
+                        "@BackTo hedefi çözülemedi/geçersiz: ${target ?: "?"} " +
+                            "(kaynak: ${route.simpleName}) — hedef model'de bir route olmalı",
+                    )
+                }
+            }
+    }
+
+    // endregion
+
+    // region N10 — generated navigator name collisions (class-level + member-level)
+
+    /**
+     * Two sources whose stripped simple name collapses to the same `X` both emit an `XNavigator`
+     * into the single generated package — the second silently overwrites the first. Only routes that
+     * actually earn a navigator (same predicate codegen uses) participate.
+     */
+    private fun checkN10ClassNames() {
+        model.routes
+            .filter { NavigatorCodegen.hasNavigator(it, graphsByFq) }
+            .groupBy { NavigatorCodegen.navigatorX(it.simpleName) }
+            .filterValues { it.size >= 2 }
+            .forEach { (x, routes) ->
+                error(
+                    "N10",
+                    "${x}Navigator birden çok kaynaktan üretiliyor (aynı pakete çıkacak sınıf adı " +
+                        "çakışması): ${routes.joinToString { it.fqName }}",
+                )
+            }
+    }
+
+    /**
+     * Within a single source, two edges whose derived method names coincide (e.g. `@GoTo(Detail)`
+     * and `@GoTo(DetailRoute)` both → `goToDetail`, or two `@GoForResult`s sharing a `name=` → the
+     * same `launchX`/`xResults`/`goToXForResult` triple) would emit duplicate members. The
+     * `@GoForResult` triple is keyed by its `launchX` member, since all three share the same `X`.
+     */
+    private fun checkN10Members(route: RouteModel) {
+        val byMember = linkedMapOf<String, MutableList<String>>()
+        fun record(member: String, targetFq: String) {
+            byMember.getOrPut(member) { mutableListOf() }.add(simple(targetFq))
+        }
+        route.edges.forEach { edge ->
+            val derived = strip(targetSimpleName(edge.targetFq))
+            when (edge.kind) {
+                EdgeKind.GO_TO -> record(edge.name.ifEmpty { "goTo$derived" }, edge.targetFq)
+                EdgeKind.REPLACE_TO -> record(edge.name.ifEmpty { "replaceTo$derived" }, edge.targetFq)
+                EdgeKind.QUIT_AND_GO_TO -> record(edge.name.ifEmpty { "quitAndGoTo$derived" }, edge.targetFq)
+                EdgeKind.GO_FOR_RESULT -> {
+                    val x = edge.name.ifEmpty { derived }.replaceFirstChar { it.uppercase() }
+                    record("launch$x", edge.targetFq)
+                }
+            }
+        }
+        route.backEdges
+            .filter { it.kind == BackEdgeKind.BACK_TO }
+            .forEach { backEdge -> backEdge.targetFq?.let { record("backTo" + strip(simple(it)), it) } }
+
+        byMember.filterValues { it.size >= 2 }.forEach { (member, targets) ->
+            error(
+                "N10",
+                "${route.simpleName} içinde iki ayrı edge aynı üye adını ($member) üretiyor — " +
+                    "çakışan hedefler: ${targets.joinToString()}",
             )
         }
     }
@@ -298,6 +399,13 @@ class GezginValidator(
     private fun parentGraphOf(fq: String): GraphModelNode? = model.graphs.firstOrNull { fq in it.memberFq }
 
     private fun simple(fq: String): String = fq.substringAfterLast('.')
+
+    /** A forward-edge target's simple name — the route's own name, or a graph's simple name. */
+    private fun targetSimpleName(targetFq: String): String =
+        routesByFq[targetFq]?.simpleName ?: simple(targetFq)
+
+    /** Route/Screen/Flow-suffix strip, byte-identical to the navigator codegen's `X` derivation. */
+    private fun strip(simpleName: String): String = NavigatorCodegen.navigatorX(simpleName)
 
     private fun EdgeKind.annotationName(): String = when (this) {
         EdgeKind.GO_TO -> "GoTo"

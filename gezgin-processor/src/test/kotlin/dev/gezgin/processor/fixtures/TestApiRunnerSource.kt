@@ -27,6 +27,8 @@ val TEST_API_RUNNER_SOURCE = """
         nav.fromCart().goToPayment()
         nav.fromPayment().quitWith(OrderId("o1"))
 
-        return runBlocking { nav.raw.results<Any?>(feedEntryId, "Feed→CheckoutFlow").first() }
+        return runBlocking {
+            nav.raw.results<Any?>(feedEntryId, "dev.gezgin.shop.HomeGraph.Feed→dev.gezgin.shop.CheckoutFlow").first()
+        }
     }
 """.trimIndent()

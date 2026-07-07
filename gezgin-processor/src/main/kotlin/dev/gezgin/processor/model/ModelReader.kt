@@ -8,7 +8,9 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.symbol.KSValueArgument
+import com.squareup.kotlinpoet.ksp.toTypeName
 
 private const val NAV_GRAPH_FQ = "dev.gezgin.core.annotation.NavGraph"
 private const val FLOW_GRAPH_FQ = "dev.gezgin.core.annotation.FlowGraph"
@@ -60,11 +62,24 @@ class ModelReader(
         return (navGraphs + flowGraphs).distinctBy { it.qualifiedName?.asString() }.toList()
     }
 
-    /** Declarations lexically nested directly inside [graphDecl] that are routes, not subgraphs. */
+    /**
+     * Declarations lexically nested directly inside [graphDecl] that are routes, not subgraphs.
+     * A route must be instantiable, so `object`s qualify but only NON-abstract, NON-sealed classes
+     * do — an abstract/sealed nested class is an intermediate type (e.g. a shared base), never a
+     * navigable destination, and must not leak into the route list (nor into the polymorphic
+     * serializers module as a `subclass()`).
+     */
     private fun routeDeclarationsOf(graphDecl: KSClassDeclaration): List<KSClassDeclaration> =
         graphDecl.declarations
             .filterIsInstance<KSClassDeclaration>()
-            .filter { it.classKind == ClassKind.CLASS || it.classKind == ClassKind.OBJECT }
+            .filter { decl ->
+                decl.classKind == ClassKind.OBJECT ||
+                    (
+                        decl.classKind == ClassKind.CLASS &&
+                            Modifier.ABSTRACT !in decl.modifiers &&
+                            Modifier.SEALED !in decl.modifiers
+                        )
+            }
             .filter { !it.hasAnnotation(NAV_GRAPH_FQ) && !it.hasAnnotation(FLOW_GRAPH_FQ) }
             .toList()
 
@@ -139,6 +154,7 @@ class ModelReader(
             ParamModel(
                 name = param.name?.asString().orEmpty(),
                 typeFq = resolved.declaration.qualifiedName?.asString() ?: resolved.toString(),
+                typeName = resolved.toTypeName(),
                 isNullable = resolved.isMarkedNullable,
                 hasDefault = param.hasDefault,
             )
