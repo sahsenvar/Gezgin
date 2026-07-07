@@ -40,15 +40,7 @@ class RawNavigatorTest {
         assertEquals(1, root); assertEquals(Feed, n.current)
     }
 
-    // Fix 5 sonrası: iki TOP-based launch farklı caller görür (ikincide top = Cart), guard'ı tetiklemez;
-    // idempotency artık (caller, edge) başınadır → caller'ı sabitle (açık overload). Bkz. explicitCallerGuardPreventsDoublePush.
-    @Test fun duplicateLaunchDoesNotDoublePush() {
-        val n = nav()
-        val caller = n.currentEntryId
-        n.launchForResult(caller, "Catalog→CheckoutFlow", Cart)
-        n.launchForResult(caller, "Catalog→CheckoutFlow", Cart)     // aynı caller/edge → idempotent
-        assertEquals(2, n.backStack.value.size)                     // [Feed, Cart] — tek push
-    }
+    // (idempotent launch guard: bkz. explicitCallerGuardPreventsDoublePush — dedupe (caller, edge) başınadır)
 
     // --- Additional discriminating tests ---
 
@@ -205,5 +197,23 @@ class RawNavigatorTest {
         assertEquals(listOf<Route>(Product("1")), ev.removed)
         assertEquals(listOf<Route>(Feed, Catalog), n.backStack.value)
         job.cancel()
+    }
+
+    // quitWith'in Value'su YALNIZ flow'un kendi entry slotuna gider; explicit OUT-OF-FLOW caller'lı
+    // (caller = Feed, target = Otp — flow ile birlikte kalkan) yabancı-tipli slot Canceled alır.
+    // Eski kod burada inner'a Value(OrderId) teslim ederdi → discriminator.
+    @Test fun quitWithDeliversValueOnlyToFlowEntrySlot_othersCanceled() = runTest {
+        val n = nav()
+        val feedId = n.currentEntryId               // Feed — flow DIŞI explicit caller
+        n.navigate(Catalog)
+        val outerCaller = n.currentEntryId
+        val outer = async { n.navigateForResult<OrderId>(outerCaller, "Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        n.navigate(Payment)
+        val inner = async { n.navigateForResult<Pick>(feedId, "Feed→AddressPick", Otp) }
+        runCurrent()
+        n.quitWith(OrderId("d"))                    // CheckoutFlow biter: [Cart, Payment, Otp] kalkar
+        assertEquals(NavResult.Value(OrderId("d")), outer.await())  // flow-entry (Cart) slotu → Value
+        assertEquals(NavResult.Canceled, inner.await())             // Feed hayatta → Canceled, YANLIŞ-TİPLİ Value DEĞİL
     }
 }

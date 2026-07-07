@@ -4,7 +4,6 @@ import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.Product
 import dev.gezgin.core.fixtures.testTopology
-import dev.gezgin.core.Route
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

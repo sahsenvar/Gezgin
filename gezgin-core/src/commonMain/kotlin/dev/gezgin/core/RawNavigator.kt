@@ -107,7 +107,8 @@ class RawNavigator(
     /**
      * Geri: sıra (§8.1 / Fix 9) — (1) top flow-ENTRY ise TAMAMEN quit()'e devret (pending target olsa
      * bile: settleRemoved Canceled teslim eder), event `FlowQuit(canceled=true)` olur, `Popped` YOK;
-     * (2) top pending-target ise Canceled teslim + pop + `Popped`; (3) düz pop. Dipte → onRootBack.
+     * (2) düz pop + `Popped` — top pending-target ise Canceled'ı settleRemoved teslim eder (tek kapı).
+     * Dipte → onRootBack.
      */
     fun back() {
         val top = state.stack.last()
@@ -115,12 +116,7 @@ class RawNavigator(
             quit()
             return
         }
-        if (isPendingTarget(top.id)) {   // (2) pending target ama flow entry değil → Canceled + pop
-            bus.deliver(top.id, NavResult.Canceled)
-            popTopAndEmit()
-            return
-        }
-        popTopAndEmit()                  // (3) düz pop
+        popTopAndEmit()                  // (2) düz pop — pending-target Canceled'ı da settleRemoved verir
     }
 
     fun replaceTo(route: Route, clearUpTo: KClass<out Route>? = null, inclusive: Boolean = true) {
@@ -176,7 +172,9 @@ class RawNavigator(
         }
         refreshBackStack()
         _events.tryEmit(NavEvent.FlowQuit(flowId, canceled = false))
-        settleRemoved(removed, deliverValue = result) // Value YALNIZ hayatta-kalan caller'lı slotlara; caller'ı da kalkan iç slotlar dropFor→ResultDropped
+        // Value YALNIZ flow'un KENDİ entry slotuna (removed.first() = flow entry — contiguous blok garanti);
+        // diğer hayatta-kalan caller'lı slotlar Canceled; caller'ı da kalkan iç slotlar dropFor→ResultDropped.
+        settleRemoved(removed, deliverValue = result, valueTargetId = removed.first().id)
     }
 
     /** top = pending target ise deliver + pop; değilse no-op (raw katman — sessizce yok sayar). */
@@ -207,7 +205,9 @@ class RawNavigator(
         _events.tryEmit(NavEvent.Pushed(pushed.route))
     }
 
-    /** Kolaylık: caller = ÇAĞRI ANINDAKİ top. Faz 2 codegen (caller top değilken) açık overload'ı kullanmalı. */
+    /** Kolaylık: caller = ÇAĞRI ANINDAKİ top. Faz 2 codegen (caller top değilken) açık overload'ı kullanmalı.
+     *  İki hızlı top-based çağrı farklı caller görür (ilk push top'u değiştirir) → dedupe istiyorsan
+     *  explicit-caller overload'ını kullan; typed katman caller'ı entry'ye bağlar. */
     fun launchForResult(edgeId: String, route: Route) = launchForResult(currentEntryId, edgeId, route)
 
     /** Açık-caller (Faz 2 kancası): (caller, edge) slotunun sonuç akışı. */
@@ -269,14 +269,17 @@ class RawNavigator(
     }
 
     /** Stack'ten kalkan entry'lerin slot/event muhasebesi — tüm removal path'lerinin TEK kapısı.
-     *  deliverValue != null ise: hayatta-kalan caller'lı pending target'lara Value; değilse Canceled. */
-    private fun settleRemoved(removed: List<GezginKey>, deliverValue: Any? = null) {
+     *  Value YALNIZ [valueTargetId]'nin slotuna (quit edilen flow'un KENDİ entry'si) teslim edilir;
+     *  diğer hayatta-kalan caller'lı pending target'lar Canceled alır — açık out-of-flow caller'lı
+     *  yabancı-tipli bir slota asla Value sızmaz. deliverValue == null ise hepsi Canceled. */
+    private fun settleRemoved(removed: List<GezginKey>, deliverValue: Any? = null, valueTargetId: Long? = null) {
         if (removed.isEmpty()) return
         val removedIds = removed.map { it.id }.toSet()
         for (slot in bus.slots) {
             if (slot.result == null && slot.targetEntryId in removedIds && slot.callerEntryId !in removedIds) {
                 bus.deliver(slot.targetEntryId,
-                    if (deliverValue != null) NavResult.Value(deliverValue) else NavResult.Canceled)
+                    if (deliverValue != null && slot.targetEntryId == valueTargetId) NavResult.Value(deliverValue)
+                    else NavResult.Canceled)
             }
         }
         bus.dropFor(removedIds).forEach { _events.tryEmit(NavEvent.ResultDropped(it.edgeId)) }
