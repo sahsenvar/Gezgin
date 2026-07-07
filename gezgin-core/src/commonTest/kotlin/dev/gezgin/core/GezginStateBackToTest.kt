@@ -31,15 +31,14 @@ class GezginStateBackToTest {
         assertEquals(Feed, s.stack.last().route)
     }
 
-    @Test fun nearestAncestorNotFirst() {
+    @Test fun nearestAncestorAmongThreeSameTypeEntries_inclusive() {
         val s = GezginState(emptyList(), 0, testTopology)
-        s.push(Product("A"), singleTop = false); s.push(Feed)
-        s.push(Product("B"), singleTop = false); s.push(Catalog)
-        val removed = s.backTo(Product::class, inclusive = false)!!
-        // Wrong impl (indexOfFirst) would find Product("A") and remove more entries
-        assertEquals(1, removed.size)
-        assertEquals(listOf(Catalog), removed.map { it.route })
-        assertEquals(3, s.stack.size)  // Should keep 3 entries: [Product("A"), Feed, Product("B")]
+        s.push(Product("A"), singleTop = false); s.push(Product("B"), singleTop = false)
+        s.push(Feed); s.push(Product("C"), singleTop = false); s.push(Catalog)
+        val removed = s.backTo(Product::class, inclusive = true)!!   // nearest = Product("C")
+        assertEquals(listOf(Product("C"), Catalog), removed.map { it.route })
+        // indexOfFirst kullanan yanlış implementasyon [Product("A")]'ya kadar her şeyi silerdi:
+        assertEquals(listOf(Product("A"), Product("B"), Feed), s.stack.map { it.route })
     }
 
     @Test fun targetIsTopOnlyReturnsNull() {
