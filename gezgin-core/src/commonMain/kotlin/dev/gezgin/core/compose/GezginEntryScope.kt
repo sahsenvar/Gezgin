@@ -15,9 +15,20 @@ enum class EntryKind { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
 /**
  * Gezgin registry kaydı — [kind] Faz 4 modal scene wiring'i için metadata, [content] `Route`'a
  * daraltılmış (register<R>'daki güvenli cast) composable içerik.
+ *
+ * [noBack] (M5′, §4.2): `@NoBack` annotation'ının runtime karşılığı. `true` iken bu entry TERMINAL'dir
+ * — Gezgin-sahipli bir geri-yutucu kurulur: (1) [gezginOnBack] guard'ı top bu entry iken `back()`'i
+ * no-op'a çevirir (pop yok; kök-muafiyeti hariç), (2) [toNavEntry] content'i entry-scoped bir
+ * geri-handler ([GezginNoBackHandler]) ile OUTER (ekran içeriğinden ÖNCE — dispatcher LIFO'sunda
+ * ekranın kendi `BackHandler`'ı daha İÇ/sonra kaydolup kazanır) sarar. Faz 3.4 codegen'i `@NoBack`
+ * okuyup bu flag'i doldurur; bu fazda register-zamanı parametresi olarak plumbing + test edilir.
  */
 @PublishedApi
-internal class RegisteredEntry(val kind: EntryKind, val content: @Composable (Route) -> Unit)
+internal class RegisteredEntry(
+    val kind: EntryKind,
+    val noBack: Boolean,
+    val content: @Composable (Route) -> Unit,
+)
 
 /**
  * `GezginDisplay`'in trailing lambda receiver'ı (§10.1/§12) — kullanıcı (veya codegen ürettiği
@@ -35,6 +46,7 @@ class GezginEntryScope internal constructor() {
      */
     inline fun <reified R : Route> register(
         kind: EntryKind = EntryKind.SCREEN,
+        noBack: Boolean = false,
         noinline content: @Composable (R) -> Unit,
     ) {
         val routeClass = R::class
@@ -42,6 +54,6 @@ class GezginEntryScope internal constructor() {
             error("Route için entry zaten kayıtlı: ${routeClass.simpleName}")
         }
         @Suppress("UNCHECKED_CAST")
-        registry[routeClass] = RegisteredEntry(kind) { route -> content(route as R) }
+        registry[routeClass] = RegisteredEntry(kind, noBack) { route -> content(route as R) }
     }
 }
