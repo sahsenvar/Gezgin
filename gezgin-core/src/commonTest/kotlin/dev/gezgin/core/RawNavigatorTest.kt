@@ -216,4 +216,42 @@ class RawNavigatorTest {
         assertEquals(NavResult.Value(OrderId("d")), outer.await())  // flow-entry (Cart) slotu → Value
         assertEquals(NavResult.Canceled, inner.await())             // Feed hayatta → Canceled, YANLIŞ-TİPLİ Value DEĞİL
     }
+
+    // --- Task 2.5: @QuitAndGoTo runtime hook ---
+
+    // (1) normal case: nested (non-root) flow is torn down (pending caller → Canceled,
+    // FlowQuit(canceled=true) emitted), then the target is pushed on top of the surviving stack.
+    @Test fun quitAndGoToTearsDownNestedFlowThenNavigates() = runTest {
+        val n = nav()
+        n.navigate(Catalog)
+        val r = async { n.navigateForResult<OrderId>("Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        n.navigate(Payment)                                    // top = Payment, inside CheckoutFlow
+
+        val eventsCollected = mutableListOf<NavEvent>()
+        val job = launch { n.events.collect { eventsCollected += it } }
+        runCurrent()
+
+        n.quitAndGoTo(Product("p1"))
+
+        assertEquals(NavResult.Canceled, r.await())            // flow teardown → pending caller Canceled
+        assertEquals(Product("p1"), n.current)
+        assertEquals(listOf<Route>(Feed, Catalog, Product("p1")), n.backStack.value)
+        assertTrue(eventsCollected.any { it is NavEvent.FlowQuit && it.canceled })
+        assertTrue(eventsCollected.any { it is NavEvent.Pushed && it.route == Product("p1") })
+        job.cancel()
+    }
+
+    // (2) root-flow case: the flow being quit IS the root entry (quitFlow → null) → falls to
+    // onRootBack/RootBack exactly like quit()/quitWith, and does NOT navigate (teardown itself failed).
+    @Test fun quitAndGoToAtRootFlowFallsToOnRootBackAndDoesNotNavigate() = runTest {
+        var rootBackCount = 0
+        val n = RawNavigator(start = Cart, topology = testTopology, onRootBack = { rootBackCount++ })
+
+        n.quitAndGoTo(Catalog)
+
+        assertEquals(1, rootBackCount)
+        assertEquals(Cart, n.current)                          // untouched — navigate never ran
+        assertEquals(listOf<Route>(Cart), n.backStack.value)
+    }
 }

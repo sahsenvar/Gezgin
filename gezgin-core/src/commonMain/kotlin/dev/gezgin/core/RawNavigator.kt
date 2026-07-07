@@ -230,6 +230,29 @@ class RawNavigator(
     suspend fun <T> navigateForResult(edgeId: String, route: Route): NavResult<T> =
         navigateForResult(currentEntryId, edgeId, route)
 
+    /**
+     * @QuitAndGoTo (Faz 2 codegen kancası) — mevcut flow'u result'suz yık (quit() ile birebir aynı
+     * teardown: hayatta kalan caller'lı pending slotlara Canceled, `FlowQuit(canceled = true)`) ve
+     * ardından hedefe navigate et. Kaynak bir flow İÇİNDE DEĞİLKEN (flowId yok) yıkılacak bir şey
+     * yoktur — düz `navigate` ile eşdeğerdir. Kök flow'da (quitFlow → null) quit()/quitWith ile aynı
+     * kural: onRootBack()'e düş + `RootBack` yay, navigate ETME (teardown'un kendisi başarısız).
+     */
+    fun quitAndGoTo(route: Route) {
+        val flowId = state.currentFlowId()
+        if (flowId != null) {
+            val removed = state.quitFlow(flowId)
+            if (removed == null) {
+                onRootBack()
+                _events.tryEmit(NavEvent.RootBack)
+                return
+            }
+            refreshBackStack()
+            _events.tryEmit(NavEvent.FlowQuit(flowId, canceled = true))
+            settleRemoved(removed)
+        }
+        navigate(route, singleTop = false)
+    }
+
     // ---- internal helpers ----
 
     private fun refreshBackStack() {
