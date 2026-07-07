@@ -83,8 +83,27 @@ class ValidationTest {
             import dev.gezgin.core.annotation.GoForResult
             import dev.gezgin.core.annotation.NavGraph
             import dev.gezgin.core.annotation.StartDestination
+            import kotlinx.serialization.KSerializer
+            import kotlinx.serialization.descriptors.SerialDescriptor
+            import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+            import kotlinx.serialization.encoding.Decoder
+            import kotlinx.serialization.encoding.Encoder
 
-            data class Picked(val v: String)
+            // Test-only stub (no kotlinx-serialization plugin in kctfork) — Task 2.4's codegen
+            // always emits a real `Picked.serializer()` call for this @GoForResult edge. The
+            // factory call itself must succeed (it runs eagerly if the generated topology is ever
+            // classloaded); only the actual (de)serialize methods are unsupported.
+            data class Picked(val v: String) {
+                companion object {
+                    fun serializer(): KSerializer<Picked> = object : KSerializer<Picked> {
+                        override val descriptor: SerialDescriptor = buildClassSerialDescriptor("Picked")
+                        override fun serialize(encoder: Encoder, value: Picked): Unit =
+                            throw UnsupportedOperationException("test stub")
+                        override fun deserialize(decoder: Decoder): Picked =
+                            throw UnsupportedOperationException("test stub")
+                    }
+                }
+            }
 
             @NavGraph
             interface HomeGraph : Route {

@@ -13,6 +13,19 @@ package dev.gezgin.processor.fixtures
  *
  * Kept as a raw string constant (rather than a `.kt` file on the test classpath) so
  * [dev.gezgin.processor.CompileHarness] can feed it to kctfork as an in-memory `SourceFile`.
+ *
+ * `OrderId` carries a hand-written `companion object { fun serializer(): KSerializer<OrderId> }`
+ * stub rather than `@Serializable` — Task 2.4's codegen (`TopologyCodegen`) always emits a real
+ * `OrderId.serializer()` call for the `Feed`→`CheckoutFlow` `@GoForResult` edge (real application
+ * code has the kotlinx-serialization compiler plugin and a genuine `@Serializable`-generated
+ * `.serializer()`), but kctfork's test compilation has no such plugin wired in.
+ *
+ * The stub's `serializer()` factory itself must succeed — `gezginTopology` is a top-level `val`,
+ * so its initializer (including this call) runs eagerly in `GezginGeneratedKt.<clinit>` the moment
+ * the generated file is classloaded, which every test that reads `gezginTopology` does. What must
+ * never happen is a real (de)serialize call, so the returned [KSerializer] is a real object whose
+ * factory construction is cheap and side-effect-free, but whose actual serialization methods throw
+ * if a test ever mistakenly exercises them.
  */
 val SHOP_SOURCE = """
     package dev.gezgin.shop
@@ -30,8 +43,24 @@ val SHOP_SOURCE = """
     import dev.gezgin.core.annotation.Quit
     import dev.gezgin.core.annotation.ReplaceTo
     import dev.gezgin.core.annotation.StartDestination
+    import kotlinx.serialization.KSerializer
+    import kotlinx.serialization.descriptors.SerialDescriptor
+    import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+    import kotlinx.serialization.encoding.Decoder
+    import kotlinx.serialization.encoding.Encoder
 
-    data class OrderId(val value: String)
+    data class OrderId(val value: String) {
+        // Test-only stub — see the file-level KDoc above. Never actually (de)serializes.
+        companion object {
+            fun serializer(): KSerializer<OrderId> = object : KSerializer<OrderId> {
+                override val descriptor: SerialDescriptor = buildClassSerialDescriptor("OrderId")
+                override fun serialize(encoder: Encoder, value: OrderId): Unit =
+                    throw UnsupportedOperationException("test stub — no kotlinx-serialization plugin in kctfork")
+                override fun deserialize(decoder: Decoder): OrderId =
+                    throw UnsupportedOperationException("test stub — no kotlinx-serialization plugin in kctfork")
+            }
+        }
+    }
 
     // Intermediate non-route layer (top-level, not nested in a graph) implementing ResultRoute —
     // exercises transitive supertype result-type resolution.
