@@ -13,6 +13,8 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GezginTestNavigatorTest {
@@ -50,5 +52,19 @@ class GezginTestNavigatorTest {
         assertEquals(2, nav.backStack.size)
         assertEquals(Product("p1"), nav.current)
         assertEquals(listOf(Catalog, Product("p1")), nav.backStack)
+    }
+
+    // Task 2.6: entryIdOf — nearest match, and the explanatory error when there is none.
+    @Test fun entryIdOfReturnsNearestEntryId() {
+        val nav = GezginTestNavigator(start = Catalog, topology = testTopology)
+        nav.navigate(Product("p1"))
+        nav.navigate(Product("p2"))
+        assertEquals(nav.raw.currentEntryId, nav.entryIdOf(Product::class))
+    }
+
+    @Test fun entryIdOfThrowsExplanatoryErrorWhenNoMatch() {
+        val nav = GezginTestNavigator(start = Catalog, topology = testTopology)
+        val ex = assertFailsWith<IllegalStateException> { nav.entryIdOf(Payment::class) }
+        assertTrue(ex.message.orEmpty().contains("Payment"))
     }
 }

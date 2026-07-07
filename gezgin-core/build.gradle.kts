@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.library)
 }
 kotlin {
+    jvmToolchain(17)
     jvm()
     androidTarget()
     sourceSets {
