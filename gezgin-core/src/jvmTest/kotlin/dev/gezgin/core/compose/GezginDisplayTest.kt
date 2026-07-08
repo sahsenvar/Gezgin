@@ -11,6 +11,7 @@ import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.fixtures.Cart
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.Feed
+import dev.gezgin.core.fixtures.ScreenOwnTransition
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -100,6 +101,35 @@ class GezginDisplayTest {
 
         assertEquals(1, rootBackCount)
     }
+
+    @Test
+    fun `e - transition tanimli route'a navigate edilince icerik yine dogru gorunur (smoke, Task 3-5)`() =
+        runComposeUiTest {
+            // Animasyonun kendisini assert etmiyoruz (§9 predictive/forward/back spec'leri NavDisplay'in
+            // iç AnimatedContent'ine gider, uiTest'ten gözlenemez) — yalnız: transition'lı bir route'a
+            // (kendi override'ı olan [ScreenOwnTransition], Task 3.5 fixture'ı) geçiş, geçiş ANİMASYONLU
+            // olsa da tamamlanır ve içerik doğru görünür (regresyon guard'ı — cascade wiring'i NavDisplay'i
+            // kırmıyor).
+            val nav = navigator()
+            setContent {
+                GezginDisplay(navigator = nav) {
+                    register<Feed> { BasicText("FeedScreen") }
+                    register<ScreenOwnTransition> { BasicText("TransitionScreen") }
+                }
+            }
+
+            nav.navigate(ScreenOwnTransition)
+            waitForIdle()
+
+            onNodeWithText("TransitionScreen").assertIsDisplayed()
+            onAllNodesWithText("FeedScreen").assertCountEquals(0)
+
+            nav.back()
+            waitForIdle()
+
+            onNodeWithText("FeedScreen").assertIsDisplayed()
+            onAllNodesWithText("TransitionScreen").assertCountEquals(0)
+        }
 
     @Test
     fun `guard - rememberNavigator start ResultFlow uyesiyse kurulusta hata firlatir`() {
