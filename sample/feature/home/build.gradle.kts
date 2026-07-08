@@ -1,3 +1,5 @@
+// bilinçli: bu blok :feature:auth/:feature:home/:feature:profile arasında üçlenir — sample
+// okunabilirliği için (her modül tek bakışta anlaşılsın); üretimde convention plugin önerilir.
 plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)

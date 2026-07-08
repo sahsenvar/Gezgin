@@ -76,18 +76,25 @@ class GezginValidator(
                 val target = edge.targetFq
                 val targetAsGraph = graphsByFq[target]
                 val parent = parentGraphOf(target)
-                val entersResultFlow = (
-                    targetAsGraph != null && targetAsGraph.declaresResultFlowDirectly &&
-                        targetAsGraph.fqName !in route.flowChainFq
-                    ) || (
-                    parent != null && parent.declaresResultFlowDirectly && parent.startFq == target &&
-                        parent.fqName !in route.flowChainFq
-                    )
-                if (entersResultFlow) {
+                val entersResultFlowDirectly = targetAsGraph != null && targetAsGraph.declaresResultFlowDirectly &&
+                    targetAsGraph.fqName !in route.flowChainFq
+                val entersResultFlowViaStart = parent != null && parent.declaresResultFlowDirectly &&
+                    parent.startFq == target && parent.fqName !in route.flowChainFq
+                if (entersResultFlowDirectly) {
                     error(
                         "E1",
                         "@${edge.kind.annotationName()} hedefi ${simple(target)} bir ResultFlow — girişe " +
                             "yalnız @GoForResult izin verir (kaynak: ${route.simpleName})",
+                    )
+                } else if (entersResultFlowViaStart) {
+                    // Target is a plain ROUTE, not the flow-graph type itself — it's a ResultFlow only
+                    // by being that flow's @StartDestination, so the message must name it as such
+                    // rather than (incorrectly) calling the route itself "a ResultFlow".
+                    error(
+                        "E1",
+                        "@${edge.kind.annotationName()} hedefi ${simple(target)}, ${simple(parent!!.fqName)} " +
+                            "ResultFlow'un START'ı — girişe yalnız @GoForResult izin verir (kaynak: " +
+                            "${route.simpleName})",
                     )
                 }
             }

@@ -166,7 +166,19 @@ sealed interface ProfileGraph : AppRoot {
         @Serializable
         data class CropRoute(val source: String) : AvatarFlow
 
-        /** NESTED @FlowGraph — chain [AvatarFlow, ZoomFlow]; quit() exits from within. */
+        /**
+         * NESTED @FlowGraph — chain [AvatarFlow, ZoomFlow]. Çıkış: flow-entry'de plain `back()` =
+         * `quit()` semantiği (§8.1) — yalnız ZoomFlow'un kendi segmentini kapatır, AvatarFlow (ve
+         * CropRoute) açık kalır. `quitWith` de aynı düzeyi hedefler: `ZoomFlow` kendi
+         * `ResultFlow<T>`'unu deklare etmez ama transitif olarak biridir
+         * (`isResultFlow=true`/`declaresResultFlowDirectly=false`, miras AvatarFlow'dan) — hem
+         * runtime çözümü hem üretilen navigator zincirdeki EN İÇTEKİ `isResultFlow` üyesini (burada
+         * ZoomFlow'un KENDİSİ, AvatarFlow DEĞİL) hedefler; bu yüzden ZoomRoute'tan `quitWith(...)`
+         * çağırmak yalnız ZoomFlow'u kapatır ve teslim edilen Value'nun dinleyeni olmadığından düşer —
+         * AvatarFlow'un sonuç sözleşmesini gerçekten kapatmak `CropRoute` (ya da `PickSourceRoute`)
+         * gibi zinciri sadece AvatarFlow'da biten bir üyeden `quitWith` çağırmayı gerektirir (bkz.
+         * `sample/README.md` "Tasarım notları" ve `ProfileScreens.kt`'deki `ZoomScreen`).
+         */
         @FlowGraph
         @Serializable
         sealed interface ZoomFlow : AvatarFlow {

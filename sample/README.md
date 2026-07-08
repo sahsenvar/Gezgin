@@ -67,7 +67,7 @@ Tam grafik `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/AppNa
 | `@BackTo` | `ItemDetailRoute` → `DashboardRoute` | `HomeScreens.kt` |
 | `@NoBack` (cross-module) | `WelcomeRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `AppNav.kt` / `HomeScreens.kt` |
 | `backWithResult` | `ForgotPasswordDialog`, `EditNameDialog`, `FilterSheetRoute` | ilgili dosyalar |
-| `quitWith` | `CropRoute`, `ZoomRoute` (her ikisi de `AvatarFlow`'un `ResultFlow` zincirinde) | `ProfileScreens.kt` |
+| `quitWith` | `CropRoute` (AvatarFlow'a ulaşır), `ZoomRoute` (yalnız kendi ZoomFlow'unu kapatır — bkz. "Tasarım notları") | `ProfileScreens.kt` |
 | Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 | bkz. aşağıdaki "Faz 4 notu" | tüm feature dosyaları |
 | Transition cascade (3 seviye) | app `navTransitions{default{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `AppNav.kt` |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
@@ -101,7 +101,7 @@ kind farkı yalnızca kodda (annotation) ve derlenmiş registride vardır.
 
 ## Davranış testleri
 
-`sample/navigation/src/test/kotlin/dev/gezgin/sample/navigation/AppNavBehaviorTest.kt` — 7 test,
+`sample/navigation/src/test/kotlin/dev/gezgin/sample/navigation/AppNavBehaviorTest.kt` — 12 test,
 UI katmanına hiç dokunmadan `GezginTestNavigator` + üretilen navigator sınıfları üzerinden
 kurgulanmış senaryolar (kapsama matrisinin DAVRANIŞ kanıtı):
 
@@ -112,8 +112,13 @@ kurgulanmış senaryolar (kapsama matrisinin DAVRANIŞ kanıtı):
 | `logoutClearUpToDashboardInclusive_stacksASecondLoginEntry` | **Tasarım notu** — aşağıya bakın |
 | `avatarFlowQuitWith_deliversValueToProfilePickAvatarResults` | `quitWith` en yakın kapsayan `ResultFlow`'u hedefler, Value flow-entry'nin caller'ına gider |
 | `nestedZoomFlowBack_popsOnlyZoomLeavesCropOnTop` | nested `@FlowGraph`'ta flow-entry `back()` yalnız kendi segmentini kapatır |
+| `nestedZoomFlowQuitWith_onlyQuitsZoomFlowSegmentAvatarFlowContractStaysOpen` | **Tasarım notu** — aşağıya bakın |
 | `goToRelatedTwiceSameId_createsThreeDistinctStackEntries` | `singleTop=false` aynı route-değerine tekrar tekrar YENİ (id'si farklı) entry basar (R2) |
 | `forgotPasswordSuspendResult_deliversValue` | suspend `goToXForResult` + `deliverResult` (raw `backWithResult`) round-trip'i |
+| `forgotPasswordBack_deliversCanceled` | pending bir `ResultRoute` üzerinde düz `back()` → `NavResult.Canceled` (dismiss without answer) |
+| `termsBackToStart_landsOnCredentialsKeepsLoginBelow` | `@BackToStart` flow'un kendi START'ına döner, flow HAYATTA kalır, Login altta dokunulmaz |
+| `termsQuit_tearsDownSignUpFlowLeavesLoginOnTop` | `@Quit` bütün SignUpFlow segmentini yıkar, Login üstte kalır |
+| `backToDashboardThenCrossGraphGoToProfile_bothViaGeneratedNavigators` | `@BackTo` (ItemDetail→Dashboard) + cross-graph B1 edge'i (`goToProfile`) TAMAMEN üretilen navigator'larla (raw.navigate YOK) pinler |
 
 ### kspTest wiring — denendi, yapısal nedenle vazgeçildi
 
@@ -156,6 +161,23 @@ için eklendi; `kspTest(...)` bağımlılığı EKLENMEDİ (yukarıdaki nedenle 
   üründe muhtemel düzeltme: `clearUpTo` hedefini `LoginRoute::class` yapmak (o zaman zaten dip
   Login'in KENDİSİ temizlenir) ya da `SettingsRoute`'u her zaman Dashboard'un ÜSTÜNDE bir yerden
   çağrılacağını varsaymamak.
+- **`ZoomFlow` içinden `quitWith` AvatarFlow'a ULAŞMAZ bulgusu** — `ZoomFlow` kendi
+  `ResultFlow<T>`'unu deklare etmez (`declaresResultFlowDirectly=false`) ama transitif olarak biridir
+  (`isResultFlow=true`, AvatarFlow'dan miras). Hem `RawNavigator.quitWith`'in runtime çözümü
+  (`chain.indexOfLast { it.isResultFlow }`) hem `NavigatorCodegen`'in ürettiği statik parametre tipi
+  zincirdeki EN İÇTEKİ `isResultFlow` üyesini hedefler — bu, `ZoomRoute` için AvatarFlow DEĞİL,
+  ZoomFlow'un KENDİSİDİR. Sonuç: `ZoomScreen`'deki `quitWith` düğmesi yalnız ZoomFlow'un tek
+  entry'sini (`back()` ile AYNI stack etkisi) kapatır; teslim edilen `AvatarChoice` değerinin
+  dinleyeni yoktur (AvatarFlow'un `pickAvatarResults` beklemesi `PickSourceRoute`'un entry'sine
+  bağlıdır, `ZoomRoute`'unkine değil) ve sessizce düşer — AvatarFlow'un sözleşmesi AÇIK kalır.
+  Sözleşmeyi gerçekten kapatmak zincirinin tek `isResultFlow` üyesi AvatarFlow'un kendisi olan bir
+  üyeden (`CropRoute`, `PickSourceRoute`) `quitWith` çağırmayı gerektirir. Bu, "grafiği düzeltmek"
+  yerine BİLİNÇLİ OLARAK olduğu gibi bırakılan bir framework-davranışı bulgusudur (çözüm gerektirirse:
+  `NavigatorCodegen`/`RawNavigator.quitWith`'in `isResultFlow` yerine `declaresResultFlowDirectly`
+  bazlı bir "en yakın SÖZLEŞME SAHİBİ" çözünürlüğüne geçmesi düşünülebilir — bu sample'ın kapsamı
+  dışında); davranış testi
+  (`nestedZoomFlowQuitWith_onlyQuitsZoomFlowSegmentAvatarFlowContractStaysOpen`) bu GERÇEK sonucu
+  pinler.
 - **Dashboard'ın suspend `goToPickSortForResult` çağrısı** — `rememberCoroutineScope()`'a bağlı
   `scope.launch`; VM ömrü İÇİNDE güvenlidir ama VM'siz composable'da bir config-change/process-death
   sonucu SESSİZCE düşürür (bkz. `HomeScreens.kt`'deki kod-içi yorum). Kalıcı sonuç isteniyorsa
@@ -164,6 +186,10 @@ için eklendi; `kspTest(...)` bağımlılığı EKLENMEDİ (yukarıdaki nedenle 
 - **Üretilen API isimleri plan metniyle birebir eşleşmiyor** — bkz.
   `.superpowers/sdd/sample-s2-report.md` "Escalations" bölümü (örn. plandaki varsayılan
   `goToForgotPasswordForResult` yerine gerçek üretilen ad `goToForgotPasswordDialogForResult`).
+- **Entry kaydı runtime-checked'tir, derleme-zamanı değil** — bir route için `provideXEntry`
+  unutulursa (feature modülü `@Screen`/`@Dialog`/`@BottomSheet` composable'ını sağlamazsa) derleme
+  YEŞİL kalır; hata yalnızca o route'un İLK gösterilmeye çalışıldığı anda, `GezginDisplay`'in
+  `toNavEntry` eager lookup'ında açıklayıcı bir exception olarak ortaya çıkar.
 
 ## Çalıştırma
 
