@@ -1,0 +1,169 @@
+package dev.gezgin.processor.mvi
+
+import com.google.devtools.ksp.processing.KSPLogger
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSType
+import com.google.devtools.ksp.symbol.KSTypeParameter
+import com.google.devtools.ksp.symbol.KSValueArgument
+import com.squareup.kotlinpoet.ksp.toTypeName
+
+internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.ViewModel"
+internal const val SCREEN_EFFECT_FQ = "dev.gezgin.mvi.annotation.ScreenEffect"
+internal const val GEZGIN_MVI_FQ = "dev.gezgin.mvi.GezginMvi"
+
+/**
+ * Faz 5.1 — reads every `@ViewModel(Route::class)`-annotated CLASS (spec §10/§10.1 MVI add-on) into a
+ * validated [ViewModelModel] list, mirroring [dev.gezgin.processor.entry.EntryModelReader]'s
+ * constructor shape and its collect-all-then-fail, bracketed-code error idiom (`MV1`/`MV4`) via
+ * [logger]. [read] never throws — it reports every violation in one pass and returns whether the read
+ * was clean alongside whatever models DID resolve.
+ *
+ * All `dev.gezgin.mvi.*` symbols are read as **string FQNs** — `gezgin-processor` gains NO compile
+ * dependency on `gezgin-mvi` (only its test sourceset does, for fixtures), exactly like the existing
+ * `dev.gezgin.core.*` reads.
+ *
+ * **`MV1` (guardrail, §10.1):** a `@ViewModel` class MUST implement `GezginMvi<S,I,E>` (transitively,
+ * via [getAllSuperTypes] — same pattern as `ModelReader.resultTypeArgOf`). A `@ViewModel` that doesn't
+ * → error, no model emitted for it (S/I/E are unreadable, so it would be useless to 5.2 anyway).
+ *
+ * **`MV4` (duplicate):** two `@ViewModel` classes resolving to the same route → error (mirrors
+ * [dev.gezgin.processor.entry.EntryModelReader]'s `SC4` duplicate-route pattern).
+ *
+ * **Same-module (§10.1):** KSP only sees one module's symbols per run, so a cross-module VM/content
+ * pairing simply won't match — the `@ViewModel`/`@Screen`/`@ScreenEffect` triple being in the SAME
+ * module is naturally enforced by `resolver.getSymbolsWithAnnotation` returning only THIS module's
+ * `@ViewModel`s. `EntryModelReader` closes the loop symmetrically (`MV2`/`MV3`).
+ */
+class ViewModelModelReader(
+    private val resolver: Resolver,
+    private val logger: KSPLogger,
+) {
+
+    private var ok = true
+    private val seenRouteFqs = mutableMapOf<String, String>() // routeFq -> first VM's simple name
+
+    fun read(): Pair<List<ViewModelModel>, Boolean> {
+        val models = resolver.getSymbolsWithAnnotation(VIEW_MODEL_FQ)
+            .filterIsInstance<KSClassDeclaration>()
+            .mapNotNull { decl -> buildModel(decl) }
+            .toList()
+        return models to ok
+    }
+
+    private fun buildModel(decl: KSClassDeclaration): ViewModelModel? {
+        val vmFq = decl.qualifiedName?.asString() ?: return null
+        val vmSimpleName = decl.simpleName.asString()
+        val annotation = decl.annotations.first { it.fqName() == VIEW_MODEL_FQ }
+
+        // `@ViewModel(route)` is a mandatory KClass arg (no sentinel, §10.1) — but stay defensive if it
+        // somehow fails to resolve to a class type.
+        val routeType = annotation.classArg("route")
+        val routeFq = routeType?.declaration?.qualifiedName?.asString()
+        if (routeFq == null) {
+            error("MV1", "$vmSimpleName: @ViewModel(route=…) türü çözülemedi")
+            return null
+        }
+
+        // MV1 — the VM must implement GezginMvi<S,I,E> (transitively). Its S/I/E are the whole source
+        // of truth for MVI-mode (content/effect types are validated AGAINST these, never derive them),
+        // so a VM without the supertype has no readable contract → reject, emit no model.
+        val mviArgs = gezginMviArgs(decl)
+        if (mviArgs == null) {
+            error(
+                "MV1",
+                "$vmSimpleName (@ViewModel(${routeFq.substringAfterLast('.')})) " +
+                    "$GEZGIN_MVI_FQ<S,I,E> implement etmiyor — @ViewModel + GezginMvi İKİSİ DE zorunlu (§10.1)",
+            )
+            return null
+        }
+        val (state, intent, effect) = mviArgs
+
+        // MV4 — two @ViewModel classes on the same route would both try to register the same MVI entry.
+        val previousOwner = seenRouteFqs[routeFq]
+        if (previousOwner != null) {
+            error(
+                "MV4",
+                "route ${routeFq.substringAfterLast('.')} birden çok @ViewModel tarafından işaretleniyor: " +
+                    "$previousOwner, $vmSimpleName",
+            )
+            return null
+        }
+        seenRouteFqs[routeFq] = vmSimpleName
+
+        return ViewModelModel(
+            vmFq = vmFq,
+            vmSimpleName = vmSimpleName,
+            packageName = decl.packageName.asString(),
+            routeFq = routeFq,
+            stateTypeFq = state.fqOrString(),
+            stateTypeName = state.toTypeName(),
+            intentTypeFq = intent.fqOrString(),
+            intentTypeName = intent.toTypeName(),
+            effectTypeFq = effect.fqOrString(),
+            effectTypeName = effect.toTypeName(),
+        )
+    }
+
+    /**
+     * The three substituted type args `S, I, E` of `GezginMvi<S,I,E>` if [decl] transitively implements
+     * it, else null. Three-argument sibling of `ModelReader.resultTypeArgOf`, but deliberately NOT built
+     * on KSP's `getAllSuperTypes()`: that helper throws `NoSuchElementException("No TypeParameter found
+     * for index …")` on the spec-§10.1-canonical `VM : BaseViewModel<S,I,E> : GezginMvi<S,I,E>` pattern
+     * (a KSP transitive-type-parameter-substitution bug — the intermediate base FORWARDS its type params
+     * to `GezginMvi` rather than binding concrete types). `ModelReader.resultTypeArgOf` never trips it
+     * only because `ResultRoute<OrderId>` always binds a CONCRETE arg at the immediate supertype.
+     *
+     * Instead this walks [KSClassDeclaration.superTypes] level by level, carrying a param→concrete
+     * substitution so a `GezginMvi<S,I,E>` reached through any number of type-param-forwarding bases is
+     * resolved to the VM's concrete `S/I/E` (both FQ and [com.squareup.kotlinpoet.TypeName] captured
+     * downstream, per the load-bearing FQ+TypeName decision on [ViewModelModel]).
+     */
+    private fun gezginMviArgs(decl: KSClassDeclaration): Triple<KSType, KSType, KSType>? =
+        walkForGezginMvi(decl, subst = emptyMap(), visited = mutableSetOf())
+
+    private fun walkForGezginMvi(
+        decl: KSClassDeclaration,
+        subst: Map<String, KSType>,
+        visited: MutableSet<String>,
+    ): Triple<KSType, KSType, KSType>? {
+        if (!visited.add(decl.qualifiedName?.asString() ?: return null)) return null
+        for (superRef in decl.superTypes) {
+            val superType = superRef.resolve()
+            val superDecl = superType.declaration as? KSClassDeclaration ?: continue
+            // This super's actual type args, with any that are references to [decl]'s OWN type params
+            // resolved through the incoming substitution to their concrete binding.
+            val superArgs = superType.arguments.map { arg ->
+                val t = arg.type?.resolve()
+                (t?.declaration as? KSTypeParameter)?.let { subst[it.name.asString()] } ?: t
+            }
+            if (superDecl.qualifiedName?.asString() == GEZGIN_MVI_FQ) {
+                if (superArgs.size == 3 && superArgs.all { it != null }) {
+                    return Triple(superArgs[0]!!, superArgs[1]!!, superArgs[2]!!)
+                }
+                return null
+            }
+            // Recurse, binding THIS super's type params to the (already-substituted) args we resolved.
+            val nextSubst = superDecl.typeParameters.mapIndexedNotNull { i, tp ->
+                superArgs.getOrNull(i)?.let { tp.name.asString() to it }
+            }.toMap()
+            walkForGezginMvi(superDecl, nextSubst, visited)?.let { return it }
+        }
+        return null
+    }
+
+    private fun KSType.fqOrString(): String = declaration.qualifiedName?.asString() ?: toString()
+
+    private fun KSAnnotation.fqName(): String? = annotationType.resolve().declaration.qualifiedName?.asString()
+
+    private fun KSAnnotation.arg(name: String): KSValueArgument? =
+        arguments.firstOrNull { it.name?.asString() == name } ?: defaultArguments.firstOrNull { it.name?.asString() == name }
+
+    private fun KSAnnotation.classArg(name: String): KSType? = arg(name)?.value as? KSType
+
+    private fun error(code: String, message: String) {
+        logger.error("[$code] $message")
+        ok = false
+    }
+}
