@@ -82,6 +82,15 @@ internal class GezginBottomSheetScene(
     private val onBack: () -> Unit,
 ) : OverlayScene<Route> {
 
+    init {
+        // DialogScene paritesi (§7) — bir overlay scene altında en az bir underlaid entry ŞART. toNavEntry'nin
+        // modal-kind-at-root guard'ı bunu zaten önceler; bu scene-invariant kendi başına net olsun diye defansif.
+        require(overlaidEntries.isNotEmpty()) {
+            "GezginBottomSheetScene: overlaidEntries boş olamaz — bir BottomSheet overlay'i altında en az " +
+                "bir SCREEN entry olmalı (Nav3 OverlayScene invariant'ı, §7). key: $key"
+        }
+    }
+
     override val entries: List<NavEntry<Route>> = listOf(entry)
     override val previousEntries: List<NavEntry<Route>> = overlaidEntries
 

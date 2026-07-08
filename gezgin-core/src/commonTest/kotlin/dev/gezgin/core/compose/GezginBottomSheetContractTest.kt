@@ -55,6 +55,22 @@ class GezginBottomSheetContractTest {
         )
     }
 
+    // Minor (contract-default lockstep pin): adapter'ın `?: ...` literalleri [BottomSheetContract]'ın
+    // interface default'larıyla AYNI kalsın (drift önle). Contract'sız sheet'in çözülen props'u ==
+    // tüm-default BottomSheetContract'ın getter'larından kurulan props.
+    @Test
+    fun `contract-default lockstep - contract'siz BOTTOM_SHEET == tum-default BottomSheetContract`() {
+        val allDefault = object : dev.gezgin.core.BottomSheetContract {}
+        assertEquals(
+            GezginBottomSheetProps(
+                skipPartiallyExpanded = allDefault.skipPartiallyExpanded,
+                dismissOnBackPress = allDefault.dismissOnBackPress,
+                dismissOnClickOutside = allDefault.dismissOnClickOutside,
+            ),
+            sheetPropsOf(SheetDefault("x"), 20L),
+        )
+    }
+
     @Test
     fun `BottomSheetContract'li BOTTOM_SHEET - property'ler contract'tan iner`() {
         val props = sheetPropsOf(SheetCustom("x"), 3L)
@@ -75,17 +91,23 @@ class GezginBottomSheetContractTest {
         assertTrue(sheetPropsOf(SheetDefault("x"), 32L).dismissOnClickOutside, "contract'sız → default true")
     }
 
+    // Faz4 final-review (§7): @NoBack × BOTTOM_SHEET NET YASAK — dismissOnBackPress ne olursa olsun
+    // (swipe-to-dismiss hiçbir prop'la kapatılamaz → görsel/state desync). Hem default-dismiss (=true)
+    // hem override-dismiss=false sheet route'u kuruluşta fırlatır. (Dialog için @NoBack hâlâ legal —
+    // bkz. GezginDialogContractTest `DialogNoBackCompatible GECER`.)
     @Test
-    fun `guard - @NoBack + dismissOnBackPress=true BOTTOM_SHEET kurulusu require firlatir`() {
+    fun `guard - @NoBack + BOTTOM_SHEET yasak (dismissOnBackPress=true default) require firlatir`() {
         val ex = assertFailsWith<IllegalArgumentException> {
             scope().toNavEntry(GezginKey(route = SheetBackDismissable, id = 4L), navigator, navTransitions {})
         }
-        assertTrue(ex.message?.contains("dismissOnBackPress") == true, "guard mesaji: ${ex.message}")
+        assertTrue(ex.message?.contains("BottomSheet") == true, "guard mesaji: ${ex.message}")
     }
 
     @Test
-    fun `guard - @NoBack + dismissOnBackPress=false BOTTOM_SHEET kurulusu GECER`() {
-        val props = sheetPropsOf(SheetNoBackCompatible, 5L)
-        assertTrue(!props.dismissOnBackPress)
+    fun `guard - @NoBack + BOTTOM_SHEET yasak (dismissOnBackPress=false override) da require firlatir`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            scope().toNavEntry(GezginKey(route = SheetNoBackCompatible, id = 5L), navigator, navTransitions {})
+        }
+        assertTrue(ex.message?.contains("BottomSheet") == true, "guard mesaji: ${ex.message}")
     }
 }

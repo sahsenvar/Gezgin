@@ -64,6 +64,16 @@ internal fun GezginEntryScope.toNavEntry(
 ): NavEntry<Route> {
     val registered = registry[key.route::class]
         ?: error("route için entry kaydı yok: ${key.route::class.simpleName}")
+    // §7 modal-kind-at-root guard (kuruluş-zamanı RUNTIME) — TÜM dinamik yolları tek yerde kapatır:
+    // start route DIŞINDA `replaceTo(SomeDialogRoute)`/`quitAndGoTo` da tek-modal (kök) stack üretebilir.
+    // Bu ANA guard'dır; [GezginDisplay]'deki setup-time check yalnız start route'u kapsar → redundant
+    // güvenlik ağı olarak kalır. DIALOG/FULLSCREEN_MODAL Nav3-içi `require(overlaidEntries.isNotEmpty())`
+    // ile çökerdi (Gezgin-mesajsız), BOTTOM_SHEET ise hiç fırlamayıp boş arka-planda sessiz render'dı.
+    require(!(isRoot && registered.kind != EntryKind.SCREEN)) {
+        "GezginDisplay: modal kind (${registered.kind}) stack'te tek/kök entry olamaz — bir modal'ın " +
+            "altında en az bir SCREEN entry olmalı (Nav3 OverlayScene invariant'ı, §7). replaceTo/" +
+            "quitAndGoTo ile modal'ı köke koymayın. route: ${key.route::class.simpleName}"
+    }
     val installNoBack = registered.noBack && !isRoot
     // Faz 4 scene wiring (§7): transition metadata (per-entry, §9) + DIALOG/FULLSCREEN_MODAL ise
     // dialog-scene işareti. `DialogSceneStrategy.dialog(props)` public API iki platformda AYNI imzalı
@@ -76,6 +86,16 @@ internal fun GezginEntryScope.toNavEntry(
     // §7 guard (kuruluş-zamanı runtime): @NoBack geri'yi yutar; dismissOnBackPress geri'yle kapat der.
     // İki tezat birlikte olamaz. DIALOG/FULLSCREEN_MODAL ve BOTTOM_SHEET için AYNI mantık (ortak yardımcı).
     if (registered.noBack) {
+        // §7 — @NoBack × BOTTOM_SHEET NET YASAK (dismissOnBackPress ne olursa olsun): swipe-to-dismiss
+        // hiçbir prop'la kapatılamaz → @NoBack geri-yutması sheet'i GÖRSEL olarak Hidden'a animasyonlar
+        // ama entry'yi stack'te top'ta tutar (görsel/state desync). Dialog için @NoBack HÂLÂ legal
+        // (dismissOnBackPress=false ile, aşağıdaki requireBackDismissCompatible) — yalnız sheet yasak.
+        require(registered.kind != EntryKind.BOTTOM_SHEET) {
+            "@NoBack + @BottomSheet tutarsız (${key.route::class.simpleName}): swipe-to-dismiss hiçbir " +
+                "prop'la kapatılamaz → @NoBack geri-yutması sheet'i görünmez bırakıp entry'yi stack'te " +
+                "tutar (görsel/state desync). BottomSheet için @NoBack kullanmayın; Dialog için " +
+                "dismissOnBackPress=false ile @NoBack legal (§7)."
+        }
         if (dialogProperties != null) requireBackDismissCompatible(key.route, dialogProperties.dismissOnBackPress)
         if (sheetProps != null) requireBackDismissCompatible(key.route, sheetProps.dismissOnBackPress)
     }

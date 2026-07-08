@@ -74,7 +74,9 @@ data class SheetCustom(val id: String) : ShopGraph, dev.gezgin.core.BottomSheetC
 /** @NoBack + dismissOnBackPress=true (default) çelişkisi guard testi için sheet route. */
 @Serializable data object SheetBackDismissable : ShopGraph, dev.gezgin.core.BottomSheetContract
 
-/** @NoBack ile UYUMLU sheet route: dismissOnBackPress=false → guard geçer. */
+/** @NoBack + BOTTOM_SHEET route — dismissOnBackPress=false OLSA BİLE artık YASAK (§7: swipe-to-dismiss
+ *  hiçbir prop'la kapatılamaz → görsel/state desync). Guard'ın kind==BOTTOM_SHEET dalının dismiss'ten
+ *  BAĞIMSIZ fırlattığını pinlemek için (eskiden "legal" varsayılıyordu — Faz4 final-review'da yasaklandı). */
 @Serializable
 data object SheetNoBackCompatible : ShopGraph, dev.gezgin.core.BottomSheetContract {
     override val dismissOnBackPress: Boolean get() = false

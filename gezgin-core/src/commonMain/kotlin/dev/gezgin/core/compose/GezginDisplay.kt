@@ -73,6 +73,9 @@ fun GezginDisplay(
         GezginEntryScope().apply(entries).also { registered ->
             val rootRoute = navigator.keys.first().route
             val rootKind = registered.registry[rootRoute::class]?.kind
+            // NOT: Bu YALNIZ start route'u kapsayan erken/redundant güvenlik ağıdır. ASIL modal-kind-at-root
+            // guard'ı [toNavEntry]'dedir (her entry kurulurken `isRoot` ile) — o TÜM dinamik yolları da
+            // (replaceTo/quitAndGoTo ile modal'ı köke koyma) kapatır. Bu check yine de erken/açık kalır.
             require(rootKind == null || rootKind == EntryKind.SCREEN) {
                 "GezginDisplay: start route modal kind olamaz (kind=$rootKind) — §12 kuruluş " +
                     "guard'ı (KALICI: modal genuinely root OLAMAZ — OverlayScene ≥1 underlaid entry " +
