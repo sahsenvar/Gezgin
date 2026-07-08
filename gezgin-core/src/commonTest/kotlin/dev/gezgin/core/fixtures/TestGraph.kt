@@ -57,6 +57,27 @@ data object FullModal : ShopGraph, dev.gezgin.core.FullscreenModalContract {
     override val dismissOnClickOutside: Boolean get() = false
 }
 
+// --- Task 4.2 (§7 BottomSheet) fixture'ları ---
+/** Contract implement ETMEYEN sheet route → adapter tip-varsayılan props (skipPartiallyExpanded=false,
+ *  dismissOnBackPress=true). */
+@Serializable data class SheetDefault(val id: String) : ShopGraph
+
+/** BottomSheetContract'lı sheet route: ikisini de ezer (skipPartiallyExpanded=true, dismissOnBackPress=false). */
+@Serializable
+data class SheetCustom(val id: String) : ShopGraph, dev.gezgin.core.BottomSheetContract {
+    override val skipPartiallyExpanded: Boolean get() = true
+    override val dismissOnBackPress: Boolean get() = false
+}
+
+/** @NoBack + dismissOnBackPress=true (default) çelişkisi guard testi için sheet route. */
+@Serializable data object SheetBackDismissable : ShopGraph, dev.gezgin.core.BottomSheetContract
+
+/** @NoBack ile UYUMLU sheet route: dismissOnBackPress=false → guard geçer. */
+@Serializable
+data object SheetNoBackCompatible : ShopGraph, dev.gezgin.core.BottomSheetContract {
+    override val dismissOnBackPress: Boolean get() = false
+}
+
 interface Pick                                                     // AÇIK polimorfizm — module ŞART
 @Serializable data class ChosenAddress(val id: String) : Pick
 
