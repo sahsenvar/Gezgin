@@ -356,13 +356,16 @@ object NavigatorCodegen {
     }
 
     /**
-     * The result type of the innermost `ResultFlow` in [route]'s chain — mirrors
-     * `RawNavigator.quitWith`'s own runtime resolution (`chain.indexOfLast { it.isResultFlow }`),
-     * so the statically generated `quitWith(result: T)` targets the exact same flow instance the
-     * raw call would resolve to.
+     * The result type of the innermost result-OWNING (`ResultFlow<T>` DIRECTLY declaring, spec §6
+     * ownership) flow in [route]'s chain — mirrors `RawNavigator.quitWith`'s runtime resolution
+     * (`chain.indexOfLast { it.isResultFlow }` over the generated topology, whose `isResultFlow`
+     * flag is emitted from [GraphModelNode.declaresResultFlowDirectly] — see `TopologyCodegen`), so
+     * the statically generated `quitWith(result: T)` targets the exact same flow instance the raw
+     * call resolves to. A nested result-less sub-flow (transitive [GraphModelNode.isResultFlow])
+     * owns no contract and must never capture the resolution.
      */
     private fun innermostResultFlowResultTypeFq(route: RouteModel, graphsByFq: Map<String, GraphModelNode>): String? =
-        route.flowChainFq.mapNotNull { graphsByFq[it] }.lastOrNull { it.isResultFlow }?.resultTypeFq
+        route.flowChainFq.mapNotNull { graphsByFq[it] }.lastOrNull { it.declaresResultFlowDirectly }?.resultTypeFq
 
     // endregion
 

@@ -61,6 +61,13 @@ class GezginValidator(
      * @GoTo/@ReplaceTo/@QuitAndGoTo may never *enter* a ResultFlow from outside — only @GoForResult
      * may. A source already inside the target flow is exempt (spec §8.1 "İçeride: serbest @GoTo" —
      * entry rules constrain crossing the boundary, not movement within it).
+     *
+     * The boundary is keyed on [GraphModelNode.declaresResultFlowDirectly], NOT the transitive
+     * [GraphModelNode.isResultFlow]: a result-LESS nested sub-flow (`ZoomFlow : AvatarFlow` where
+     * only `AvatarFlow : ResultFlow<…>`) is transitively a ResultFlow but owns no result contract of
+     * its own — `@GoTo`-ing into it from within its enclosing result flow crosses no result boundary
+     * (§6 "nested ResultFlow" / the sample's AvatarFlow→ZoomFlow). Entering such a sub-flow from
+     * *outside* the enclosing flow is still rejected — by E3 (jumping into a flow's interior).
      */
     private fun checkE1(route: RouteModel) {
         route.edges
@@ -69,18 +76,25 @@ class GezginValidator(
                 val target = edge.targetFq
                 val targetAsGraph = graphsByFq[target]
                 val parent = parentGraphOf(target)
-                val entersResultFlow = (
-                    targetAsGraph != null && targetAsGraph.isResultFlow &&
-                        targetAsGraph.fqName !in route.flowChainFq
-                    ) || (
-                    parent != null && parent.isResultFlow && parent.startFq == target &&
-                        parent.fqName !in route.flowChainFq
-                    )
-                if (entersResultFlow) {
+                val entersResultFlowDirectly = targetAsGraph != null && targetAsGraph.declaresResultFlowDirectly &&
+                    targetAsGraph.fqName !in route.flowChainFq
+                val entersResultFlowViaStart = parent != null && parent.declaresResultFlowDirectly &&
+                    parent.startFq == target && parent.fqName !in route.flowChainFq
+                if (entersResultFlowDirectly) {
                     error(
                         "E1",
                         "@${edge.kind.annotationName()} hedefi ${simple(target)} bir ResultFlow — girişe " +
                             "yalnız @GoForResult izin verir (kaynak: ${route.simpleName})",
+                    )
+                } else if (entersResultFlowViaStart) {
+                    // Target is a plain ROUTE, not the flow-graph type itself — it's a ResultFlow only
+                    // by being that flow's @StartDestination, so the message must name it as such
+                    // rather than (incorrectly) calling the route itself "a ResultFlow".
+                    error(
+                        "E1",
+                        "@${edge.kind.annotationName()} hedefi ${simple(target)}, ${simple(parent!!.fqName)} " +
+                            "ResultFlow'un START'ı — girişe yalnız @GoForResult izin verir (kaynak: " +
+                            "${route.simpleName})",
                     )
                 }
             }
@@ -109,24 +123,57 @@ class GezginValidator(
     // region E3/E4 — flow-membership boundaries
 
     /**
-     * Any forward-edge target that is a direct (non-start) member of a flow the source isn't itself
-     * part of is unreachable except through that flow's own entry point. Back-edges (`@BackTo`) are
-     * out of scope per spec §4.2: forward edges define topology, back edges walk existing history
-     * (a `@BackTo` whose target isn't on the back stack is a runtime no-op, not a topology error).
+     * A forward-edge target reachable only by crossing a flow boundary the source doesn't share is
+     * rejected: EVERY flow enclosing the target must be in the source's own flow chain, with exactly
+     * ONE exemption — the legal container-entry level. A route target exempts its INNERMOST
+     * enclosing flow when it IS that flow's `@StartDestination` (entering a flow via its start is
+     * precisely what a `@GoTo(SomeFlow::class)` container edge pushes); a flow-container target
+     * exempts itself (its own ancestors still count). Everything ABOVE the exempted level must
+     * already be in the source's chain — the walk covers the whole ancestor chain, closing the
+     * grandchild-start hole: from outside AvatarFlow, `@GoTo(ZoomRoute)` (start of the nested
+     * ZoomFlow) exempts ZoomFlow but still crosses AvatarFlow's boundary → E3 (the old single-level
+     * parent check let it slip past both E3 and — post the direct-declaration E1 fix — E1 too,
+     * silently bypassing AvatarFlow's result contract). From INSIDE AvatarFlow the same edge stays
+     * legal (AvatarFlow is in the source's chain — §8.1 "içeride serbest @GoTo").
+     *
+     * Back-edges (`@BackTo`) are out of scope per spec §4.2: forward edges define topology, back
+     * edges walk existing history (a `@BackTo` whose target isn't on the back stack is a runtime
+     * no-op, not a topology error).
      */
     private fun checkE3(route: RouteModel) {
         route.edges.map { it.targetFq }.forEach { target ->
-            val parent = parentGraphOf(target) ?: return@forEach
-            val isDirectNonStartMember = target != parent.startFq
-            if (parent.isFlow && isDirectNonStartMember && parent.fqName !in route.flowChainFq) {
+            val targetRoute = routesByFq[target]
+            val crossedFlows: List<String> = when {
+                targetRoute != null -> {
+                    val chain = targetRoute.flowChainFq
+                    val innermost = chain.lastOrNull()
+                    // Start-route exemption applies ONLY to the target's own (innermost) container.
+                    if (innermost != null && graphsByFq[innermost]?.startFq == target) chain.dropLast(1) else chain
+                }
+                target in graphsByFq -> ancestorFlowChainOf(target)
+                else -> emptyList() // unresolved target — E6's problem, not a boundary question
+            }
+            val violated = crossedFlows.firstOrNull { it !in route.flowChainFq }
+            if (violated != null) {
                 error(
                     "E3",
-                    "${simple(target)}, ${simple(parent.fqName)} flow'unun bir iç üyesi ve kaynağın " +
+                    "${simple(target)}, ${simple(violated)} flow'unun bir iç üyesi ve kaynağın " +
                         "(${route.simpleName}) flow-chain'i dışında — doğrudan hedeflenemez, yalnız " +
-                        "${simple(parent.fqName)}'un kendisi (start'ı) hedeflenebilir",
+                        "${simple(violated)}'un kendisi (start'ı) hedeflenebilir",
                 )
             }
         }
+    }
+
+    /** Flows lexically enclosing graph [graphFq] (outermost→innermost), NOT including [graphFq] itself. */
+    private fun ancestorFlowChainOf(graphFq: String): List<String> {
+        val chain = mutableListOf<String>()
+        var cur = graphsByFq[graphFq]?.parentFlowFq
+        while (cur != null) {
+            chain.add(0, cur)
+            cur = graphsByFq[cur]?.parentFlowFq
+        }
+        return chain
     }
 
     /**

@@ -22,12 +22,20 @@ private val POLYMORPHIC = MemberName(SERIALIZATION_MODULES_PKG, "polymorphic")
 private val SUBCLASS = MemberName(SERIALIZATION_MODULES_PKG, "subclass")
 
 /**
+ * The reified `kotlinx.serialization.serializer<T>()` lookup — used instead of `T.serializer()` so a
+ * BUILTIN result type (`ResultRoute<Boolean>`/`<String>`/`<Int>` …) resolves too: those have no
+ * companion `serializer()`, only the `kotlinx.serialization.builtins` extensions, whereas the
+ * reified top-level helper covers builtin AND `@Serializable` types uniformly with one import.
+ */
+private val SERIALIZER = MemberName("kotlinx.serialization", "serializer")
+
+/**
  * Task 2.4: emits the two generated-code artifacts derived from a validated [GraphModel] via
  * KotlinPoet.
  *
  * - [generateTopology] → `GezginGenerated.kt`: the loadable, executable `GezginTopology` — safe to
- *   generate unconditionally, since real result types carry `@Serializable` (and thus a real
- *   `.serializer()`) in application code.
+ *   generate unconditionally, since every result type is serializable (either `@Serializable` or a
+ *   kotlinx builtin), resolved uniformly through the reified [SERIALIZER] lookup.
  * - [generateSerializers] → `GezginSerializers.kt`: the `SerializersModule` registering every
  *   concrete [dev.gezgin.core.Route] subtype for polymorphic serialization. Split into its own file
  *   (gated by the `gezgin.emitSerializers` KSP option, default `true`) purely so test compilations
@@ -119,8 +127,15 @@ object TopologyCodegen {
             val chain = CodeBlock.builder().add("listOf(")
             route.flowChainFq.forEachIndexed { index, flowFq ->
                 if (index > 0) chain.add(", ")
-                val isResultFlow = graphsByFq.getValue(flowFq).isResultFlow
-                chain.add("%T(%S, %L)", FLOW_TYPE, flowFq, isResultFlow)
+                // OWNERSHIP semantics (spec §6): `FlowType.isResultFlow` marks the flow that OWNS a
+                // result contract — DIRECT `ResultFlow<T>` declaration only, NOT the transitive
+                // [GraphModelNode.isResultFlow] (a nested result-less sub-flow inherits the marker
+                // but no contract). The runtime's `RawNavigator.quitWith` resolves its target via
+                // `chain.indexOfLast { it.isResultFlow }`; emitting the transitive flag here made a
+                // nested sub-flow (ZoomFlow) swallow `quitWith` and silently drop the value instead
+                // of finishing the declaring flow (AvatarFlow).
+                val ownsResultContract = graphsByFq.getValue(flowFq).declaresResultFlowDirectly
+                chain.add("%T(%S, %L)", FLOW_TYPE, flowFq, ownsResultContract)
             }
             chain.add(")")
             builder.add("%T::class to %L,\n", ClassName.bestGuess(route.fqName), chain.build())
@@ -155,10 +170,11 @@ object TopologyCodegen {
                             "type — should have been rejected by GezginValidator's E2 before codegen runs",
                     )
                 builder.add(
-                    "%S to %T(%S, %T.serializer()),\n",
+                    "%S to %T(%S, %M<%T>()),\n",
                     id,
                     EDGE_SPEC,
                     id,
+                    SERIALIZER,
                     ClassName.bestGuess(resultTypeFq),
                 )
             }

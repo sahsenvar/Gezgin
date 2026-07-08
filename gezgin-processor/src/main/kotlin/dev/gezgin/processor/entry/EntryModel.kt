@@ -20,6 +20,14 @@ data class EntryFunctionModel(
     val hasNavParam: Boolean,
     /** `true` only when [routeFq] resolved to a route the model actually knows about (same module). */
     val routeInModel: Boolean,
+    /**
+     * The package the resolved route DECLARATION lives in — i.e. where [dev.gezgin.processor.codegen.NavigatorCodegen]
+     * emits the `RawNavigator.xNavigator()` factory (the nav-topology target package). Read per-entry
+     * from the route declaration itself (NOT from this module's [dev.gezgin.processor.codegen.TopologyCodegen.targetPackage]),
+     * so a cross-module feature — whose own [dev.gezgin.processor.model.GraphModel] has NO graphs and
+     * hence an empty target package — still qualifies the factory import against the nav module's package.
+     */
+    val routePackageName: String,
     val noBack: Boolean,
     /** `X` derivation for both the entry function name (`provideXEntry`) and the navigator factory. */
     val x: String,

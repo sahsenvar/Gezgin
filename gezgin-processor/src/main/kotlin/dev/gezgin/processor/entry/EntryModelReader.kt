@@ -187,6 +187,12 @@ class EntryModelReader(
             hasRouteParam = routeParam != null,
             hasNavParam = navParam != null,
             routeInModel = routeModel != null,
+            // The factory `RawNavigator.xNavigator()` lives in the route DECLARATION's package
+            // (that's where NavigatorCodegen emits it). Reading it off `routeDecl` — always
+            // resolvable via KSP regardless of which module the route was compiled in — is what
+            // lets EntryCodegen qualify the factory import cross-module (a feature module's own
+            // model has no graphs, so its `targetPackage` is empty and useless here). See §3.3.
+            routePackageName = routeDecl!!.packageName.asString(),
             // Declaration-tabanlı okuma (Important 2, review): `routeModel` YALNIZ bu modülün
             // GraphModel'inde bilinen route'lar için var olur (cross-module route'larda null) — model
             // fallback'i bu yüzden cross-module @NoBack'i SESSİZCE düşürüyordu. `routeDecl` KSP'de

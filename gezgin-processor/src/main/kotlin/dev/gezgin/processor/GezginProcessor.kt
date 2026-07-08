@@ -53,53 +53,64 @@ class GezginProcessor(
             // Codegen (Task 2.4) only runs on a clean model — a validation failure already fails
             // the compilation via KSP errors, and the model may be too malformed to emit sane code
             // for (e.g. a @GoForResult edge with no resolvable result type, normally rejected by E2).
-            if (validationOk && model.graphs.isNotEmpty()) {
-                val packageName = TopologyCodegen.targetPackage(model)
-                if (packageName.isEmpty()) {
-                    // All generated artifacts (topology, serializers, navigators, test accessors)
-                    // share ONE target package — the common prefix of every graph/route. When that
-                    // prefix is empty the nav sources sprawl across unrelated top-level packages and
-                    // there is no coherent home for the generated code; fail rather than emit into "".
-                    environment.logger.error(
-                        "[PKG] nav modülü route'ları ortak bir pakette olmalı — ortak paket öneki boş " +
-                            "(kaynaklar ayrışık top-level paketlere dağılmış)",
-                    )
-                    return emptyList()
-                }
+            if (validationOk) {
+                // GRAPH-derived codegen (topology / serializers / navigators / test accessors) is
+                // gated on this module actually OWNING graphs — its sealed graph tree, and hence its
+                // single shared nav-topology package. A cross-module FEATURE (spec §3.3) has NO
+                // graphs of its own (they all live in the central `:navigation` module), so this
+                // whole block is skipped there — but its `@Screen` ENTRY codegen below still runs.
+                if (model.graphs.isNotEmpty()) {
+                    val packageName = TopologyCodegen.targetPackage(model)
+                    if (packageName.isEmpty()) {
+                        // All graph-derived artifacts (topology, serializers, navigators, test
+                        // accessors) share ONE target package — the common prefix of every
+                        // graph/route. When that prefix is empty the nav sources sprawl across
+                        // unrelated top-level packages and there is no coherent home for the
+                        // generated code; fail rather than emit into "".
+                        environment.logger.error(
+                            "[PKG] nav modülü route'ları ortak bir pakette olmalı — ortak paket öneki boş " +
+                                "(kaynaklar ayrışık top-level paketlere dağılmış)",
+                        )
+                        return emptyList()
+                    }
 
-                TopologyCodegen.generateTopology(model, packageName)
-                    .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
-
-                val emitSerializers = environment.options["gezgin.emitSerializers"]?.toBooleanStrictOrNull() ?: true
-                if (emitSerializers) {
-                    TopologyCodegen.generateSerializers(model, packageName)
+                    TopologyCodegen.generateTopology(model, packageName)
                         .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
-                }
 
-                // Task 2.5: typed per-source navigators — undeclared edges simply have no
-                // corresponding method (unresolved reference), which is the core value proposition.
-                NavigatorCodegen.generate(model, packageName).forEach {
-                    it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
-                }
+                    val emitSerializers = environment.options["gezgin.emitSerializers"]?.toBooleanStrictOrNull() ?: true
+                    if (emitSerializers) {
+                        TopologyCodegen.generateSerializers(model, packageName)
+                            .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+                    }
 
-                // Task 2.6: §13 typed test API (`GezginTestNavigator.fromX()`) — opt-IN (default
-                // false): production modules don't depend on `:gezgin-test`, only a test source
-                // set's KSP configuration sets `gezgin.emitTestAccessors=true`.
-                val emitTestAccessors = environment.options["gezgin.emitTestAccessors"].toBoolean()
-                if (emitTestAccessors) {
-                    TestApiCodegen.generate(model, packageName)
-                        ?.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+                    // Task 2.5: typed per-source navigators — undeclared edges simply have no
+                    // corresponding method (unresolved reference), which is the core value proposition.
+                    NavigatorCodegen.generate(model, packageName).forEach {
+                        it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+                    }
+
+                    // Task 2.6: §13 typed test API (`GezginTestNavigator.fromX()`) — opt-IN (default
+                    // false): production modules don't depend on `:gezgin-test`, only a test source
+                    // set's KSP configuration sets `gezgin.emitTestAccessors=true`.
+                    val emitTestAccessors = environment.options["gezgin.emitTestAccessors"].toBoolean()
+                    if (emitTestAccessors) {
+                        TestApiCodegen.generate(model, packageName)
+                            ?.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+                    }
                 }
 
                 // Task 3.4: `provideXEntry` core-mode codegen — opt-OUT (default true, mirrors
                 // `gezgin.emitSerializers`). The opt-out exists purely for kctfork test infra where
                 // registering the compose-compiler plugin isn't wired up (see EntryCodegenTest);
-                // real (Gradle/AGP) builds always emit.
+                // real (Gradle/AGP) builds always emit. Runs INDEPENDENTLY of graph ownership: a
+                // feature module registers cross-module routes' `@Screen`s (§3.3) with no graphs of
+                // its own. Each entry qualifies its navigator factory against the ROUTE's package
+                // ([EntryFunctionModel.routePackageName]), not this module's (absent) target package.
                 val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
                 if (emitEntries) {
                     val (entries, entriesOk) = EntryModelReader(resolver, environment.logger, model).read()
-                    if (entriesOk) {
-                        EntryCodegen.generate(entries, packageName)
+                    if (entriesOk && entries.isNotEmpty()) {
+                        EntryCodegen.generate(entries)
                             .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
                     }
                 }

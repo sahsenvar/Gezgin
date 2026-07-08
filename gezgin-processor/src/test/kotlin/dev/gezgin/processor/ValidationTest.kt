@@ -176,6 +176,44 @@ class ValidationTest {
     }
 
     @Test
+    fun `positive - GoTo into a result-less nested sub-flow from within its enclosing ResultFlow is allowed`() {
+        // AvatarFlow OWNS the result contract (ResultFlow<Res>); ZoomFlow is nested inside it and
+        // only INHERITS the marker transitively (declares none of its own). Crop, itself inside
+        // AvatarFlow, @GoTo-ing ZoomFlow crosses no *result* boundary — E1 must key on the DIRECT
+        // declaration, not the transitive `isResultFlow` (which would wrongly reject this). E3 must
+        // also stay quiet because AvatarFlow is in Crop's flow chain.
+        assertCompilesClean(
+            """
+            package dev.gezgin.pos.nestedflow
+
+            import dev.gezgin.core.ResultFlow
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.StartDestination
+
+            data class Res(val v: String)
+
+            @FlowGraph
+            interface AvatarFlow : Route, ResultFlow<Res> {
+                @StartDestination
+                @GoTo(Crop::class)
+                data object PickSource : AvatarFlow
+
+                @GoTo(ZoomFlow::class)
+                data class Crop(val source: String) : AvatarFlow
+
+                @FlowGraph
+                interface ZoomFlow : AvatarFlow {
+                    @StartDestination
+                    data object Zoom : ZoomFlow
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
     fun `positive - graph extending another annotated graph does not trip E5 on its routes`() {
         assertCompilesClean(
             """
@@ -304,6 +342,89 @@ class ValidationTest {
                 data object Cart : CheckoutFlow
 
                 data object Payment : CheckoutFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `E3 - GoTo into a NESTED flow container from outside the enclosing flow is rejected`() {
+        // ZoomFlow (a flow container) is itself an interior member of AvatarFlow — targeting it
+        // from HomeGraph (outside AvatarFlow) jumps over AvatarFlow's boundary. The ancestor-chain
+        // walk must flag AvatarFlow even though the DIRECT target is a legal-looking flow container.
+        assertViolates(
+            "E3",
+            """
+            package dev.gezgin.e3.nestedcontainer
+
+            import dev.gezgin.core.ResultFlow
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.StartDestination
+
+            data class Res(val v: String)
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @GoTo(AvatarFlow.ZoomFlow::class)
+                data object Feed : HomeGraph
+            }
+
+            @FlowGraph
+            interface AvatarFlow : Route, ResultFlow<Res> {
+                @StartDestination
+                data object PickSource : AvatarFlow
+
+                @FlowGraph
+                interface ZoomFlow : AvatarFlow {
+                    @StartDestination
+                    data object Zoom : ZoomFlow
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `E3 - GoTo into a NESTED flow's start route from outside the enclosing flow is rejected`() {
+        // The grandchild-start hole (discriminator for the ancestor-chain walk — compiled clean
+        // before the fix): Zoom is ZoomFlow's @StartDestination, so the innermost-container start
+        // exemption applies to ZoomFlow — but AvatarFlow (the enclosing flow) is NOT in Feed's flow
+        // chain, so the edge still crosses AvatarFlow's boundary, silently bypassing its result
+        // contract. Neither the old single-level E3 nor E1 (ZoomFlow doesn't DIRECTLY declare
+        // ResultFlow) caught this.
+        assertViolates(
+            "E3",
+            """
+            package dev.gezgin.e3.nestedstart
+
+            import dev.gezgin.core.ResultFlow
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.StartDestination
+
+            data class Res(val v: String)
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @GoTo(AvatarFlow.ZoomFlow.Zoom::class)
+                data object Feed : HomeGraph
+            }
+
+            @FlowGraph
+            interface AvatarFlow : Route, ResultFlow<Res> {
+                @StartDestination
+                data object PickSource : AvatarFlow
+
+                @FlowGraph
+                interface ZoomFlow : AvatarFlow {
+                    @StartDestination
+                    data object Zoom : ZoomFlow
+                }
             }
             """.trimIndent(),
         )

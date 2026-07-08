@@ -47,6 +47,38 @@ object CompileHarness {
         return compilation.compile()
     }
 
+    /**
+     * Compiles ONE module in isolation (its own KSP round), optionally against a prior module's
+     * compiled output on the classpath — the closest kctfork can get to the spec §3.3 multi-module
+     * layout within its single-compilation-unit model. Feeding a `:navigation` module's
+     * [JvmCompilationResult.outputDirectory] as [extraClasspath] to a second (feature) compilation
+     * makes the navigation routes/navigators visible as CLASSPATH symbols — so the feature's own KSP
+     * `getSymbolsWithAnnotation` sees `@Screen`s but NO graphs (graphs are compiled classes, not
+     * sources), exactly the cross-module condition [dev.gezgin.processor.GezginProcessor] must handle.
+     *
+     * Each call captures its own messages (via [JvmCompilationResult.messages]); unlike [compileGezgin]
+     * it does NOT touch [lastMessages], so a two-stage test can read each stage's output independently.
+     */
+    fun compileGezginModule(
+        vararg sources: SourceFile,
+        kspArgs: Map<String, String> = emptyMap(),
+        extraClasspath: List<File> = emptyList(),
+    ): JvmCompilationResult {
+        val compilation = KotlinCompilation().apply {
+            this.sources = sources.toList()
+            configureKsp(useKsp2 = true) {
+                symbolProcessorProviders += GezginProcessorProvider()
+                processorOptions.putAll(kspArgs)
+            }
+            inheritClassPath = true
+            classpaths += extraClasspath
+            jvmTarget = "17"
+            kotlincArguments += listOf("-Xlambdas=class", "-Xsam-conversions=class")
+        }
+        lastCompilation = compilation
+        return compilation.compile()
+    }
+
     /** Convenience accessor mirroring the brief's `result.generatedSourceFor(name)` ask. */
     fun JvmCompilationResult.generatedSourceFor(fileName: String) =
         sourcesGeneratedBySymbolProcessor.firstOrNull { it.name == fileName }

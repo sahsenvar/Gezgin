@@ -100,6 +100,7 @@ class ModelReader(
             fqName = fqName,
             isFlow = isFlow,
             isResultFlow = resultTypeFq != null,
+            declaresResultFlowDirectly = graphDecl.directlyImplements(RESULT_FLOW_FQ),
             resultTypeFq = resultTypeFq,
             startFq = startFq,
             memberFq = members.map { it.requireQualifiedName() }.sorted(),
@@ -222,6 +223,10 @@ class ModelReader(
         }
         return chain
     }
+
+    /** Whether [decl]'s OWN (declared) supertype list names [fq] — non-transitive (cf. [resultTypeArgOf]). */
+    private fun KSClassDeclaration.directlyImplements(fq: String): Boolean =
+        superTypes.any { it.resolve().declaration.qualifiedName?.asString() == fq }
 
     /** `T` from `markerFq<T>` if [decl] transitively implements `markerFq<T>` (substituted), else null. */
     private fun resultTypeArgOf(decl: KSClassDeclaration, markerFq: String): String? {

@@ -68,7 +68,22 @@ data class RouteModel(
 data class GraphModelNode(
     val fqName: String,
     val isFlow: Boolean,
+    /**
+     * TRANSITIVELY a `ResultFlow<T>` — true for a nested sub-flow that merely inherits an enclosing
+     * flow's result contract too (e.g. `ZoomFlow : AvatarFlow` where `AvatarFlow : ResultFlow<…>`).
+     * Use for "does `quitWith` apply / what type" style questions. For the E1 entry-boundary check,
+     * use [declaresResultFlowDirectly] instead — a nested result-LESS sub-flow is transitively a
+     * ResultFlow but establishes no new result contract, so entering it from within the enclosing
+     * flow is legal via `@GoTo`.
+     */
     val isResultFlow: Boolean,
+    /**
+     * Declares `ResultFlow<T>` on its OWN supertype list (direct, non-transitive). This is the flow
+     * that actually OWNS a result contract — the only kind whose entry from outside requires an
+     * awaiting caller (`@GoForResult`, E1). A sub-flow that inherits the marker from a parent has
+     * [isResultFlow] `true` but [declaresResultFlowDirectly] `false`.
+     */
+    val declaresResultFlowDirectly: Boolean,
     val resultTypeFq: String?,
     val startFq: String?,
     val memberFq: List<String>,

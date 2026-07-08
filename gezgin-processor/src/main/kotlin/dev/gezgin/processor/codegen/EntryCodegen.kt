@@ -31,18 +31,21 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
  * composable may live in a different module/package than the routes it registers, so (unlike
  * [NavigatorCodegen]/[TestApiCodegen], which share the single nav-topology package) this groups by
  * [EntryFunctionModel.packageName] instead. The navigator FACTORY call (`xNavigator(entryId)`) is
- * still qualified against [navigatorPackageName] — that's where [NavigatorCodegen] emits it.
+ * qualified against each entry's own [EntryFunctionModel.routePackageName] — the package the route
+ * DECLARATION (and thus [NavigatorCodegen]'s factory) lives in. Reading it per-entry off the route
+ * (rather than off one shared nav-topology package) is what makes the factory import resolve in a
+ * cross-module feature, whose own model has no graphs and hence no target package of its own (§3.3).
  */
 object EntryCodegen {
 
-    fun generate(entries: List<EntryFunctionModel>, navigatorPackageName: String): List<FileSpec> =
+    fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
         entries.groupBy { it.packageName }.map { (packageName, group) ->
             FileSpec.builder(packageName, "GezginEntries")
-                .apply { group.forEach { addFunction(provideEntryFun(it, navigatorPackageName)) } }
+                .apply { group.forEach { addFunction(provideEntryFun(it)) } }
                 .build()
         }
 
-    private fun provideEntryFun(entry: EntryFunctionModel, navigatorPackageName: String): FunSpec {
+    private fun provideEntryFun(entry: EntryFunctionModel): FunSpec {
         val routeClass = ClassName.bestGuess(entry.routeFq)
         val composableFun = MemberName(entry.packageName, entry.functionSimpleName)
 
@@ -59,10 +62,10 @@ object EntryCodegen {
             )
             .indent()
         if (entry.hasNavParam) {
-            // `%M` (not `%L`) for the factory extension fun — it lives in [navigatorPackageName],
-            // a DIFFERENT package than this file's when the composable's own package differs, so it
-            // needs a real import, not a bare unqualified call.
-            val factoryFun = MemberName(navigatorPackageName, NavigatorCodegen.rawFactoryFunName(entry.x))
+            // `%M` (not `%L`) for the factory extension fun — it lives in the route's own package
+            // ([EntryFunctionModel.routePackageName]), a DIFFERENT package (and, cross-module, a
+            // different MODULE) than this file's, so it needs a real import, not a bare call.
+            val factoryFun = MemberName(entry.routePackageName, NavigatorCodegen.rawFactoryFunName(entry.x))
             body.add(
                 "val nav = %M.current.%M(%M.current)\n",
                 LOCAL_RAW_NAVIGATOR,
