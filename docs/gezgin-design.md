@@ -310,7 +310,7 @@ fun App() {
     val navigator = rememberNavigator(start = HomeRoute)
     GezginDisplay(
         navigator   = navigator,
-        transitions = navTransitions { default { /* app-geneli */ } },
+        transitions = navTransitions { forward { /* app-geneli */ } backward { /* app-geneli */ } },
         middleware  = listOf(NavLogger, Analytics),
     ) {                                              // this: GezginEntryScope
         homeFeatureEntries()                         // kullanıcı-yazımı bundle'lar

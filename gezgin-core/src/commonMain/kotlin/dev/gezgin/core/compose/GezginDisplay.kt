@@ -14,17 +14,6 @@ import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
 
 /**
- * `transitions` parametresinin varsayılan değeri — SINGLETON (Important 3, final-review). Önceki hal
- * `navTransitions {}` idi: bir default-arg lambda'sı olarak HER `GezginDisplay` recomposition'ında
- * (ve/veya her çağrı sitesinde) YENİDEN çalışıyordu, taze bir `GezginTransitions` instance'ı üretiyordu
- * — `remember(keys, transitions)` anahtarı bu yüzden identity'de her seferinde değişiyor gibi
- * görünebiliyordu (structural equality `GezginTransitions` için tanımlı değilse cache hep miss eder,
- * `entryList`'in gereksiz yeniden kurulmasına yol açar). Tek, sabit bir instance'a sabitlemek bu
- * kaynağı ortadan kaldırır — davranış AYNI (default hâlâ "hiç transition tanımlanmamış").
- */
-private val EMPTY_TRANSITIONS = GezginTransitions(null)
-
-/**
  * Nav3 `NavDisplay` adapter'ı (§2.1/§4.2/§12) — `entries` trailing lambda'sı [GezginEntryScope]
  * alıcısında `register<R> { ... }` çağrılarını (veya Faz 3.4'ün üreteceği `provideXEntry`'leri)
  * toplar; içerik (`GezginKey` listesi) HER ZAMAN `navigator.keysState`'ten (`id` taşır) okunur —
@@ -51,7 +40,7 @@ private val EMPTY_TRANSITIONS = GezginTransitions(null)
  * scene wiring gelince bu guard gevşetilecek (TODO).
  *
  * **Transition cascade (Task 3.5, §9) — PER-ENTRY metadata:** her entry kurulurken ([toNavEntry]) KENDİ
- * route'unun cascade'i çözülür ([resolveTransition]: `route.transition ?: transitions.default` —
+ * route'unun cascade'i çözülür ([resolveTransition]: `route.transition ?: transitions` —
  * screen>graph basamağı [Route.transition]'ın interface-override zincirinden BEDAVA gelir) ve
  * `NavEntry.metadata`'ya Nav3'ün PUBLIC `NavDisplay.transitionSpec/popTransitionSpec/
  * predictivePopTransitionSpec` sarmalayıcılarıyla yazılır ([GezginTransition.toNavEntryMetadata]).
@@ -65,7 +54,7 @@ private val EMPTY_TRANSITIONS = GezginTransitions(null)
  * NavDisplay-parametresi çözen ilk yaklaşım tam bu yüzden geri alındı: pop'ta A'nın spec'i okunuyordu).
  * `NavDisplay`'in transition parametreleri artık HİÇ geçilmiyor — cascade tamamen null ise (route yok,
  * graph yok, app default yok → metadata boş) Nav3 kendi `defaultTransitionSpec` ailesine düşer.
- * Predictive fallback (`predictive` yazılmazsa = back, §9) metadata üretiminde uygulanır.
+ * Predictive fallback (`predictive` yazılmazsa = backward, §9) metadata üretiminde uygulanır.
  *
  * **`entries` lambda'sı yalnız İLK composition'da yakalanır** (`remember { GezginEntryScope().apply(entries) }`
  * — `entries` sonraki recomposition'larda BİR DAHA çağrılmaz): içindeki `register<R> { ... }` çağrıları
@@ -76,7 +65,7 @@ private val EMPTY_TRANSITIONS = GezginTransitions(null)
 fun GezginDisplay(
     navigator: RawNavigator,
     modifier: Modifier = Modifier,
-    transitions: GezginTransitions = EMPTY_TRANSITIONS,
+    transitions: GezginTransition? = null,
     entries: GezginEntryScope.() -> Unit,
 ) {
     val scope = remember {
