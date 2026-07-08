@@ -155,7 +155,7 @@ fun ZoomScreen(route: ZoomRoute, nav: ZoomNavigator) {
             // Nested flow'dan çıkış: `ZoomRoute`'ta da (Crop gibi) generated `quit()` yok — `back()`
             // yalnız ZoomFlow'un kendi entry'sini pop'lar, CropRoute (ve dolayısıyla AvatarFlow) AÇIK
             // kalır (plan notu: "yalnız ZoomFlow kapanır, AvatarFlow kalır" — aynı sonuç, üretilen API).
-            Button(onClick = { nav.back() }) { Text("Tamam") }
+            Button(onClick = { nav.back() }) { Text("Geri") }
         }
     }
 }

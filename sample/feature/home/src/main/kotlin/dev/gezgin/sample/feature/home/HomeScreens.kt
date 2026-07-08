@@ -22,12 +22,12 @@ import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.BottomSheet
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.sample.navigation.DashboardNavigator
+import dev.gezgin.sample.navigation.FilterSheetNavigator
 import dev.gezgin.sample.navigation.HomeGraph.DashboardRoute
 import dev.gezgin.sample.navigation.HomeGraph.FilterSheetRoute
 import dev.gezgin.sample.navigation.HomeGraph.ItemDetailRoute
 import dev.gezgin.sample.navigation.HomeGraph.WelcomeRoute
 import dev.gezgin.sample.navigation.ItemDetailNavigator
-import dev.gezgin.sample.navigation.FilterSheetNavigator
 import dev.gezgin.sample.navigation.SortOrder
 import dev.gezgin.sample.navigation.WelcomeNavigator
 import kotlinx.coroutines.launch
@@ -59,6 +59,15 @@ fun DashboardScreen(route: DashboardRoute, nav: DashboardNavigator) {
             Button(
                 onClick = {
                     // suspend @GoForResult(named) tüketimi — result doğrudan liste state'ine akar.
+                    // CAVEAT (spec §6): `scope` burada `rememberCoroutineScope()` — bu composable'ın
+                    // (VM'siz) YAŞAM SÜRESİNE bağlı. Bir config-change / process-death sırasında bu
+                    // scope iptal edilir; `goToPickSortForResult` beklerken kesilirse sonuç SESSİZCE
+                    // düşer (recreate sonrası ne çağrı ne de bekleyen sonuç geri gelir — FilterSheet
+                    // ekranı hâlâ stack'te durur ama kimse dinlemiyordur). Bir ViewModel'in scope'u
+                    // (config-change'de hayatta kalır) içinde çağrılsaydı güvenli olurdu; VM'siz kalıcı
+                    // sonuç isteniyorsa `ProfileScreen`'deki launch+collect (stream) deseni kullanılmalı
+                    // (`nav.launchPickAvatar()` + `LaunchedEffect(Unit) { nav.pickAvatarResults.collect
+                    // {...} }` — her recomposition'da yeniden abone olur, PD-safe re-attach).
                     scope.launch {
                         val result = nav.goToPickSortForResult(order.name)
                         if (result is NavResult.Value) order = result.value
