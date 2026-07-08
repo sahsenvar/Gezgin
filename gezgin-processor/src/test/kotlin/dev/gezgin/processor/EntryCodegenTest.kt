@@ -226,6 +226,41 @@ class EntryCodegenTest {
     }
 
     @Test
+    fun `SC6 — two entries in the same package resolving to the same X (provideXEntry clash)`() {
+        // `Detail` and `DetailRoute` are DIFFERENT routes (no SC4), but the X derivation strips the
+        // "Route" suffix — both resolve to X="Detail", i.e. the SAME `provideDetailEntry()` name in the
+        // SAME package. Without SC6, EntryCodegen would emit two identical-signature functions into one
+        // GezginEntries.kt and the build would die later with an opaque "conflicting overloads".
+        val source = """
+            package dev.gezgin.shopui
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+
+            class Detail : Route
+            class DetailRoute : Route
+
+            @Screen
+            @Composable
+            fun DetailScreen(route: Detail) {
+            }
+
+            @Screen
+            @Composable
+            fun DetailRouteScreen(route: DetailRoute) {
+            }
+        """.trimIndent()
+
+        val result = compileGezgin(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            SourceFile.kotlin("Bad.kt", source),
+        )
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)
+        assertTrue(result.messages.contains("[SC6]"), result.messages)
+    }
+
+    @Test
     fun `SC5 — derived route type does not implement Route`() {
         val source = """
             package dev.gezgin.shopui

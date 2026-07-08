@@ -1,11 +1,17 @@
 package dev.gezgin.core.compose
 
+import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
+import dev.gezgin.core.SavedState
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.Feed
+import dev.gezgin.core.fixtures.Otp
 import dev.gezgin.core.fixtures.testSerializersModule
 import dev.gezgin.core.fixtures.testTopology
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -74,6 +80,30 @@ class RememberNavigatorSaverTest {
             json = testJson,
             onRootBack = {},
         )
+
+        assertNull(restored)
+    }
+
+    @Test
+    fun `gecerli JSON ama bilinmeyen route tipi (module'e kayitsiz) ile null doner`() {
+        // "Uygulama guncellemesi bir route'u kaldirdi" senaryosu: state, Otp'yi TANIYAN daha genis bir
+        // module ile encode edilir (yapisal olarak tamamen gecerli JSON), ama testJson'in
+        // testSerializersModule'unde Otp POLIMORFIK KAYITLI DEGIL — decode'da polymorphic-discriminator
+        // cozulemez (SerializationException) → null (fresh-start fallback), crash degil.
+        val widerJson = Json {
+            serializersModule = SerializersModule {
+                include(testSerializersModule)
+                polymorphic(dev.gezgin.core.Route::class) { subclass(Otp::class) }
+            }
+        }
+        val staleState = SavedState(
+            keys = listOf(GezginKey(route = Otp, id = 1L)),
+            nextId = 2L,
+            pendingSlots = emptyList(),
+        )
+        val encoded = widerJson.encodeToString(SavedState.serializer(), staleState)
+
+        val restored = decodeNavigatorStateOrNull(encoded, start = Feed, topology = testTopology, json = testJson, onRootBack = {})
 
         assertNull(restored)
     }
