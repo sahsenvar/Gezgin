@@ -27,12 +27,12 @@ import dev.gezgin.sample.navigation.AvatarChoice
 import dev.gezgin.sample.navigation.CropNavigator
 import dev.gezgin.sample.navigation.EditNameDialogNavigator
 import dev.gezgin.sample.navigation.PickSourceNavigator
-import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.CropRoute
-import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.PickSourceRoute
-import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.ZoomFlow.ZoomRoute
-import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialog
-import dev.gezgin.sample.navigation.ProfileGraph.ProfileRoute
-import dev.gezgin.sample.navigation.ProfileGraph.SettingsRoute
+import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.CropScreenRoute
+import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.PickSourceScreenRoute
+import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute
+import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialogRoute
+import dev.gezgin.sample.navigation.ProfileGraph.ProfileScreenRoute
+import dev.gezgin.sample.navigation.ProfileGraph.SettingsScreenRoute
 import dev.gezgin.sample.navigation.ProfileNavigator
 import dev.gezgin.sample.navigation.SettingsNavigator
 import dev.gezgin.sample.navigation.ZoomNavigator
@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
 
 @Screen
 @Composable
-fun ProfileScreen(route: ProfileRoute, nav: ProfileNavigator) {
+fun ProfileScreen(route: ProfileScreenRoute, nav: ProfileNavigator) {
     var name by remember { mutableStateOf("Gezgin Kullanıcı") }
     var avatarUri by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -78,13 +78,13 @@ fun ProfileScreen(route: ProfileRoute, nav: ProfileNavigator) {
 
 @Screen
 @Composable
-fun SettingsScreen(route: SettingsRoute, nav: SettingsNavigator) {
+fun SettingsScreen(route: SettingsScreenRoute, nav: SettingsNavigator) {
     var darkTheme by remember { mutableStateOf(false) }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Ayarlar")
             ThemeToggle(darkTheme) { darkTheme = it }
-            // `logout()` = `replaceTo(LoginRoute, clearUpTo = DashboardRoute, inclusive = true)`:
+            // `logout()` = `replaceTo(LoginScreenRoute, clearUpTo = DashboardScreenRoute, inclusive = true)`:
             // stack Dashboard dahil temizlenir, yerine Login gelir (geri ile Dashboard'a dönülmez).
             Button(onClick = { nav.logout() }) { Text("Çıkış yap") }
         }
@@ -102,7 +102,7 @@ private fun ThemeToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
 /** `@Dialog` kind — bkz. AuthScreens.kt'deki not (yalnız kind annotation'ı, `@Screen` YOK). */
 @Dialog
 @Composable
-fun EditNameDialogScreen(route: EditNameDialog, nav: EditNameDialogNavigator) {
+fun EditNameDialogScreen(route: EditNameDialogRoute, nav: EditNameDialogNavigator) {
     var text by remember { mutableStateOf(route.current) }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -120,7 +120,7 @@ fun EditNameDialogScreen(route: EditNameDialog, nav: EditNameDialogNavigator) {
 
 @Screen
 @Composable
-fun PickSourceScreen(route: PickSourceRoute, nav: PickSourceNavigator) {
+fun PickSourceScreen(route: PickSourceScreenRoute, nav: PickSourceNavigator) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Avatar kaynağı seç")
@@ -132,14 +132,14 @@ fun PickSourceScreen(route: PickSourceRoute, nav: PickSourceNavigator) {
 
 @Screen
 @Composable
-fun CropScreen(route: CropRoute, nav: CropNavigator) {
+fun CropScreen(route: CropScreenRoute, nav: CropNavigator) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Kırp (kaynak: ${route.source})")
             Button(onClick = { nav.goToZoom() }) { Text("Yakınlaştır") }
             Button(onClick = { nav.quitWith(AvatarChoice(uri = "avatar://${route.source}")) }) { Text("Kullan") }
-            // `CropRoute`'un generated `quit()`u YOK (yalnız `AvatarFlow` üyeleri arasında `@Quit`
-            // annotasyonu olan yok) — vazgeçmek `back()` ile PickSourceRoute'a döner (escalation:
+            // `CropScreenRoute`'un generated `quit()`u YOK (yalnız `AvatarFlow` üyeleri arasında `@Quit`
+            // annotasyonu olan yok) — vazgeçmek `back()` ile PickSourceScreenRoute'a döner (escalation:
             // plandaki `nav.quit()` yerine üretilen API'ye uyuldu, bkz. rapor).
             TextButton(onClick = { nav.back() }) { Text("Vazgeç") }
         }
@@ -148,19 +148,19 @@ fun CropScreen(route: CropRoute, nav: CropNavigator) {
 
 @Screen
 @Composable
-fun ZoomScreen(route: ZoomRoute, nav: ZoomNavigator) {
+fun ZoomScreen(route: ZoomScreenRoute, nav: ZoomNavigator) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Yakınlaştır (nested ZoomFlow)")
             // `quitWith` en yakın SÖZLEŞME SAHİBİ (ResultFlow<T>'u DOĞRUDAN deklare eden) flow'u
-            // hedefler (spec §6 ownership): ZoomRoute'un chain'i [AvatarFlow, ZoomFlow] ama ZoomFlow
+            // hedefler (spec §6 ownership): ZoomScreenRoute'un chain'i [AvatarFlow, ZoomFlow] ama ZoomFlow
             // kendi sözleşmesini deklare etmez — bu çağrı HEM ZoomFlow HEM AvatarFlow segmentlerini
             // tek seferde yıkar ve AvatarChoice değerini doğrudan Profile'ın `pickAvatarResults`
             // sözleşmesine teslim eder. Nested result'suz bir sub-flow İÇİNDEN dahi flow-mode sonuç
             // teslim edilebildiğinin kanıtı.
             Button(onClick = { nav.quitWith(AvatarChoice(uri = "zoomed://frame")) }) { Text("Bu kareyi kullan") }
             // Nested flow'dan geri çıkış: `back()` yalnız ZoomFlow'un kendi entry'sini pop'lar,
-            // CropRoute (ve dolayısıyla AvatarFlow) AÇIK kalır.
+            // CropScreenRoute (ve dolayısıyla AvatarFlow) AÇIK kalır.
             Button(onClick = { nav.back() }) { Text("Geri") }
         }
     }
