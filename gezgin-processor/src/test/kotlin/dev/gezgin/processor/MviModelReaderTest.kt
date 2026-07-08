@@ -54,7 +54,8 @@ class MviModelReaderTest {
                 "state=dev.gezgin.mviui.CounterState|dev.gezgin.mviui.CounterState " +
                 "intent=dev.gezgin.mviui.CounterIntent|dev.gezgin.mviui.CounterIntent " +
                 "effect=dev.gezgin.mviui.CounterEffect|dev.gezgin.mviui.CounterEffect " +
-                "pkg=dev.gezgin.mviui",
+                "pkg=dev.gezgin.mviui " +
+                "di=ANDROIDX factory=- ctor=route:dev.gezgin.mviui.CounterRoute",
         )
         assertContains(
             dump,

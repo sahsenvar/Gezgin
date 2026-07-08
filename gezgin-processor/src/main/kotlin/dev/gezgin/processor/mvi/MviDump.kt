@@ -10,7 +10,9 @@ import dev.gezgin.processor.entry.EntryFunctionModel
  * Each `vm` line dumps S/I/E BOTH as flattened FQ and as KotlinPoet `TypeName` (`fq|typeName`) so a
  * golden test can prove the [com.squareup.kotlinpoet.TypeName] capture does NOT flatten generics (the
  * Sample-Showcase regression class): a `List<String>` state arg dumps as
- * `kotlin.collections.List|kotlin.collections.List<kotlin.String>`.
+ * `kotlin.collections.List|kotlin.collections.List<kotlin.String>`. It also dumps the Faz-5.2
+ * DI-detection (`di=`, `factory=`) and primary-ctor params (`ctor=name:typeFq[(di)],…`) so the
+ * DI-default-resolver decision has model-level golden coverage alongside the codegen golden.
  *
  * Lines are sorted by owning FQ so the output never depends on KSP traversal order.
  */
@@ -22,7 +24,9 @@ fun dumpMviText(vmModels: List<ViewModelModel>, entries: List<EntryFunctionModel
             "state=${vm.stateTypeFq}|${vm.stateTypeName} " +
             "intent=${vm.intentTypeFq}|${vm.intentTypeName} " +
             "effect=${vm.effectTypeFq}|${vm.effectTypeName} " +
-            "pkg=${vm.packageName}"
+            "pkg=${vm.packageName} " +
+            "di=${vm.di} factory=${vm.assistedFactoryFq ?: "-"} " +
+            "ctor=${vm.ctorParams.joinToString(",") { "${it.name}:${it.typeFq}${if (it.diAnnotated) "(di)" else ""}" }.ifEmpty { "-" }}"
     }
 
     entries.filter { it.mvi != null }.sortedBy { it.routeFq }.forEach { entry ->

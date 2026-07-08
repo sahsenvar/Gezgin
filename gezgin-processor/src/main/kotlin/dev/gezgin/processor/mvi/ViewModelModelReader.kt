@@ -13,6 +13,13 @@ internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.ViewModel"
 internal const val SCREEN_EFFECT_FQ = "dev.gezgin.mvi.annotation.ScreenEffect"
 internal const val GEZGIN_MVI_FQ = "dev.gezgin.mvi.GezginMvi"
 
+// DI-detection FQNs (§10.1, Faz-5.0 spike) — read as strings, no compile dep on Hilt/Koin.
+private const val HILT_VIEW_MODEL_FQ = "dagger.hilt.android.lifecycle.HiltViewModel"
+private const val KOIN_VIEW_MODEL_FQ = "org.koin.core.annotation.KoinViewModel"
+private const val ASSISTED_FQ = "dagger.assisted.Assisted"
+private const val INJECTED_PARAM_FQ = "org.koin.core.annotation.InjectedParam"
+private const val UNIT_FQ = "kotlin.Unit"
+
 /**
  * Faz 5.1 — reads every `@ViewModel(Route::class)`-annotated CLASS (spec §10/§10.1 MVI add-on) into a
  * validated [ViewModelModel] list, mirroring [dev.gezgin.processor.entry.EntryModelReader]'s
@@ -92,6 +99,20 @@ class ViewModelModelReader(
         }
         seenRouteFqs[routeFq] = vmSimpleName
 
+        // DI-detection (§10.1, Faz-5.2): read the VM's own DI annotation + its ctor params so
+        // MviEntryCodegen can emit the right default `viewModel` resolver (Hilt/Koin/androidx) and
+        // decide whether a default is even possible (only when every DI-relevant param is route/nav).
+        val (di, assistedFactoryFq) = detectDi(decl)
+        val ctorParams = decl.primaryConstructor?.parameters.orEmpty().map { p ->
+            VmCtorParam(
+                name = p.name?.asString().orEmpty(),
+                // Best-effort: a same-module `nav: XNavigator` type isn't generated yet in this KSP
+                // round, so it may be unresolved — codegen matches nav by NAME in that case.
+                typeFq = p.type.resolve().fqOrString(),
+                diAnnotated = p.annotations.any { it.fqName() == ASSISTED_FQ || it.fqName() == INJECTED_PARAM_FQ },
+            )
+        }
+
         return ViewModelModel(
             vmFq = vmFq,
             vmSimpleName = vmSimpleName,
@@ -103,7 +124,28 @@ class ViewModelModelReader(
             intentTypeName = intent.toTypeName(),
             effectTypeFq = effect.fqOrString(),
             effectTypeName = effect.toTypeName(),
+            di = di,
+            assistedFactoryFq = assistedFactoryFq,
+            ctorParams = ctorParams,
         )
+    }
+
+    /**
+     * The VM's DI framework + (for Hilt-assisted) its factory FQ, by inspecting the class's own
+     * annotations (§10.1). `@HiltViewModel` with a non-sentinel `assistedFactory` → [VmDiKind.HILT_ASSISTED];
+     * a bare `@HiltViewModel` → [VmDiKind.HILT_PLAIN]; `@KoinViewModel` → [VmDiKind.KOIN]; none →
+     * [VmDiKind.ANDROIDX]. The sentinel guard accepts BOTH the fixture stub's `Unit::class` default and
+     * real Hilt's `HiltViewModel::class` self-referential default, so neither is mistaken for a factory.
+     */
+    private fun detectDi(decl: KSClassDeclaration): Pair<VmDiKind, String?> {
+        val hilt = decl.annotations.firstOrNull { it.fqName() == HILT_VIEW_MODEL_FQ }
+        if (hilt != null) {
+            val factoryFq = hilt.classArg("assistedFactory")?.declaration?.qualifiedName?.asString()
+            val isSentinel = factoryFq == null || factoryFq == UNIT_FQ || factoryFq == HILT_VIEW_MODEL_FQ
+            return if (isSentinel) VmDiKind.HILT_PLAIN to null else VmDiKind.HILT_ASSISTED to factoryFq
+        }
+        if (decl.annotations.any { it.fqName() == KOIN_VIEW_MODEL_FQ }) return VmDiKind.KOIN to null
+        return VmDiKind.ANDROIDX to null
     }
 
     /**
