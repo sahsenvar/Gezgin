@@ -119,11 +119,18 @@ fun ItemDetailScreen(route: ItemDetailScreenRoute, nav: ItemDetailNavigator) {
 fun FilterSheetScreen(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavigator) {
     val sheetState = LocalGezginSheetState.current
     val scope = rememberCoroutineScope()
+    // Double-click idempotency (referans sample dersi): `hide()` bir suspend animasyon → hızlı iki tık
+    // İKİ coroutine başlatıp iki `backWithResult` dispatch edebilir; ikincisi arkadaki Dashboard'ı da
+    // pop'lardı. `dispatched` bayrağı onClick'te SENKRON set edilir (launch'tan önce) → yalnız İLK tık
+    // hide+backWithResult yapar, sonrakiler no-op.
+    var dispatched by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Sırala (şu an: ${route.current})")
         SortOrder.entries.forEach { candidate ->
             Button(
-                onClick = {
+                onClick = onClick@{
+                    if (dispatched) return@onClick
+                    dispatched = true
                     scope.launch {
                         sheetState.hide()
                         nav.backWithResult(candidate)

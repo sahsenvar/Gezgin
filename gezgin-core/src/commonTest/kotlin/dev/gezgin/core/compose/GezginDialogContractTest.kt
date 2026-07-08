@@ -54,6 +54,23 @@ class GezginDialogContractTest {
         assertEquals(DialogProperties(true, true, true), props)
     }
 
+    // Minor (contract-default lockstep pin): adapter'ın `?: true` literalleri [DialogContract]'ın interface
+    // default'larıyla AYNI kalsın (drift önle). Contract'sız DIALOG'un çözülen props'u == tüm-default
+    // DialogContract'ın getter'larından kurulan props. Adapter default'u değişir ama interface değişmezse
+    // (ya da tersi) bu test kırılır.
+    @Test
+    fun `contract-default lockstep - contract'siz DIALOG == tum-default DialogContract`() {
+        val allDefault = object : dev.gezgin.core.DialogContract {}
+        assertEquals(
+            DialogProperties(
+                dismissOnBackPress = allDefault.dismissOnBackPress,
+                dismissOnClickOutside = allDefault.dismissOnClickOutside,
+                usePlatformDefaultWidth = allDefault.usePlatformDefaultWidth,
+            ),
+            dialogPropsOf(DialogDefault("x"), 20L),
+        )
+    }
+
     @Test
     fun `DialogContract'li DIALOG - property'ler contract'tan iner`() {
         val props = dialogPropsOf(DialogCustom("x"), 3L)
