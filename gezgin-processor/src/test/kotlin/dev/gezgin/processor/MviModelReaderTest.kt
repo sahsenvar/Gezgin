@@ -29,7 +29,13 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 class MviModelReaderTest {
 
     private fun dumpOf(vararg sources: SourceFile): List<String> {
-        val result = compileGezgin(*sources, kspArgs = mapOf("gezgin.dumpMvi" to "true", "gezgin.emitSerializers" to "false"))
+        // `gezgin.emitEntries=false`: the model-level dump must not trigger Faz-5.2 MVI codegen, whose
+        // generated `collectAsStateWithLifecycle()` call site backend-ICEs kctfork's plugin-less compile
+        // (see EntryCodegenTest's class KDoc). The dump itself runs regardless of this flag.
+        val result = compileGezgin(
+            *sources,
+            kspArgs = mapOf("gezgin.dumpMvi" to "true", "gezgin.emitSerializers" to "false", "gezgin.emitEntries" to "false"),
+        )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
         val dump = findGeneratedResource("GezginMviDump.txt")
         assertNotNull(dump, "GezginMviDump.txt not generated; messages:\n${result.messages}")
@@ -66,21 +72,27 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `positive — a MVI @Screen emits NO core-mode GezginEntries (Faz 5_2 territory), no SC error`() {
-        // The MVI content must NOT be mis-read as a core-mode entry and emitted by EntryCodegen; the
-        // MVI provideXEntry is Faz 5.2. The read+validate is clean (no [SC*]/[MV*]).
+    fun `MVI @Screen emits GezginMviEntries, never core-mode GezginEntries, no SC error`() {
+        // The MVI content must NOT be mis-read as a core-mode entry (that would land in EntryCodegen's
+        // GezginEntries.kt with the wrong `(route, nav)` shape); Faz 5.2 emits it via MviEntryCodegen
+        // into GezginMviEntries.kt instead. The read+validate stays clean (no [SC*]/[MV*]). Exit is NOT
+        // asserted OK here: the emitted `collectAsStateWithLifecycle()` call site backend-ICEs kctfork's
+        // plugin-less compile (EntryCodegenTest class KDoc) — the KSP-generated sources still populate.
         val result = compileGezgin(
             SourceFile.kotlin("MviSource.kt", MVI_SOURCE),
             kspArgs = mapOf("gezgin.emitSerializers" to "false"),
         )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
         assertTrue(
             !result.messages.contains("[SC") && !result.messages.contains("[MV"),
             "unexpected KSP error: ${result.messages}",
         )
         assertTrue(
             result.generatedSourceFor("GezginEntries.kt") == null,
-            "MVI-mode content must not emit core-mode GezginEntries.kt in 5.1",
+            "MVI-mode content must not emit core-mode GezginEntries.kt",
+        )
+        assertNotNull(
+            result.generatedSourceFor("GezginMviEntries.kt"),
+            "MVI-mode content must emit GezginMviEntries.kt in 5.2: ${result.messages}",
         )
     }
 
