@@ -106,6 +106,40 @@ class TopologyCodegenTest {
     }
 
     @Test
+    fun `topology compiles when a GoForResult result type is a kotlinx builtin (Boolean)`() {
+        // ForgotPasswordDialog : ResultRoute<Boolean> — a BUILTIN result type has no companion
+        // `Boolean.serializer()`, so the topology must reach it through the reified
+        // `kotlinx.serialization.serializer<Boolean>()` helper. Regression for the sample showcase's
+        // ResultRoute<Boolean>/<String> screen-mode results (spec §6).
+        val source = """
+            package dev.gezgin.builtinresult
+
+            import dev.gezgin.core.ResultRoute
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoForResult
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface AuthGraph : Route {
+                @GoForResult(ForgotPasswordDialog::class)
+                data object LoginRoute : AuthGraph
+
+                data class ForgotPasswordDialog(val email: String? = null) : AuthGraph, ResultRoute<Boolean>
+            }
+        """.trimIndent()
+
+        val result = compileGezgin(
+            SourceFile.kotlin("BuiltinResult.kt", source),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val topologyText = result.generatedSourceFor("GezginGenerated.kt")?.readText()
+        assertNotNull(topologyText, "GezginGenerated.kt must be emitted")
+        assertTrue("serializer<Boolean>()" in topologyText, topologyText)
+    }
+
+    @Test
     fun `golden text for GezginSerializers contains expected shape`() {
         val result = compileGezgin(
             SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),

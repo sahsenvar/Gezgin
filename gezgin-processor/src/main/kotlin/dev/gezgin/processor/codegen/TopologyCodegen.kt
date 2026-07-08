@@ -22,12 +22,20 @@ private val POLYMORPHIC = MemberName(SERIALIZATION_MODULES_PKG, "polymorphic")
 private val SUBCLASS = MemberName(SERIALIZATION_MODULES_PKG, "subclass")
 
 /**
+ * The reified `kotlinx.serialization.serializer<T>()` lookup — used instead of `T.serializer()` so a
+ * BUILTIN result type (`ResultRoute<Boolean>`/`<String>`/`<Int>` …) resolves too: those have no
+ * companion `serializer()`, only the `kotlinx.serialization.builtins` extensions, whereas the
+ * reified top-level helper covers builtin AND `@Serializable` types uniformly with one import.
+ */
+private val SERIALIZER = MemberName("kotlinx.serialization", "serializer")
+
+/**
  * Task 2.4: emits the two generated-code artifacts derived from a validated [GraphModel] via
  * KotlinPoet.
  *
  * - [generateTopology] → `GezginGenerated.kt`: the loadable, executable `GezginTopology` — safe to
- *   generate unconditionally, since real result types carry `@Serializable` (and thus a real
- *   `.serializer()`) in application code.
+ *   generate unconditionally, since every result type is serializable (either `@Serializable` or a
+ *   kotlinx builtin), resolved uniformly through the reified [SERIALIZER] lookup.
  * - [generateSerializers] → `GezginSerializers.kt`: the `SerializersModule` registering every
  *   concrete [dev.gezgin.core.Route] subtype for polymorphic serialization. Split into its own file
  *   (gated by the `gezgin.emitSerializers` KSP option, default `true`) purely so test compilations
@@ -155,10 +163,11 @@ object TopologyCodegen {
                             "type — should have been rejected by GezginValidator's E2 before codegen runs",
                     )
                 builder.add(
-                    "%S to %T(%S, %T.serializer()),\n",
+                    "%S to %T(%S, %M<%T>()),\n",
                     id,
                     EDGE_SPEC,
                     id,
+                    SERIALIZER,
                     ClassName.bestGuess(resultTypeFq),
                 )
             }
