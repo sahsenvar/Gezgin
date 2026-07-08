@@ -13,6 +13,8 @@ import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.entry.EntryModelReader
 import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.dumpText
+import dev.gezgin.processor.mvi.ViewModelModelReader
+import dev.gezgin.processor.mvi.dumpMviText
 
 /**
  * Reads the semantic [dev.gezgin.processor.model.GraphModel] (Task 2.2), validates it against the
@@ -108,10 +110,33 @@ class GezginProcessor(
                 // ([EntryFunctionModel.routePackageName]), not this module's (absent) target package.
                 val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
                 if (emitEntries) {
-                    val (entries, entriesOk) = EntryModelReader(resolver, environment.logger, model).read()
-                    if (entriesOk && entries.isNotEmpty()) {
-                        EntryCodegen.generate(entries)
-                            .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
+                    // Faz 5.1 — MVI add-on read/validate. @ViewModel classes first (MV1/MV4), then feed
+                    // them to the entry reader so MVI-mode `@Screen(state,onIntent)` content can pair with
+                    // its same-module @ViewModel by route (MV2/MV3/MV5/MV6). Core-mode (route,nav) reading
+                    // is untouched — vmModels is empty in any module with no @ViewModel.
+                    val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
+                    val (entries, entriesOk) = EntryModelReader(resolver, environment.logger, model, vmModels).read()
+
+                    if (environment.options["gezgin.dumpMvi"].toBoolean()) {
+                        environment.codeGenerator.createNewFile(
+                            dependencies = Dependencies.ALL_FILES,
+                            packageName = "",
+                            fileName = "GezginMviDump",
+                            extensionName = "txt",
+                        ).use { it.write(dumpMviText(vmModels, entries).toByteArray()) }
+                    }
+
+                    // Faz 5.1 emits ONLY core-mode entries — MVI-mode `provideXEntry` codegen (VM
+                    // resolver / DI-detection / @ScreenEffect wiring / Problem-2 resolver params) is
+                    // Faz 5.2. MVI-mode entries are fully read+validated above (MV1–MV6) and carried in
+                    // the model for 5.2; they are NOT passed to the core-mode EntryCodegen (which knows
+                    // only the `(route, nav)` shape).
+                    if (vmOk && entriesOk) {
+                        val coreEntries = entries.filter { it.mvi == null }
+                        if (coreEntries.isNotEmpty()) {
+                            EntryCodegen.generate(coreEntries)
+                                .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
+                        }
                     }
                 }
             }
