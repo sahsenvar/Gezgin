@@ -55,17 +55,16 @@ interface FullscreenModalContract {
  * taşır ([DialogContract] ile aynı desen; adapter `route as? BottomSheetContract` ile okur). Route
  * implement etmezse adapter tip-varsayılanları kullanır (aşağıdaki default'larla birebir).
  *
- * **Minimal & dürüst prop seti kararı (§7 sheet için spesifik prop saymaz):** yalnız material3
- * `ModalBottomSheet`'in GERÇEK, anlamlı knob'larına maplenen iki alan:
+ * **Prop seti — material3 `ModalBottomSheet`'in GERÇEK knob'larına maplenen üç alan** ([DialogContract]
+ * ile simetrik dismiss ikilisi + sheet'e özgü layout knob'u):
  * - [skipPartiallyExpanded] → `rememberModalBottomSheetState(skipPartiallyExpanded = ...)`. `true` iken
  *   sheet ara (yarı-açık) durağı atlar; doğrudan tam-açık ya da gizli olur (kısa içerik sheet'leri için).
  * - [dismissOnBackPress] → `ModalBottomSheetProperties(shouldDismissOnBackPress = ...)`. `false` iken
  *   geri tuşu sheet'i kapatmaz. [DialogContract.dismissOnBackPress] paraleli; **aynı `@NoBack` guard'ına**
  *   tabidir (adapter'da `require(!(noBack && dismissOnBackPress))` — kuruluş-zamanı runtime, §7).
- *
- * `dismissOnClickOutside` BİLEREK YOK: material3 `ModalBottomSheet` scrim-tap'i her zaman
- * `onDismissRequest`'e bağlar (kapatmayı devre-dışı bırakan bir knob yok) → böyle bir prop yanıltıcı
- * olurdu (minimal magic; olmayan davranışı iddia etme).
+ * - [dismissOnClickOutside] → `ModalBottomSheetProperties(shouldDismissOnClickOutside = ...)`. scrim-tap
+ *   (dışarı tık) sheet'i kapatır mı; default `true`. `false` → tap-outside kapatmaz, ama swipe-down ve
+ *   geri-tuşu (izin varsa) HÂLÂ çalışır. [DialogContract.dismissOnClickOutside] paraleli.
  *
  * dismiss (swipe-down / scrim-tap / geri-izin-varken) → sheet `onDismissRequest = onBack` →
  * `navigator.back()` → pop; route `ResultRoute` ise caller `Canceled` alır (mevcut `back()` yolu —
@@ -74,4 +73,5 @@ interface FullscreenModalContract {
 interface BottomSheetContract {
     val skipPartiallyExpanded: Boolean get() = false
     val dismissOnBackPress: Boolean get() = true
+    val dismissOnClickOutside: Boolean get() = true
 }

@@ -132,7 +132,7 @@ private fun resolveDialogProperties(kind: EntryKind, route: Route): DialogProper
 /**
  * Kind + route-instance → BottomSheet scene [GezginBottomSheetProps] (§7), yoksa `null` (sheet-dışı entry).
  * Property'ler route'un opsiyonel [BottomSheetContract]'ından (runtime değer, §2.4) okunur; route implement
- * etmemişse tip-varsayılan (`skipPartiallyExpanded=false`, `dismissOnBackPress=true`).
+ * etmemişse tip-varsayılan (`skipPartiallyExpanded=false`, `dismissOnBackPress=true`, `dismissOnClickOutside=true`).
  */
 private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottomSheetProps? = when (kind) {
     EntryKind.BOTTOM_SHEET -> {
@@ -140,6 +140,7 @@ private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottom
         GezginBottomSheetProps(
             skipPartiallyExpanded = contract?.skipPartiallyExpanded ?: false,
             dismissOnBackPress = contract?.dismissOnBackPress ?: true,
+            dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
         )
     }
     EntryKind.SCREEN, EntryKind.DIALOG, EntryKind.FULLSCREEN_MODAL -> null

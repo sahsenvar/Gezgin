@@ -45,13 +45,34 @@ class GezginBottomSheetContractTest {
     @Test
     fun `BottomSheetContract'siz BOTTOM_SHEET - tip-varsayilan props`() {
         val props = sheetPropsOf(SheetDefault("x"), 2L)
-        assertEquals(GezginBottomSheetProps(skipPartiallyExpanded = false, dismissOnBackPress = true), props)
+        assertEquals(
+            GezginBottomSheetProps(
+                skipPartiallyExpanded = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+            ),
+            props,
+        )
     }
 
     @Test
     fun `BottomSheetContract'li BOTTOM_SHEET - property'ler contract'tan iner`() {
         val props = sheetPropsOf(SheetCustom("x"), 3L)
-        assertEquals(GezginBottomSheetProps(skipPartiallyExpanded = true, dismissOnBackPress = false), props)
+        assertEquals(
+            GezginBottomSheetProps(
+                skipPartiallyExpanded = true,
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+            ),
+            props,
+        )
+    }
+
+    @Test
+    fun `dismissOnClickOutside - contract'tan iner (Important 1 - scrim-tap knob acikta)`() {
+        // Contract false → props false (scrim-tap kapatmaz); contract'sız → default true.
+        assertTrue(!sheetPropsOf(SheetCustom("x"), 31L).dismissOnClickOutside, "contract false → false")
+        assertTrue(sheetPropsOf(SheetDefault("x"), 32L).dismissOnClickOutside, "contract'sız → default true")
     }
 
     @Test

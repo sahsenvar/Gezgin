@@ -50,6 +50,7 @@ internal const val GEZGIN_BOTTOM_SHEET_KEY = "gezginBottomSheet"
 internal data class GezginBottomSheetProps(
     val skipPartiallyExpanded: Boolean,
     val dismissOnBackPress: Boolean,
+    val dismissOnClickOutside: Boolean,
 )
 
 /**
@@ -66,6 +67,12 @@ internal data class GezginBottomSheetProps(
  *
  * Nav3 `Scene` sözleşmesi eşitlik ister (aynı backstack için aynı scene instance'ı kullanılsın diye) →
  * [DialogScene] gibi `equals`/`hashCode` elle implement edildi.
+ *
+ * **Kalıntı risk — programatik pop animasyonsuz (4.4/gelecek):** kullanıcı jest'leriyle (swipe/scrim/back)
+ * kapatmada material3 `ModalBottomSheet` hide-animation'ı `onDismissRequest`'ten ÖNCE oynar (görsel
+ * slide-down). Ama PROGRAMATİK `navigator.back()` doğrudan entry'yi backstack'ten düşürür → scene
+ * SinglePane'e recompose olur, sheet animasyonsuz kaybolur. İleride `OverlayScene.onRemove()` override'ı
+ * programatik pop'a da slide-down ekleyebilir (bu görev kapsamı dışı — 4.4/gelecek notu).
  */
 internal class GezginBottomSheetScene(
     override val key: Any,
@@ -83,7 +90,10 @@ internal class GezginBottomSheetScene(
         ModalBottomSheet(
             onDismissRequest = onBack,
             sheetState = sheetState,
-            properties = ModalBottomSheetProperties(shouldDismissOnBackPress = props.dismissOnBackPress),
+            properties = ModalBottomSheetProperties(
+                shouldDismissOnBackPress = props.dismissOnBackPress,
+                shouldDismissOnClickOutside = props.dismissOnClickOutside,
+            ),
         ) {
             CompositionLocalProvider(LocalGezginSheetState provides sheetState) {
                 entry.Content()

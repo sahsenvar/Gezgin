@@ -59,14 +59,16 @@ data object FullModal : ShopGraph, dev.gezgin.core.FullscreenModalContract {
 
 // --- Task 4.2 (§7 BottomSheet) fixture'ları ---
 /** Contract implement ETMEYEN sheet route → adapter tip-varsayılan props (skipPartiallyExpanded=false,
- *  dismissOnBackPress=true). */
+ *  dismissOnBackPress=true, dismissOnClickOutside=true). */
 @Serializable data class SheetDefault(val id: String) : ShopGraph
 
-/** BottomSheetContract'lı sheet route: ikisini de ezer (skipPartiallyExpanded=true, dismissOnBackPress=false). */
+/** BottomSheetContract'lı sheet route: üçünü de ezer (skipPartiallyExpanded=true, dismissOnBackPress=false,
+ *  dismissOnClickOutside=false). */
 @Serializable
 data class SheetCustom(val id: String) : ShopGraph, dev.gezgin.core.BottomSheetContract {
     override val skipPartiallyExpanded: Boolean get() = true
     override val dismissOnBackPress: Boolean get() = false
+    override val dismissOnClickOutside: Boolean get() = false
 }
 
 /** @NoBack + dismissOnBackPress=true (default) çelişkisi guard testi için sheet route. */
