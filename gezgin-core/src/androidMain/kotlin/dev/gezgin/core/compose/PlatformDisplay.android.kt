@@ -29,9 +29,9 @@ internal actual fun GezginNoBackHandler() {
 
 /**
  * Android (Google 1.1.4): `NavDisplay` scene-strategy'si **ÇOĞUL** `sceneStrategies: List<SceneStrategy<T>>`.
- * `listOf(DialogSceneStrategy(), SinglePaneSceneStrategy())` — dialog-metadata'lı entry overlay, kalanı
- * tek-pane (default `listOf(SinglePaneSceneStrategy())` fallback'ı açıkça korunur — DialogSceneStrategy
- * non-dialog entry'de null döner).
+ * `listOf(DialogSceneStrategy(), GezginBottomSheetSceneStrategy(), SinglePaneSceneStrategy())` — dialog-
+ * ve sheet-metadata'lı entry'ler overlay, kalanı tek-pane (default `SinglePaneSceneStrategy` fallback'ı en
+ * sonda açıkça korunur; her overlay stratejisi ilgili metadata key'i yoksa null döner).
  */
 @Composable
 internal actual fun GezginNavDisplay(
@@ -42,7 +42,11 @@ internal actual fun GezginNavDisplay(
     NavDisplay(
         entries = entries,
         modifier = modifier,
-        sceneStrategies = listOf(DialogSceneStrategy<Route>(), SinglePaneSceneStrategy()),
+        sceneStrategies = listOf(
+            DialogSceneStrategy<Route>(),
+            GezginBottomSheetSceneStrategy(),
+            SinglePaneSceneStrategy(),
+        ),
         onBack = onBack,
     )
 }

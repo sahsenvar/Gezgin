@@ -9,7 +9,8 @@ import kotlin.reflect.KClass
  * runtime karşılığı. Faz 4 scene wiring: `DIALOG`/`FULLSCREEN_MODAL` [toNavEntry]'de DialogSceneStrategy
  * metadata'sı alır (properties opsiyonel DialogContract/FullscreenModalContract'tan) → `Dialog` overlay
  * render (bkz. EntryAdapter.kt); FULLSCREEN_MODAL `usePlatformDefaultWidth=false` (tam-ekran). `BOTTOM_SHEET`
- * hâlâ plain (4.2'de bağlanacak); `SCREEN` tek-pane.
+ * `BOTTOM_SHEET` (Faz 4.2) GezginBottomSheetSceneStrategy metadata'sı alır → `ModalBottomSheet` overlay
+ * (el-yazımı OverlayScene, sheetState Local ile enjekte); `SCREEN` tek-pane.
  */
 enum class EntryKind { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
 

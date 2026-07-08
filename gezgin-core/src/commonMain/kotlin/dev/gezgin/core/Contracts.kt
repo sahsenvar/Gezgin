@@ -48,3 +48,30 @@ interface FullscreenModalContract {
     val dismissOnClickOutside: Boolean get() = true
     val dismissOnBackPress: Boolean get() = true
 }
+
+/**
+ * BottomSheet sunum property'lerinin **opsiyonel** tipli evi (§7) — bir `@BottomSheet` route'u bu
+ * interface'i implement ederek modal sheet'in davranışını route-instance'ından **runtime değer** olarak
+ * taşır ([DialogContract] ile aynı desen; adapter `route as? BottomSheetContract` ile okur). Route
+ * implement etmezse adapter tip-varsayılanları kullanır (aşağıdaki default'larla birebir).
+ *
+ * **Minimal & dürüst prop seti kararı (§7 sheet için spesifik prop saymaz):** yalnız material3
+ * `ModalBottomSheet`'in GERÇEK, anlamlı knob'larına maplenen iki alan:
+ * - [skipPartiallyExpanded] → `rememberModalBottomSheetState(skipPartiallyExpanded = ...)`. `true` iken
+ *   sheet ara (yarı-açık) durağı atlar; doğrudan tam-açık ya da gizli olur (kısa içerik sheet'leri için).
+ * - [dismissOnBackPress] → `ModalBottomSheetProperties(shouldDismissOnBackPress = ...)`. `false` iken
+ *   geri tuşu sheet'i kapatmaz. [DialogContract.dismissOnBackPress] paraleli; **aynı `@NoBack` guard'ına**
+ *   tabidir (adapter'da `require(!(noBack && dismissOnBackPress))` — kuruluş-zamanı runtime, §7).
+ *
+ * `dismissOnClickOutside` BİLEREK YOK: material3 `ModalBottomSheet` scrim-tap'i her zaman
+ * `onDismissRequest`'e bağlar (kapatmayı devre-dışı bırakan bir knob yok) → böyle bir prop yanıltıcı
+ * olurdu (minimal magic; olmayan davranışı iddia etme).
+ *
+ * dismiss (swipe-down / scrim-tap / geri-izin-varken) → sheet `onDismissRequest = onBack` →
+ * `navigator.back()` → pop; route `ResultRoute` ise caller `Canceled` alır (mevcut `back()` yolu —
+ * material3'te swipe+scrim+back ÜÇÜ de tek `onDismissRequest`'e düşer, jar-doğrulandı).
+ */
+interface BottomSheetContract {
+    val skipPartiallyExpanded: Boolean get() = false
+    val dismissOnBackPress: Boolean get() = true
+}

@@ -1,0 +1,136 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
+package dev.gezgin.core.compose
+
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.scene.OverlayScene
+import androidx.navigation3.scene.Scene
+import androidx.navigation3.scene.SceneStrategy
+import androidx.navigation3.scene.SceneStrategyScope
+import dev.gezgin.core.Route
+
+/**
+ * `@BottomSheet` content'ine Gezgin'in enjekte ettiği [SheetState] (§7) — **register imzası
+ * DEĞİŞMEDEN** sheet durumunu content'e taşıyan rol-param'ı. [LocalGezginEntryId]/
+ * [LocalGezginRawNavigator] deseniyle simetrik: [GezginBottomSheetScene] `ModalBottomSheet`'i kurarken
+ * `sheetState`'i bu Local ile sarar; `@BottomSheet` content'i `LocalGezginSheetState.current` ile okur
+ * (örn. bir buton `scope.launch { sheetState.hide() }` ile sheet'i kapatabilir).
+ *
+ * **sheetState enjeksiyon kararı = CompositionLocal (register imzası sabit):** alternatif (register'a
+ * `@BottomSheet` özel overload) imzayı çoğaltırdı. Local ile `register<R> { ... }` tek imza kalır; Faz 3.4
+ * codegen'i İLERİDE BOTTOM_SHEET content'inin `sheetState` param'ını bu Local'dan besleyecek şekilde
+ * genişletilebilir (bu görevde core-mode register + Local yeterli — 4.4/gelecek notu).
+ *
+ * `staticCompositionLocalOf` — değer sheet-entry başına stabil (entry recompose olduğunda `SheetState`
+ * instance'ı `remember`'lı kalır); dynamic read-tracking maliyeti gereksiz.
+ */
+val LocalGezginSheetState = staticCompositionLocalOf<SheetState> {
+    error("LocalGezginSheetState yalnız GezginDisplay'in kurduğu @BottomSheet content'i içinde okunabilir.")
+}
+
+/** [GezginBottomSheetScene]'in `NavEntry.metadata`'da taşındığı anahtar (Gezgin-tanımlı, iki platformda
+ *  AYNI string — kendi strateji'miz kendi key'ini yazıp okur, platform-içi tutarlı; DialogSceneStrategy'nin
+ *  `"dialog"` key'inden ayrık, transition key'lerinden de ayrık). */
+internal const val GEZGIN_BOTTOM_SHEET_KEY = "gezginBottomSheet"
+
+/**
+ * `@BottomSheet` route'unun opsiyonel [dev.gezgin.core.BottomSheetContract]'ından (runtime değer, §2.4)
+ * çözülen sheet property'leri. `NavEntry.metadata`'ya [GEZGIN_BOTTOM_SHEET_KEY] altında konur; strateji
+ * bunu okuyup [GezginBottomSheetScene]'i kurar. `data class` → scene eşitliği + adapter-level pin için
+ * bedava `equals`/`hashCode`.
+ */
+internal data class GezginBottomSheetProps(
+    val skipPartiallyExpanded: Boolean,
+    val dismissOnBackPress: Boolean,
+)
+
+/**
+ * El-yazımı BottomSheet [OverlayScene] (§7) — Nav3'te hazır `BottomSheetSceneStrategy` YOK (4.0 raporu §3)
+ * → material3 `ModalBottomSheet` ile [androidx.navigation3.scene.DialogScene] şablonundan yazıldı.
+ * `overlaidEntries` = alttaki entry'ler (arka SCREEN görünür kalır); `content` sheet'i overlay olarak
+ * çizer ve `entry.Content()`'i [LocalGezginSheetState] ile sararak sheetState'i content'e enjekte eder.
+ *
+ * **swipe-dismiss→Canceled:** `onDismissRequest = onBack` (= `SceneStrategyScope.onBack` =
+ * `NavDisplay.onBack` = Gezgin [gezginOnBack]). material3'te swipe-down / scrim-tap / geri-tuşu ÜÇÜ de
+ * tek `onDismissRequest`'e düşer (jar-doğrulandı: `settleToDismiss`/`Scrim`/predictive-back hepsi bu
+ * callback'i çağırır) → dismiss = `navigator.back()` = `ResultRoute` sheet için `Canceled` (dialog'daki
+ * 4.1 mekanizmasının aynısı, ek kod gerekmez).
+ *
+ * Nav3 `Scene` sözleşmesi eşitlik ister (aynı backstack için aynı scene instance'ı kullanılsın diye) →
+ * [DialogScene] gibi `equals`/`hashCode` elle implement edildi.
+ */
+internal class GezginBottomSheetScene(
+    override val key: Any,
+    private val entry: NavEntry<Route>,
+    override val overlaidEntries: List<NavEntry<Route>>,
+    private val props: GezginBottomSheetProps,
+    private val onBack: () -> Unit,
+) : OverlayScene<Route> {
+
+    override val entries: List<NavEntry<Route>> = listOf(entry)
+    override val previousEntries: List<NavEntry<Route>> = overlaidEntries
+
+    override val content: @Composable () -> Unit = {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = props.skipPartiallyExpanded)
+        ModalBottomSheet(
+            onDismissRequest = onBack,
+            sheetState = sheetState,
+            properties = ModalBottomSheetProperties(shouldDismissOnBackPress = props.dismissOnBackPress),
+        ) {
+            CompositionLocalProvider(LocalGezginSheetState provides sheetState) {
+                entry.Content()
+            }
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+        other as GezginBottomSheetScene
+        return key == other.key &&
+            entry == other.entry &&
+            overlaidEntries == other.overlaidEntries &&
+            props == other.props
+    }
+
+    override fun hashCode(): Int {
+        return key.hashCode() * 31 +
+            entry.hashCode() * 31 +
+            overlaidEntries.hashCode() * 31 +
+            props.hashCode() * 31
+    }
+
+    override fun toString(): String =
+        "GezginBottomSheetScene(key=$key, entry=$entry, overlaidEntries=$overlaidEntries, props=$props)"
+}
+
+/**
+ * BottomSheet [SceneStrategy] (§7) — top entry'nin `NavEntry.metadata`'sında [GEZGIN_BOTTOM_SHEET_KEY]
+ * (adapter [toNavEntry] `kind == BOTTOM_SHEET` iken yazar) varsa bir [GezginBottomSheetScene] döndürür,
+ * yoksa `null` (zincirdeki sonraki stratejiye devret). `DialogSceneStrategy` deseni; `overlaidEntries =
+ * entries.dropLast(1)` (arka SCREEN görünür). [GezginNavDisplay] actual'larında DialogSceneStrategy'nin
+ * YANINA (fallback `SinglePaneSceneStrategy`'den ÖNCE) eklenir.
+ */
+internal class GezginBottomSheetSceneStrategy : SceneStrategy<Route> {
+    override fun SceneStrategyScope<Route>.calculateScene(entries: List<NavEntry<Route>>): Scene<Route>? {
+        val lastEntry = entries.lastOrNull()
+        val props = lastEntry?.metadata?.get(GEZGIN_BOTTOM_SHEET_KEY) as? GezginBottomSheetProps
+        return props?.let {
+            GezginBottomSheetScene(
+                key = lastEntry.contentKey,
+                entry = lastEntry,
+                overlaidEntries = entries.dropLast(1),
+                props = it,
+                onBack = onBack,
+            )
+        }
+    }
+}

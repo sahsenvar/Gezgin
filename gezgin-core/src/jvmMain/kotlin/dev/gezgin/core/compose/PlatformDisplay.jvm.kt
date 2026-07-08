@@ -27,8 +27,10 @@ internal actual fun GezginNoBackHandler() { /* no-op — bkz. KDoc */ }
 
 /**
  * Desktop (JB alpha05): `NavDisplay` scene-strategy'si **TEKİL** `sceneStrategy: SceneStrategy<T>`.
- * `DialogSceneStrategy() then SinglePaneSceneStrategy()` — dialog-metadata'lı entry overlay olarak,
- * kalanı tek-pane (SceneStrategy.then overlay-önce sözleşmesi, iki platformda mevcut infix).
+ * `DialogSceneStrategy() then GezginBottomSheetSceneStrategy() then SinglePaneSceneStrategy()` — dialog-
+ * ve sheet-metadata'lı entry'ler overlay olarak (her strateji kendi metadata key'ini okur, ayrık), kalanı
+ * tek-pane (SceneStrategy.then overlay-önce sözleşmesi; iki overlay stratejisi karşılıklı-dışlayan, sıra
+ * önemsiz — SinglePane en sonda fallback).
  */
 @Composable
 internal actual fun GezginNavDisplay(
@@ -39,7 +41,8 @@ internal actual fun GezginNavDisplay(
     NavDisplay(
         entries = entries,
         modifier = modifier,
-        sceneStrategy = DialogSceneStrategy<Route>() then SinglePaneSceneStrategy(),
+        sceneStrategy = DialogSceneStrategy<Route>() then GezginBottomSheetSceneStrategy() then
+            SinglePaneSceneStrategy(),
         onBack = onBack,
     )
 }

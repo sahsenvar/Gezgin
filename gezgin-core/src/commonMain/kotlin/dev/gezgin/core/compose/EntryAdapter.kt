@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.DialogSceneStrategy
+import dev.gezgin.core.BottomSheetContract
 import dev.gezgin.core.DialogContract
 import dev.gezgin.core.FullscreenModalContract
 import dev.gezgin.core.GezginKey
@@ -25,7 +26,8 @@ import dev.gezgin.core.Route
  * bağlı DialogSceneStrategy o entry'yi `Dialog` overlay'inde (arka görünür) render eder. `properties`
  * route'un opsiyonel [DialogContract]/[FullscreenModalContract]'ından (route-instance runtime değeri,
  * §2.4) okunur; route implement etmemişse tip-bazlı varsayılan `DialogProperties` (FULLSCREEN_MODAL'da
- * `usePlatformDefaultWidth=false` = tam-ekran) kurulur. `BOTTOM_SHEET` hâlâ plain (4.2 çözer).
+ * `usePlatformDefaultWidth=false` = tam-ekran) kurulur. `BOTTOM_SHEET` (Faz 4.2) [GEZGIN_BOTTOM_SHEET_KEY]
+ * işaretiyle [GezginBottomSheetSceneStrategy]'e bağlanır → `ModalBottomSheet` overlay (el-yazımı OverlayScene).
  *
  * **Guard — `dismissOnBackPress + @NoBack` çelişkisi (§7, kuruluş-zamanı RUNTIME):** `@NoBack` geri'yi
  * YUTAR ([gezginOnBack]/[GezginNoBackHandler]) ama `dismissOnBackPress=true` "geri dialog'u kapatsın"
@@ -68,22 +70,23 @@ internal fun GezginEntryScope.toNavEntry(
     // (`Map<String, Any>` döner) — içteki metadata-key temsili farklı (android typed `NavMetadataKey`,
     // desktop string sabit) ama her platform kendi DialogSceneStrategy'siyle okur → platform-içi
     // tutarlı, commonMain'den güvenli çağrı. Anahtar çakışması yok (dialog anahtarı transition
-    // anahtarlarından ayrık). BOTTOM_SHEET hâlâ plain (4.2 çözer).
+    // anahtarlarından ayrık). BOTTOM_SHEET ise GEZGIN_BOTTOM_SHEET_KEY işaretiyle overlay (4.2, aşağıda).
     val dialogProperties = resolveDialogProperties(registered.kind, key.route)
-    if (dialogProperties != null && registered.noBack) {
-        // §7 guard (kuruluş-zamanı runtime): @NoBack geri'yi yutar; dismissOnBackPress geri'yle kapat der.
-        require(!dialogProperties.dismissOnBackPress) {
-            "Modal kuruluş çelişkisi (${key.route::class.simpleName}): @NoBack (geri yutulur) ile " +
-                "dismissOnBackPress=true (geri modal'ı kapatır) birlikte olamaz. Modal " +
-                "DialogContract/FullscreenModalContract'ında `override val dismissOnBackPress = false` " +
-                "ver ya da @NoBack'i kaldır (§7)."
-        }
+    val sheetProps = resolveBottomSheetProps(registered.kind, key.route)
+    // §7 guard (kuruluş-zamanı runtime): @NoBack geri'yi yutar; dismissOnBackPress geri'yle kapat der.
+    // İki tezat birlikte olamaz. DIALOG/FULLSCREEN_MODAL ve BOTTOM_SHEET için AYNI mantık (ortak yardımcı).
+    if (registered.noBack) {
+        if (dialogProperties != null) requireBackDismissCompatible(key.route, dialogProperties.dismissOnBackPress)
+        if (sheetProps != null) requireBackDismissCompatible(key.route, sheetProps.dismissOnBackPress)
     }
     val transitionMetadata = resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
-    val metadata = if (dialogProperties != null) {
-        transitionMetadata + DialogSceneStrategy.dialog(dialogProperties)
-    } else {
-        transitionMetadata
+    // Kind mutually-exclusive: dialogProperties (DIALOG/FULLSCREEN_MODAL) ve sheetProps (BOTTOM_SHEET) aynı
+    // anda dolu olamaz — her ikisi de eklense bile ayrık anahtarlar (çakışma yok). BOTTOM_SHEET artık plain
+    // değil: GEZGIN_BOTTOM_SHEET_KEY işaretiyle GezginBottomSheetSceneStrategy overlay render eder (4.2).
+    val metadata: Map<String, Any> = buildMap {
+        putAll(transitionMetadata)
+        if (dialogProperties != null) putAll(DialogSceneStrategy.dialog(dialogProperties))
+        if (sheetProps != null) put(GEZGIN_BOTTOM_SHEET_KEY, sheetProps)
     }
     return NavEntry(key = key.route, contentKey = key.id, metadata = metadata) { route ->
         CompositionLocalProvider(
@@ -124,4 +127,35 @@ private fun resolveDialogProperties(kind: EntryKind, route: Route): DialogProper
         )
     }
     EntryKind.SCREEN, EntryKind.BOTTOM_SHEET -> null
+}
+
+/**
+ * Kind + route-instance → BottomSheet scene [GezginBottomSheetProps] (§7), yoksa `null` (sheet-dışı entry).
+ * Property'ler route'un opsiyonel [BottomSheetContract]'ından (runtime değer, §2.4) okunur; route implement
+ * etmemişse tip-varsayılan (`skipPartiallyExpanded=false`, `dismissOnBackPress=true`).
+ */
+private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottomSheetProps? = when (kind) {
+    EntryKind.BOTTOM_SHEET -> {
+        val contract = route as? BottomSheetContract
+        GezginBottomSheetProps(
+            skipPartiallyExpanded = contract?.skipPartiallyExpanded ?: false,
+            dismissOnBackPress = contract?.dismissOnBackPress ?: true,
+        )
+    }
+    EntryKind.SCREEN, EntryKind.DIALOG, EntryKind.FULLSCREEN_MODAL -> null
+}
+
+/**
+ * `@NoBack` + `dismissOnBackPress=true` çelişki guard'ı (§7, kuruluş-zamanı RUNTIME) — DIALOG/
+ * FULLSCREEN_MODAL ve BOTTOM_SHEET modalları için ORTAK: `@NoBack` geri'yi YUTAR ([gezginOnBack]/
+ * [GezginNoBackHandler]) ama `dismissOnBackPress=true` "geri modal'ı kapatsın" der → tezat. `dismissOnBackPress`
+ * runtime değer (route-instance, KSP okuyamaz) → derleme yerine entry kuruluşunda `require` ile reddedilir.
+ */
+private fun requireBackDismissCompatible(route: Route, dismissOnBackPress: Boolean) {
+    require(!dismissOnBackPress) {
+        "Modal kuruluş çelişkisi (${route::class.simpleName}): @NoBack (geri yutulur) ile " +
+            "dismissOnBackPress=true (geri modal'ı kapatır) birlikte olamaz. Modal " +
+            "DialogContract/FullscreenModalContract/BottomSheetContract'ında " +
+            "`override val dismissOnBackPress = false` ver ya da @NoBack'i kaldır (§7)."
+    }
 }

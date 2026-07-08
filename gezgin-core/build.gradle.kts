@@ -19,6 +19,12 @@ kotlin {
             // plugin sürümünde hard-deprecated (derleme hatası) — doğrudan koordinat kullanılıyor.
             api("org.jetbrains.compose.runtime:runtime:${libs.versions.compose.multiplatform.get()}")
             api("org.jetbrains.compose.foundation:foundation:${libs.versions.compose.multiplatform.get()}")
+            // material3 (CMP) — Faz 4.2 BottomSheet scene: `ModalBottomSheet`/`SheetState`/
+            // `rememberModalBottomSheetState` commonMain'de (iki platformda), el-yazımı `OverlayScene`
+            // için gerekli (Nav3'te hazır BottomSheetSceneStrategy YOK — 4.0 raporu §3). `api` çünkü
+            // `sheetState: SheetState` Local'i public yüzeyde (@BottomSheet content'i okur). Sürüm
+            // composeVersion'dan AYRI (1.9.0) — bkz. libs.versions.toml `compose-material3` notu.
+            api("org.jetbrains.compose.material3:material3:${libs.versions.compose.material3.get()}")
             // Nav3 üç ayrı koordinat/sürüm ailesi: `androidx.navigation3:navigation3-runtime` (Google,
             // gerçekten çok-platformlu, 1.1.4 — android sürüm çizgisi) vs. `org.jetbrains.androidx.
             // navigation3:navigation3-ui`/`lifecycle-viewmodel-navigation3` (JetBrains fork/uyarlaması,
