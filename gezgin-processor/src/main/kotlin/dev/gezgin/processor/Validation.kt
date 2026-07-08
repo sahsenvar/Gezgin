@@ -29,6 +29,9 @@ class GezginValidator(
 
     private var ok = true
 
+    /** [NavigatorCodegen]'in HER navigator sınıfında koşulsuz taşıdığı üye adları — bkz. [checkN10Members]. */
+    private val RESERVED_MEMBER_NAMES = setOf("back", "quit", "quitWith", "backWithResult", "raw")
+
     fun validate(): Boolean {
         model.routes.forEach { route ->
             checkE1(route)
@@ -237,8 +240,14 @@ class GezginValidator(
     /**
      * Within a single source, two edges whose derived method names coincide (e.g. `@GoTo(Detail)`
      * and `@GoTo(DetailRoute)` both → `goToDetail`, or two `@GoForResult`s sharing a `name=` → the
-     * same `launchX`/`xResults`/`goToXForResult` triple) would emit duplicate members. The
-     * `@GoForResult` triple is keyed by its `launchX` member, since all three share the same `X`.
+     * same `launchX`/`xResults`/`goToXForResult` triple) would emit duplicate members. Each
+     * `@GoForResult` records all three triple members (not just `launchX`) so a collision against
+     * either sibling is caught too.
+     *
+     * Task 3.4 devir: `name=` overrides are also checked against the navigator class's FIXED
+     * members ([RESERVED_MEMBER_NAMES] — `back`/`quit`/`quitWith`/`backWithResult`/the public `raw`
+     * property) — these exist independent of any single edge, so an override that happens to spell
+     * one out (e.g. `@GoTo(X::class, name = "back")`) would silently shadow/duplicate a real member.
      */
     private fun checkN10Members(route: RouteModel) {
         val byMember = linkedMapOf<String, MutableList<String>>()
@@ -254,6 +263,8 @@ class GezginValidator(
                 EdgeKind.GO_FOR_RESULT -> {
                     val x = edge.name.ifEmpty { derived }.replaceFirstChar { it.uppercase() }
                     record("launch$x", edge.targetFq)
+                    record(x.replaceFirstChar { it.lowercase() } + "Results", edge.targetFq)
+                    record("goTo${x}ForResult", edge.targetFq)
                 }
             }
         }
@@ -266,6 +277,14 @@ class GezginValidator(
                 "N10",
                 "${route.simpleName} içinde iki ayrı edge aynı üye adını ($member) üretiyor — " +
                     "çakışan hedefler: ${targets.joinToString()}",
+            )
+        }
+
+        byMember.keys.filter { it in RESERVED_MEMBER_NAMES }.forEach { member ->
+            error(
+                "N10",
+                "${route.simpleName} içinde bir name= override üretilen üye adı ($member) " +
+                    "navigator'ın rezerve üyeleriyle (${RESERVED_MEMBER_NAMES.joinToString()}) çakışıyor",
             )
         }
     }

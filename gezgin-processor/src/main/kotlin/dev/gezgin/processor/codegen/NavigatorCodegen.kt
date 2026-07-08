@@ -41,9 +41,10 @@ private val FLOW = ClassName(FLOW_PKG, "Flow")
  * `X` is the route's simple name with a trailing `Route`/`Screen`/`Flow` suffix stripped (applied
  * uniformly — including graph names for `@GoForResult` flow-mode member naming, e.g.
  * `CheckoutFlow` → `Checkout`). An edge's `name=` override replaces the derived method name
- * wholesale for `@GoTo`/`@ReplaceTo`/`@QuitAndGoTo`/`@BackTo` (single method); for the
- * `@GoForResult` triple (`launchX`/`xResults`/`goToXForResult`) it substitutes for `X` itself so
- * all three members stay consistently named.
+ * wholesale for `@GoTo`/`@ReplaceTo`/`@QuitAndGoTo` (single method); for the `@GoForResult` triple
+ * (`launchX`/`xResults`/`goToXForResult`) it substitutes for `X` itself so all three members stay
+ * consistently named. `@BackTo` has no `name=` param at all (see `Annotations.kt`) — its method
+ * name is always derived (`backTo` + target's `X`), never overridable.
  */
 object NavigatorCodegen {
 

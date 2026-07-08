@@ -1,5 +1,10 @@
 package dev.gezgin.core.fixtures
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import dev.gezgin.core.Route
+import dev.gezgin.core.compose.GezginTransition
+import dev.gezgin.core.compose.transition
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -21,10 +26,46 @@ import kotlinx.serialization.modules.subclass
 interface Pick                                                     // AÇIK polimorfizm — module ŞART
 @Serializable data class ChosenAddress(val id: String) : Pick
 
+// --- Task 3.5 (§9 transition cascade) fixture'ları — üç ayırt edilebilir GezginTransition örneği ile
+// route-override > graph-default > app-default > null zincirinin HER basamağı ayrı bir route'la sınanır.
+val graphTransitionFixture: GezginTransition = transition { forward { fadeIn() togetherWith fadeOut() } }
+val screenTransitionFixture: GezginTransition = transition { forward { fadeIn() togetherWith fadeOut() } }
+val appTransitionFixture: GezginTransition = transition { forward { fadeIn() togetherWith fadeOut() } }
+/** YALNIZ `back` set — forward yok, predictive yok (predictive→back fallback'i metadata testinde sınanır). */
+val backOnlyTransitionFixture: GezginTransition = transition { back { fadeIn() togetherWith fadeOut() } }
+
+/** Graph-seviyesi transition override'ı (§9 "app/graph seviyesi = ağaç boyunca devralınan değer"). */
+@Serializable
+sealed interface TransitionGraph : Route {
+    override val transition: GezginTransition? get() = graphTransitionFixture
+}
+
+/** Kendi override'ı YOK → [TransitionGraph]'ın graph-seviyesi değerini interface override zinciriyle miras alır. */
+@Serializable data object ScreenInheritsGraphTransition : TransitionGraph
+
+/** Kendi `transition` override'ı VAR → graph-seviyesini ezer (screen > graph, §9). */
+@Serializable
+data object ScreenOwnTransition : TransitionGraph {
+    override val transition: GezginTransition? get() = screenTransitionFixture
+}
+
+/** Ne kendi ne de graph (`ShopGraph` override etmiyor) bir şey söylemiyor → app-seviyesine/`null`'a düşer. */
+@Serializable data object ScreenNoTransitionAnywhere : ShopGraph
+
+/** YALNIZ `back{}` set etmiş route — metadata testinde (pop key VAR / forward key YOK) B rolü. */
+@Serializable
+data object ScreenBackOnlyTransition : ShopGraph {
+    override val transition: GezginTransition? get() = backOnlyTransitionFixture
+}
+
 val testSerializersModule = SerializersModule {
     polymorphic(Route::class) {
         subclass(Feed::class); subclass(Catalog::class); subclass(Product::class)
         subclass(Cart::class); subclass(Payment::class)
+        // Task 3.5 (Important 2): transition-override'lı route'lar da polimorfik kayıtta — GezginKey
+        // round-trip'i getter'ın backing field ÜRETMEDİĞİNİN (serialization'a takılmadığının) çalışan kanıtı.
+        subclass(ScreenOwnTransition::class); subclass(ScreenInheritsGraphTransition::class)
+        subclass(ScreenBackOnlyTransition::class)
     }
     polymorphic(Pick::class) { subclass(ChosenAddress::class) }
 }

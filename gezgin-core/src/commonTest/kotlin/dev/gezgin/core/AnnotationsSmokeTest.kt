@@ -1,9 +1,13 @@
 package dev.gezgin.core
 
 import dev.gezgin.core.Self
+import dev.gezgin.core.annotation.BottomSheet
+import dev.gezgin.core.annotation.Dialog
+import dev.gezgin.core.annotation.FullscreenModal
 import dev.gezgin.core.annotation.GoTo
 import dev.gezgin.core.annotation.ReplaceTo
 import dev.gezgin.core.annotation.NavGraph
+import dev.gezgin.core.annotation.Screen
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -35,6 +39,32 @@ class AnnotationsSmokeTest {
 
 	sealed interface ScreenD : Route
 	data object ScreenDImpl : ScreenD
+
+	// Kind annotation'lari (§3.2) — FUNCTION target smoke: default sentinel (route = Route::class)
+	// ve açık route param'i, dördü de derlenir.
+	@Screen
+	fun screenFun(route: ScreenA) = Unit
+
+	@Screen(route = ScreenA::class)
+	fun screenFunExplicit(route: ScreenA) = Unit
+
+	@Dialog
+	fun dialogFun(route: ScreenB) = Unit
+
+	@BottomSheet
+	fun bottomSheetFun(route: ScreenC) = Unit
+
+	@FullscreenModal
+	fun fullscreenModalFun(route: ScreenD) = Unit
+
+	@Test
+	fun kindAnnotationsSmokeTest() {
+		screenFun(ScreenAImpl)
+		screenFunExplicit(ScreenAImpl)
+		dialogFun(ScreenBImpl)
+		bottomSheetFun(ScreenCImpl)
+		fullscreenModalFun(ScreenDImpl)
+	}
 
 	@Test
 	fun annotationsSmokeTest() {

@@ -36,6 +36,17 @@ class RawNavigator(
     private val _backStack = MutableStateFlow<List<Route>>(emptyList())
     val backStack: StateFlow<List<Route>> = _backStack.asStateFlow()
 
+    private val _keysState = MutableStateFlow<List<GezginKey>>(emptyList())
+    /**
+     * Display-katmanı için `id` TAŞIYAN entry görünümü (R2, §2.1). [backStack] yalnız `Route`
+     * (id'siz) taşır → `StateFlow` eşit-değer dedup'ı yüzünden `replaceTo` ile aynı-değer-farklı-id
+     * bir hedefe geçiş [backStack]'te YENİ emit ÜRETMEZ (route listesi değişmez), dolayısıyla
+     * recompose tetiklemez. `GezginKey` benzersiz `id` taşıdığından bu akış her id değişiminde
+     * (yeni instance push/replace) farklı bir liste yayar → [GezginDisplay] bunu `collectAsState`
+     * ederek contentKey'i (id) değişen entry'yi yeniden kurar. `internal`: zarf public API'ye sızmaz.
+     */
+    internal val keysState: StateFlow<List<GezginKey>> = _keysState.asStateFlow()
+
     private val _events = MutableSharedFlow<NavEvent>(extraBufferCapacity = 64)
     /**
      * Gözlem-amaçlı (observe-only) navigasyon olay akışı. `extraBufferCapacity=64` + `tryEmit` —
@@ -265,6 +276,7 @@ class RawNavigator(
 
     private fun refreshBackStack() {
         _backStack.value = state.stack.map { it.route }
+        _keysState.value = state.stack.toList()   // id taşır → replaceTo same-value-diff-id de emit eder (§2.1/R2)
     }
 
     private fun popTopAndEmit() {

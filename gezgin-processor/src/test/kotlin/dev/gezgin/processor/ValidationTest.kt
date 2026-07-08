@@ -765,6 +765,86 @@ class ValidationTest {
         )
     }
 
+    @Test
+    fun `N10 - a name= override spelling a reserved navigator member is rejected`() {
+        // Task 3.4 devir: `name = "back"` would emit a goTo method literally named `back`, silently
+        // colliding with the navigator's own unconditional back() member.
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10reserved
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @GoTo(Detail::class, name = "back")
+                data object Feed : HomeGraph
+
+                data object Detail : HomeGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `N10 - name=quitWith on a ResultFlow member collides with the flow-earned quitWith member`() {
+        // A ResultFlow member's navigator ALWAYS carries quitWith(result) — a name= override
+        // spelling it out would emit a second, edge-shaped quitWith into the same class.
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10quitwith
+
+            import dev.gezgin.core.ResultFlow
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.StartDestination
+
+            @FlowGraph
+            interface CheckoutFlow : Route, ResultFlow<String> {
+                @StartDestination
+                @GoTo(Payment::class, name = "quitWith")
+                data object Cart : CheckoutFlow
+
+                data object Payment : CheckoutFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `N10 - a second edge colliding with a @GoForResult triple sibling (goToXForResult) is rejected`() {
+        // The named @GoForResult emits launchPick/pickResults/goToPickForResult — ALL THREE are
+        // recorded, so a @GoTo whose name= spells out a SIBLING member (not just launchX) clashes.
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10triple
+
+            import dev.gezgin.core.ResultRoute
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoForResult
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            interface HomeGraph : Route {
+                @GoForResult(Picker::class, name = "pick")
+                @GoTo(Detail::class, name = "goToPickForResult")
+                data object Feed : HomeGraph
+
+                data object Picker : HomeGraph, ResultRoute<String>
+
+                data object Detail : HomeGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
     // endregion
 
     // region PKG — generated code needs a single common target package
