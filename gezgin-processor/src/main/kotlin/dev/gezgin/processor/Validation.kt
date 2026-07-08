@@ -61,6 +61,13 @@ class GezginValidator(
      * @GoTo/@ReplaceTo/@QuitAndGoTo may never *enter* a ResultFlow from outside — only @GoForResult
      * may. A source already inside the target flow is exempt (spec §8.1 "İçeride: serbest @GoTo" —
      * entry rules constrain crossing the boundary, not movement within it).
+     *
+     * The boundary is keyed on [GraphModelNode.declaresResultFlowDirectly], NOT the transitive
+     * [GraphModelNode.isResultFlow]: a result-LESS nested sub-flow (`ZoomFlow : AvatarFlow` where
+     * only `AvatarFlow : ResultFlow<…>`) is transitively a ResultFlow but owns no result contract of
+     * its own — `@GoTo`-ing into it from within its enclosing result flow crosses no result boundary
+     * (§6 "nested ResultFlow" / the sample's AvatarFlow→ZoomFlow). Entering such a sub-flow from
+     * *outside* the enclosing flow is still rejected — by E3 (jumping into a flow's interior).
      */
     private fun checkE1(route: RouteModel) {
         route.edges
@@ -70,10 +77,10 @@ class GezginValidator(
                 val targetAsGraph = graphsByFq[target]
                 val parent = parentGraphOf(target)
                 val entersResultFlow = (
-                    targetAsGraph != null && targetAsGraph.isResultFlow &&
+                    targetAsGraph != null && targetAsGraph.declaresResultFlowDirectly &&
                         targetAsGraph.fqName !in route.flowChainFq
                     ) || (
-                    parent != null && parent.isResultFlow && parent.startFq == target &&
+                    parent != null && parent.declaresResultFlowDirectly && parent.startFq == target &&
                         parent.fqName !in route.flowChainFq
                     )
                 if (entersResultFlow) {

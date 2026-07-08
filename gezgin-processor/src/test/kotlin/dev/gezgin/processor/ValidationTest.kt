@@ -176,6 +176,44 @@ class ValidationTest {
     }
 
     @Test
+    fun `positive - GoTo into a result-less nested sub-flow from within its enclosing ResultFlow is allowed`() {
+        // AvatarFlow OWNS the result contract (ResultFlow<Res>); ZoomFlow is nested inside it and
+        // only INHERITS the marker transitively (declares none of its own). Crop, itself inside
+        // AvatarFlow, @GoTo-ing ZoomFlow crosses no *result* boundary — E1 must key on the DIRECT
+        // declaration, not the transitive `isResultFlow` (which would wrongly reject this). E3 must
+        // also stay quiet because AvatarFlow is in Crop's flow chain.
+        assertCompilesClean(
+            """
+            package dev.gezgin.pos.nestedflow
+
+            import dev.gezgin.core.ResultFlow
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.StartDestination
+
+            data class Res(val v: String)
+
+            @FlowGraph
+            interface AvatarFlow : Route, ResultFlow<Res> {
+                @StartDestination
+                @GoTo(Crop::class)
+                data object PickSource : AvatarFlow
+
+                @GoTo(ZoomFlow::class)
+                data class Crop(val source: String) : AvatarFlow
+
+                @FlowGraph
+                interface ZoomFlow : AvatarFlow {
+                    @StartDestination
+                    data object Zoom : ZoomFlow
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
     fun `positive - graph extending another annotated graph does not trip E5 on its routes`() {
         assertCompilesClean(
             """
