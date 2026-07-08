@@ -23,6 +23,33 @@ import kotlinx.serialization.modules.subclass
 @Serializable data object Otp : ShopGraph       // PayAuthFlow üyesi (nested: Checkout > PayAuth)
 @Serializable data object GiftPick : ShopGraph  // GiftFlow üyesi   (nested: Checkout > Gift)
 
+// --- Task 4.1 (§7 modal contract) fixture'ları ---
+/** Contract implement ETMEYEN dialog route → adapter tip-varsayılan DialogProperties (hepsi true). */
+@Serializable data class DialogDefault(val id: String) : ShopGraph
+
+/** DialogContract'ı ctor-param + override ile besleyen dialog route (KOŞULLU + SABİT karışık). */
+@Serializable
+data class DialogCustom(val id: String) : ShopGraph, dev.gezgin.core.DialogContract {
+    override val dismissOnClickOutside: Boolean get() = false
+    override val dismissOnBackPress: Boolean get() = false
+    override val usePlatformDefaultWidth: Boolean get() = false
+}
+
+/** @NoBack + dismissOnBackPress=true (default) çelişkisi guard testi için dialog route. */
+@Serializable data object DialogBackDismissable : ShopGraph, dev.gezgin.core.DialogContract
+
+/** @NoBack ile UYUMLU dialog route: dismissOnBackPress=false → guard geçer. */
+@Serializable
+data object DialogNoBackCompatible : ShopGraph, dev.gezgin.core.DialogContract {
+    override val dismissOnBackPress: Boolean get() = false
+}
+
+/** FullscreenModalContract'lı tam-ekran modal route. */
+@Serializable
+data object FullModal : ShopGraph, dev.gezgin.core.FullscreenModalContract {
+    override val dismissOnClickOutside: Boolean get() = false
+}
+
 interface Pick                                                     // AÇIK polimorfizm — module ŞART
 @Serializable data class ChosenAddress(val id: String) : Pick
 

@@ -7,9 +7,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.fixtures.Catalog
+import dev.gezgin.core.fixtures.DialogCustom
 import dev.gezgin.core.fixtures.Product
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /**
  * Faz 4.0 spike — desktop uiTest: bir `EntryKind.DIALOG` entry'nin [GezginNavDisplay]/DialogSceneStrategy
@@ -57,5 +59,46 @@ class GezginDisplaySceneTest {
         waitForIdle()
         // SCREEN push = tek-pane → yalnız top görünür (overlay DEĞİL).
         onNodeWithText("product").assertIsDisplayed()
+    }
+
+    @Test
+    fun `DialogContract'li DIALOG entry overlay render olur - arka SCREEN gorunur (4_1)`() = runComposeUiTest {
+        val nav = RawNavigator(start = Catalog, topology = testTopology)
+        setContent {
+            GezginDisplay(navigator = nav) {
+                register<Catalog> { BasicText("home-screen") }
+                register<DialogCustom>(kind = EntryKind.DIALOG) { BasicText("contract-dialog") }
+            }
+        }
+        onNodeWithText("home-screen").assertIsDisplayed()
+
+        nav.navigate(DialogCustom("x"))   // contract'lı dialog → overlay (props contract'tan iner)
+        waitForIdle()
+
+        onNodeWithText("home-screen").assertIsDisplayed()      // overlaid SCREEN hâlâ görünür
+        onNodeWithText("contract-dialog").assertIsDisplayed()  // dialog içeriği render oldu
+    }
+
+    @Test
+    fun `dialog dismiss (back) - overlay kapanir, arka SCREEN kalir (4_1)`() = runComposeUiTest {
+        val nav = RawNavigator(start = Catalog, topology = testTopology)
+        setContent {
+            GezginDisplay(navigator = nav) {
+                register<Catalog> { BasicText("home-screen") }
+                register<DialogCustom>(kind = EntryKind.DIALOG) { BasicText("contract-dialog") }
+            }
+        }
+        nav.navigate(DialogCustom("x"))
+        waitForIdle()
+        onNodeWithText("contract-dialog").assertIsDisplayed()
+
+        // Dismiss = pop (dialog scene onDismissRequest → NavDisplay.onBack yolu). Programatik pop ile
+        // aynı state değişimini sürüyoruz → overlay kaybolur, arka SCREEN top olur.
+        nav.back()
+        waitForIdle()
+
+        onNodeWithText("contract-dialog").assertDoesNotExist()
+        onNodeWithText("home-screen").assertIsDisplayed()
+        assertEquals(Catalog, nav.current)
     }
 }

@@ -75,7 +75,8 @@ fun GezginDisplay(
             val rootKind = registered.registry[rootRoute::class]?.kind
             require(rootKind == null || rootKind == EntryKind.SCREEN) {
                 "GezginDisplay: start route modal kind olamaz (kind=$rootKind) — §12 kuruluş " +
-                    "guard'ı (Faz 4'te scene gelince gevşetilecek). route: ${rootRoute::class.simpleName}"
+                    "guard'ı (KALICI: modal genuinely root OLAMAZ — OverlayScene ≥1 underlaid entry " +
+                    "ister, §7). route: ${rootRoute::class.simpleName}"
             }
         }
     }
