@@ -31,8 +31,8 @@ interface Pick                                                     // AÇIK poli
 val graphTransitionFixture: GezginTransition = transition { forward { fadeIn() togetherWith fadeOut() } }
 val screenTransitionFixture: GezginTransition = transition { forward { fadeIn() togetherWith fadeOut() } }
 val appTransitionFixture: GezginTransition = transition { forward { fadeIn() togetherWith fadeOut() } }
-/** YALNIZ `back` set — forward yok, predictive yok (predictive→back fallback'i metadata testinde sınanır). */
-val backOnlyTransitionFixture: GezginTransition = transition { back { fadeIn() togetherWith fadeOut() } }
+/** YALNIZ `backward` set — forward yok, predictive yok (predictive→backward fallback'i metadata testinde sınanır). */
+val backOnlyTransitionFixture: GezginTransition = transition { backward { fadeIn() togetherWith fadeOut() } }
 
 /** Graph-seviyesi transition override'ı (§9 "app/graph seviyesi = ağaç boyunca devralınan değer"). */
 @Serializable
@@ -52,7 +52,7 @@ data object ScreenOwnTransition : TransitionGraph {
 /** Ne kendi ne de graph (`ShopGraph` override etmiyor) bir şey söylemiyor → app-seviyesine/`null`'a düşer. */
 @Serializable data object ScreenNoTransitionAnywhere : ShopGraph
 
-/** YALNIZ `back{}` set etmiş route — metadata testinde (pop key VAR / forward key YOK) B rolü. */
+/** YALNIZ `backward{}` set etmiş route — metadata testinde (pop key VAR / forward key YOK) B rolü. */
 @Serializable
 data object ScreenBackOnlyTransition : ShopGraph {
     override val transition: GezginTransition? get() = backOnlyTransitionFixture

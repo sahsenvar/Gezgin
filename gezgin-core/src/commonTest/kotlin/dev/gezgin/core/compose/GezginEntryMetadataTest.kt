@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 
 /**
  * Task 3.5 fix (review) — ayırt edici per-entry metadata testleri: transition cascade artık `NavDisplay`
- * parametrelerinden DEĞİL, entry'nin KENDİ `NavEntry.metadata`'sından iner (pop B→A'da B'nin `back{}`
+ * parametrelerinden DEĞİL, entry'nin KENDİ `NavEntry.metadata`'sından iner (pop B→A'da B'nin `backward{}`
  * spec'inin kullanılabilmesi için — top-route yaklaşımında A'nınki okunuyordu, §9 ihlali).
  *
  * Anahtar assertion'ları decompile'daki string sabitlerine DEĞİL, Nav3'ün PUBLIC sarmalayıcılarının
@@ -43,7 +43,7 @@ class GezginEntryMetadataTest {
     }
 
     @Test
-    fun `predictive yazilmamis back'li route'ta predictive anahtari back fallback'iyle VAR (§9)`() {
+    fun `predictive yazilmamis backward'li route'ta predictive anahtari backward fallback'iyle VAR (§9)`() {
         val entry = scope().toNavEntry(
             GezginKey(route = ScreenBackOnlyTransition, id = 2L), navigator, navTransitions {},
         )
@@ -73,7 +73,7 @@ class GezginEntryMetadataTest {
     fun `transition'siz route app default'u varsa ONUN metadata'sini tasir (cascade app basamagi)`() {
         val entry = scope().toNavEntry(
             GezginKey(route = Feed, id = 1L), navigator,
-            navTransitions { default { forward { error("spec cagirilmadan sadece anahtar kontrolu") } } },
+            navTransitions { forward { error("spec cagirilmadan sadece anahtar kontrolu") } },
         )
         assertTrue(forwardKey in entry.metadata, "app-default forward anahtari bekleniyordu; actual: ${entry.metadata.keys}")
     }

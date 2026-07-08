@@ -304,7 +304,7 @@ navigator.events       // Flow<NavEvent>           → analytics / ekran-görün
 
 GezginDisplay(
     navigator   = nav,
-    transitions = navTransitions { default { /* app-geneli geçiş */ } },
+    transitions = navTransitions { forward { /* app-geneli ileri */ } backward { /* app-geneli geri */ } },
     middleware  = listOf(NavLogger, Analytics),      // OkHttp interceptor gibi takılır
 ) { shopEntries() }                                  // multi-module: her feature kendi entry bundle'ını verir
 ```

@@ -20,7 +20,7 @@ import kotlin.test.assertEquals
  * FALLBACK PATH (not the typed `fromX()` test API — see `build.gradle.kts` + `sample/README.md`
  * "Tasarım notları" for the full trace): `gezgin.emitTestAccessors=true` is reachable per-`kspTest`
  * TASK, but `TestApiCodegen` still needs a non-empty [dev.gezgin.processor.model.GraphModel], and a
- * `kspTestKotlin` round only sees the `test` source set's own `.kt` files — `AppNav.kt`'s
+ * `kspTestKotlin` round only sees the `test` source set's own `.kt` files — the graph files'
  * `@NavGraph`s live in `main` and are already compiled by then, so `getSymbolsWithAnnotation` finds
  * nothing and no `GezginTestAccessors.kt` is ever emitted for a module shaped like this one (graphs
  * and tests in separate Gradle source sets). So every test below drives the ALREADY generated
@@ -34,25 +34,25 @@ class AppNavBehaviorTest {
     private fun <T> GezginTestNavigator.on(route: KClass<out Route>, factory: (RawNavigator, Long) -> T): T =
         factory(raw, entryIdOf(route))
 
-    private fun GezginTestNavigator.login() = on(AuthGraph.LoginRoute::class, RawNavigator::loginNavigator)
-    private fun GezginTestNavigator.credentials() = on(AuthGraph.SignUpFlow.CredentialsRoute::class, RawNavigator::credentialsNavigator)
-    private fun GezginTestNavigator.profileInfo() = on(AuthGraph.SignUpFlow.ProfileInfoRoute::class, RawNavigator::profileInfoNavigator)
-    private fun GezginTestNavigator.terms() = on(AuthGraph.SignUpFlow.TermsRoute::class, RawNavigator::termsNavigator)
-    private fun GezginTestNavigator.welcome() = on(HomeGraph.WelcomeRoute::class, RawNavigator::welcomeNavigator)
-    private fun GezginTestNavigator.settings() = on(ProfileGraph.SettingsRoute::class, RawNavigator::settingsNavigator)
-    private fun GezginTestNavigator.profile() = on(ProfileGraph.ProfileRoute::class, RawNavigator::profileNavigator)
-    private fun GezginTestNavigator.pickSource() = on(ProfileGraph.AvatarFlow.PickSourceRoute::class, RawNavigator::pickSourceNavigator)
-    private fun GezginTestNavigator.crop() = on(ProfileGraph.AvatarFlow.CropRoute::class, RawNavigator::cropNavigator)
-    private fun GezginTestNavigator.zoom() = on(ProfileGraph.AvatarFlow.ZoomFlow.ZoomRoute::class, RawNavigator::zoomNavigator)
-    private fun GezginTestNavigator.dashboard() = on(HomeGraph.DashboardRoute::class, RawNavigator::dashboardNavigator)
-    private fun GezginTestNavigator.itemDetail() = on(HomeGraph.ItemDetailRoute::class, RawNavigator::itemDetailNavigator)
-    private fun GezginTestNavigator.forgotPassword() = on(AuthGraph.ForgotPasswordDialog::class, RawNavigator::forgotPasswordDialogNavigator)
+    private fun GezginTestNavigator.login() = on(AuthGraph.LoginScreenRoute::class, RawNavigator::loginNavigator)
+    private fun GezginTestNavigator.credentials() = on(AuthGraph.SignUpFlow.CredentialsScreenRoute::class, RawNavigator::credentialsNavigator)
+    private fun GezginTestNavigator.profileInfo() = on(AuthGraph.SignUpFlow.ProfileInfoScreenRoute::class, RawNavigator::profileInfoNavigator)
+    private fun GezginTestNavigator.terms() = on(AuthGraph.SignUpFlow.TermsScreenRoute::class, RawNavigator::termsNavigator)
+    private fun GezginTestNavigator.welcome() = on(HomeGraph.WelcomeScreenRoute::class, RawNavigator::welcomeNavigator)
+    private fun GezginTestNavigator.settings() = on(ProfileGraph.SettingsScreenRoute::class, RawNavigator::settingsNavigator)
+    private fun GezginTestNavigator.profile() = on(ProfileGraph.ProfileScreenRoute::class, RawNavigator::profileNavigator)
+    private fun GezginTestNavigator.pickSource() = on(ProfileGraph.AvatarFlow.PickSourceScreenRoute::class, RawNavigator::pickSourceNavigator)
+    private fun GezginTestNavigator.crop() = on(ProfileGraph.AvatarFlow.CropScreenRoute::class, RawNavigator::cropNavigator)
+    private fun GezginTestNavigator.zoom() = on(ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute::class, RawNavigator::zoomNavigator)
+    private fun GezginTestNavigator.dashboard() = on(HomeGraph.DashboardScreenRoute::class, RawNavigator::dashboardNavigator)
+    private fun GezginTestNavigator.itemDetail() = on(HomeGraph.ItemDetailScreenRoute::class, RawNavigator::itemDetailNavigator)
+    private fun GezginTestNavigator.forgotPassword() = on(AuthGraph.ForgotPasswordDialogRoute::class, RawNavigator::forgotPasswordDialogNavigator)
 
     // (a) login → signUp flow → terms → quitAndGoTo(Welcome): the whole SignUpFlow segment is torn
     // down (quitAndGoTo tears down the CURRENT flow unconditionally) and Welcome is pushed as a plain
     // (non-flow) HomeGraph route on top of the surviving Login entry.
     @Test fun loginSignUpQuitAndGoToWelcome_leavesLoginThenWelcome() {
-        val nav = GezginTestNavigator(start = AuthGraph.LoginRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
 
         nav.login().goToSignUp()
         nav.credentials().goToProfileInfo("ada@example.com")
@@ -60,7 +60,7 @@ class AppNavBehaviorTest {
         nav.terms().quitAndGoToWelcome("Ada")
 
         assertEquals(
-            listOf(AuthGraph.LoginRoute, HomeGraph.WelcomeRoute("Ada")),
+            listOf(AuthGraph.LoginScreenRoute, HomeGraph.WelcomeScreenRoute("Ada")),
             nav.backStack,
         )
     }
@@ -69,7 +69,7 @@ class AppNavBehaviorTest {
     // replaceTo with clearUpTo=null only cuts the CURRENT top (Welcome), so Login below survives —
     // back from Dashboard would still land on Login, not on Welcome (@NoBack's whole point).
     @Test fun welcomeContinueToDashboard_replacesWelcomeKeepsLoginBelow() {
-        val nav = GezginTestNavigator(start = AuthGraph.LoginRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
         nav.login().goToSignUp()
         nav.credentials().goToProfileInfo("ada@example.com")
         nav.profileInfo().goToTerms()
@@ -77,11 +77,11 @@ class AppNavBehaviorTest {
 
         nav.welcome().continueToDashboard()
 
-        assertEquals(listOf(AuthGraph.LoginRoute, HomeGraph.DashboardRoute), nav.backStack)
+        assertEquals(listOf(AuthGraph.LoginScreenRoute, HomeGraph.DashboardScreenRoute), nav.backStack)
     }
 
-    // (c) DESIGN NOTE (see sample/README.md "Tasarım notları"): SettingsRoute's
-    // `@ReplaceTo(LoginRoute, clearUpTo = DashboardRoute::class, inclusive = true, name = "logout")`
+    // (c) DESIGN NOTE (see sample/README.md "Tasarım notları"): SettingsScreenRoute's
+    // `@ReplaceTo(LoginScreenRoute, clearUpTo = DashboardScreenRoute::class, inclusive = true, name = "logout")`
     // purges the stack down to (and including) Dashboard's nearest occurrence, which — starting from
     // [Login, Dashboard, Profile, Settings] — leaves only the ORIGINAL Login entry, and THEN
     // `replaceTo` always pushes a fresh (non-singleTop) route. The real runtime outcome is therefore
@@ -89,18 +89,18 @@ class AppNavBehaviorTest {
     // deliberately-not-"fixed" finding: the sample graph is left as authored (S1), and this test
     // documents the actual behavior rather than an assumed one.
     @Test fun logoutClearUpToDashboardInclusive_stacksASecondLoginEntry() {
-        val nav = GezginTestNavigator(start = AuthGraph.LoginRoute, topology = gezginTopology)
-        nav.raw.navigate(HomeGraph.DashboardRoute)
-        nav.raw.navigate(ProfileGraph.ProfileRoute)
-        nav.raw.navigate(ProfileGraph.SettingsRoute)
+        val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
+        nav.raw.navigate(HomeGraph.DashboardScreenRoute)
+        nav.raw.navigate(ProfileGraph.ProfileScreenRoute)
+        nav.raw.navigate(ProfileGraph.SettingsScreenRoute)
         assertEquals(
-            listOf(AuthGraph.LoginRoute, HomeGraph.DashboardRoute, ProfileGraph.ProfileRoute, ProfileGraph.SettingsRoute),
+            listOf(AuthGraph.LoginScreenRoute, HomeGraph.DashboardScreenRoute, ProfileGraph.ProfileScreenRoute, ProfileGraph.SettingsScreenRoute),
             nav.backStack,
         )
 
         nav.settings().logout()
 
-        assertEquals(listOf(AuthGraph.LoginRoute, AuthGraph.LoginRoute), nav.backStack)
+        assertEquals(listOf(AuthGraph.LoginScreenRoute, AuthGraph.LoginScreenRoute), nav.backStack)
     }
 
     // (d) Profile → launchPickAvatar (flow-mode @GoForResult) → PickSource → Crop → quitWith:
@@ -108,14 +108,14 @@ class AppNavBehaviorTest {
     // segment [PickSource, Crop] is torn down, Profile survives on top, and the Value is delivered
     // to the flow-entry's own pending slot (i.e. Profile's `pickAvatarResults`).
     @Test fun avatarFlowQuitWith_deliversValueToProfilePickAvatarResults() = runTest {
-        val nav = GezginTestNavigator(start = ProfileGraph.ProfileRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = ProfileGraph.ProfileScreenRoute, topology = gezginTopology)
         val profile = nav.profile()
 
         profile.launchPickAvatar()
         nav.pickSource().goToCrop("gallery")
         nav.crop().quitWith(AvatarChoice("file://avatar.png"))
 
-        assertEquals(ProfileGraph.ProfileRoute, nav.current)
+        assertEquals(ProfileGraph.ProfileScreenRoute, nav.current)
         assertEquals(
             NavResult.Value(AvatarChoice("file://avatar.png")),
             profile.pickAvatarResults.first(),
@@ -127,17 +127,17 @@ class AppNavBehaviorTest {
     // delegates to quit() and tears down ONLY the ZoomFlow segment — Crop (still inside AvatarFlow,
     // untouched) is left on top. AvatarFlow's own pending pickAvatar slot is unaffected.
     @Test fun nestedZoomFlowBack_popsOnlyZoomLeavesCropOnTop() {
-        val nav = GezginTestNavigator(start = ProfileGraph.ProfileRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = ProfileGraph.ProfileScreenRoute, topology = gezginTopology)
         nav.profile().launchPickAvatar()
         nav.pickSource().goToCrop("camera")
         nav.crop().goToZoom()
-        assertEquals(ProfileGraph.AvatarFlow.ZoomFlow.ZoomRoute, nav.current)
+        assertEquals(ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute, nav.current)
 
         nav.zoom().back()
 
-        assertEquals(ProfileGraph.AvatarFlow.CropRoute("camera"), nav.current)
+        assertEquals(ProfileGraph.AvatarFlow.CropScreenRoute("camera"), nav.current)
         assertEquals(
-            listOf(ProfileGraph.ProfileRoute, ProfileGraph.AvatarFlow.PickSourceRoute, ProfileGraph.AvatarFlow.CropRoute("camera")),
+            listOf(ProfileGraph.ProfileScreenRoute, ProfileGraph.AvatarFlow.PickSourceScreenRoute, ProfileGraph.AvatarFlow.CropScreenRoute("camera")),
             nav.backStack,
         )
     }
@@ -150,17 +150,17 @@ class AppNavBehaviorTest {
     // the Value reaches Profile's `pickAvatarResults` exactly like a direct `crop().quitWith(...)`
     // would (see (d)) — no PickSource/Crop/Zoom entry remains on the stack, nothing is dropped.
     @Test fun nestedZoomFlowQuitWith_deliversValueToProfileTearsDownWholeAvatarFlow() = runTest {
-        val nav = GezginTestNavigator(start = ProfileGraph.ProfileRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = ProfileGraph.ProfileScreenRoute, topology = gezginTopology)
         val profile = nav.profile()
 
         profile.launchPickAvatar()
         nav.pickSource().goToCrop("gallery")
         nav.crop().goToZoom()
-        assertEquals(ProfileGraph.AvatarFlow.ZoomFlow.ZoomRoute, nav.current)
+        assertEquals(ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute, nav.current)
 
         nav.zoom().quitWith(AvatarChoice("zoomed://frame"))
 
-        assertEquals(listOf(ProfileGraph.ProfileRoute), nav.backStack)
+        assertEquals(listOf(ProfileGraph.ProfileScreenRoute), nav.backStack)
         assertEquals(
             NavResult.Value(AvatarChoice("zoomed://frame")),
             profile.pickAvatarResults.first(),
@@ -169,9 +169,9 @@ class AppNavBehaviorTest {
 
     // (f) R2: `goToRelated` (singleTop=false, named 2nd edge to the SAME target) never dedups —
     // each call mints a genuinely new stack entry (distinct id), even though the route VALUE
-    // (ItemDetailRoute("item-1")) repeats three times in `backStack`.
+    // (ItemDetailScreenRoute("item-1")) repeats three times in `backStack`.
     @Test fun goToRelatedTwiceSameId_createsThreeDistinctStackEntries() {
-        val nav = GezginTestNavigator(start = HomeGraph.DashboardRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = HomeGraph.DashboardScreenRoute, topology = gezginTopology)
 
         nav.dashboard().goToItemDetail("item-1")
         val firstId = nav.raw.currentEntryId
@@ -183,10 +183,10 @@ class AppNavBehaviorTest {
         assertEquals(3, setOf(firstId, secondId, thirdId).size)
         assertEquals(
             listOf(
-                HomeGraph.DashboardRoute,
-                HomeGraph.ItemDetailRoute("item-1"),
-                HomeGraph.ItemDetailRoute("item-1"),
-                HomeGraph.ItemDetailRoute("item-1"),
+                HomeGraph.DashboardScreenRoute,
+                HomeGraph.ItemDetailScreenRoute("item-1"),
+                HomeGraph.ItemDetailScreenRoute("item-1"),
+                HomeGraph.ItemDetailScreenRoute("item-1"),
             ),
             nav.backStack,
         )
@@ -196,12 +196,12 @@ class AppNavBehaviorTest {
     // real-screen counterpart): the call pushes synchronously then suspends on the result; delivering
     // via `deliverResult` (raw `backWithResult`) on the still-top dialog resumes it with the Value.
     @Test fun forgotPasswordSuspendResult_deliversValue() = runTest {
-        val nav = GezginTestNavigator(start = AuthGraph.LoginRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
         val login = nav.login()
 
         val resultDeferred = async { login.goToForgotPasswordDialogForResult(null) }
         runCurrent()
-        assertEquals(AuthGraph.ForgotPasswordDialog(null), nav.current)
+        assertEquals(AuthGraph.ForgotPasswordDialogRoute(null), nav.current)
 
         nav.deliverResult(true)
 
@@ -212,23 +212,23 @@ class AppNavBehaviorTest {
     // ResultRoute (no `backWithResult`) delivers `NavResult.Canceled` to the awaiting suspend call
     // — mirrors (g) but exercises the "user dismissed without an answer" branch.
     @Test fun forgotPasswordBack_deliversCanceled() = runTest {
-        val nav = GezginTestNavigator(start = AuthGraph.LoginRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
         val login = nav.login()
 
         val resultDeferred = async { login.goToForgotPasswordDialogForResult(null) }
         runCurrent()
-        assertEquals(AuthGraph.ForgotPasswordDialog(null), nav.current)
+        assertEquals(AuthGraph.ForgotPasswordDialogRoute(null), nav.current)
 
         nav.forgotPassword().back()
 
         assertEquals(NavResult.Canceled, resultDeferred.await())
     }
 
-    // (i) `@BackToStart` on `TermsRoute`: pops back to (not past) the flow's own
-    // `@StartDestination` (`CredentialsRoute`) — the flow itself SURVIVES, only its interior
+    // (i) `@BackToStart` on `TermsScreenRoute`: pops back to (not past) the flow's own
+    // `@StartDestination` (`CredentialsScreenRoute`) — the flow itself SURVIVES, only its interior
     // (ProfileInfo, Terms) is discarded; Login (outside the flow) is untouched below it.
     @Test fun termsBackToStart_landsOnCredentialsKeepsLoginBelow() {
-        val nav = GezginTestNavigator(start = AuthGraph.LoginRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
         nav.login().goToSignUp()
         nav.credentials().goToProfileInfo("ada@example.com")
         nav.profileInfo().goToTerms()
@@ -236,41 +236,41 @@ class AppNavBehaviorTest {
         nav.terms().backToStart()
 
         assertEquals(
-            listOf(AuthGraph.LoginRoute, AuthGraph.SignUpFlow.CredentialsRoute),
+            listOf(AuthGraph.LoginScreenRoute, AuthGraph.SignUpFlow.CredentialsScreenRoute),
             nav.backStack,
         )
     }
 
-    // (j) `@Quit` on `TermsRoute`: a flow-entry `quit()` tears down the WHOLE SignUpFlow segment
+    // (j) `@Quit` on `TermsScreenRoute`: a flow-entry `quit()` tears down the WHOLE SignUpFlow segment
     // (Canceled to any pending caller) and leaves Login exposed on top — contrast with (i), where
     // the same route's OTHER exit annotation keeps the flow alive.
     @Test fun termsQuit_tearsDownSignUpFlowLeavesLoginOnTop() {
-        val nav = GezginTestNavigator(start = AuthGraph.LoginRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
         nav.login().goToSignUp()
         nav.credentials().goToProfileInfo("ada@example.com")
         nav.profileInfo().goToTerms()
 
         nav.terms().quit()
 
-        assertEquals(listOf(AuthGraph.LoginRoute), nav.backStack)
+        assertEquals(listOf(AuthGraph.LoginScreenRoute), nav.backStack)
     }
 
-    // (k) `@BackTo` (`ItemDetailRoute` → `DashboardRoute`) built ENTIRELY through generated
+    // (k) `@BackTo` (`ItemDetailScreenRoute` → `DashboardScreenRoute`) built ENTIRELY through generated
     // navigators (no `raw.navigate`), AND pinning the cross-graph B1 edge
-    // (`DashboardRoute.goToProfile()` → `ProfileGraph.ProfileRoute`) that every other test exercises
-    // only by starting `GezginTestNavigator` directly on `ProfileRoute` — here it is actually invoked.
+    // (`DashboardScreenRoute.goToProfile()` → `ProfileGraph.ProfileScreenRoute`) that every other test exercises
+    // only by starting `GezginTestNavigator` directly on `ProfileScreenRoute` — here it is actually invoked.
     @Test fun backToDashboardThenCrossGraphGoToProfile_bothViaGeneratedNavigators() {
-        val nav = GezginTestNavigator(start = HomeGraph.DashboardRoute, topology = gezginTopology)
+        val nav = GezginTestNavigator(start = HomeGraph.DashboardScreenRoute, topology = gezginTopology)
 
         nav.dashboard().goToItemDetail("item-1")
-        assertEquals(HomeGraph.ItemDetailRoute("item-1"), nav.current)
+        assertEquals(HomeGraph.ItemDetailScreenRoute("item-1"), nav.current)
 
         nav.itemDetail().backToDashboard()
-        assertEquals(listOf(HomeGraph.DashboardRoute), nav.backStack)
+        assertEquals(listOf(HomeGraph.DashboardScreenRoute), nav.backStack)
 
         nav.dashboard().goToProfile()
         assertEquals(
-            listOf(HomeGraph.DashboardRoute, ProfileGraph.ProfileRoute),
+            listOf(HomeGraph.DashboardScreenRoute, ProfileGraph.ProfileScreenRoute),
             nav.backStack,
         )
     }

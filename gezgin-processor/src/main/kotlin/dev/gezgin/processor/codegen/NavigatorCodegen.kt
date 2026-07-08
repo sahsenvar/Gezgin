@@ -38,17 +38,22 @@ private val FLOW = ClassName(FLOW_PKG, "Flow")
  * generating a class whose only possible member would be the unconditional `back()` isn't useful
  * on its own, and would just be dead API surface every source pays for.
  *
- * `X` is the route's simple name with a trailing `Route`/`Screen`/`Flow` suffix stripped (applied
- * uniformly — including graph names for `@GoForResult` flow-mode member naming, e.g.
- * `CheckoutFlow` → `Checkout`). An edge's `name=` override replaces the derived method name
- * wholesale for `@GoTo`/`@ReplaceTo`/`@QuitAndGoTo` (single method); for the `@GoForResult` triple
+ * `X` is the route's simple name with a trailing `Route` stripped first, then a trailing
+ * `Screen`/`Flow` kind token stripped; `Dialog`/`BottomSheet` tokens are retained (applied uniformly
+ * — including graph names for `@GoForResult` flow-mode member naming, e.g. `CheckoutFlow` →
+ * `Checkout`). An edge's `name=` override replaces the derived method name wholesale for
+ * `@GoTo`/`@ReplaceTo`/`@QuitAndGoTo` (single method); for the `@GoForResult` triple
  * (`launchX`/`xResults`/`goToXForResult`) it substitutes for `X` itself so all three members stay
  * consistently named. `@BackTo` has no `name=` param at all (see `Annotations.kt`) — its method
  * name is always derived (`backTo` + target's `X`), never overridable.
  */
 object NavigatorCodegen {
 
-    private val SUFFIXES = listOf("Route", "Screen", "Flow")
+    // Route-kind sonek token'ları — türetilmiş X adından (`XNavigator`/`provideXEntry`/`goToX`/`fromX`)
+    // atılır. "Screen"/"Flow" atılır (LoginScreenRoute → Login, SignUpFlow → SignUp); "Dialog"/
+    // "BottomSheet" KASITEN korunur (ForgotPasswordDialogRoute → ForgotPasswordDialog) — modal kind'lar
+    // türetilen adda görünür kalır (tarihsel @Dialog davranışı).
+    private val KIND_SUFFIXES = listOf("Screen", "Flow")
 
     fun generate(model: GraphModel, packageName: String): List<FileSpec> {
         val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)
@@ -405,10 +410,19 @@ object NavigatorCodegen {
         return block.add(")").build()
     }
 
-    private fun stripSuffix(simpleName: String): String =
-        SUFFIXES.firstOrNull { simpleName.length > it.length && simpleName.endsWith(it) }
-            ?.let { simpleName.removeSuffix(it) }
-            ?: simpleName
+    // Bileşik sonek: önce tek bir trailing "Route", ARDINDAN tek bir kind token'ı ("Screen"/"Flow")
+    // atılır. Böylece `-ScreenRoute` konvansiyonu türetilmiş adları DEĞİŞTİRMEDEN okunurluk kazandırır
+    // (LoginScreenRoute → Login → aynı `goToLogin`/`LoginNavigator`/`provideLoginEntry`). Her adım
+    // uzunluk korumalı (adı asla boşaltmaz). "Dialog"/"BottomSheet" KIND_SUFFIXES'te YOK → korunur.
+    private fun stripSuffix(simpleName: String): String {
+        var name = simpleName
+        if (name.length > "Route".length && name.endsWith("Route")) {
+            name = name.removeSuffix("Route")
+        }
+        val kind = KIND_SUFFIXES.firstOrNull { name.length > it.length && name.endsWith(it) }
+        if (kind != null) name = name.removeSuffix(kind)
+        return name
+    }
 
     private fun lowerFirst(s: String): String = s.replaceFirstChar { it.lowercase() }
 

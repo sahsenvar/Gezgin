@@ -24,7 +24,7 @@ uygulama iskeleti. Amaç bir "gerçek app" üretmek değil — spec'in her navig
       ▼              ▼                  ▼
 :sample:feature:auth :sample:feature:home :sample:feature:profile
  Login, ForgotPassword   Dashboard, ItemDetail   Profile, Settings,
- Dialog, SignUp flow     FilterSheet, Welcome    EditNameDialog, Avatar flow
+ Dialog, SignUp flow     FilterBottomSheet, Welcome    EditNameDialogRoute, Avatar flow
       │              │                  │
       └──────────────┴──────────────────┘
                      │
@@ -42,34 +42,33 @@ olmasa bile (`model.graphs.isEmpty()`) `@Screen`/`@Dialog`/`@BottomSheet` kayıt
 
 ## Navigasyon grafiği
 
-Tam grafik `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/AppNav.kt`'ta;
-üç `@NavGraph` (`AuthGraph`, `HomeGraph`, `ProfileGraph`), sealed `AppRoot : Route` kökü altında
-(kök annotation'sız — E5 pozitif deseni), artı iç içe `AvatarFlow` → `ZoomFlow` (`@FlowGraph` içinde
-`@FlowGraph`).
+Tam grafik `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/{AuthGraph,HomeGraph,ProfileGraph}.kt` dosyalarında;
+üç `@NavGraph` (`AuthGraph`, `HomeGraph`, `ProfileGraph`) doğrudan `Route` altında,
+artı iç içe `AvatarFlow` → `ZoomFlow` (`@FlowGraph` içinde `@FlowGraph`).
 
 ## Kapsama tablosu
 
 | Özellik | Route(lar) | Ekran / dosya |
 |---|---|---|
-| `@NavGraph` ×3 | `AuthGraph`, `HomeGraph`, `ProfileGraph` | `AppNav.kt` |
-| result'suz `@FlowGraph` | `AuthGraph.SignUpFlow` | `AppNav.kt` |
-| `ResultFlow<T>` + nested `@FlowGraph` | `ProfileGraph.AvatarFlow` → `AvatarFlow.ZoomFlow` | `AppNav.kt` |
-| `@StartDestination` / G1 (app start) | `SignUpFlow.CredentialsRoute`, `AvatarFlow.PickSourceRoute`, `ZoomFlow.ZoomRoute`; gerçek app start = `LoginRoute` | `AppNav.kt`, `MainActivity.kt` |
-| `@GoTo` (+ `singleTop=false` + `name=`) | `DashboardRoute→ItemDetailRoute`; `ItemDetailRoute→ItemDetailRoute` (`goToRelated`, R2 dup) | `HomeScreens.kt` |
-| `@ReplaceTo` (Self-default) | `LoginRoute→DashboardRoute` (`loginSuccess`), `WelcomeRoute→DashboardRoute` (`continueToDashboard`) | `AuthScreens.kt`, `HomeScreens.kt` |
-| `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsRoute→LoginRoute` | `ProfileScreens.kt` |
-| `@GoForResult` — screen×3 (Dialog/Dialog/Sheet) | `ForgotPasswordDialog`, `EditNameDialog`, `FilterSheetRoute` | `AuthScreens.kt`, `ProfileScreens.kt`, `HomeScreens.kt` |
-| `@GoForResult` — flow×1, named×2 | `AvatarFlow` (`pickAvatar`), `FilterSheetRoute` (`pickSort`) | `ProfileScreens.kt`, `HomeScreens.kt` |
+| `@NavGraph` ×3 | `AuthGraph`, `HomeGraph`, `ProfileGraph` | `AuthGraph.kt`, `HomeGraph.kt`, `ProfileGraph.kt` |
+| result'suz `@FlowGraph` | `AuthGraph.SignUpFlow` | `AuthGraph.kt` |
+| `ResultFlow<T>` + nested `@FlowGraph` | `ProfileGraph.AvatarFlow` → `AvatarFlow.ZoomFlow` | `ProfileGraph.kt` |
+| `@StartDestination` / G1 (app start) | `SignUpFlow.CredentialsScreenRoute`, `AvatarFlow.PickSourceScreenRoute`, `ZoomFlow.ZoomScreenRoute`; gerçek app start = `LoginScreenRoute` | graph dosyaları, `MainActivity.kt` |
+| `@GoTo` (+ `singleTop=false` + `name=`) | `DashboardScreenRoute→ItemDetailScreenRoute`; `ItemDetailScreenRoute→ItemDetailScreenRoute` (`goToRelated`, R2 dup) | `HomeScreens.kt` |
+| `@ReplaceTo` (Self-default) | `LoginScreenRoute→DashboardScreenRoute` (`loginSuccess`), `WelcomeScreenRoute→DashboardScreenRoute` (`continueToDashboard`) | `AuthScreens.kt`, `HomeScreens.kt` |
+| `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsScreenRoute→LoginScreenRoute` | `ProfileScreens.kt` |
+| `@GoForResult` — screen×3 (Dialog/Dialog/Sheet) | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | `AuthScreens.kt`, `ProfileScreens.kt`, `HomeScreens.kt` |
+| `@GoForResult` — flow×1, named×2 | `AvatarFlow` (`pickAvatar`), `FilterBottomSheetRoute` (`pickSort`) | `ProfileScreens.kt`, `HomeScreens.kt` |
 | Üçlü tüketimin İKİ deseni | suspend `goToPickSortForResult` (Dashboard) **vs.** `launchPickAvatar()` + `pickAvatarResults.collect` VM'siz `LaunchedEffect` (Profile) | `HomeScreens.kt` / `ProfileScreens.kt` |
-| `@QuitAndGoTo` | `TermsRoute` → `WelcomeRoute` | `AuthScreens.kt` |
-| `@Quit` | `TermsRoute` | `AuthScreens.kt` |
-| `@BackToStart` | `TermsRoute` → `CredentialsRoute` | `AuthScreens.kt` |
-| `@BackTo` | `ItemDetailRoute` → `DashboardRoute` | `HomeScreens.kt` |
-| `@NoBack` (cross-module) | `WelcomeRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `AppNav.kt` / `HomeScreens.kt` |
-| `backWithResult` | `ForgotPasswordDialog`, `EditNameDialog`, `FilterSheetRoute` | ilgili dosyalar |
-| `quitWith` | `CropRoute`, `ZoomRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `ProfileScreens.kt` |
+| `@QuitAndGoTo` | `TermsScreenRoute` → `WelcomeScreenRoute` | `AuthScreens.kt` |
+| `@Quit` | `TermsScreenRoute` | `AuthScreens.kt` |
+| `@BackToStart` | `TermsScreenRoute` → `CredentialsScreenRoute` | `AuthScreens.kt` |
+| `@BackTo` | `ItemDetailScreenRoute` → `DashboardScreenRoute` | `HomeScreens.kt` |
+| `@NoBack` (cross-module) | `WelcomeScreenRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `HomeGraph.kt` / `HomeScreens.kt` |
+| `backWithResult` | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | ilgili dosyalar |
+| `quitWith` | `CropScreenRoute`, `ZoomScreenRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `ProfileScreens.kt` |
 | Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 | bkz. aşağıdaki "Faz 4 notu" | tüm feature dosyaları |
-| Transition cascade (3 seviye) | app `navTransitions{default{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `AppNav.kt` |
+| Transition cascade (3 seviye) | app `navTransitions{forward{...}backward{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsScreenRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `ProfileGraph.kt` |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
 | `onRootBack = finish()` | — | `MainActivity.kt` |
 | PD-safe restore | `rememberNavigator` PD-safe `Saver`; bkz. `gezgin-core` (`GezginDisplay`) dokümantasyonu — bu sample ek bir test EKLEMEZ, framework'ün kendi restore testleri kapsar | — |
@@ -79,7 +78,7 @@ Tam grafik `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/AppNa
 
 Aynı "@GoForResult sonucunu bekle" ihtiyacının iki farklı, İKİSİ DE meşru çözümü:
 
-**1. Suspend çağrı (Dashboard → FilterSheet, `pickSort`)** — `scope.launch { val r =
+**1. Suspend çağrı (Dashboard → FilterBottomSheetRoute, `pickSort`)** — `scope.launch { val r =
 nav.goToPickSortForResult(...) }`. Kısa, doğrudan; ama `scope`
 (`rememberCoroutineScope()`) composable'ın YAŞAM SÜRESİNE bağlıdır — bkz. aşağıdaki "Tasarım
 notları" içindeki config-change caveat'ı.
@@ -95,8 +94,8 @@ tercih edilmeli (§6).
 `@Screen` / `@Dialog` / `@BottomSheet` annotation'ları `EntryCodegen`/registry seviyesinde tam
 işlenir (kind bilgisi kaydedilir), ama **Faz 4'e kadar tüm kind'lar aynı şekilde, plain
 full-screen composable olarak render edilir** — `GezginDisplay` henüz `Dialog`/`ModalBottomSheet`
-gibi platform-native konteynerlere ayrım yapmıyor. Bu sample'da `ForgotPasswordDialog`,
-`EditNameDialog` (Dialog) ve `FilterSheetRoute` (BottomSheet) UI'da sıradan bir ekran gibi görünür;
+gibi platform-native konteynerlere ayrım yapmıyor. Bu sample'da `ForgotPasswordDialogRoute`,
+`EditNameDialogRoute` (Dialog) ve `FilterBottomSheetRoute` (BottomSheet) UI'da sıradan bir ekran gibi görünür;
 kind farkı yalnızca kodda (annotation) ve derlenmiş registride vardır.
 
 ## Davranış testleri
@@ -132,7 +131,7 @@ Plan, `gezgin.emitTestAccessors=true`'u `:sample:navigation`'ın `kspTest` kayna
    plugin'inin `KspAATask.kt`'sinde task-seviyesinde, paylaşılan listenin ÜSTÜNE eklenen bir liste)
    doğrudan argüman eklemek mümkün — bu kısım ÇALIŞIYOR, flag yalnız test derlemesinde açılabiliyor.
 3. Ama gerçek engel YAPISAL: `TestApiCodegen`, [GraphModel] gerektirir; `kspTestKotlin`'in KSP
-   round'u yalnızca `test` kaynak kümesinin `.kt` dosyalarını görür. `AppNav.kt`'nin `@NavGraph`'ları
+   round'u yalnızca `test` kaynak kümesinin `.kt` dosyalarını görür. `AuthGraph.kt`/`HomeGraph.kt`/`ProfileGraph.kt`'nin `@NavGraph`'ları
    `main`'de yaşar ve o noktada zaten `.class`'a derlenmiştir — `getSymbolsWithAnnotation` binary
    classpath girdilerinden annotation'ları asla yeniden keşfetmez. Sonuç: `model.graphs`/`routes`
    HER ZAMAN boş → `GezginTestAccessors.kt` hiç üretilmez. Ampirik doğrulama: `kspTestKotlin`'i tek
@@ -150,16 +149,16 @@ için eklendi; `kspTest(...)` bağımlılığı EKLENMEDİ (yukarıdaki nedenle 
 
 ## Tasarım notları (S2/S3 bulguları)
 
-- **`SettingsRoute.logout()` çift-Login bulgusu** — `@ReplaceTo(LoginRoute, clearUpTo =
-  DashboardRoute::class, inclusive = true)`, `[Login, Dashboard, Profile, Settings]` stack'inden
+- **`SettingsScreenRoute.logout()` çift-Login bulgusu** — `@ReplaceTo(LoginScreenRoute, clearUpTo =
+  DashboardScreenRoute::class, inclusive = true)`, `[Login, Dashboard, Profile, Settings]` stack'inden
   başlarsa Dashboard'a kadar (dahil) her şeyi temizler ve GERİYE KALAN `Login`'in ÜSTÜNE yeni bir
   Login entry'si push eder (`replaceTo` her zaman `singleTop=false` ile push eder — hedef zaten
   top'un altındaki bir entry ile aynı DEĞERDE olsa bile dedup yapmaz). Runtime sonucu:
   `[Login, Login']` — çift Login. Bu, grafiği "düzeltmek" yerine BİLİNÇLİ OLARAK olduğu gibi
   bırakılan bir örnek-grafik tasarım bulgusudur (S1'in dosyası değiştirilmedi); davranış testi
   (`logoutClearUpToDashboardInclusive_stacksASecondLoginEntry`) bu GERÇEK sonucu pinler. Gerçek bir
-  üründe muhtemel düzeltme: `clearUpTo` hedefini `LoginRoute::class` yapmak (o zaman zaten dip
-  Login'in KENDİSİ temizlenir) ya da `SettingsRoute`'u her zaman Dashboard'un ÜSTÜNDE bir yerden
+  üründe muhtemel düzeltme: `clearUpTo` hedefini `LoginScreenRoute::class` yapmak (o zaman zaten dip
+  Login'in KENDİSİ temizlenir) ya da `SettingsScreenRoute`'u her zaman Dashboard'un ÜSTÜNDE bir yerden
   çağrılacağını varsaymamak.
 - **`quitWith` sahiplik (ownership) çözünürlüğü — bulunan ve DÜZELTİLEN kütüphane bug'ı** — Bu
   showcase, `ZoomFlow : AvatarFlow` şeklinde (nested flow'un, kapsayan `ResultFlow`'u SUBTYPE

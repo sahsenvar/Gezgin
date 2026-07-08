@@ -24,11 +24,11 @@ import androidx.compose.ui.unit.dp
 import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.Dialog
 import dev.gezgin.core.annotation.Screen
-import dev.gezgin.sample.navigation.AuthGraph.ForgotPasswordDialog
-import dev.gezgin.sample.navigation.AuthGraph.LoginRoute
-import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.CredentialsRoute
-import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.ProfileInfoRoute
-import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.TermsRoute
+import dev.gezgin.sample.navigation.AuthGraph.ForgotPasswordDialogRoute
+import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
+import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.CredentialsScreenRoute
+import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.ProfileInfoScreenRoute
+import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.TermsScreenRoute
 import dev.gezgin.sample.navigation.CredentialsNavigator
 import dev.gezgin.sample.navigation.ForgotPasswordDialogNavigator
 import dev.gezgin.sample.navigation.LoginNavigator
@@ -44,7 +44,7 @@ import kotlinx.coroutines.launch
  */
 @Screen
 @Composable
-fun LoginScreen(route: LoginRoute, nav: LoginNavigator) {
+fun LoginScreen(route: LoginScreenRoute, nav: LoginNavigator) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -102,7 +102,7 @@ fun LoginScreen(route: LoginRoute, nav: LoginNavigator) {
  */
 @Dialog
 @Composable
-fun ForgotPasswordDialogScreen(route: ForgotPasswordDialog, nav: ForgotPasswordDialogNavigator) {
+fun ForgotPasswordDialogScreen(route: ForgotPasswordDialogRoute, nav: ForgotPasswordDialogNavigator) {
     var email by remember { mutableStateOf(route.email.orEmpty()) }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -121,7 +121,7 @@ fun ForgotPasswordDialogScreen(route: ForgotPasswordDialog, nav: ForgotPasswordD
 
 @Screen
 @Composable
-fun CredentialsScreen(route: CredentialsRoute, nav: CredentialsNavigator) {
+fun CredentialsScreen(route: CredentialsScreenRoute, nav: CredentialsNavigator) {
     var email by remember { mutableStateOf("") }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -139,7 +139,7 @@ fun CredentialsScreen(route: CredentialsRoute, nav: CredentialsNavigator) {
 
 @Screen
 @Composable
-fun ProfileInfoScreen(route: ProfileInfoRoute, nav: ProfileInfoNavigator) {
+fun ProfileInfoScreen(route: ProfileInfoScreenRoute, nav: ProfileInfoNavigator) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Kayıt ol — profil bilgileri")
@@ -151,7 +151,7 @@ fun ProfileInfoScreen(route: ProfileInfoRoute, nav: ProfileInfoNavigator) {
 
 @Screen
 @Composable
-fun TermsScreen(route: TermsRoute, nav: TermsNavigator) {
+fun TermsScreen(route: TermsScreenRoute, nav: TermsNavigator) {
     var name by remember { mutableStateOf("") }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

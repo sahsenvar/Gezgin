@@ -23,11 +23,11 @@ import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.BottomSheet
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.sample.navigation.DashboardNavigator
-import dev.gezgin.sample.navigation.FilterSheetNavigator
-import dev.gezgin.sample.navigation.HomeGraph.DashboardRoute
-import dev.gezgin.sample.navigation.HomeGraph.FilterSheetRoute
-import dev.gezgin.sample.navigation.HomeGraph.ItemDetailRoute
-import dev.gezgin.sample.navigation.HomeGraph.WelcomeRoute
+import dev.gezgin.sample.navigation.FilterBottomSheetNavigator
+import dev.gezgin.sample.navigation.HomeGraph.DashboardScreenRoute
+import dev.gezgin.sample.navigation.HomeGraph.FilterBottomSheetRoute
+import dev.gezgin.sample.navigation.HomeGraph.ItemDetailScreenRoute
+import dev.gezgin.sample.navigation.HomeGraph.WelcomeScreenRoute
 import dev.gezgin.sample.navigation.ItemDetailNavigator
 import dev.gezgin.sample.navigation.SortOrder
 import dev.gezgin.sample.navigation.WelcomeNavigator
@@ -39,7 +39,7 @@ private val FAKE_ITEMS = (1..5).map { "item-$it" }
 
 @Screen
 @Composable
-fun DashboardScreen(route: DashboardRoute, nav: DashboardNavigator) {
+fun DashboardScreen(route: DashboardScreenRoute, nav: DashboardNavigator) {
     var order by remember { mutableStateOf(SortOrder.RELEVANCE) }
     val items = remember(order) {
         when (order) {
@@ -81,8 +81,8 @@ fun DashboardScreen(route: DashboardRoute, nav: DashboardNavigator) {
 
 @Screen
 @Composable
-fun ItemDetailScreen(route: ItemDetailRoute, nav: ItemDetailNavigator) {
-    // singleTop=false ile aynı id'ye tekrar navigate edilebilir (R2: iki ItemDetailRoute("3") eşit-değer
+fun ItemDetailScreen(route: ItemDetailScreenRoute, nav: ItemDetailNavigator) {
+    // singleTop=false ile aynı id'ye tekrar navigate edilebilir (R2: iki ItemDetailScreenRoute("3") eşit-değer
     // ama AYRI entry/id — bu sayaç her yeni entry'de rememberSaveable'dan 0'dan başlar, aynı-değerli iki
     // ekranın gerçekten bağımsız (saveable) state taşıdığını canlı gösterir.
     var visits by rememberSaveable { mutableIntStateOf(0) }
@@ -102,7 +102,7 @@ fun ItemDetailScreen(route: ItemDetailRoute, nav: ItemDetailNavigator) {
 /** `@BottomSheet` kind — Faz 4'e kadar plain screen render edilir (bkz. AuthScreens.kt üstteki not). */
 @BottomSheet
 @Composable
-fun FilterSheetScreen(route: FilterSheetRoute, nav: FilterSheetNavigator) {
+fun FilterSheetScreen(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavigator) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Sırala (şu an: ${route.current})")
@@ -122,7 +122,7 @@ fun FilterSheetScreen(route: FilterSheetRoute, nav: FilterSheetNavigator) {
  */
 @Screen
 @Composable
-fun WelcomeScreen(route: WelcomeRoute, nav: WelcomeNavigator) {
+fun WelcomeScreen(route: WelcomeScreenRoute, nav: WelcomeNavigator) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(if (route.name != null) "Hoş geldin, ${route.name}" else "Hoş geldin")

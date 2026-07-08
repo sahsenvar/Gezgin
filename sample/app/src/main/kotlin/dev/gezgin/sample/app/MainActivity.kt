@@ -16,30 +16,18 @@ import androidx.compose.runtime.remember
 import dev.gezgin.core.compose.GezginDisplay
 import dev.gezgin.core.compose.navTransitions
 import dev.gezgin.core.compose.rememberNavigator
-import dev.gezgin.sample.feature.auth.provideCredentialsEntry
-import dev.gezgin.sample.feature.auth.provideForgotPasswordDialogEntry
-import dev.gezgin.sample.feature.auth.provideLoginEntry
-import dev.gezgin.sample.feature.auth.provideProfileInfoEntry
-import dev.gezgin.sample.feature.auth.provideTermsEntry
-import dev.gezgin.sample.feature.home.provideDashboardEntry
-import dev.gezgin.sample.feature.home.provideFilterSheetEntry
-import dev.gezgin.sample.feature.home.provideItemDetailEntry
-import dev.gezgin.sample.feature.home.provideWelcomeEntry
-import dev.gezgin.sample.feature.profile.provideCropEntry
-import dev.gezgin.sample.feature.profile.provideEditNameDialogEntry
-import dev.gezgin.sample.feature.profile.providePickSourceEntry
-import dev.gezgin.sample.feature.profile.provideProfileEntry
-import dev.gezgin.sample.feature.profile.provideSettingsEntry
-import dev.gezgin.sample.feature.profile.provideZoomEntry
-import dev.gezgin.sample.navigation.AuthGraph.LoginRoute
+import dev.gezgin.sample.feature.auth.authGraphEntries
+import dev.gezgin.sample.feature.home.homeGraphEntries
+import dev.gezgin.sample.feature.profile.profileGraphEntries
+import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
 import dev.gezgin.sample.navigation.gezginSerializersModule
 import dev.gezgin.sample.navigation.gezginTopology
 import kotlinx.serialization.json.Json
 
 /**
- * S2 — showcase host. `start = LoginRoute` (NOT `DashboardRoute`, plan §N6): V1'in tek-stack
+ * S2 — showcase host. `start = LoginScreenRoute` (NOT `DashboardScreenRoute`, plan §N6): V1'in tek-stack
  * navigator'ında bir "önce login gate'i kontrol et" decider yok, bu yüzden en gerçekçi basit kurulum
- * `LoginRoute`'tan başlamaktır — `loginSuccess()` bir `@ReplaceTo` olduğu için giriş yapınca geri tuşu
+ * `LoginScreenRoute`'tan başlamaktır — `loginSuccess()` bir `@ReplaceTo` olduğu için giriş yapınca geri tuşu
  * login'e DÖNMEZ (Dashboard stack'in tek elemanı olur). Bu, `spec §12`'nin auth-gate/decider konusunu
  * V2'ye erteleyen notuyla tutarlıdır.
  */
@@ -54,7 +42,7 @@ class MainActivity : ComponentActivity() {
 private fun GezginShowcaseApp(onRootBack: () -> Unit) {
     val json = remember { Json { serializersModule = gezginSerializersModule } }
     val navigator = rememberNavigator(
-        start = LoginRoute,
+        start = LoginScreenRoute,
         topology = gezginTopology,
         json = json,
         onRootBack = onRootBack,
@@ -70,30 +58,13 @@ private fun GezginShowcaseApp(onRootBack: () -> Unit) {
         GezginDisplay(
             navigator = navigator,
             transitions = navTransitions {
-                default {
-                    forward { fadeIn() togetherWith fadeOut() }
-                    back { slideInHorizontally() togetherWith slideOutHorizontally() }
-                }
+                forward { fadeIn() togetherWith fadeOut() }
+                backward { slideInHorizontally() togetherWith slideOutHorizontally() }
             },
         ) {
-            // AuthGraph
-            provideLoginEntry()
-            provideForgotPasswordDialogEntry()
-            provideCredentialsEntry()
-            provideProfileInfoEntry()
-            provideTermsEntry()
-            // HomeGraph
-            provideDashboardEntry()
-            provideItemDetailEntry()
-            provideFilterSheetEntry()
-            provideWelcomeEntry()
-            // ProfileGraph
-            provideProfileEntry()
-            provideSettingsEntry()
-            provideEditNameDialogEntry()
-            providePickSourceEntry()
-            provideCropEntry()
-            provideZoomEntry()
+            authGraphEntries()    // dev.gezgin.sample.feature.auth
+            homeGraphEntries()    // dev.gezgin.sample.feature.home
+            profileGraphEntries() // dev.gezgin.sample.feature.profile
         }
     }
 }

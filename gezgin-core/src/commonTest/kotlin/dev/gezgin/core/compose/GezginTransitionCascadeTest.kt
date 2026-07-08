@@ -23,26 +23,25 @@ class GezginTransitionCascadeTest {
 
     @Test
     fun `route kendi transition'ini override ederse o kazanir (screen greater than graph)`() {
-        val resolved = resolveTransition(ScreenOwnTransition, navTransitions {})
+        val resolved = resolveTransition(ScreenOwnTransition, null)
         assertSame(screenTransitionFixture, resolved)
     }
 
     @Test
     fun `route override etmezse graph'in transition'i miras alinir (graph greater than app)`() {
-        val resolved = resolveTransition(ScreenInheritsGraphTransition, navTransitions {})
+        val resolved = resolveTransition(ScreenInheritsGraphTransition, null)
         assertSame(graphTransitionFixture, resolved)
     }
 
     @Test
     fun `ne route ne graph soylerse app-seviyesi default'a duser`() {
-        val appTransitions = GezginTransitions(default = appTransitionFixture)
-        val resolved = resolveTransition(ScreenNoTransitionAnywhere, appTransitions)
+        val resolved = resolveTransition(ScreenNoTransitionAnywhere, appTransitionFixture)
         assertSame(appTransitionFixture, resolved)
     }
 
     @Test
     fun `hicbir seviye (route, graph, app) bir sey soylemezse null doner`() {
-        val resolved = resolveTransition(ScreenNoTransitionAnywhere, navTransitions {})
+        val resolved = resolveTransition(ScreenNoTransitionAnywhere, null)
         assertNull(resolved)
     }
 }

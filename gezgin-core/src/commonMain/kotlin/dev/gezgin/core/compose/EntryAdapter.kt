@@ -36,7 +36,7 @@ import dev.gezgin.core.Route
  * ([resolveTransition]: route-override > graph-mirası > app-default) çözülür ve `NavEntry.metadata`'ya
  * ([GezginTransition.toNavEntryMetadata] — Nav3'ün PUBLIC `NavDisplay.transitionSpec/popTransitionSpec/
  * predictivePopTransitionSpec` sarmalayıcılarıyla) yazılır. Top-route'tan NavDisplay-parametresi çözen
- * ilk yaklaşım GERİ ALINDI: pop B→A'da NavDisplay'in top'u artık A olduğundan B'nin `back{}`/
+ * ilk yaklaşım GERİ ALINDI: pop B→A'da NavDisplay'in top'u artık A olduğundan B'nin `backward{}`/
  * `predictive{}` spec'leri hiç kullanılmıyordu (§9 "en içteki kazanır" ihlali). Per-entry metadata'da
  * Nav3'ün kendi AnimatedContent çözümü doğru entry'nin spec'ini seçer (`Scene.metadata` default'u = son
  * entry'nin metadata'sı; pop/predictive'de çıkılan scene'inki okunur — bkz. GezginDisplay KDoc).
@@ -44,7 +44,7 @@ import dev.gezgin.core.Route
 internal fun GezginEntryScope.toNavEntry(
     key: GezginKey,
     navigator: RawNavigator,
-    transitions: GezginTransitions,
+    transitions: GezginTransition?,
     isRoot: Boolean = false,
 ): NavEntry<Route> {
     val registered = registry[key.route::class]

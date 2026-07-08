@@ -12,7 +12,7 @@ import dev.gezgin.core.compose.GezginTransition
  * temeli): bir graph interface'i bu property'yi override edip kendi grup-geneli transition'ını
  * verebilir; onu implement eden route'lar kendi override'ı yoksa Kotlin'in interface property override
  * zinciriyle graph'ın değerini miras alır (screen>graph cascade BEDAVA gelir — ek kod gerekmez). Kalan
- * app-seviyesi basamak ([GezginTransitions.default]) [dev.gezgin.core.compose.resolveTransition]'da.
+ * app-seviyesi basamak ([dev.gezgin.core.compose.navTransitions]) [dev.gezgin.core.compose.resolveTransition]'da.
  */
 interface Route {
     val transition: GezginTransition? get() = null
