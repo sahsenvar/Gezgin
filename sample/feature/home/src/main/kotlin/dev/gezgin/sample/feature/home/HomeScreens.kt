@@ -9,6 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -85,10 +86,13 @@ fun ItemDetailScreen(route: ItemDetailRoute, nav: ItemDetailNavigator) {
     // ama AYRI entry/id — bu sayaç her yeni entry'de rememberSaveable'dan 0'dan başlar, aynı-değerli iki
     // ekranın gerçekten bağımsız (saveable) state taşıdığını canlı gösterir.
     var visits by rememberSaveable { mutableIntStateOf(0) }
+    // Composition-anında yazım YASAK (recomposition'da kendi kendini artırır — R2 dersini bozar).
+    // Artış entry/composable ömründe TEK SEFER, LaunchedEffect(Unit) içinde yapılır.
+    LaunchedEffect(Unit) { visits++ }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Ürün: ${route.id}")
-            Text("Bu ekran örneğinde ziyaret sayacı: ${++visits}")
+            Text("Bu ekran örneğinde ziyaret sayacı: $visits")
             Button(onClick = { nav.goToRelated(route.id) }) { Text("İlgili ürün (aynı id, yeni entry)") }
             TextButton(onClick = { nav.backToDashboard() }) { Text("Panoya dön") }
         }
