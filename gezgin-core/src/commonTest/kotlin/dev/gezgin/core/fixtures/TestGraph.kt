@@ -23,6 +23,65 @@ import kotlinx.serialization.modules.subclass
 @Serializable data object Otp : ShopGraph       // PayAuthFlow üyesi (nested: Checkout > PayAuth)
 @Serializable data object GiftPick : ShopGraph  // GiftFlow üyesi   (nested: Checkout > Gift)
 
+// --- Task 4.1 (§7 modal contract) fixture'ları ---
+/** Contract implement ETMEYEN dialog route → adapter tip-varsayılan DialogProperties (hepsi true). */
+@Serializable data class DialogDefault(val id: String) : ShopGraph
+
+/** DialogContract'ı ctor-param + override ile besleyen dialog route (KOŞULLU + SABİT karışık). */
+@Serializable
+data class DialogCustom(val id: String) : ShopGraph, dev.gezgin.core.DialogContract {
+    override val dismissOnClickOutside: Boolean get() = false
+    override val dismissOnBackPress: Boolean get() = false
+    override val usePlatformDefaultWidth: Boolean get() = false
+}
+
+/** @NoBack + dismissOnBackPress=true (default) çelişkisi guard testi için dialog route. */
+@Serializable data object DialogBackDismissable : ShopGraph, dev.gezgin.core.DialogContract
+
+/** @NoBack ile UYUMLU dialog route: dismissOnBackPress=false → guard geçer. */
+@Serializable
+data object DialogNoBackCompatible : ShopGraph, dev.gezgin.core.DialogContract {
+    override val dismissOnBackPress: Boolean get() = false
+}
+
+/** dismissOnBackPress KOŞULLU (ctor-param'dan) — guard'ın property GETTER'ından (sabit-override değil,
+ *  instance-değerinden) okuduğunu pinlemek için (Task 4.1 Minor). */
+@Serializable
+data class ConditionalBackDialog(val backDismiss: Boolean) : ShopGraph, dev.gezgin.core.DialogContract {
+    override val dismissOnBackPress: Boolean get() = backDismiss
+}
+
+/** FullscreenModalContract'lı tam-ekran modal route. */
+@Serializable
+data object FullModal : ShopGraph, dev.gezgin.core.FullscreenModalContract {
+    override val dismissOnClickOutside: Boolean get() = false
+}
+
+// --- Task 4.2 (§7 BottomSheet) fixture'ları ---
+/** Contract implement ETMEYEN sheet route → adapter tip-varsayılan props (skipPartiallyExpanded=false,
+ *  dismissOnBackPress=true, dismissOnClickOutside=true). */
+@Serializable data class SheetDefault(val id: String) : ShopGraph
+
+/** BottomSheetContract'lı sheet route: üçünü de ezer (skipPartiallyExpanded=true, dismissOnBackPress=false,
+ *  dismissOnClickOutside=false). */
+@Serializable
+data class SheetCustom(val id: String) : ShopGraph, dev.gezgin.core.BottomSheetContract {
+    override val skipPartiallyExpanded: Boolean get() = true
+    override val dismissOnBackPress: Boolean get() = false
+    override val dismissOnClickOutside: Boolean get() = false
+}
+
+/** @NoBack + dismissOnBackPress=true (default) çelişkisi guard testi için sheet route. */
+@Serializable data object SheetBackDismissable : ShopGraph, dev.gezgin.core.BottomSheetContract
+
+/** @NoBack + BOTTOM_SHEET route — dismissOnBackPress=false OLSA BİLE artık YASAK (§7: swipe-to-dismiss
+ *  hiçbir prop'la kapatılamaz → görsel/state desync). Guard'ın kind==BOTTOM_SHEET dalının dismiss'ten
+ *  BAĞIMSIZ fırlattığını pinlemek için (eskiden "legal" varsayılıyordu — Faz4 final-review'da yasaklandı). */
+@Serializable
+data object SheetNoBackCompatible : ShopGraph, dev.gezgin.core.BottomSheetContract {
+    override val dismissOnBackPress: Boolean get() = false
+}
+
 interface Pick                                                     // AÇIK polimorfizm — module ŞART
 @Serializable data class ChosenAddress(val id: String) : Pick
 

@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import dev.gezgin.core.DialogContract
 import dev.gezgin.core.ResultFlow
 import dev.gezgin.core.ResultRoute
 import dev.gezgin.core.Route
@@ -47,8 +48,18 @@ sealed interface ProfileGraph : Route {
             get() = transition { forward { slideInHorizontally() togetherWith slideOutHorizontally() } }
     }
 
+    /**
+     * Screen-mode result producer — real `@Dialog` overlay (Faz 4). `DialogContract`'ın KOŞULLU
+     * desenini gösterir (§7/Contracts.kt, `ForgotPasswordDialogRoute`'daki SABİT desenin karşıtı):
+     * `dismissOnClickOutside` route ctor param'ından (`current`) hesaplanır — mevcut isim BOŞSA (ilk
+     * kayıt akışı varsayımı) dışarı-tık kapatmaz, kullanıcı bir isim girmeden çıkamaz; mevcut ismi
+     * DÜZENLERKEN dışarı tık ile rahatça vazgeçilebilir. `dismissOnBackPress` varsayılan (`true`) her
+     * durumda çalışır.
+     */
     @Serializable
-    data class EditNameDialogRoute(val current: String) : ProfileGraph, ResultRoute<String>
+    data class EditNameDialogRoute(val current: String) : ProfileGraph, ResultRoute<String>, DialogContract {
+        override val dismissOnClickOutside: Boolean get() = current.isNotBlank()
+    }
 
     /** Flow that RETURNS a result (ResultFlow<AvatarChoice>) — members get quitWith(AvatarChoice). */
     @FlowGraph

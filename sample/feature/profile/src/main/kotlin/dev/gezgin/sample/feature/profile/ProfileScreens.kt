@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -99,12 +101,25 @@ private fun ThemeToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     }
 }
 
-/** `@Dialog` kind — bkz. AuthScreens.kt'deki not (yalnız kind annotation'ı, `@Screen` YOK). */
+/**
+ * `@Dialog` kind — bkz. AuthScreens.kt'deki not (yalnız kind annotation'ı, `@Screen` YOK). Gerçek
+ * `DialogSceneStrategy` overlay'i (Faz 4); `EditNameDialogRoute` (bkz. `ProfileGraph.kt`)
+ * `DialogContract`'ın KOŞULLU desenini kullanır: `dismissOnClickOutside` route'un `current` ctor
+ * param'ından hesaplanır (boşsa kapanmaz, doluysa dışarı-tık kapatır) — `ForgotPasswordDialogRoute`'un
+ * SABİT `false`'unun karşıtı. Dismiss (izin verilen yollarla) → `back()` → `NavResult.Canceled`.
+ */
 @Dialog
 @Composable
 fun EditNameDialogScreen(route: EditNameDialogRoute, nav: EditNameDialogNavigator) {
     var text by remember { mutableStateOf(route.current) }
-    Surface(modifier = Modifier.fillMaxSize()) {
+    // Gerçek Dialog overlay — içerik KOMPAKT bir kart; `fillMaxSize` DEĞİL (dialog tüm ekranı
+    // kaplamamalı, scrim üstünde ortalanmış/wrap-content/gölgeli görünmeli — bkz. on-device checklist
+    // madde 9). Dialog penceresi `usePlatformDefaultWidth=true` ile zaten genişliği sınırlar.
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 6.dp,
+        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+    ) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Adı düzenle")
             OutlinedTextField(

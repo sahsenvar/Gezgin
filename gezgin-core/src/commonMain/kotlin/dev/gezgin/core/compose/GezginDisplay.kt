@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
@@ -36,8 +35,10 @@ import dev.gezgin.core.Route
  * `error()` ile durur — Nav3 `OverlayScene`'in `require(overlaidEntries.isNotEmpty())` invariant'ını
  * (bir modal'ın altında en az bir normal entry olmadan var olamayacağı) kökte tek başına bir modal
  * başlatarak ihlal etmeyi önler. Route HENÜZ kayıtlı değilse (kind lookup `null`) burada patlamaz —
- * o durumun daha açıklayıcı hatası [toNavEntry]'de (`route için entry kaydı yok`) zaten var. Faz 4'te
- * scene wiring gelince bu guard gevşetilecek (TODO).
+ * o durumun daha açıklayıcı hatası [toNavEntry]'de (`route için entry kaydı yok`) zaten var. Faz 4
+ * scene wiring'i geldi ([GezginNavDisplay]/DialogSceneStrategy) AMA bu guard KALIR (gevşetilmez):
+ * `OverlayScene` `require(overlaidEntries.isNotEmpty())` invariant'ı gerçektir — bir modal genuinely
+ * kökte tek başına var olamaz (altında overlaid bir normal entry şart). Global Constraints §7.
  *
  * **Transition cascade (Task 3.5, §9) — PER-ENTRY metadata:** her entry kurulurken ([toNavEntry]) KENDİ
  * route'unun cascade'i çözülür ([resolveTransition]: `route.transition ?: transitions` —
@@ -72,9 +73,13 @@ fun GezginDisplay(
         GezginEntryScope().apply(entries).also { registered ->
             val rootRoute = navigator.keys.first().route
             val rootKind = registered.registry[rootRoute::class]?.kind
+            // NOT: Bu YALNIZ start route'u kapsayan erken/redundant güvenlik ağıdır. ASIL modal-kind-at-root
+            // guard'ı [toNavEntry]'dedir (her entry kurulurken `isRoot` ile) — o TÜM dinamik yolları da
+            // (replaceTo/quitAndGoTo ile modal'ı köke koyma) kapatır. Bu check yine de erken/açık kalır.
             require(rootKind == null || rootKind == EntryKind.SCREEN) {
                 "GezginDisplay: start route modal kind olamaz (kind=$rootKind) — §12 kuruluş " +
-                    "guard'ı (Faz 4'te scene gelince gevşetilecek). route: ${rootRoute::class.simpleName}"
+                    "guard'ı (KALICI: modal genuinely root OLAMAZ — OverlayScene ≥1 underlaid entry " +
+                    "ister, §7). route: ${rootRoute::class.simpleName}"
             }
         }
     }
@@ -102,7 +107,10 @@ fun GezginDisplay(
     // üretiyordu (NavDisplay'in `onBack` parametresi identity ile karşılaştırılabilir call-site'lar
     // için gereksiz iş). Davranış AYNI — sadece kimlik stabilize edildi.
     val onBack = remember(navigator, scope) { gezginOnBack(navigator, scope) }
-    NavDisplay(
+    // Faz 4 scene wiring: `NavDisplay` çağrısı platform-özel sarmalayıcıda ([GezginNavDisplay]) —
+    // sceneStrategy imzası android/desktop uzlaşmaz (expect/actual, bkz. PlatformDisplay.kt KDoc).
+    // DialogSceneStrategy dialog-metadata'lı entry'yi ([toNavEntry], kind==DIALOG) overlay render eder.
+    GezginNavDisplay(
         entries = decoratedEntries,
         modifier = modifier,
         onBack = onBack,

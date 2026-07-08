@@ -3,6 +3,12 @@ kotlin = "2.2.20"
 ksp = "2.2.20-2.0.2"
 agp = "8.11.0"
 compose-multiplatform = "1.11.0"
+# CMP material3 (Faz 4.2 BottomSheet) — org.jetbrains.compose plugin 1.11.0'ın BUNDLE ettiği material3
+# sürümü composeVersion'dan (1.11.0) FARKLI (`ComposeBuildConfig.composeMaterial3Version = 1.9.0`);
+# `org.jetbrains.compose.material3:material3` yalnız 1.9.0'a kadar stable yayınlıyor (1.11.0 stable YOK,
+# yalnız alpha). Deprecated `compose.material3` accessor'ı yerine direkt koordinat (runtime/foundation
+# deseni) → bu ayrı sürüm alias'ı gerekli.
+compose-material3 = "1.9.0"
 coroutines = "1.10.2"
 serialization = "1.9.0"
 androidx-navigation3 = "1.1.4"

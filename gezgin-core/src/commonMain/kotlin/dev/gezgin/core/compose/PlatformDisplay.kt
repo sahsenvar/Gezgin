@@ -1,6 +1,8 @@
 package dev.gezgin.core.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavEntryDecorator
 import dev.gezgin.core.Route
 
@@ -34,3 +36,25 @@ internal expect fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Ro
  */
 @Composable
 internal expect fun GezginNoBackHandler()
+
+/**
+ * Nav3 `NavDisplay` çağrısının platform-özel sarmalayıcısı (Faz 4 scene wiring, §7) — **NAMED RISK
+ * çözümü (Task 3.0/4.0 bulgusu):** `NavDisplay`'in scene-strategy parametresi iki hedefte GERÇEKTEN
+ * uzlaşmaz imzalı → `expect/actual` ZORUNLU (bir commonMain sarmalayıcı YETMEZ). Kaynak-jar kanıtı
+ * (`navigation3-ui` sources, `entries`-alan non-deprecated overload):
+ * - **desktop (JB `1.0.0-alpha05`)**: `sceneStrategy: SceneStrategy<T> = SinglePaneSceneStrategy()`
+ *   — TEKİL; `sceneDecoratorStrategies`/`sharedTransitionScope` YOK.
+ * - **android (Google `1.1.4`)**: `sceneStrategies: List<SceneStrategy<T>> = listOf(SinglePaneSceneStrategy())`
+ *   — ÇOĞUL liste; ayrıca `sceneDecoratorStrategies`, `sharedTransitionScope` var.
+ * Parametre hem ADI hem ARİTESİ farklı (isimli argüman hedefe göre kırılır) → ortak alt-kümede
+ * DEĞİL. Actual'lar `DialogSceneStrategy()`'yi (public API, iki platformda AYNI: bkz. [toNavEntry])
+ * fallback `SinglePaneSceneStrategy` ile zincirler (`then`/liste) — dialog-metadata'lı entry overlay,
+ * diğerleri tek-pane. Transition spec'leri buraya GEÇMEZ (per-entry `NavEntry.metadata` ile iner,
+ * bkz. [GezginDisplay] KDoc) → sarmalayıcı yalnız `entries`/`modifier`/`onBack` taşır.
+ */
+@Composable
+internal expect fun GezginNavDisplay(
+    entries: List<NavEntry<Route>>,
+    modifier: Modifier,
+    onBack: () -> Unit,
+)
