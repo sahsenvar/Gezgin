@@ -67,7 +67,7 @@ Tam grafik `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/AppNa
 | `@BackTo` | `ItemDetailRoute` → `DashboardRoute` | `HomeScreens.kt` |
 | `@NoBack` (cross-module) | `WelcomeRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `AppNav.kt` / `HomeScreens.kt` |
 | `backWithResult` | `ForgotPasswordDialog`, `EditNameDialog`, `FilterSheetRoute` | ilgili dosyalar |
-| `quitWith` | `CropRoute` (AvatarFlow'a ulaşır), `ZoomRoute` (yalnız kendi ZoomFlow'unu kapatır — bkz. "Tasarım notları") | `ProfileScreens.kt` |
+| `quitWith` | `CropRoute`, `ZoomRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `ProfileScreens.kt` |
 | Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 | bkz. aşağıdaki "Faz 4 notu" | tüm feature dosyaları |
 | Transition cascade (3 seviye) | app `navTransitions{default{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `AppNav.kt` |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
@@ -112,7 +112,7 @@ kurgulanmış senaryolar (kapsama matrisinin DAVRANIŞ kanıtı):
 | `logoutClearUpToDashboardInclusive_stacksASecondLoginEntry` | **Tasarım notu** — aşağıya bakın |
 | `avatarFlowQuitWith_deliversValueToProfilePickAvatarResults` | `quitWith` en yakın kapsayan `ResultFlow`'u hedefler, Value flow-entry'nin caller'ına gider |
 | `nestedZoomFlowBack_popsOnlyZoomLeavesCropOnTop` | nested `@FlowGraph`'ta flow-entry `back()` yalnız kendi segmentini kapatır |
-| `nestedZoomFlowQuitWith_onlyQuitsZoomFlowSegmentAvatarFlowContractStaysOpen` | **Tasarım notu** — aşağıya bakın |
+| `nestedZoomFlowQuitWith_deliversValueToProfileTearsDownWholeAvatarFlow` | `quitWith` NESTED sub-flow içinden çağrılınca da en yakın SÖZLEŞME SAHİBİ flow'u (AvatarFlow) hedefler — HEM ZoomFlow HEM AvatarFlow segmenti yıkılır, Value yine Profile'a gider (spec §6 ownership) |
 | `goToRelatedTwiceSameId_createsThreeDistinctStackEntries` | `singleTop=false` aynı route-değerine tekrar tekrar YENİ (id'si farklı) entry basar (R2) |
 | `forgotPasswordSuspendResult_deliversValue` | suspend `goToXForResult` + `deliverResult` (raw `backWithResult`) round-trip'i |
 | `forgotPasswordBack_deliversCanceled` | pending bir `ResultRoute` üzerinde düz `back()` → `NavResult.Canceled` (dismiss without answer) |
@@ -161,23 +161,19 @@ için eklendi; `kspTest(...)` bağımlılığı EKLENMEDİ (yukarıdaki nedenle 
   üründe muhtemel düzeltme: `clearUpTo` hedefini `LoginRoute::class` yapmak (o zaman zaten dip
   Login'in KENDİSİ temizlenir) ya da `SettingsRoute`'u her zaman Dashboard'un ÜSTÜNDE bir yerden
   çağrılacağını varsaymamak.
-- **`ZoomFlow` içinden `quitWith` AvatarFlow'a ULAŞMAZ bulgusu** — `ZoomFlow` kendi
-  `ResultFlow<T>`'unu deklare etmez (`declaresResultFlowDirectly=false`) ama transitif olarak biridir
-  (`isResultFlow=true`, AvatarFlow'dan miras). Hem `RawNavigator.quitWith`'in runtime çözümü
-  (`chain.indexOfLast { it.isResultFlow }`) hem `NavigatorCodegen`'in ürettiği statik parametre tipi
-  zincirdeki EN İÇTEKİ `isResultFlow` üyesini hedefler — bu, `ZoomRoute` için AvatarFlow DEĞİL,
-  ZoomFlow'un KENDİSİDİR. Sonuç: `ZoomScreen`'deki `quitWith` düğmesi yalnız ZoomFlow'un tek
-  entry'sini (`back()` ile AYNI stack etkisi) kapatır; teslim edilen `AvatarChoice` değerinin
-  dinleyeni yoktur (AvatarFlow'un `pickAvatarResults` beklemesi `PickSourceRoute`'un entry'sine
-  bağlıdır, `ZoomRoute`'unkine değil) ve sessizce düşer — AvatarFlow'un sözleşmesi AÇIK kalır.
-  Sözleşmeyi gerçekten kapatmak zincirinin tek `isResultFlow` üyesi AvatarFlow'un kendisi olan bir
-  üyeden (`CropRoute`, `PickSourceRoute`) `quitWith` çağırmayı gerektirir. Bu, "grafiği düzeltmek"
-  yerine BİLİNÇLİ OLARAK olduğu gibi bırakılan bir framework-davranışı bulgusudur (çözüm gerektirirse:
-  `NavigatorCodegen`/`RawNavigator.quitWith`'in `isResultFlow` yerine `declaresResultFlowDirectly`
-  bazlı bir "en yakın SÖZLEŞME SAHİBİ" çözünürlüğüne geçmesi düşünülebilir — bu sample'ın kapsamı
-  dışında); davranış testi
-  (`nestedZoomFlowQuitWith_onlyQuitsZoomFlowSegmentAvatarFlowContractStaysOpen`) bu GERÇEK sonucu
-  pinler.
+- **`quitWith` sahiplik (ownership) çözünürlüğü — bulunan ve DÜZELTİLEN kütüphane bug'ı** — Bu
+  showcase, `ZoomFlow : AvatarFlow` şeklinde (nested flow'un, kapsayan `ResultFlow`'u SUBTYPE
+  ettiği) bir zincirde `quitWith`'in sessizce değer düşürdüğünü ortaya çıkardı: `TopologyCodegen`
+  üretilen `FlowType.isResultFlow`'u TRANSİTİF bayraktan yazıyordu, runtime'ın
+  `chain.indexOfLast { it.isResultFlow }` hedef seçimi de bu yüzden AvatarFlow yerine ZoomFlow'u
+  buluyordu. Düzeltme (spec §6 ownership): üretilen bayrak artık DOĞRUDAN `ResultFlow<T>`
+  deklarasyonundan (`declaresResultFlowDirectly`) yazılır — nested result'suz sub-flow `false`,
+  sözleşme sahibi `true`. `NavigatorCodegen`'in `quitWith` parametre-tipi seçimi de aynı sahiplik
+  kuralına hizalandı. Processor regresyon testi:
+  `TopologyCodegenTest."FlowType isResultFlow is OWNERSHIP (direct declaration) ..."`; davranış
+  kanıtı: `nestedZoomFlowQuitWith_deliversValueToProfileTearsDownWholeAvatarFlow`. (Eski el-yazımı
+  core fixture'ları zaten ownership semantiğindeydi — `PayAuthFlow : Route` kapsayanı subtype
+  etmediği için bug'ı hiç tetiklememişti.)
 - **Dashboard'ın suspend `goToPickSortForResult` çağrısı** — `rememberCoroutineScope()`'a bağlı
   `scope.launch`; VM ömrü İÇİNDE güvenlidir ama VM'siz composable'da bir config-change/process-death
   sonucu SESSİZCE düşürür (bkz. `HomeScreens.kt`'deki kod-içi yorum). Kalıcı sonuç isteniyorsa

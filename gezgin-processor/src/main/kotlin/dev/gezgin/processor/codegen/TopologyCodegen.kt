@@ -127,8 +127,15 @@ object TopologyCodegen {
             val chain = CodeBlock.builder().add("listOf(")
             route.flowChainFq.forEachIndexed { index, flowFq ->
                 if (index > 0) chain.add(", ")
-                val isResultFlow = graphsByFq.getValue(flowFq).isResultFlow
-                chain.add("%T(%S, %L)", FLOW_TYPE, flowFq, isResultFlow)
+                // OWNERSHIP semantics (spec §6): `FlowType.isResultFlow` marks the flow that OWNS a
+                // result contract — DIRECT `ResultFlow<T>` declaration only, NOT the transitive
+                // [GraphModelNode.isResultFlow] (a nested result-less sub-flow inherits the marker
+                // but no contract). The runtime's `RawNavigator.quitWith` resolves its target via
+                // `chain.indexOfLast { it.isResultFlow }`; emitting the transitive flag here made a
+                // nested sub-flow (ZoomFlow) swallow `quitWith` and silently drop the value instead
+                // of finishing the declaring flow (AvatarFlow).
+                val ownsResultContract = graphsByFq.getValue(flowFq).declaresResultFlowDirectly
+                chain.add("%T(%S, %L)", FLOW_TYPE, flowFq, ownsResultContract)
             }
             chain.add(")")
             builder.add("%T::class to %L,\n", ClassName.bestGuess(route.fqName), chain.build())

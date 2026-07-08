@@ -152,21 +152,15 @@ fun ZoomScreen(route: ZoomRoute, nav: ZoomNavigator) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Yakınlaştır (nested ZoomFlow)")
-            // PINNED DESIGN FINDING (bkz. sample/README.md "Tasarım notları"): `ZoomFlow` kendi
-            // `ResultFlow<T>`'unu DEKLARE ETMEZ (`declaresResultFlowDirectly == false`) ama
-            // TRANSİTİF olarak biridir (`isResultFlow == true`, AvatarFlow'dan miras) — hem
-            // `RawNavigator.quitWith`'in runtime çözümü hem de `NavigatorCodegen`'in ürettiği
-            // parametre tipi zincirdeki EN İÇTEKİ `isResultFlow` üyesini (burada AvatarFlow DEĞİL,
-            // ZoomFlow'un KENDİSİ) hedefler. Sonuç: bu çağrı yalnız ZoomFlow'un TEK entry'sini
-            // (ZoomRoute) yıkar — `back()` ile AYNI stack etkisi — ve teslim edilecek Value'nun
-            // dinleyeni yok (AvatarFlow'un `pickAvatarResults` beklemesi PickSourceRoute'un entry'sine
-            // bağlı, ZoomRoute'unkine değil) → sessizce düşer. AvatarFlow'un sözleşmesini gerçekten
-            // kapatmak için `CropScreen`'deki `quitWith` kullanılmalı (o rotanın zincirinde tek
-            // `isResultFlow` üyesi zaten AvatarFlow'un kendisi).
-            Button(onClick = { nav.quitWith(AvatarChoice(uri = "zoomed://frame")) }) { Text("Bu kareyi kullan (yalnız ZoomFlow kapanır)") }
+            // `quitWith` en yakın SÖZLEŞME SAHİBİ (ResultFlow<T>'u DOĞRUDAN deklare eden) flow'u
+            // hedefler (spec §6 ownership): ZoomRoute'un chain'i [AvatarFlow, ZoomFlow] ama ZoomFlow
+            // kendi sözleşmesini deklare etmez — bu çağrı HEM ZoomFlow HEM AvatarFlow segmentlerini
+            // tek seferde yıkar ve AvatarChoice değerini doğrudan Profile'ın `pickAvatarResults`
+            // sözleşmesine teslim eder. Nested result'suz bir sub-flow İÇİNDEN dahi flow-mode sonuç
+            // teslim edilebildiğinin kanıtı.
+            Button(onClick = { nav.quitWith(AvatarChoice(uri = "zoomed://frame")) }) { Text("Bu kareyi kullan") }
             // Nested flow'dan geri çıkış: `back()` yalnız ZoomFlow'un kendi entry'sini pop'lar,
-            // CropRoute (ve dolayısıyla AvatarFlow) AÇIK kalır — yukarıdaki `quitWith` ile aynı stack
-            // sonucu.
+            // CropRoute (ve dolayısıyla AvatarFlow) AÇIK kalır.
             Button(onClick = { nav.back() }) { Text("Geri") }
         }
     }

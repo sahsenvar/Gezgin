@@ -169,15 +169,12 @@ sealed interface ProfileGraph : AppRoot {
         /**
          * NESTED @FlowGraph — chain [AvatarFlow, ZoomFlow]. Çıkış: flow-entry'de plain `back()` =
          * `quit()` semantiği (§8.1) — yalnız ZoomFlow'un kendi segmentini kapatır, AvatarFlow (ve
-         * CropRoute) açık kalır. `quitWith` de aynı düzeyi hedefler: `ZoomFlow` kendi
-         * `ResultFlow<T>`'unu deklare etmez ama transitif olarak biridir
-         * (`isResultFlow=true`/`declaresResultFlowDirectly=false`, miras AvatarFlow'dan) — hem
-         * runtime çözümü hem üretilen navigator zincirdeki EN İÇTEKİ `isResultFlow` üyesini (burada
-         * ZoomFlow'un KENDİSİ, AvatarFlow DEĞİL) hedefler; bu yüzden ZoomRoute'tan `quitWith(...)`
-         * çağırmak yalnız ZoomFlow'u kapatır ve teslim edilen Value'nun dinleyeni olmadığından düşer —
-         * AvatarFlow'un sonuç sözleşmesini gerçekten kapatmak `CropRoute` (ya da `PickSourceRoute`)
-         * gibi zinciri sadece AvatarFlow'da biten bir üyeden `quitWith` çağırmayı gerektirir (bkz.
-         * `sample/README.md` "Tasarım notları" ve `ProfileScreens.kt`'deki `ZoomScreen`).
+         * CropRoute) açık kalır. `quitWith` ise SÖZLEŞME SAHİPLİĞİ üzerinden çözülür (spec §6):
+         * ZoomFlow, `ResultFlow<T>`'u yalnız TRANSİTİF taşır (AvatarFlow'dan miras), kendi
+         * sözleşmesini deklare etmez — bu yüzden nested içinden `quitWith(AvatarChoice(...))`
+         * çağırmak en yakın DOĞRUDAN-deklare-eden atayı (AvatarFlow) bitirir: HEM ZoomFlow HEM
+         * AvatarFlow segmenti yıkılır, Value doğrudan Profile'ın `pickAvatarResults`'ına teslim
+         * edilir. ZoomRoute'un kendi `quit()`u YOK (üyeler arasında `@Quit` annotasyonu yok).
          */
         @FlowGraph
         @Serializable

@@ -106,6 +106,104 @@ class TopologyCodegenTest {
     }
 
     @Test
+    fun `FlowType isResultFlow is OWNERSHIP (direct declaration) — a nested sub-flow SUBTYPING the declaring ResultFlow stays false`() {
+        // Regression for the sample showcase's AvatarFlow/ZoomFlow shape: unlike SHOP_SOURCE's
+        // `PayAuthFlow : Route`, here the nested flow SUBTYPES its enclosing ResultFlow
+        // (`ZoomFlow : AvatarFlow`), so it is TRANSITIVELY a ResultFlow (inherits `ResultFlow<T>`
+        // through the supertype chain) while owning no contract of its own. Emitting the transitive
+        // flag into the topology made `RawNavigator.quitWith`'s `chain.indexOfLast { it.isResultFlow }`
+        // resolve to the sub-flow — quitting only its own segment and silently DROPPING the value
+        // (no slot listens at the sub-flow's entry). Ownership semantics (spec §6 + the S1 E1
+        // adjudication): only the DIRECTLY-declaring flow carries `isResultFlow = true`.
+        val source = """
+            package dev.gezgin.nestedresult
+
+            import dev.gezgin.core.ResultFlow
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoForResult
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.StartDestination
+            import kotlinx.serialization.KSerializer
+            import kotlinx.serialization.descriptors.SerialDescriptor
+            import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+            import kotlinx.serialization.encoding.Decoder
+            import kotlinx.serialization.encoding.Encoder
+
+            data class AvatarChoice(val uri: String) {
+                // Test-only stub (same pattern as SHOP_SOURCE's OrderId) — kctfork has no
+                // kotlinx-serialization compiler plugin, but the generated topology's <clinit>
+                // eagerly calls AvatarChoice.serializer() for the pickAvatar edge.
+                companion object {
+                    fun serializer(): KSerializer<AvatarChoice> = object : KSerializer<AvatarChoice> {
+                        override val descriptor: SerialDescriptor = buildClassSerialDescriptor("AvatarChoice")
+                        override fun serialize(encoder: Encoder, value: AvatarChoice): Unit =
+                            throw UnsupportedOperationException("test stub")
+                        override fun deserialize(decoder: Decoder): AvatarChoice =
+                            throw UnsupportedOperationException("test stub")
+                    }
+                }
+            }
+
+            @NavGraph
+            interface ProfileGraph : Route {
+                @GoForResult(AvatarFlow::class, name = "pickAvatar")
+                data object Profile : ProfileGraph
+
+                @FlowGraph
+                interface AvatarFlow : ProfileGraph, ResultFlow<AvatarChoice> {
+                    @StartDestination
+                    @GoTo(Crop::class)
+                    data object PickSource : AvatarFlow
+
+                    @GoTo(ZoomFlow::class)
+                    data object Crop : AvatarFlow
+
+                    @FlowGraph
+                    interface ZoomFlow : AvatarFlow {
+                        @StartDestination
+                        data object Zoom : ZoomFlow
+                    }
+                }
+            }
+        """.trimIndent()
+
+        val result = compileGezgin(
+            SourceFile.kotlin("NestedResult.kt", source),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val loader = result.classLoader
+        val topology = loader.loadClass("dev.gezgin.nestedresult.GezginGeneratedKt")
+            .getMethod("getGezginTopology").invoke(null) as GezginTopology
+
+        val zoom = loader.kClassOf("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow.ZoomFlow.Zoom")
+        val crop = loader.kClassOf("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow.Crop")
+
+        // The declaring flow OWNS the contract (true); the transitively-ResultFlow sub-flow does NOT.
+        assertEquals(
+            listOf(
+                FlowType("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow", isResultFlow = true),
+                FlowType("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow.ZoomFlow", isResultFlow = false),
+            ),
+            topology.flowChain(zoom),
+        )
+        assertEquals(
+            listOf(FlowType("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow", isResultFlow = true)),
+            topology.flowChain(crop),
+        )
+
+        // NavigatorCodegen alignment: the sub-flow member's generated `quitWith` param type is the
+        // DECLARING flow's T (AvatarChoice) — resolved via `declaresResultFlowDirectly`, mirroring
+        // the runtime's (now ownership-based) target selection.
+        val zoomNavigatorText = result.generatedSourceFor("ZoomNavigator.kt")?.readText()
+        assertNotNull(zoomNavigatorText, "ZoomNavigator.kt must be emitted (Zoom is inside AvatarFlow's chain)")
+        assertTrue("public fun quitWith(result: AvatarChoice)" in zoomNavigatorText, zoomNavigatorText)
+    }
+
+    @Test
     fun `topology compiles when a GoForResult result type is a kotlinx builtin (Boolean)`() {
         // ForgotPasswordDialog : ResultRoute<Boolean> — a BUILTIN result type has no companion
         // `Boolean.serializer()`, so the topology must reach it through the reified

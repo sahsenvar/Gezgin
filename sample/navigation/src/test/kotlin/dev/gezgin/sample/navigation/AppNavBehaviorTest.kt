@@ -142,19 +142,14 @@ class AppNavBehaviorTest {
         )
     }
 
-    // (e2) PINNED DESIGN FINDING: `quitWith` called from the NESTED ZoomFlow does NOT reach
-    // AvatarFlow/Profile. `ZoomFlow` doesn't DECLARE its own `ResultFlow<T>`
-    // (`declaresResultFlowDirectly=false`) but IS one transitively (`isResultFlow=true`, inherited
-    // from AvatarFlow) — both `RawNavigator.quitWith`'s runtime resolution and the generated
-    // navigator's static param type key on the INNERMOST `isResultFlow` chain member, which here is
-    // ZoomFlow ITSELF, not AvatarFlow. So this call has the SAME stack effect as `zoom().back()`
-    // (only ZoomRoute's own entry is torn down) and the delivered Value has no listening slot at
-    // that entry id (AvatarFlow's pending `pickAvatar` slot targets PickSourceRoute's entry, not
-    // ZoomRoute's) — it is silently dropped, and AvatarFlow's contract stays open. A SUBSEQUENT
-    // `quitWith` from a route whose chain's innermost `isResultFlow` member really is AvatarFlow
-    // (e.g. `CropRoute`) is what actually fulfills it — proving the contract wasn't lost, just not
-    // reachable from the deeper ZoomFlow level.
-    @Test fun nestedZoomFlowQuitWith_onlyQuitsZoomFlowSegmentAvatarFlowContractStaysOpen() = runTest {
+    // (e2) `quitWith` from the NESTED ZoomFlow (chain [AvatarFlow, ZoomFlow]) targets the nearest
+    // CONTRACT-OWNING flow (spec §6 ownership): ZoomFlow carries ResultFlow only TRANSITIVELY
+    // (inherited from AvatarFlow) and owns no contract, so the generated topology marks it
+    // isResultFlow=false (direct-declaration semantics — see TopologyCodegen). Result: BOTH
+    // ZoomFlow's and AvatarFlow's segments are torn down in one call, Profile survives on top, and
+    // the Value reaches Profile's `pickAvatarResults` exactly like a direct `crop().quitWith(...)`
+    // would (see (d)) — no PickSource/Crop/Zoom entry remains on the stack, nothing is dropped.
+    @Test fun nestedZoomFlowQuitWith_deliversValueToProfileTearsDownWholeAvatarFlow() = runTest {
         val nav = GezginTestNavigator(start = ProfileGraph.ProfileRoute, topology = gezginTopology)
         val profile = nav.profile()
 
@@ -165,17 +160,9 @@ class AppNavBehaviorTest {
 
         nav.zoom().quitWith(AvatarChoice("zoomed://frame"))
 
+        assertEquals(listOf(ProfileGraph.ProfileRoute), nav.backStack)
         assertEquals(
-            listOf(ProfileGraph.ProfileRoute, ProfileGraph.AvatarFlow.PickSourceRoute, ProfileGraph.AvatarFlow.CropRoute("gallery")),
-            nav.backStack,
-        )
-
-        // AvatarFlow's own contract is untouched by the above — closing it for real still works.
-        nav.crop().quitWith(AvatarChoice("avatar://gallery"))
-
-        assertEquals(ProfileGraph.ProfileRoute, nav.current)
-        assertEquals(
-            NavResult.Value(AvatarChoice("avatar://gallery")),
+            NavResult.Value(AvatarChoice("zoomed://frame")),
             profile.pickAvatarResults.first(),
         )
     }
