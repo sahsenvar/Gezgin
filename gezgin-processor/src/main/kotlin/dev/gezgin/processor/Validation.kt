@@ -116,24 +116,57 @@ class GezginValidator(
     // region E3/E4 — flow-membership boundaries
 
     /**
-     * Any forward-edge target that is a direct (non-start) member of a flow the source isn't itself
-     * part of is unreachable except through that flow's own entry point. Back-edges (`@BackTo`) are
-     * out of scope per spec §4.2: forward edges define topology, back edges walk existing history
-     * (a `@BackTo` whose target isn't on the back stack is a runtime no-op, not a topology error).
+     * A forward-edge target reachable only by crossing a flow boundary the source doesn't share is
+     * rejected: EVERY flow enclosing the target must be in the source's own flow chain, with exactly
+     * ONE exemption — the legal container-entry level. A route target exempts its INNERMOST
+     * enclosing flow when it IS that flow's `@StartDestination` (entering a flow via its start is
+     * precisely what a `@GoTo(SomeFlow::class)` container edge pushes); a flow-container target
+     * exempts itself (its own ancestors still count). Everything ABOVE the exempted level must
+     * already be in the source's chain — the walk covers the whole ancestor chain, closing the
+     * grandchild-start hole: from outside AvatarFlow, `@GoTo(ZoomRoute)` (start of the nested
+     * ZoomFlow) exempts ZoomFlow but still crosses AvatarFlow's boundary → E3 (the old single-level
+     * parent check let it slip past both E3 and — post the direct-declaration E1 fix — E1 too,
+     * silently bypassing AvatarFlow's result contract). From INSIDE AvatarFlow the same edge stays
+     * legal (AvatarFlow is in the source's chain — §8.1 "içeride serbest @GoTo").
+     *
+     * Back-edges (`@BackTo`) are out of scope per spec §4.2: forward edges define topology, back
+     * edges walk existing history (a `@BackTo` whose target isn't on the back stack is a runtime
+     * no-op, not a topology error).
      */
     private fun checkE3(route: RouteModel) {
         route.edges.map { it.targetFq }.forEach { target ->
-            val parent = parentGraphOf(target) ?: return@forEach
-            val isDirectNonStartMember = target != parent.startFq
-            if (parent.isFlow && isDirectNonStartMember && parent.fqName !in route.flowChainFq) {
+            val targetRoute = routesByFq[target]
+            val crossedFlows: List<String> = when {
+                targetRoute != null -> {
+                    val chain = targetRoute.flowChainFq
+                    val innermost = chain.lastOrNull()
+                    // Start-route exemption applies ONLY to the target's own (innermost) container.
+                    if (innermost != null && graphsByFq[innermost]?.startFq == target) chain.dropLast(1) else chain
+                }
+                target in graphsByFq -> ancestorFlowChainOf(target)
+                else -> emptyList() // unresolved target — E6's problem, not a boundary question
+            }
+            val violated = crossedFlows.firstOrNull { it !in route.flowChainFq }
+            if (violated != null) {
                 error(
                     "E3",
-                    "${simple(target)}, ${simple(parent.fqName)} flow'unun bir iç üyesi ve kaynağın " +
+                    "${simple(target)}, ${simple(violated)} flow'unun bir iç üyesi ve kaynağın " +
                         "(${route.simpleName}) flow-chain'i dışında — doğrudan hedeflenemez, yalnız " +
-                        "${simple(parent.fqName)}'un kendisi (start'ı) hedeflenebilir",
+                        "${simple(violated)}'un kendisi (start'ı) hedeflenebilir",
                 )
             }
         }
+    }
+
+    /** Flows lexically enclosing graph [graphFq] (outermost→innermost), NOT including [graphFq] itself. */
+    private fun ancestorFlowChainOf(graphFq: String): List<String> {
+        val chain = mutableListOf<String>()
+        var cur = graphsByFq[graphFq]?.parentFlowFq
+        while (cur != null) {
+            chain.add(0, cur)
+            cur = graphsByFq[cur]?.parentFlowFq
+        }
+        return chain
     }
 
     /**
