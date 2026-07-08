@@ -172,6 +172,42 @@ gelecekteki bir KMP sample için not:
 
 ---
 
+## 7. Uygulama güncellemesi sonrası restore — bozuk state → fresh fallback (final-review, Important 1)
+
+`decodeNavigatorStateOrNull` (bkz. `RememberNavigator.kt`) bir uygulama güncellemesi (yeni `SavedState`
+şeması/serializer değişikliği) sonrası eski cihazlarda kalmış PD-kaydedilmiş state'i decode ederken
+`SerializationException`/`IllegalArgumentException` fırlatırsa `null` döner → `rememberSaveable` `start`'tan
+fresh kuruluşa düşer (crash-loop DEĞİL). Bu birim testle (`RememberNavigatorSaverTest`) pinlendi ama
+GERÇEK bir eski-şema `SharedPreferences`/`Bundle` state'i cihazda üretmek pratik değil — bu yüzden
+cihaz-üstü doğrulaması manuel/simüle:
+
+**Adımlar (simüle, en pratik yol):** `sample:shopr`'ı kur, birkaç ekran ilerle, "Don't keep activities"
+AÇIK, arka plana at (madde 4'teki gibi PD tetikle) — ama araya (geçici, yalnız test için) bir kod
+değişikliği koy: `navigatorSaver`'ın `restore` lambdasına GEÇİCİ olarak kaydedilen string'i bozan bir
+satır ekle (örn. `encoded.reversed()`), rebuild + reinstall (kaydedilen `SavedStateRegistry` içeriği
+eski/uyumsuz kalır), app'e geri dön.
+
+**Beklenen:** crash/ANR YOK — `Feed`'e (fresh `start`) sessizce düşer, kullanıcı stack'i kaybeder ama
+uygulama açılır durumda kalır.
+
+**Durum:** [ ] Doğrulanmadı
+
+---
+
+## 8. Desktop'ta root-back'in sessiz no-op olduğu bilgisi (final-review, deferred)
+
+Desktop'ta (`sample:shopr` yok — JVM/desktop hedefi şu an yalnız derleme düzeyinde, madde 6) kökte
+(`keys.size<=1`) geri tetiklenirse `onRootBack` çağrılır; `PlatformRootBack.jvm.kt`'nin
+`platformDefaultRootBack()`'i **no-op** döner (Android'in aksine `finish()`'e karşılık gelen bir "pencereyi
+kapat" davranışı YOK, çağıran kendi `onRootBack`'ini vermezse hiçbir şey olmaz — uygulama açık kalır,
+görünürde "geri tuşu tepkisiz" gibi görünür). Bu bilgilendirici bir madde — bugün cihaz gerektirmiyor,
+gelecekteki bir desktop sample'ın `onRootBack = { exitProcess(0) }`/pencere kapatma çağırması GEREKTİĞİNİ
+hatırlatmak için düşüldü.
+
+**Durum:** [ ] Bilgilendirici — desktop sample'a kadar aksiyon gerekmiyor
+
+---
+
 ## Özet tablo
 
 | # | Kalem | Cihaz gerekli mi | Durum |
@@ -182,6 +218,8 @@ gelecekteki bir KMP sample için not:
 | 4 | PD "Don't keep activities" | Evet | [ ] Doğrulanmadı |
 | 5 | N8 | — | [ ] Henüz uygulanabilir değil |
 | 6 | iOS/Desktop back farkları | Hayır (bilgilendirici) | [ ] Bilgilendirici |
+| 7 | PD restore fallback (bozuk state → fresh) | Evet (simüle) | [ ] Doğrulanmadı |
+| 8 | Desktop root-back sessiz no-op | Hayır (bilgilendirici) | [ ] Bilgilendirici |
 
 Kullanıcı cihazla döndüğünde: `sample:shopr`'ı bir Android cihaza/emülatöre kur
 (`./gradlew :sample:shopr:installDebug`), yukarıdaki 1/3/4'ü sırayla koş, kutuları işaretle, bulguları bu

@@ -51,6 +51,12 @@ annotation class NoBack
 @Target(AnnotationTarget.FUNCTION)
 annotation class Screen(val route: KClass<out Route> = Route::class)
 
+/**
+ * Ad çakışması notu: `androidx.compose.ui.window.Dialog` (Compose'un kendi dialog composable'ı) ile
+ * AYNI basit ad — aynı dosyada/paket-import'unda ikisi birden kullanılacaksa import alias'ı önerilir
+ * (örn. `import androidx.compose.ui.window.Dialog as ComposeDialog`), aksi halde derleyici ambiguity
+ * hatası verir ya da (import sırasına göre) yanlış olan sessizce çözülebilir.
+ */
 @Target(AnnotationTarget.FUNCTION)
 annotation class Dialog(val route: KClass<out Route> = Route::class)
 

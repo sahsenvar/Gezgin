@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import dev.gezgin.core.compose.GezginDisplay
 import dev.gezgin.core.compose.rememberNavigator
 import dev.gezgin.sample.shopr.nav.HomeGraph.Feed
@@ -27,16 +28,27 @@ import kotlinx.serialization.json.Json
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ShoprApp() }
+        setContent { ShoprApp(onRootBack = { finish() }) }
     }
 }
 
+/**
+ * Deferred comment-fix (final-review): `onRootBack = { finish() }` — kökte (`Feed`, stack dibi)
+ * geri'ye basınca gerçek Android davranışı, `platformDefaultRootBack()`'in no-op'u değil, host
+ * Activity'nin kapanmasıdır (bkz. `PlatformRootBack.android.kt`'nin artık güncellenmiş TODO'su).
+ * `Json { ... }` `remember` ile sarıldı — önceki hal her (potansiyel) recomposition'da yeni bir `Json`
+ * instance'ı kuruyordu (ucuz değil: serializersModule + config validasyonu); PD-restore'un `Saver`ı
+ * zaten TEK `json` kaynağına (encode/decode simetrisi) bağımlı olduğundan bu instance'ın kimliğinin
+ * composition boyunca sabit kalması da doğru davranış.
+ */
 @Composable
-private fun ShoprApp() {
+private fun ShoprApp(onRootBack: () -> Unit) {
+    val json = remember { Json { serializersModule = gezginSerializersModule } }
     val navigator = rememberNavigator(
         start = Feed,
         topology = gezginTopology,
-        json = Json { serializersModule = gezginSerializersModule },
+        json = json,
+        onRootBack = onRootBack,
     )
     GezginDisplay(navigator = navigator) {
         provideFeedEntry()

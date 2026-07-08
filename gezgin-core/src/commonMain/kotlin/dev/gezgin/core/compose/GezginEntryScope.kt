@@ -37,6 +37,10 @@ internal class RegisteredEntry(
  */
 class GezginEntryScope internal constructor() {
 
+    // Thread-safety notu: senkronize DEĞİL (`mutableMapOf`, plain) — bilinçli, çünkü yalnız
+    // `GezginDisplay`'in `remember { GezginEntryScope().apply(entries) }` kuruluş bloğunda,
+    // ana/Compose thread'inde, TEK SEFER doldurulur; kuruluştan sonra yalnız okunur (register çağrıları
+    // yok). Kuruluş sonrası çoklu-thread yazımı desteklenmiyor/beklenmiyor.
     @PublishedApi
     internal val registry: MutableMap<KClass<out Route>, RegisteredEntry> = mutableMapOf()
 
