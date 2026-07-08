@@ -6,9 +6,9 @@ import kotlin.reflect.KClass
 
 /**
  * Sunum kind'ı (§3.2) — `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal` annotation'larının
- * runtime karşılığı. Modal scene wiring (`DIALOG`/`BOTTOM_SHEET`/`FULLSCREEN_MODAL`) Faz 4'te;
- * bu fazda yalnız registry'de metadata olarak taşınır — [toNavEntry] hepsini normal (SCREEN gibi)
- * render eder (bkz. EntryAdapter.kt TODO).
+ * runtime karşılığı. Faz 4 scene wiring: `DIALOG` [toNavEntry]'de DialogSceneStrategy metadata'sı
+ * alır → `Dialog` overlay render (bkz. EntryAdapter.kt). `BOTTOM_SHEET`/`FULLSCREEN_MODAL` hâlâ plain
+ * (4.2/4.3'te bağlanacak); `SCREEN` tek-pane.
  */
 enum class EntryKind { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
 

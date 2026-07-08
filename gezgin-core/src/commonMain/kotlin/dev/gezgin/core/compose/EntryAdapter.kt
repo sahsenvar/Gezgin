@@ -2,6 +2,7 @@ package dev.gezgin.core.compose
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.scene.DialogSceneStrategy
 import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
@@ -16,9 +17,10 @@ import dev.gezgin.core.Route
  * İÇİNDE değil. Kayıtsız route derlenmiş bir stack'e karışmışsa hata composable invoke edilmeden,
  * entry kurulurken patlar (erken/açık başarısızlık; sessiz boş ekran yok).
  *
- * Kind (`RegisteredEntry.kind`) bu fazda `metadata`'ya yazılmaz — SCREEN dışı kind'lar da (Dialog/
- * BottomSheet/FullscreenModal) burada normal (tam ekran gibi) render edilir. Modal scene wiring
- * (`NavDisplay` `sceneStrategy`/metadata) Faz 4 TODO'su.
+ * Kind (`RegisteredEntry.kind`) → scene metadata (Faz 4, §7): `DIALOG` iken `NavEntry.metadata`'ya
+ * `DialogSceneStrategy.dialog()` işareti yazılır → [GezginNavDisplay]'e bağlı DialogSceneStrategy o
+ * entry'yi `Dialog` overlay'inde (arka görünür) render eder. `BOTTOM_SHEET`/`FULLSCREEN_MODAL` bu
+ * spike'ta hâlâ plain (tam ekran) — 4.2/4.3 çözer.
  *
  * Task 3.2 devri — **top-entry-drive** (§10.1/§12): [navigator] parametresi eklendi (additive,
  * Task 3.1'in tek-parametreli imzasının yerini alır); content [LocalGezginEntryId]/
@@ -50,7 +52,18 @@ internal fun GezginEntryScope.toNavEntry(
     val registered = registry[key.route::class]
         ?: error("route için entry kaydı yok: ${key.route::class.simpleName}")
     val installNoBack = registered.noBack && !isRoot
-    val metadata = resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
+    // Faz 4 scene wiring (§7): transition metadata (per-entry, §9) + DIALOG kind ise dialog-scene işareti.
+    // `DialogSceneStrategy.dialog()` public API iki platformda AYNI imzalı (`Map<String, Any>` döner) —
+    // içteki metadata-key temsili farklı (android typed `NavMetadataKey`, desktop string sabit) ama her
+    // platform kendi DialogSceneStrategy'siyle okur → platform-içi tutarlı, commonMain'den güvenli çağrı.
+    // BOTTOM_SHEET/FULLSCREEN_MODAL bu spike'ta plain (4.2/4.3 çözer). Anahtar çakışması yok (dialog
+    // anahtarı ile transition anahtarları ayrık).
+    val transitionMetadata = resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
+    val metadata = if (registered.kind == EntryKind.DIALOG) {
+        transitionMetadata + DialogSceneStrategy.dialog()
+    } else {
+        transitionMetadata
+    }
     return NavEntry(key = key.route, contentKey = key.id, metadata = metadata) { route ->
         CompositionLocalProvider(
             LocalGezginEntryId provides key.id,
