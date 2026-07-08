@@ -54,18 +54,33 @@ back gesture'ı için Android 14/API 34+ ideal, ama sistem geri tuşu her sürü
 
 ---
 
-## 2. Overlay-over-`@NoBack` etkileşimi (bilgilendirici — Faz 4'e kadar kapsam dışı)
+## 2. Overlay-over-`@NoBack` etkileşimi (Faz 4 tamamlandı — sample topolojisi kısmi kapsıyor)
 
-Faz 4'te modal (dialog/bottom-sheet/fullscreen) SCENE wiring gelince, bir modal'ın `@NoBack` bir entry'nin
-**üstünde** açık olduğu durumda geri tuşunun hangi katmanı (modal'ın kendi dismiss'i mi, yoksa alttaki
-`@NoBack` entry'nin yutması mı) önceleyeceği ayrıca doğrulanmalı. `sample:shopr` (Task 3.6) hiç modal kind
-kullanmıyor (`@Dialog`/`@BottomSheet`/`@FullscreenModal` yok) — bu kalem bugün test EDİLEMEZ, yalnız not
-düşülüyor ki Faz 4 sample'ı genişletirken unutulmasın.
+Faz 4 modal (dialog/bottom-sheet) SCENE wiring'i kuruldu (`DialogSceneStrategy` +
+`GezginBottomSheetSceneStrategy`, `.superpowers/sdd/task-4.{1,2,3}-report.md`) ve `gezgin-core` bunu
+desktop uiTest ile pinledi (dialog-üstü-dialog N8 dahil). `sample:app` artık `ForgotPasswordDialogRoute`/
+`EditNameDialogRoute` (Dialog) ve `FilterBottomSheetRoute` (BottomSheet) kind'larını GERÇEK overlay
+olarak render ediyor (bkz. `sample/README.md` "Faz 4 — gerçek modal overlay"). Ancak bu sample'ın
+topolojisinde HİÇBİR modal, `@NoBack` bir entry'nin (`WelcomeScreenRoute`) ÜSTÜNDE açılmıyor —
+`WelcomeScreenRoute`'un forward-edge'i yok, dolayısıyla "modal `@NoBack` entry'nin üstünde" senaryosu
+bu topolojide DOĞRUDAN kurulamıyor. Genel modal-dismiss/geri-tuşu davranışları (tap-outside/swipe/back →
+Canceled, predictive-back modal üstünde) aşağıdaki 9–12. maddelerle kapsanıyor.
+
+**Ön koşul:** `sample:app` cihaza/emülatöre kurulu.
+
+**Adımlar:** Login ekranından "Şifremi unuttum" ile `ForgotPasswordDialogRoute`'u aç; sistem geri
+tuşuna/gesture'a bas.
+
+**Beklenen:** Dialog kapanır (dismissOnBackPress=true varsayılan), `LoginScreenRoute` geri görünür ve
+etkileşilebilir hale gelir — altındaki ekranın kendi `@NoBack`/`BackHandler` durumu YOKTUR (Login
+`@NoBack` değil) — bu madde şu an yalnız "modal kapanınca alt ekran sağlıklı geri geliyor mu" genel
+kontrolünü doğrular; `@NoBack`-altında-modal spesifik senaryosu hâlâ kapsam dışı (gelecekte
+`sample:shopr` ya da bu sample'a yeni bir route eklenirse tekrar değerlendirilecek).
 
 **İlgili spec §:** plan §Global Constraints madde 16 (Faz-2 final-review devri (b) top-entry-drive'ın
-"modal overlay istisnası Faz 4 notu"); `docs/gezgin-design.md` §5/§12 modal-kind guard'ı.
+"modal overlay istisnası Faz 4 notu"); `docs/gezgin-design.md` §5/§7/§12 modal-kind guard'ı.
 
-**Durum:** [ ] Kapsam dışı (Faz 4'te tekrar değerlendirilecek)
+**Durum:** [ ] Doğrulanmadı (genel dismiss davranışı) / Kapsam dışı (spesifik `@NoBack`-altında-modal)
 
 ---
 
@@ -140,13 +155,18 @@ adım 4 sonrası `Payment`→tamamla→`Catalog` akışı hâlâ `NavResult.Valu
 
 ---
 
-## 5. N8 — Faz 4'e ertelendi, henüz uygulanabilir değil (yalnız not)
+## 5. N8 — artık uygulanabilir; cihaz-üstü doğrulaması madde 9'a taşındı
 
-N8 kalemi (spec'te referans verilen, Faz 4 kapsamına planlanmış bir madde) bu fazda (Faz 3, `GezginDisplay`)
-işlenmiyor — ilgili annotation/wiring henüz codegen'de yok, dolayısıyla `sample:shopr` üzerinden bugün
-test edilecek bir davranış YOK. Faz 4 başladığında bu checklist'e gerçek bir madde olarak eklenecek.
+N8 (dialog-üstü-dialog stacked overlay) Faz 4.3'te `gezgin-core`'da desktop uiTest ile pinlendi
+(`.superpowers/sdd/task-4.3-report.md`) — ilgili annotation/wiring artık codegen + runtime'da mevcut.
+Bu sample'ın topolojisinde İKİ dialog'u ÜST ÜSTE açan declared bir edge yok (`ForgotPasswordDialogRoute`
+ve `EditNameDialogRoute` birbirinden bağımsız, aynı anda açık değiller) — dolayısıyla N8'in gerçek
+cihaz-üstü **z-order/scrim** doğrulaması aşağıdaki madde 9'da, bu sample'ın MEVCUT tek-dialog
+senaryolarıyla (scrim/opacity görsel kontrolü) yapılıyor; gerçek İKİ-dialog-üst-üste senaryosu için
+sample'a yeni bir route eklenmesi gerekir (kapsam dışı bırakıldı — mevcut coverage tablosu zaten
+Dialog/BottomSheet contract desenlerini sergiliyor, bkz. `sample/README.md`).
 
-**Durum:** [ ] Henüz uygulanabilir değil (Faz 4)
+**Durum:** [ ] Bkz. madde 9 (kısmi kapsam — stacked N8 senaryosu sample'da yok)
 
 ---
 
@@ -208,18 +228,133 @@ hatırlatmak için düşüldü.
 
 ---
 
+## 9. N8 — scrim/z-order görsel katman (dialog/sheet üstündeki scrim opaklığı ve sıralaması)
+
+`gezgin-core`'un desktop uiTest'i N8'in (stacked overlay) FONKSİYONEL doğruluğunu (hangi entry top,
+back sırası) pinledi ama scrim'in GÖRSEL katman sırası (arka ekranın koyulaşması, dialog'un/sheet'in
+scrim'in ÜSTÜNDE net render olması, iki ayrı scrim'in çakışmaması) yalnız gerçek cihazda/gerçek
+compositor'da gözlenebilir.
+
+**Ön koşul:** `sample:app` cihaza/emülatöre kurulu.
+
+**Adımlar:**
+1. Login ekranından "Şifremi unuttum" ile `ForgotPasswordDialogRoute`'u aç (Dialog).
+2. Ekranı gözle: arkadaki `LoginScreenRoute` KARARMIŞ (scrim) ama SEÇİLEBİLİR-DEĞİL şekilde görünmeli;
+   dialog kutusu scrim'in üstünde net, gölgeli render olmalı.
+3. Profil → "Adı düzenle" ile `EditNameDialogRoute`'u aç; aynı görsel kontrolü tekrarla.
+4. Dashboard → "Sırala" ile `FilterBottomSheetRoute`'u aç (BottomSheet); scrim + sheet'in ekranın ALT
+   kenarından yukarı doğru slide-in animasyonunu gözle.
+
+**Beklenen:** Her üç modalde de scrim tek katman, doğru opaklıkta, alttaki ekranın ÜSTÜNDE ve
+modal içeriğinin ALTINDA render olur; iki modal arka arkaya açılıp kapatılırsa (örn. dialog kapat →
+hemen sheet aç) eski scrim'den kalıntı/flicker olmamalı.
+
+**İlgili spec §:** `docs/gezgin-design.md` §7 (N8); `gezgin-core` `DialogSceneStrategy`/
+`GezginBottomSheetScene` (bkz. `BottomSheetScene.kt`).
+
+**Durum:** [ ] Doğrulanmadı
+
+---
+
+## 10. Dialog/sheet dismiss gesture'ları → `Canceled` + doğru sonuç teslimi
+
+**Ön koşul:** `sample:app` cihaza/emülatöre kurulu.
+
+**Adımlar:**
+1. Login → "Şifremi unuttum" aç; dışarı tıkla (`ForgotPasswordDialogRoute.dismissOnClickOutside =
+   false` — KAPANMAMALI). Sonra sistem geri tuşuna bas (KAPANMALI, `dismissOnBackPress` varsayılan).
+   Snackbar "Sıfırlama iptal edildi" görünmeli (`NavResult.Canceled` yolu).
+2. Profil → "Adı düzenle" aç; mevcut ismi SİL (boşalt) ve dışarı tıkla — KAPANMAMALI
+   (`current.isNotBlank()` artık `false`). Metni geri yaz (boş olmayan) — yeni bir örnekte dışarı tıkla,
+   bu kez KAPANMALI.
+3. Dashboard → "Sırala" aç (BottomSheet); aşağı swipe et — kapanmalı, `order` state'i DEĞİŞMEMELİ
+   (Canceled — seçim yapılmadı). Tekrar aç, scrim'e tıkla — aynı sonuç. Tekrar aç, bir sıralama seçeneğine
+   dokun — sheet ÖNCE kapanma animasyonuyla inmeli, SONRA `order` güncellenmiş görünmeli (hide-then-result).
+
+**Beklenen:** Yukarıdaki her dismiss yolu ilgili caller'a `Canceled` teslim eder (state değişmez);
+`dismissOnClickOutside=false` olan durumlarda dışarı tık HİÇBİR ŞEY yapmaz (dialog açık kalır).
+
+**İlgili spec §:** `docs/gezgin-design.md` §7; `gezgin-core` `Contracts.kt` (`DialogContract`/
+`BottomSheetContract`).
+
+**Durum:** [ ] Doğrulanmadı
+
+---
+
+## 11. Predictive-back modal üstünde
+
+**Ön koşul:** `sample:app` cihaza/emülatöre kurulu; Android 14+ (API 34+) + Ayarlar → Geliştirici
+seçenekleri → "Predictive Back animasyonlarını etkinleştir" AÇIK.
+
+**Adımlar:**
+1. Login → "Şifremi unuttum" aç (dialog). Geri gesture'ını YARIM bırak (parmağı kaldırmadan geri çek) —
+   preview frame'i gözle, sonra iptal et (dialog AÇIK kalmalı).
+2. Aynı ekranda gesture'ı TAMAMLA — dialog kapanmalı (`dismissOnBackPress=true`).
+3. Dashboard → "Sırala" (sheet) aç; aynı yarım/tam gesture çiftini sheet üzerinde tekrarla.
+
+**Beklenen:** Predictive-back preview'ı modal'ın KENDİSİ üzerinde çalışır (arkadaki `LoginScreenRoute`/
+`DashboardScreenRoute` için bir preview BAŞLAMAMALI — modal top entry olduğu için geri jesti modal'ın
+`onDismissRequest`'ine gitmeli, alttaki ekranın kendi geri-animasyonuna değil).
+
+**İlgili spec §:** `docs/gezgin-design.md` §7; madde 1'deki M5′ predictive-back altyapısıyla aynı
+`OnBackPressedDispatcher` mekanizması, modal üstünde gözlem.
+
+**Durum:** [ ] Doğrulanmadı
+
+---
+
+## 12. Sheet swipe-dismiss animasyonu + hide-then-result deseni (görsel doğrulama)
+
+**Ön koşul:** `sample:app` cihaza/emülatöre kurulu.
+
+**Adımlar:**
+1. Dashboard → "Sırala" aç; bir sıralama seçeneğine dokun. Sheet'in AŞAĞI doğru kayarak (slide-down)
+   kapandığını, animasyon BİTTİKTEN SONRA listenin yeni sıra ile göründüğünü gözle (`FilterSheetScreen`
+   `sheetState.hide()` → `backWithResult(...)` sırası — bkz. `HomeScreens.kt`).
+2. Karşılaştırma için: aşağı swipe ile (seçim yapmadan) kapat — animasyon aynı, ama `order`
+   DEĞİŞMEMELİ.
+
+**Beklenen:** Her iki kapanışta da (seçimli/seçimsiz) GÖRSEL animasyon aynı akıcılıkta; programatik
+"seçim" yolu animasyonsuz/aniden kesilen bir kapanış GÖSTERMEMELİ (bu, `GezginBottomSheetScene`
+KDoc'undaki "kalıntı risk — programatik pop animasyonsuz" notunun tam da ÖNLENMEK istenen senaryosu;
+`hide()`'ı önce çağırmak bunu sample'da zaten önlüyor — bu madde bunu cihazda GÖZLE doğrular).
+
+**İlgili spec §:** `docs/gezgin-design.md` §7; `gezgin-core/.../compose/BottomSheetScene.kt` KDoc'u.
+
+**Durum:** [ ] Doğrulanmadı
+
+---
+
+## 13. `FullscreenModalContract` — cihaz-üstü kapsam dışı (sample'da kullanılmıyor)
+
+`FullscreenModalContract`/`@FullscreenModal` bu sample'a bilinçli olarak eklenmedi (bkz.
+`sample/README.md` "Faz 4 — gerçek modal overlay" son paragrafı — Dialog/BottomSheet contract
+desenleri zaten yeterli kanıt sağlıyor). Görsel tam-ekran occlusion doğrulaması `gezgin-core`'un
+kendi desktop uiTest'i (Task 4.3) ile fonksiyonel olarak pinlendi; cihaz-üstü GÖRSEL doğrulaması
+(scrim yok, içerik tam ekranı kaplıyor) sample'a bir `@FullscreenModal` route'u eklenirse bu maddeye
+gerçek adımlar yazılacak.
+
+**Durum:** [ ] Kapsam dışı (sample'da `@FullscreenModal` kullanımı yok)
+
+---
+
 ## Özet tablo
 
 | # | Kalem | Cihaz gerekli mi | Durum |
 |---|---|---|---|
 | 1 | M5′ `@NoBack` LIFO / predictive-back | Evet | [ ] Doğrulanmadı |
-| 2 | Overlay-over-`@NoBack` | Evet (Faz 4) | [ ] Kapsam dışı |
+| 2 | Overlay-over-`@NoBack` | Evet (kısmi kapsam) | [ ] Doğrulanmadı / Kapsam dışı (spesifik) |
 | 3 | R2 VM-store yarısı | Evet | [ ] Doğrulanmadı |
 | 4 | PD "Don't keep activities" | Evet | [ ] Doğrulanmadı |
-| 5 | N8 | — | [ ] Henüz uygulanabilir değil |
+| 5 | N8 (stacked dialog) | Evet | [ ] Bkz. madde 9 (kısmi kapsam) |
 | 6 | iOS/Desktop back farkları | Hayır (bilgilendirici) | [ ] Bilgilendirici |
 | 7 | PD restore fallback (bozuk state → fresh) | Evet (simüle) | [ ] Doğrulanmadı |
 | 8 | Desktop root-back sessiz no-op | Hayır (bilgilendirici) | [ ] Bilgilendirici |
+| 9 | N8 scrim/z-order görsel katman | Evet | [ ] Doğrulanmadı |
+| 10 | Dialog/sheet dismiss → Canceled + sonuç teslimi | Evet | [ ] Doğrulanmadı |
+| 11 | Predictive-back modal üstünde | Evet | [ ] Doğrulanmadı |
+| 12 | Sheet swipe-dismiss animasyonu + hide-then-result | Evet | [ ] Doğrulanmadı |
+| 13 | `FullscreenModalContract` görsel occlusion | — | [ ] Kapsam dışı (sample'da yok) |
 
 Kullanıcı cihazla döndüğünde: `sample:shopr`'ı bir Android cihaza/emülatöre kur
 (`./gradlew :sample:shopr:installDebug`), yukarıdaki 1/3/4'ü sırayla koş, kutuları işaretle, bulguları bu

@@ -67,7 +67,10 @@ artı iç içe `AvatarFlow` → `ZoomFlow` (`@FlowGraph` içinde `@FlowGraph`).
 | `@NoBack` (cross-module) | `WelcomeScreenRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `HomeGraph.kt` / `HomeScreens.kt` |
 | `backWithResult` | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | ilgili dosyalar |
 | `quitWith` | `CropScreenRoute`, `ZoomScreenRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `ProfileScreens.kt` |
-| Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 | bkz. aşağıdaki "Faz 4 notu" | tüm feature dosyaları |
+| Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 | gerçek overlay render — bkz. aşağıdaki "Faz 4 — gerçek modal overlay" | tüm feature dosyaları |
+| `DialogContract` — SABİT desen | `ForgotPasswordDialogRoute.dismissOnClickOutside = false` | `AuthGraph.kt`, `AuthScreens.kt` |
+| `DialogContract` — KOŞULLU desen | `EditNameDialogRoute.dismissOnClickOutside` ← `current.isNotBlank()` | `ProfileGraph.kt`, `ProfileScreens.kt` |
+| `BottomSheetContract` + `LocalGezginSheetState` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `sheetState.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `HomeScreens.kt` |
 | Transition cascade (3 seviye) | app `navTransitions{forward{...}backward{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsScreenRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `ProfileGraph.kt` |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
 | `onRootBack = finish()` | — | `MainActivity.kt` |
@@ -89,14 +92,44 @@ Her (re)composition'da yeniden abone olur; bekleyen bir sonuç varsa collector k
 teslim edilir. VM'siz bir composable'da PD/config-change sonrası kalıcı sonuç isteniyorsa BU desen
 tercih edilmeli (§6).
 
-## Faz 4 notu — kind render
+## Faz 4 — gerçek modal overlay
 
-`@Screen` / `@Dialog` / `@BottomSheet` annotation'ları `EntryCodegen`/registry seviyesinde tam
-işlenir (kind bilgisi kaydedilir), ama **Faz 4'e kadar tüm kind'lar aynı şekilde, plain
-full-screen composable olarak render edilir** — `GezginDisplay` henüz `Dialog`/`ModalBottomSheet`
-gibi platform-native konteynerlere ayrım yapmıyor. Bu sample'da `ForgotPasswordDialogRoute`,
-`EditNameDialogRoute` (Dialog) ve `FilterBottomSheetRoute` (BottomSheet) UI'da sıradan bir ekran gibi görünür;
-kind farkı yalnızca kodda (annotation) ve derlenmiş registride vardır.
+Faz 3'te `@Screen` / `@Dialog` / `@BottomSheet` annotation'ları `EntryCodegen`/registry seviyesinde
+işleniyordu ama tüm kind'lar aynı şekilde, plain full-screen composable olarak render ediliyordu.
+**Faz 4 bunu gerçek overlay'e çevirdi** (`gezgin-core`: `DialogSceneStrategy` + el-yazımı
+`GezginBottomSheetSceneStrategy`, bkz. `.superpowers/sdd/task-4.{1,2,3}-report.md`) — bu sample artık
+kütüphane kullanıcısına REFERANS teşkil edecek şekilde bu API'leri gerçekten kullanıyor:
+
+- **`ForgotPasswordDialogRoute`** (`AuthGraph.kt`) ve **`EditNameDialogRoute`** (`ProfileGraph.kt`) —
+  gerçek `androidx.compose.ui.window.Dialog` overlay'i (`DialogSceneStrategy`), arkadaki ekran
+  (`LoginScreenRoute`/`ProfileScreenRoute`) görünür kalır. `DialogContract`'ın İKİ besleme deseni
+  yan yana gösterilir (bkz. Contracts.kt KDoc'u §7):
+  - **SABİT** — `ForgotPasswordDialogRoute.dismissOnClickOutside = false`: her zaman dışarı-tık
+    kapatmaz (kullanıcı yanlışlıkla şifre-sıfırlama akışını kaybetmesin); `dismissOnBackPress`
+    varsayılan (`true`) hâlâ çalışır.
+  - **KOŞULLU** — `EditNameDialogRoute.dismissOnClickOutside` route'un `current` ctor param'ından
+    hesaplanır (`current.isNotBlank()`): isim boşsa (ilk-kayıt varsayımı) dışarı-tık kapatmaz, mevcut
+    ismi düzenlerken rahatça vazgeçilebilir.
+  - Her iki route'da da dismiss (izin verilen yollarla: tap-outside/Esc/back) →
+    `onDismissRequest = onBack` → `navigator.back()` → `ResultRoute` caller'ı `NavResult.Canceled`
+    alır (mevcut `back()` yolu, ek kod gerekmez).
+- **`FilterBottomSheetRoute`** (`HomeGraph.kt`) — gerçek `ModalBottomSheet` overlay'i (el-yazımı
+  `GezginBottomSheetSceneStrategy`, arkadaki `DashboardScreenRoute` görünür kalır).
+  `BottomSheetContract.skipPartiallyExpanded = true` (kısa liste, ara durak gereksiz).
+  `FilterSheetScreen` (`HomeScreens.kt`) `LocalGezginSheetState.current` ile sheet'in `SheetState`'ini
+  okur; bir sıralama seçildiğinde spec §7 deseni izlenir: ÖNCE `sheetState.hide()` (kapanma
+  animasyonu tamamlanır), SONRA `nav.backWithResult(candidate)` (programatik pop + sonuç) — düz
+  `backWithResult` çağrısı sheet'i animasyonsuz kaybettirirdi (bkz. `GezginBottomSheetScene`
+  KDoc'undaki "kalıntı risk" notu). Kullanıcı swipe-down/scrim-tap/geri-tuşu ile kapatırsa
+  (`BottomSheetContract` varsayılanları) yine `Canceled`.
+
+**`FullscreenModalContract`/`@FullscreenModal` bu sample'da KULLANILMIYOR** — bilinçli karar: kapsama
+tablosu zaten `@Dialog`×2 (SABİT+KOŞULLU desen) ve `@BottomSheet`×1'i (sheetState + hide-then-result)
+sergiliyor; `FullscreenModalContract`'ın davranışı `DialogContract`'ın basit bir paraleli
+(`usePlatformDefaultWidth` yok, adapter'da sabit `false`) — core seviyesinde zaten uiTest kanıtı var
+(Task 4.3). Sample'a üçüncü bir modal route eklemek yeni bir kapsam tablosu satırı dışında ek bir
+API deseni göstermeyecekti; mevcut ikisi (Dialog/BottomSheet contract + sheetState + dismiss→Canceled)
+referans için yeterli görüldü.
 
 ## Davranış testleri
 
