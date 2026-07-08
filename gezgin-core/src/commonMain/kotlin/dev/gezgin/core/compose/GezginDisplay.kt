@@ -55,12 +55,28 @@ import dev.gezgin.core.Route
  * `NavDisplay`'in transition parametreleri artık HİÇ geçilmiyor — cascade tamamen null ise (route yok,
  * graph yok, app default yok → metadata boş) Nav3 kendi `defaultTransitionSpec` ailesine düşer.
  * Predictive fallback (`predictive` yazılmazsa = back, §9) metadata üretiminde uygulanır.
+ *
+ * **`entries` lambda'sı yalnız İLK composition'da yakalanır** (`remember { GezginEntryScope().apply(entries) }`
+ * — `entries` sonraki recomposition'larda BİR DAHA çağrılmaz): içindeki `register<R> { ... }` çağrıları
+ * koşulsuz olmalı (bir `if`/state'e bağlı koşullu register beklenen şekilde çalışmaz — kayıt kuruluşta
+ * donar, sonradan değişmez).
  */
+/**
+ * `transitions` parametresinin varsayılan değeri — SINGLETON (Important 3, final-review). Önceki hal
+ * `navTransitions {}` idi: bir default-arg lambda'sı olarak HER `GezginDisplay` recomposition'ında
+ * (ve/veya her çağrı sitesinde) YENİDEN çalışıyordu, taze bir `GezginTransitions` instance'ı üretiyordu
+ * — `remember(keys, transitions)` anahtarı bu yüzden identity'de her seferinde değişiyor gibi
+ * görünebiliyordu (structural equality `GezginTransitions` için tanımlı değilse cache hep miss eder,
+ * `entryList`'in gereksiz yeniden kurulmasına yol açar). Tek, sabit bir instance'a sabitlemek bu
+ * kaynağı ortadan kaldırır — davranış AYNI (default hâlâ "hiç transition tanımlanmamış").
+ */
+private val EMPTY_TRANSITIONS = GezginTransitions(null)
+
 @Composable
 fun GezginDisplay(
     navigator: RawNavigator,
     modifier: Modifier = Modifier,
-    transitions: GezginTransitions = navTransitions {},
+    transitions: GezginTransitions = EMPTY_TRANSITIONS,
     entries: GezginEntryScope.() -> Unit,
 ) {
     val scope = remember {
@@ -79,13 +95,28 @@ fun GezginDisplay(
     val entryList = remember(keys, transitions) {
         keys.map { key -> scope.toNavEntry(key, navigator, transitions, isRoot = isRootEntry(keys, key.id)) }
     }
-    val decorators: List<NavEntryDecorator<Route>> =
-        listOf(rememberSaveableStateHolderNavEntryDecorator<Route>()) + rememberPlatformEntryDecorators()
+    // `remember` ile sabitlenmiş kimlik (Important 3, final-review): decorator @Composable'ları
+    // ([rememberSaveableStateHolderNavEntryDecorator]/[rememberPlatformEntryDecorators]) her ikisi de
+    // KENDİ içeriklerini `remember`'lasa da, bu ikisini birleştiren `listOf(...) + ...` HER
+    // recomposition'da taze bir `List` instance'ı üretiyordu — `rememberDecoratedNavEntries`'e her
+    // seferinde "değişti" görünen bir liste geçiyordu (referans-eşitliği yoksa cache miss). Anahtarlar
+    // decorator'ların kendileri: onlar stabilse (normal durum — navigator/scope her recomposition'da
+    // değişmez) bu liste artık stabil kalır.
+    val saveableDecorator = rememberSaveableStateHolderNavEntryDecorator<Route>()
+    val platformDecorators = rememberPlatformEntryDecorators()
+    val decorators: List<NavEntryDecorator<Route>> = remember(saveableDecorator, platformDecorators) {
+        listOf(saveableDecorator) + platformDecorators
+    }
     val decoratedEntries = rememberDecoratedNavEntries(entryList, decorators)
+    // `gezginOnBack(navigator, scope)` de bir kurucu fonksiyon çağrısı — SABİT `navigator`/`scope`
+    // (aynı composition boyunca) için `remember` olmadan her recomposition'da yeni bir lambda instance'ı
+    // üretiyordu (NavDisplay'in `onBack` parametresi identity ile karşılaştırılabilir call-site'lar
+    // için gereksiz iş). Davranış AYNI — sadece kimlik stabilize edildi.
+    val onBack = remember(navigator, scope) { gezginOnBack(navigator, scope) }
     NavDisplay(
         entries = decoratedEntries,
         modifier = modifier,
-        onBack = gezginOnBack(navigator, scope),
+        onBack = onBack,
     )
 }
 

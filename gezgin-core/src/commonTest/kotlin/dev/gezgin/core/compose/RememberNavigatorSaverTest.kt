@@ -8,6 +8,8 @@ import dev.gezgin.core.fixtures.testTopology
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 private val testJson = Json { serializersModule = testSerializersModule }
 
@@ -44,5 +46,47 @@ class RememberNavigatorSaverTest {
         val restored = decodeNavigatorState(encoded, start = Feed, topology = testTopology, json = testJson, onRootBack = {})
 
         assertEquals(stackSizeBefore, restored.keys.size)   // start yeniden push edilseydi +1 olurdu
+    }
+
+    // Important 1 (final-review) — PD restore fault-tolerance: bozuk/eski-şema bir kayıtlı state
+    // crash-loop'a değil, `null`'a (Saver sözleşmesi → fresh init at `start`) düşmeli.
+
+    @Test
+    fun `bozuk json ile decodeNavigatorStateOrNull null doner (crash-loop yerine fresh-start)`() {
+        val restored = decodeNavigatorStateOrNull(
+            encoded = "{ this is not valid json at all",
+            start = Feed,
+            topology = testTopology,
+            json = testJson,
+            onRootBack = {},
+        )
+
+        assertNull(restored)
+    }
+
+    @Test
+    fun `sema-disi (eksik alan) json ile decodeNavigatorStateOrNull null doner`() {
+        // Gecerli JSON ama SavedState semasina uymuyor (beklenen alanlar yok) — SerializationException.
+        val restored = decodeNavigatorStateOrNull(
+            encoded = """{"unexpectedField": 42}""",
+            start = Feed,
+            topology = testTopology,
+            json = testJson,
+            onRootBack = {},
+        )
+
+        assertNull(restored)
+    }
+
+    @Test
+    fun `gecerli encoded state ile decodeNavigatorStateOrNull normal restore doner`() {
+        val nav = RawNavigator(start = Feed, topology = testTopology)
+        nav.navigate(Catalog)
+        val encoded = encodeNavigatorState(nav, testJson)
+
+        val restored = decodeNavigatorStateOrNull(encoded, start = Feed, topology = testTopology, json = testJson, onRootBack = {})
+
+        assertNotNull(restored)
+        assertEquals(Catalog, restored.current)
     }
 }

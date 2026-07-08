@@ -3,6 +3,7 @@ package dev.gezgin.processor.entry
 import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
@@ -18,6 +19,7 @@ private const val DIALOG_FQ = "dev.gezgin.core.annotation.Dialog"
 private const val BOTTOM_SHEET_FQ = "dev.gezgin.core.annotation.BottomSheet"
 private const val FULLSCREEN_MODAL_FQ = "dev.gezgin.core.annotation.FullscreenModal"
 private const val ROUTE_FQ = "dev.gezgin.core.Route"
+private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
 
 private val KIND_BY_ANNOTATION_FQ = mapOf(
     SCREEN_FQ to EntryKindModel.SCREEN,
@@ -66,6 +68,7 @@ class EntryModelReader(
 
     private var ok = true
     private val seenRouteFqs = mutableMapOf<String, String>() // routeFq -> first function's simple name
+    private val seenProvideNames = mutableMapOf<Pair<String, String>, String>() // (package, x) -> first function's simple name
 
     fun read(): Pair<List<EntryFunctionModel>, Boolean> {
         val entries = KIND_BY_ANNOTATION_FQ.flatMap { (annotationFq, kind) ->
@@ -158,18 +161,47 @@ class EntryModelReader(
             }
         }
 
+        val packageName = fn.packageName.asString()
+        val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
+
+        // SC6 (Minor 5) — iki entry fonksiyonu AYNI pakette AYNI `x`'e (dolayısıyla aynı
+        // `provideXEntry` fonksiyon adına) çözülürse KotlinPoet aynı dosyaya iki eş-imzalı fonksiyon
+        // yazar → derleme "conflicting overloads" ile patlar; burada erken ve açıklayıcı yakalanır.
+        val provideKey = packageName to x
+        val previousProvideOwner = seenProvideNames[provideKey]
+        if (previousProvideOwner != null) {
+            error(
+                "SC6",
+                "$packageName paketinde provide${x}Entry() birden çok fonksiyon tarafından üretiliyor: " +
+                    "$previousProvideOwner, $fnName — route adlarının aynı 'X' türetimine (${x}) çözülmesi",
+            )
+            return null
+        }
+        seenProvideNames[provideKey] = fnName
+
         return EntryFunctionModel(
-            packageName = fn.packageName.asString(),
+            packageName = packageName,
             functionSimpleName = fnName,
             kind = kind,
             routeFq = routeFq,
             hasRouteParam = routeParam != null,
             hasNavParam = navParam != null,
             routeInModel = routeModel != null,
-            noBack = routeModel?.noBack ?: false,
-            x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString()),
+            // Declaration-tabanlı okuma (Important 2, review): `routeModel` YALNIZ bu modülün
+            // GraphModel'inde bilinen route'lar için var olur (cross-module route'larda null) — model
+            // fallback'i bu yüzden cross-module @NoBack'i SESSİZCE düşürüyordu. `routeDecl` KSP'de
+            // modülden bağımsız her zaman erişilebilir (Route implement eden herhangi bir sınıf, hangi
+            // modülde derlenmiş olursa olsun), bu yüzden noBack HER ZAMAN doğrudan route declaration'ın
+            // kendi annotation'larından okunur. Sınır: kctfork tek derleme birimi olduğu için gerçek
+            // cross-module senaryo bu testlerle simüle edilemiyor — mevcut golden (Product, aynı modül)
+            // bu okuma-yolunun declaration-tabanlı olduğunu pinler, cross-module davranışı manuel/on-device
+            // doğrulamaya kalıyor (bkz. final-review raporu).
+            noBack = routeDecl!!.hasAnnotation(NO_BACK_FQ),
+            x = x,
         )
     }
+
+    private fun KSAnnotated.hasAnnotation(fq: String): Boolean = annotations.any { it.fqName() == fq }
 
     private fun KSAnnotation.fqName(): String? = annotationType.resolve().declaration.qualifiedName?.asString()
 
