@@ -149,11 +149,11 @@ V1 deep-link'siz çıkar. V2 yönü (kesinleşmedi): **path-hiyerarşisi = back 
 ## 7. Modal (Dialog / BottomSheet / Fullscreen)
 Hepsi normal back stack entry; fark sadece Nav3 **SceneStrategy** ile overlay render (arka görünür).
 - Kind composable'da (`@Dialog`/`@BottomSheet`/`@FullscreenModal`); composable = **sadece içerik** (Surface/Column).
-- Properties = route'ta **opsiyonel** `DialogContract`/`BottomSheetContract`: SABİT = body override, KOŞULLU = constructor param (→ generated navigate param, serialize → PD-safe). `dismissOnClickOutside`, `dismissOnBackPress`, `layout`. Annotation'da prop yok.
+- Properties = route'ta **opsiyonel** `DialogContract`/`FullscreenModalContract`/`BottomSheetContract`: SABİT = body override, KOŞULLU = constructor param (→ generated navigate param, serialize → PD-safe). `DialogContract`: `dismissOnClickOutside`, `dismissOnBackPress`, `usePlatformDefaultWidth` (spec'in soyut `layout`'unun somut `DialogProperties` karşılığı — `false` = içerik genişliği/geniş modal). `FullscreenModalContract`: yalnız dismiss'ler (`usePlatformDefaultWidth` YOK — tam-ekran tanımı gereği SABİT `false`). Contract yoksa adapter tip-varsayılan `DialogProperties`. Annotation'da prop yok.
 - Pencere + dismiss→pop Gezgin scene'inden; dismiss (tap-outside/swipe) = `Canceled`.
 - BottomSheet: `BottomSheetSceneStrategy` core'a bundle; swipe-dismiss animasyonlu pop; `sheetState: SheetState` opsiyonel param ile composable'a enjekte.
 - Sonuç: dialog/sheet doğal sonuç-üreticisi (`ResultRoute<T>` + `backWithResult`). Entry-scoped VM burada da geçerli.
-- **Guardrail:** `dismissOnBackPress = true` + `@NoBack` = derleme hatası (tezat).
+- **Guardrail:** `dismissOnBackPress = true` + `@NoBack` = **kuruluş-zamanı runtime guard** (tezat: `@NoBack` geri'yi yutar, `dismissOnBackPress` geri'yle kapat der). `dismissOnBackPress` runtime değer (route-instance property, KSP okuyamaz) → derleme yerine entry kuruluşunda (`toNavEntry`) `require` reddeder.
 - **Guardrail (root, runtime):** modal kind'lı entry stack'te tek başına kalamaz — Nav3 `OverlayScene` `require(overlaidEntries.isNotEmpty())` (doğrulandı). `rememberNavigator(start)` kuruluşta modal-start'ı reddeder (§12); `@QuitAndGoTo(modal)` = KSP uyarısı.
 - **Back:** dialog entry'sinde back'i dialog'un kendi window'u tüketir (`dismissOnBackPress` → pop = `Canceled`); predictive preview yok. Back authority modal'larda window'dadır (§4.2 carve-out).
 - **Modal-üstü-modal (N8):** dialog/sheet normal back-stack entry → doğal stack'lenir (`[.., dialogB, dialogC]`, back tek tek kapatır); Nav3 `OverlayScene` destekliyor. Design = destekli; N-derin overlay scrim katmanı + predictive-back **implementation'da on-device doğrulanacak**.
