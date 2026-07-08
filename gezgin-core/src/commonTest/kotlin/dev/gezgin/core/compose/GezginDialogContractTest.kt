@@ -3,6 +3,7 @@ package dev.gezgin.core.compose
 import androidx.compose.ui.window.DialogProperties
 import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
+import dev.gezgin.core.fixtures.ConditionalBackDialog
 import dev.gezgin.core.fixtures.DialogBackDismissable
 import dev.gezgin.core.fixtures.DialogCustom
 import dev.gezgin.core.fixtures.DialogDefault
@@ -33,6 +34,7 @@ class GezginDialogContractTest {
         register<FullModal>(kind = EntryKind.FULLSCREEN_MODAL) { }
         register<DialogBackDismissable>(kind = EntryKind.DIALOG, noBack = true) { }
         register<DialogNoBackCompatible>(kind = EntryKind.DIALOG, noBack = true) { }
+        register<ConditionalBackDialog>(kind = EntryKind.DIALOG, noBack = true) { }
     }
 
     private fun dialogPropsOf(route: dev.gezgin.core.Route, id: Long): DialogProperties {
@@ -85,5 +87,25 @@ class GezginDialogContractTest {
     fun `guard - @NoBack + dismissOnBackPress=false DIALOG kurulusu GECER`() {
         val props = dialogPropsOf(DialogNoBackCompatible, 6L)
         assertTrue(!props.dismissOnBackPress)
+    }
+
+    // --- Minor: guard KOŞULLU (ctor-param'dan beslenen) dismissOnBackPress yolunu da pinle. Guard'ın
+    // sabit-override değil property GETTER'ından (= instance-değeri) okuduğunun kanıtı: AYNI route tipi,
+    // farklı ctor-param → biri fırlatır, diğeri geçer.
+    @Test
+    fun `guard - @NoBack + KOSULLU dismissOnBackPress=true (ctor-param) require firlatir`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            scope().toNavEntry(
+                GezginKey(route = ConditionalBackDialog(backDismiss = true), id = 7L),
+                navigator, navTransitions {},
+            )
+        }
+        assertTrue(ex.message?.contains("dismissOnBackPress") == true, "guard mesaji: ${ex.message}")
+    }
+
+    @Test
+    fun `guard - @NoBack + KOSULLU dismissOnBackPress=false (ctor-param) GECER`() {
+        val props = dialogPropsOf(ConditionalBackDialog(backDismiss = false), 8L)
+        assertTrue(!props.dismissOnBackPress, "ctor-param false → guard geçmeli, props dismissOnBackPress false")
     }
 }

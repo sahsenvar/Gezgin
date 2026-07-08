@@ -44,6 +44,13 @@ data object DialogNoBackCompatible : ShopGraph, dev.gezgin.core.DialogContract {
     override val dismissOnBackPress: Boolean get() = false
 }
 
+/** dismissOnBackPress KOŞULLU (ctor-param'dan) — guard'ın property GETTER'ından (sabit-override değil,
+ *  instance-değerinden) okuduğunu pinlemek için (Task 4.1 Minor). */
+@Serializable
+data class ConditionalBackDialog(val backDismiss: Boolean) : ShopGraph, dev.gezgin.core.DialogContract {
+    override val dismissOnBackPress: Boolean get() = backDismiss
+}
+
 /** FullscreenModalContract'lı tam-ekran modal route. */
 @Serializable
 data object FullModal : ShopGraph, dev.gezgin.core.FullscreenModalContract {
