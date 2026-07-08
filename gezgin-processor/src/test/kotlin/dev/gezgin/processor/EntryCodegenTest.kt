@@ -98,6 +98,72 @@ class EntryCodegenTest {
     }
 
     @Test
+    fun `cross-module — feature with NO graphs still emits entries and factory import resolves to the route's package`() {
+        // Spec §3.3 multi-module: the `:navigation` module owns every graph/route; a FEATURE module
+        // owns only `@Screen` composables over those cross-module routes. Simulated at kctfork's
+        // single-unit boundary by compiling the graph module FIRST, then feeding its output as the
+        // feature module's classpath — so the feature's KSP sees `@Screen`s but its GraphModel is
+        // EMPTY (graphs are compiled classes, not sources).
+        val navModule = CompileHarness.compileGezginModule(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        // The nav module has no `@Screen`s → no compose-runtime call sites → no backend ICE; it must
+        // compile cleanly for its routes+navigators to land on the feature module's classpath.
+        assertEquals(KotlinCompilation.ExitCode.OK, navModule.exitCode, navModule.messages)
+
+        val featureSource = """
+            package dev.gezgin.featureui
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.shop.HomeGraph.Feed
+            import dev.gezgin.shop.HomeGraph.Product
+            import dev.gezgin.shop.FeedNavigator
+
+            @Screen
+            @Composable
+            fun FeedScreen(route: Feed, nav: FeedNavigator) {
+            }
+
+            @Screen
+            @Composable
+            fun ProductScreen(route: Product) {
+            }
+        """.trimIndent()
+
+        val feature = CompileHarness.compileGezginModule(
+            SourceFile.kotlin("FeatureSource.kt", featureSource),
+            extraClasspath = listOf(navModule.outputDirectory),
+        )
+
+        // (a) The graph gate no longer suppresses entry codegen in a graph-less module.
+        assertTrue(
+            !feature.messages.contains("[SC") && !feature.messages.contains("[PKG]"),
+            "unexpected KSP error in feature module: ${feature.messages}",
+        )
+        val entries = feature.generatedSourceFor("GezginEntries.kt")
+        assertTrue(entries != null, "feature module emitted no GezginEntries.kt: ${feature.messages}")
+        val text = entries!!.readText()
+
+        // Entry file lives in the FEATURE package…
+        assertTrue(text.startsWith("package dev.gezgin.featureui"), text)
+        // …but (b) the navigator FACTORY is imported/qualified from the ROUTE's (nav-module) package,
+        // not the feature's — cross-module resolution via EntryFunctionModel.routePackageName.
+        assertTrue(text.contains("import dev.gezgin.shop.feedNavigator"), text)
+        assertTrue(
+            text.contains("val nav = LocalGezginRawNavigator.current.feedNavigator(LocalGezginEntryId.current)"),
+            text,
+        )
+        // @NoBack flows through the route DECLARATION cross-module (Product is @NoBack in SHOP_SOURCE).
+        assertTrue(text.contains("register<HomeGraph.Product>(kind = EntryKind.SCREEN, noBack = true) { route ->"), text)
+
+        // A graph-less feature emits NO topology/serializers/navigators — only entries.
+        assertTrue(feature.generatedSourceFor("GezginGenerated.kt") == null, "feature emitted topology")
+        assertTrue(feature.generatedSourceFor("FeedNavigator.kt") == null, "feature re-emitted a navigator")
+    }
+
+    @Test
     fun `SC1 — route type cannot be derived (no explicit route, no route param)`() {
         val source = """
             package dev.gezgin.shopui
