@@ -9,9 +9,6 @@ import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import androidx.navigation3.ui.defaultPopTransitionSpec
-import androidx.navigation3.ui.defaultPredictivePopTransitionSpec
-import androidx.navigation3.ui.defaultTransitionSpec
 import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
@@ -42,21 +39,22 @@ import dev.gezgin.core.Route
  * o durumun daha açıklayıcı hatası [toNavEntry]'de (`route için entry kaydı yok`) zaten var. Faz 4'te
  * scene wiring gelince bu guard gevşetilecek (TODO).
  *
- * **Transition cascade (Task 3.5, §9):** her recompose'da TOP entry'nin (`keys.last()`) route'undan
- * [resolveTransition] çağrılır (`route.transition ?: transitions.default` — screen>graph basamağı
- * [Route.transition]'ın interface-override zincirinden BEDAVA gelir, kalan app basamağı burada) ve sonuç
- * `NavDisplay`'in `transitionSpec`/`popTransitionSpec`/`predictivePopTransitionSpec` parametrelerine
- * (Task 3.0'da HER İKİ target'ta da ortak olduğu doğrulanmış `entries`-overload parametreleri) geçirilir.
- * **Nav3'ün per-entry `NavEntry.metadata` yolu (`NavDisplay.TransitionKey`/`transitionSpec()`) KASITLI
- * kullanılmadı:** decompile ile doğrulandı — android (google 1.1.4) `NavMetadataKey`/`MetadataScope.put`
- * DSL'i (`androidx.navigation3.runtime`) kullanırken, desktop (jetbrains alpha05) DAHA ESKİ, düz
- * `Map<String, Any>` döndüren `NavDisplay.transitionSpec { }` fonksiyonuna sahip — iki API tip-uyumsuz,
- * ortak commonMain kodu YOK; üstelik alpha05'in map key sabitleri (`TRANSITION_SPEC` vb.) `internal`.
- * `transitionSpec`/`popTransitionSpec`/`predictivePopTransitionSpec` NavDisplay parametreleri ise her iki
- * target'ta da AYNI imzayla var (bkz. [dev.gezgin.core.compose.GezginTransitionSpec] KDoc'u) — güvenli
- * ortak yüzey bu yüzden seçildi. Predictive fallback (`predictive` null ise `back` kullan, §9) `backSpec`
- * (zaten kendi NavDisplay-default fallback'ini içeren) üzerinden kurulur — kullanıcı yalnız `back`
- * verip predictive'i atladığında da doğru (özel ya da NavDisplay default) davranış miras alınır.
+ * **Transition cascade (Task 3.5, §9) — PER-ENTRY metadata:** her entry kurulurken ([toNavEntry]) KENDİ
+ * route'unun cascade'i çözülür ([resolveTransition]: `route.transition ?: transitions.default` —
+ * screen>graph basamağı [Route.transition]'ın interface-override zincirinden BEDAVA gelir) ve
+ * `NavEntry.metadata`'ya Nav3'ün PUBLIC `NavDisplay.transitionSpec/popTransitionSpec/
+ * predictivePopTransitionSpec` sarmalayıcılarıyla yazılır ([GezginTransition.toNavEntryMetadata]).
+ * Decompile bulgusu (review düzeltmesi — ilk "iki API tip-uyumsuz" tespiti YANLIŞTI): bu üç sarmalayıcı
+ * HER İKİ target'ta da (desktop alpha05 + android 1.1.4) AYNI commonMain dosyasında, AYNI
+ * `Map<String, Any>`-dönen imzayla PUBLIC; yalnız map anahtarının İÇ temsili farklı (alpha05: String
+ * sabiti, 1.1.4: `NavMetadataKey.toString()`) — anahtar hep sarmalayıcıdan üretildiği için platform-içi
+ * tutarlı. NavDisplay'in AnimatedContent çözümü `Scene.metadata`'yı (default = SON entry'nin metadata'sı)
+ * NavDisplay-seviyesi parametrelerden ÖNCE okur — pop B→A'da çıkılan scene'in (B'nin) `popTransitionSpec`
+ * metadata'sı kullanılır, yani "en içteki (screen) kazanır" POP yönünde de doğru (top-route'tan
+ * NavDisplay-parametresi çözen ilk yaklaşım tam bu yüzden geri alındı: pop'ta A'nın spec'i okunuyordu).
+ * `NavDisplay`'in transition parametreleri artık HİÇ geçilmiyor — cascade tamamen null ise (route yok,
+ * graph yok, app default yok → metadata boş) Nav3 kendi `defaultTransitionSpec` ailesine düşer.
+ * Predictive fallback (`predictive` yazılmazsa = back, §9) metadata üretiminde uygulanır.
  */
 @Composable
 fun GezginDisplay(
@@ -76,24 +74,17 @@ fun GezginDisplay(
         }
     }
     val keys by navigator.keysState.collectAsState()   // id taşır → id-only değişim de recompose eder (4a)
-    val entryList = remember(keys) {
-        keys.map { key -> scope.toNavEntry(key, navigator, isRoot = isRootEntry(keys, key.id)) }
+    // Transition cascade PER-ENTRY metadata'yla iner (bkz. dosya başı KDoc) — `transitions` remember
+    // anahtarı: app-seviyesi default değişirse entry metadata'ları yeniden kurulmalı.
+    val entryList = remember(keys, transitions) {
+        keys.map { key -> scope.toNavEntry(key, navigator, transitions, isRoot = isRootEntry(keys, key.id)) }
     }
     val decorators: List<NavEntryDecorator<Route>> =
         listOf(rememberSaveableStateHolderNavEntryDecorator<Route>()) + rememberPlatformEntryDecorators()
     val decoratedEntries = rememberDecoratedNavEntries(entryList, decorators)
-    // Cascade (§9) TOP entry'nin route'undan çözülür — bkz. dosya başı KDoc "Transition cascade" bölümü.
-    val resolved = resolveTransition(keys.last().route, transitions)
-    val forwardSpec = resolved?.forward ?: defaultTransitionSpec()
-    val backSpec = resolved?.back ?: defaultPopTransitionSpec()
-    val predictiveSpec: GezginPredictiveTransitionSpec =
-        resolved?.predictive ?: { _: Int -> backSpec() }   // §9: predictive yazılmazsa = back
     NavDisplay(
         entries = decoratedEntries,
         modifier = modifier,
-        transitionSpec = forwardSpec,
-        popTransitionSpec = backSpec,
-        predictivePopTransitionSpec = predictiveSpec,
         onBack = gezginOnBack(navigator, scope),
     )
 }

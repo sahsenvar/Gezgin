@@ -2,6 +2,7 @@ package dev.gezgin.core
 
 import dev.gezgin.core.compose.EntryKind
 import dev.gezgin.core.compose.GezginEntryScope
+import dev.gezgin.core.compose.navTransitions
 import dev.gezgin.core.compose.toNavEntry
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.Feed
@@ -64,7 +65,7 @@ class GezginEntryScopeTest {
         val key = GezginKey(route = Catalog, id = 1L)
 
         val error = assertFailsWith<IllegalStateException> {
-            scope.toNavEntry(key, navigator)
+            scope.toNavEntry(key, navigator, navTransitions {})
         }
         assertTrue(
             error.message?.contains("Catalog") == true,
@@ -78,7 +79,7 @@ class GezginEntryScopeTest {
         scope.register<Feed> { }
         val key = GezginKey(route = Feed, id = 42L)
 
-        val navEntry = scope.toNavEntry(key, navigator)
+        val navEntry = scope.toNavEntry(key, navigator, navTransitions {})
 
         assertEquals(42L, navEntry.contentKey)
     }
@@ -88,8 +89,8 @@ class GezginEntryScopeTest {
         val scope = GezginEntryScope()
         scope.register<Product> { }
 
-        val first = scope.toNavEntry(GezginKey(route = Product("a"), id = 1L), navigator)
-        val second = scope.toNavEntry(GezginKey(route = Product("a"), id = 2L), navigator)
+        val first = scope.toNavEntry(GezginKey(route = Product("a"), id = 1L), navigator, navTransitions {})
+        val second = scope.toNavEntry(GezginKey(route = Product("a"), id = 2L), navigator, navTransitions {})
 
         assertEquals(1L, first.contentKey)
         assertEquals(2L, second.contentKey)

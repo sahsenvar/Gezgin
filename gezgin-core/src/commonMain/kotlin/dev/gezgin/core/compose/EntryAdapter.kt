@@ -31,16 +31,27 @@ import dev.gezgin.core.Route
  * dispatcher LIFO'sunda ekranın kendi (daha İÇ, sonra kaydolan) `BackHandler`'ı kazanır, yoksa
  * Gezgin'inki back'i yutar. [isRoot] çağıran ([GezginDisplay]) tarafından stack'in dibi (`keys.first`)
  * bilgisinden geçirilir — call-time gerçeği, capture edilmiş stale scope değil (§10.1 staleness notu).
+ *
+ * Task 3.5 fix — **per-entry transition metadata (§9):** entry'nin KENDİ route'unun cascade'i
+ * ([resolveTransition]: route-override > graph-mirası > app-default) çözülür ve `NavEntry.metadata`'ya
+ * ([GezginTransition.toNavEntryMetadata] — Nav3'ün PUBLIC `NavDisplay.transitionSpec/popTransitionSpec/
+ * predictivePopTransitionSpec` sarmalayıcılarıyla) yazılır. Top-route'tan NavDisplay-parametresi çözen
+ * ilk yaklaşım GERİ ALINDI: pop B→A'da NavDisplay'in top'u artık A olduğundan B'nin `back{}`/
+ * `predictive{}` spec'leri hiç kullanılmıyordu (§9 "en içteki kazanır" ihlali). Per-entry metadata'da
+ * Nav3'ün kendi AnimatedContent çözümü doğru entry'nin spec'ini seçer (`Scene.metadata` default'u = son
+ * entry'nin metadata'sı; pop/predictive'de çıkılan scene'inki okunur — bkz. GezginDisplay KDoc).
  */
 internal fun GezginEntryScope.toNavEntry(
     key: GezginKey,
     navigator: RawNavigator,
+    transitions: GezginTransitions,
     isRoot: Boolean = false,
 ): NavEntry<Route> {
     val registered = registry[key.route::class]
         ?: error("route için entry kaydı yok: ${key.route::class.simpleName}")
     val installNoBack = registered.noBack && !isRoot
-    return NavEntry(key = key.route, contentKey = key.id) { route ->
+    val metadata = resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
+    return NavEntry(key = key.route, contentKey = key.id, metadata = metadata) { route ->
         CompositionLocalProvider(
             LocalGezginEntryId provides key.id,
             LocalGezginRawNavigator provides navigator,

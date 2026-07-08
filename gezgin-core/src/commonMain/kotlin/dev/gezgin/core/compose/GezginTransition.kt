@@ -3,6 +3,7 @@ package dev.gezgin.core.compose
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.navigation3.scene.Scene
+import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.Route
 
 /**
@@ -61,3 +62,43 @@ class GezginTransitionBuilder {
  */
 fun transition(block: GezginTransitionBuilder.() -> Unit): GezginTransition =
     GezginTransitionBuilder().apply(block).build()
+
+/**
+ * Çözülmüş cascade değerini Nav3 per-entry metadata'sına indirir (Task 3.5 fix — §9 "route (NavKey) →
+ * entry metadata'sındaki `NavDisplay.TransitionKey` ailesine iner"): `NavDisplay.transitionSpec/
+ * popTransitionSpec/predictivePopTransitionSpec` PUBLIC sarmalayıcıları HER İKİ target'ta da (desktop
+ * alpha05 VE android 1.1.4 — decompile ile doğrulandı, aynı `Map<String, Any>` dönen imza aynı commonMain
+ * dosyasında) mevcut; map anahtarı platform-içi tutarlı olduğu sürece (sarmalayıcı üretiyor) değer
+ * NavDisplay'in AnimatedContent çözümünde `Scene.metadata` (default'u = SON entry'nin metadata'sı,
+ * `Scene.kt`) üzerinden NavDisplay-seviyesi parametrelerden ÖNCE okunur.
+ *
+ * `null` alanların anahtarı HİÇ eklenmez → Nav3'ün kendi fallback zinciri (entry metadata → NavDisplay
+ * default'ları) çalışır. Predictive: `predictive ?: back` (§9 "predictive yazılmazsa = back") — back de
+ * `null`sa predictive anahtarı da eklenmez (ikisi birden NavDisplay default'una düşer).
+ *
+ * Cast notu: sarmalayıcılar `AnimatedContentTransitionScope<Scene<*>>` receiver'ı bekler, Gezgin spec'leri
+ * `Scene<Route>`'a sabitli — Gezgin'in `NavDisplay<Route>` kurulumunda runtime tipi hep `Scene<Route>`
+ * olduğundan unchecked-cast güvenli.
+ */
+@Suppress("UNCHECKED_CAST")
+internal fun GezginTransition.toNavEntryMetadata(): Map<String, Any> {
+    var metadata = emptyMap<String, Any>()
+    forward?.let { spec ->
+        metadata = metadata + NavDisplay.transitionSpec {
+            spec.invoke(this as AnimatedContentTransitionScope<Scene<Route>>)
+        }
+    }
+    back?.let { spec ->
+        metadata = metadata + NavDisplay.popTransitionSpec {
+            spec.invoke(this as AnimatedContentTransitionScope<Scene<Route>>)
+        }
+    }
+    val effectivePredictive: GezginPredictiveTransitionSpec? =
+        predictive ?: back?.let { b -> { _: Int -> b() } }   // §9: predictive yazılmazsa = back
+    effectivePredictive?.let { spec ->
+        metadata = metadata + NavDisplay.predictivePopTransitionSpec { edge ->
+            spec.invoke(this as AnimatedContentTransitionScope<Scene<Route>>, edge)
+        }
+    }
+    return metadata
+}
