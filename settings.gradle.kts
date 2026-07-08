@@ -4,3 +4,4 @@ rootProject.name = "gezgin"
 include(":gezgin-core")
 include(":gezgin-test")
 include(":gezgin-processor")
+include(":sample:shopr")
