@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package dev.gezgin.sample.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
@@ -5,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.BottomSheet
 import dev.gezgin.core.annotation.Screen
+import dev.gezgin.core.compose.LocalGezginSheetState
 import dev.gezgin.sample.navigation.DashboardNavigator
 import dev.gezgin.sample.navigation.FilterBottomSheetNavigator
 import dev.gezgin.sample.navigation.HomeGraph.DashboardScreenRoute
@@ -99,16 +103,33 @@ fun ItemDetailScreen(route: ItemDetailScreenRoute, nav: ItemDetailNavigator) {
     }
 }
 
-/** `@BottomSheet` kind — Faz 4'e kadar plain screen render edilir (bkz. AuthScreens.kt üstteki not). */
+/**
+ * `@BottomSheet` kind — gerçek `ModalBottomSheet` overlay'i (Faz 4: `GezginBottomSheetSceneStrategy`,
+ * arkadaki `DashboardScreenRoute` görünür kalır). `sheetState` `LocalGezginSheetState.current` ile
+ * enjekte edilir (register imzası değişmedi — bkz. `BottomSheetScene.kt` KDoc'u); bir seçime tıklandığında
+ * spec §7 deseni izlenir: ÖNCE `sheetState.hide()` (kapanma animasyonu tamamlanır), SONRA
+ * `backWithResult(...)` (programatik pop + sonuç teslimi) — aksi halde `back()` sheet'i animasyonsuz
+ * kaybettirirdi (bkz. `GezginBottomSheetScene` KDoc'undaki "kalıntı risk" notu). Kullanıcı swipe-down/
+ * scrim-tap/geri-tuşu ile kapatırsa (`FilterBottomSheetRoute.BottomSheetContract` varsayılanları — bkz.
+ * `HomeGraph.kt`) `onDismissRequest` → `back()` → `NavResult.Canceled` (Dashboard'daki
+ * `goToPickSortForResult` çağrısı bunu görür).
+ */
 @BottomSheet
 @Composable
 fun FilterSheetScreen(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavigator) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Sırala (şu an: ${route.current})")
-            SortOrder.entries.forEach { candidate ->
-                Button(onClick = { nav.backWithResult(candidate) }) { Text(candidate.name) }
-            }
+    val sheetState = LocalGezginSheetState.current
+    val scope = rememberCoroutineScope()
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Sırala (şu an: ${route.current})")
+        SortOrder.entries.forEach { candidate ->
+            Button(
+                onClick = {
+                    scope.launch {
+                        sheetState.hide()
+                        nav.backWithResult(candidate)
+                    }
+                },
+            ) { Text(candidate.name) }
         }
     }
 }

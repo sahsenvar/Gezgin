@@ -96,9 +96,14 @@ fun LoginScreen(route: LoginScreenRoute, nav: LoginNavigator) {
 /**
  * `@Dialog` kind — processor `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`'ı BİRBİRİNİN
  * ALTERNATİFİ olarak okur (her biri ayrı `getSymbolsWithAnnotation` sorgusu; ikisini aynı fonksiyona
- * koymak aynı route'u iki kez kaydeder → SC4 derleme hatası) — bu yüzden yalnız `@Dialog`. Faz 4'e
- * kadar scene wiring gelmediği için burada da plain full-screen composable olarak render edilir
- * (registry kind bilgisini taşır, `GezginDisplay` henüz onu bir `DialogScene` altında overlay etmez).
+ * koymak aynı route'u iki kez kaydeder → SC4 derleme hatası) — bu yüzden yalnız `@Dialog`.
+ *
+ * Faz 4: bu artık GERÇEK bir `DialogSceneStrategy` overlay'i — arkadaki `LoginScreenRoute` görünür
+ * kalır, bu composable `androidx.compose.ui.window.Dialog` içinde çizilir. `ForgotPasswordDialogRoute`
+ * (bkz. `AuthGraph.kt`) `DialogContract.dismissOnClickOutside = false` deklare eder — dışarı tık
+ * KAPATMAZ; `dismissOnBackPress` varsayılan `true` — geri tuşu/Esc HÂLÂ kapatır. Her iki dismiss yolu
+ * da (izin verilenler) `onDismissRequest = onBack` → `navigator.back()` → bu route `ResultRoute`
+ * olduğu için caller `NavResult.Canceled` alır (aşağıdaki `goToForgotPasswordDialogForResult` çağrısı).
  */
 @Dialog
 @Composable

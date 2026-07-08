@@ -1,5 +1,6 @@
 package dev.gezgin.sample.navigation
 
+import dev.gezgin.core.BottomSheetContract
 import dev.gezgin.core.ResultRoute
 import dev.gezgin.core.Route
 import dev.gezgin.core.annotation.BackTo
@@ -29,9 +30,19 @@ sealed interface HomeGraph : Route {
     @Serializable
     data class ItemDetailScreenRoute(val id: String) : HomeGraph
 
-    /** @BottomSheet-kind result producer. */
+    /**
+     * `@BottomSheet`-kind result producer — real `ModalBottomSheet` overlay (Faz 4:
+     * `GezginBottomSheetSceneStrategy`, arka `DashboardScreenRoute` görünür kalır).
+     * `BottomSheetContract.skipPartiallyExpanded = true` — kısa, tek-sütun sıralama listesi ara
+     * (yarı-açık) durağı gerektirmiyor; doğrudan tam-açık/gizli. `dismissOnBackPress`/
+     * `dismissOnClickOutside` varsayılan (`true`) — swipe-down/scrim-tap/geri-tuşu üçü de
+     * `onDismissRequest` → `back()` → (bekleyen sonuç varsa) `Canceled`.
+     */
     @Serializable
-    data class FilterBottomSheetRoute(val current: String) : HomeGraph, ResultRoute<SortOrder>
+    data class FilterBottomSheetRoute(val current: String) :
+        HomeGraph, ResultRoute<SortOrder>, BottomSheetContract {
+        override val skipPartiallyExpanded = true
+    }
 
     /**
      * @NoBack + a still-declared @ReplaceTo — its @Screen composable lives in :feature:home, so this

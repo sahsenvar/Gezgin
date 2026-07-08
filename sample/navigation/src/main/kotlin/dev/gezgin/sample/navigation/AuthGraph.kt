@@ -1,5 +1,6 @@
 package dev.gezgin.sample.navigation
 
+import dev.gezgin.core.DialogContract
 import dev.gezgin.core.ResultRoute
 import dev.gezgin.core.Route
 import dev.gezgin.core.annotation.BackToStart
@@ -37,9 +38,18 @@ sealed interface AuthGraph : Route {
     @Serializable
     data object LoginScreenRoute : AuthGraph
 
-    /** Screen-mode result producer — rendered as a @Dialog composable in :feature:auth. */
+    /**
+     * Screen-mode result producer — rendered as a real `@Dialog` overlay in `:feature:auth` (Faz 4:
+     * `DialogSceneStrategy`, arka `LoginScreenRoute` görünür kalır). `DialogContract`'ın SABİT desenini
+     * gösterir (§7/Contracts.kt): `dismissOnClickOutside = false` — sabit, ctor param'a bağlı değil.
+     * Gerekçe: kullanıcı yanlışlıkla dışarı tıklayıp şifre-sıfırlama akışını kaybetmesin; `back()`/Esc
+     * (dismissOnBackPress varsayılan `true`) hâlâ çalışır — dismiss = `Canceled` (mevcut `back()` yolu).
+     */
     @Serializable
-    data class ForgotPasswordDialogRoute(val email: String? = null) : AuthGraph, ResultRoute<Boolean>
+    data class ForgotPasswordDialogRoute(val email: String? = null) :
+        AuthGraph, ResultRoute<Boolean>, DialogContract {
+        override val dismissOnClickOutside = false
+    }
 
     /** Result-less opaque flow (@QuitAndGoTo allowed — no awaiting caller). */
     @FlowGraph

@@ -99,7 +99,13 @@ private fun ThemeToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     }
 }
 
-/** `@Dialog` kind — bkz. AuthScreens.kt'deki not (yalnız kind annotation'ı, `@Screen` YOK). */
+/**
+ * `@Dialog` kind — bkz. AuthScreens.kt'deki not (yalnız kind annotation'ı, `@Screen` YOK). Gerçek
+ * `DialogSceneStrategy` overlay'i (Faz 4); `EditNameDialogRoute` (bkz. `ProfileGraph.kt`)
+ * `DialogContract`'ın KOŞULLU desenini kullanır: `dismissOnClickOutside` route'un `current` ctor
+ * param'ından hesaplanır (boşsa kapanmaz, doluysa dışarı-tık kapatır) — `ForgotPasswordDialogRoute`'un
+ * SABİT `false`'unun karşıtı. Dismiss (izin verilen yollarla) → `back()` → `NavResult.Canceled`.
+ */
 @Dialog
 @Composable
 fun EditNameDialogScreen(route: EditNameDialogRoute, nav: EditNameDialogNavigator) {
