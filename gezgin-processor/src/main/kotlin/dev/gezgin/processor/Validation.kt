@@ -459,6 +459,26 @@ class GezginValidator(
 
     // endregion
 
+    // region Deliberately-omitted modal guards (Task 4.3 adjudication — see spec §7)
+    //
+    // `@QuitAndGoTo(modal)` is spec'd as a KSP *warning*, but it is NOT reliably implementable in
+    // Gezgin's canonical cross-module architecture (§3.3) and is therefore DELIBERATELY NOT checked
+    // here. The reason is a compilation-unit split: the `@QuitAndGoTo(X)` edge lives on a route
+    // interface in the nav module (this `GraphModel`), whereas X's modal-*kind* lives on a
+    // `@Dialog`/`@BottomSheet`/`@FullscreenModal` composable in a separate feature module
+    // (`EntryFunctionModel`, read by EntryModelReader). This validator runs in the graph-owning nav
+    // module, whose resolver cannot see the feature module's composable → the target's kind is
+    // invisible. The feature module's run DOES see kind, but there `model.graphs.isEmpty()` so no
+    // `@QuitAndGoTo` edges are validated. The join is only possible in a single-module (monolith)
+    // build; shipping a monolith-only best-effort warning would give inconsistent signal for
+    // identical code across build topologies, so it is intentionally not shipped. Moreover the case
+    // does not crash at runtime — `@QuitAndGoTo(X)` yields `[.., Caller, X]` (caller stays below), so
+    // OverlayScene's non-empty-overlaid invariant holds; it is an advisory design-smell, not a
+    // correctness violation. Consequence: ALL §7 modal guards are runtime — modal props are
+    // route-instance values (KSP-invisible, §2.4) and modal kind is feature-module-local.
+    //
+    // endregion
+
     // region Helpers
 
     /** The graph node [fq] is a direct (lexically nested) member of, if any. */
