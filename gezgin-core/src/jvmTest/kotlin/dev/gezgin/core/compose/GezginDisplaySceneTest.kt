@@ -8,6 +8,7 @@ import androidx.compose.ui.test.runComposeUiTest
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.DialogCustom
+import dev.gezgin.core.fixtures.FullModal
 import dev.gezgin.core.fixtures.Product
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
@@ -98,6 +99,51 @@ class GezginDisplaySceneTest {
         waitForIdle()
 
         onNodeWithText("contract-dialog").assertDoesNotExist()
+        onNodeWithText("home-screen").assertIsDisplayed()
+        assertEquals(Catalog, nav.current)
+    }
+
+    @Test
+    fun `FULLSCREEN_MODAL entry overlay olarak render olur - DialogScene yolu (4_3)`() = runComposeUiTest {
+        val nav = RawNavigator(start = Catalog, topology = testTopology)
+        setContent {
+            GezginDisplay(navigator = nav) {
+                register<Catalog> { BasicText("home-screen") }
+                register<FullModal>(kind = EntryKind.FULLSCREEN_MODAL) { BasicText("fullscreen-body") }
+            }
+        }
+        onNodeWithText("home-screen").assertIsDisplayed()
+
+        // FULLSCREEN_MODAL = DialogSceneStrategy + DialogProperties(usePlatformDefaultWidth=false) —
+        // dialog ile AYNI overlay yolu, yalnız tam-ekran (adapter resolveDialogProperties, §7).
+        nav.navigate(FullModal)
+        waitForIdle()
+
+        // Tam-ekran modal içeriği render oldu. Arka SCREEN görsel olarak KAPANIR (tam ekran) ama scene
+        // overlay entry'si olarak compose'da HÂLÂ var (overlaidEntries soyulmaz) → single-pane replace
+        // DEĞİL, overlay. `assertExists` bu overlay semantiğini pinler (görsel örtülme uiTest'te değil,
+        // on-device: §7 fullscreen tanımı usePlatformDefaultWidth=false).
+        onNodeWithText("fullscreen-body").assertIsDisplayed()
+        onNodeWithText("home-screen").assertExists()
+    }
+
+    @Test
+    fun `FULLSCREEN_MODAL dismiss (back) - overlay kapanir, arka SCREEN geri gelir (4_3)`() = runComposeUiTest {
+        val nav = RawNavigator(start = Catalog, topology = testTopology)
+        setContent {
+            GezginDisplay(navigator = nav) {
+                register<Catalog> { BasicText("home-screen") }
+                register<FullModal>(kind = EntryKind.FULLSCREEN_MODAL) { BasicText("fullscreen-body") }
+            }
+        }
+        nav.navigate(FullModal)
+        waitForIdle()
+        onNodeWithText("fullscreen-body").assertIsDisplayed()
+
+        nav.back()   // dismiss = DialogScene.onDismissRequest → NavDisplay.onBack yolu (dialog ile aynı)
+        waitForIdle()
+
+        onNodeWithText("fullscreen-body").assertDoesNotExist()
         onNodeWithText("home-screen").assertIsDisplayed()
         assertEquals(Catalog, nav.current)
     }

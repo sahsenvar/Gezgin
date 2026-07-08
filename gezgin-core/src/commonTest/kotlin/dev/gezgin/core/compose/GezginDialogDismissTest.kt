@@ -4,6 +4,7 @@ import dev.gezgin.core.NavResult
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.fixtures.DialogDefault
 import dev.gezgin.core.fixtures.Feed
+import dev.gezgin.core.fixtures.FullModal
 import dev.gezgin.core.fixtures.testTopology
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -54,5 +55,30 @@ class GezginDialogDismissTest {
 
         assertEquals(Feed, nav.current)
         assertEquals(NavResult.Canceled, nav.results<String>(callerId, "Feed→Dialog").first())
+    }
+
+    @Test
+    fun `FULLSCREEN_MODAL dismiss (gezginOnBack) - caller Canceled alir (4_3)`() = runTest {
+        // FULLSCREEN_MODAL, DIALOG ile AYNI dismiss yolundan geçer: DialogScene.onDismissRequest =
+        // NavDisplay.onBack = gezginOnBack → back() → ResultRoute-benzeri pending target'a Canceled.
+        // 4.1 guard'ı FULLSCREEN_MODAL'ı kapsıyordu; bu test dismiss→Canceled'ın da kapsandığını pinler.
+        val nav = RawNavigator(start = Feed, topology = testTopology)
+        val scope = GezginEntryScope().apply {
+            register<Feed> { }
+            register<FullModal>(kind = EntryKind.FULLSCREEN_MODAL) { }
+        }
+        val callerId = nav.currentEntryId
+
+        nav.launchForResult(callerId, edgeId = "Feed→Modal", route = FullModal)
+        assertEquals(FullModal, nav.current)
+
+        gezginOnBack(nav, scope).invoke()   // dismiss simülasyonu
+
+        assertEquals(Feed, nav.current, "dismiss fullscreen modal'ı pop etmeli")
+        assertEquals(
+            NavResult.Canceled,
+            nav.results<String>(callerId, "Feed→Modal").first(),
+            "fullscreen modal dismiss → Canceled teslim edilmeli",
+        )
     }
 }
