@@ -109,6 +109,18 @@ class RememberNavigatorSaverTest {
     }
 
     @Test
+    fun `sema-gecerli ama BOS stack'li state ile null doner (composition'da keys-first patlamasi onlenir)`() {
+        // Final re-review Minor 2: kesyfsel olarak uretilemese de sema-gecerli bir bos-keys SavedState
+        // decode'dan gecer, sonra GezginDisplay `keys.first()` ile composition'da patlardi → fresh-start.
+        val emptyState = SavedState(keys = emptyList(), nextId = 0L, pendingSlots = emptyList())
+        val encoded = testJson.encodeToString(SavedState.serializer(), emptyState)
+
+        val restored = decodeNavigatorStateOrNull(encoded, start = Feed, topology = testTopology, json = testJson, onRootBack = {})
+
+        assertNull(restored)
+    }
+
+    @Test
     fun `gecerli encoded state ile decodeNavigatorStateOrNull normal restore doner`() {
         val nav = RawNavigator(start = Feed, topology = testTopology)
         nav.navigate(Catalog)

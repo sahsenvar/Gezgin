@@ -14,6 +14,17 @@ import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
 
 /**
+ * `transitions` parametresinin varsayılan değeri — SINGLETON (Important 3, final-review). Önceki hal
+ * `navTransitions {}` idi: bir default-arg lambda'sı olarak HER `GezginDisplay` recomposition'ında
+ * (ve/veya her çağrı sitesinde) YENİDEN çalışıyordu, taze bir `GezginTransitions` instance'ı üretiyordu
+ * — `remember(keys, transitions)` anahtarı bu yüzden identity'de her seferinde değişiyor gibi
+ * görünebiliyordu (structural equality `GezginTransitions` için tanımlı değilse cache hep miss eder,
+ * `entryList`'in gereksiz yeniden kurulmasına yol açar). Tek, sabit bir instance'a sabitlemek bu
+ * kaynağı ortadan kaldırır — davranış AYNI (default hâlâ "hiç transition tanımlanmamış").
+ */
+private val EMPTY_TRANSITIONS = GezginTransitions(null)
+
+/**
  * Nav3 `NavDisplay` adapter'ı (§2.1/§4.2/§12) — `entries` trailing lambda'sı [GezginEntryScope]
  * alıcısında `register<R> { ... }` çağrılarını (veya Faz 3.4'ün üreteceği `provideXEntry`'leri)
  * toplar; içerik (`GezginKey` listesi) HER ZAMAN `navigator.keysState`'ten (`id` taşır) okunur —
@@ -61,17 +72,6 @@ import dev.gezgin.core.Route
  * koşulsuz olmalı (bir `if`/state'e bağlı koşullu register beklenen şekilde çalışmaz — kayıt kuruluşta
  * donar, sonradan değişmez).
  */
-/**
- * `transitions` parametresinin varsayılan değeri — SINGLETON (Important 3, final-review). Önceki hal
- * `navTransitions {}` idi: bir default-arg lambda'sı olarak HER `GezginDisplay` recomposition'ında
- * (ve/veya her çağrı sitesinde) YENİDEN çalışıyordu, taze bir `GezginTransitions` instance'ı üretiyordu
- * — `remember(keys, transitions)` anahtarı bu yüzden identity'de her seferinde değişiyor gibi
- * görünebiliyordu (structural equality `GezginTransitions` için tanımlı değilse cache hep miss eder,
- * `entryList`'in gereksiz yeniden kurulmasına yol açar). Tek, sabit bir instance'a sabitlemek bu
- * kaynağı ortadan kaldırır — davranış AYNI (default hâlâ "hiç transition tanımlanmamış").
- */
-private val EMPTY_TRANSITIONS = GezginTransitions(null)
-
 @Composable
 fun GezginDisplay(
     navigator: RawNavigator,

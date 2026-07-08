@@ -109,6 +109,7 @@ internal fun decodeNavigatorStateOrNull(
     onRootBack: () -> Unit,
 ): RawNavigator? = try {
     decodeNavigatorState(encoded, start, topology, json, onRootBack)
+        .takeIf { it.keys.isNotEmpty() }   // şema-geçerli ama BOŞ stack → fresh-start (final re-review Minor 2; boş stack composition'da keys.first() ile patlardı)
 } catch (e: SerializationException) {
     null
 } catch (e: IllegalArgumentException) {
