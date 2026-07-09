@@ -18,6 +18,11 @@ kotlinpoet = "2.2.0"
 kctfork = "0.9.0"
 androidx-activity-compose = "1.9.3"
 androidx-compose-bom = "2024.10.01"
+# Faz 6 (Fragment interop) — androidx.fragment:fragment-compose (`AndroidFragment` composable + transitively
+# `androidx.fragment.app.Fragment`/`Bundle` glue). Task 6.0 spike'ta Maven metadata ile SABİTLENDİ: stable
+# 1.8.9 (1.9.0-alpha* alpha, `<latest>` naifçe alpha'ya işaret ediyor → açık pin). Yalnız gezgin-core
+# androidMain, `implementation` (kullanıcıya sızmaz; kullanıcı kendi fragment sürümünü yönetir — §11.2).
+androidx-fragment = "1.8.9"
 # gezgin-mvi (Faz 5) DI-detection FQN'leri — spike task-5.0 (2026-07-08, Maven Central/dl.google.com metadata ile doğrulandı).
 # gezgin-mvi bunlara RUNTIME bağımlı DEĞİL (DI-agnostik, §15): codegen bu annotation'ları STRING-FQN ile okur
 # (gezgin-processor'ın `dev.gezgin.core.*` FQN'lerini okuduğu desen). Bu entry'ler 5.2/5.3 sample/kullanıcı içindir.
@@ -66,6 +71,9 @@ androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
+# Faz 6 — `AndroidFragment` (üretilen provideXEntry içinde) + `androidx.fragment.app.Fragment`/`Bundle`
+# (gezgin-core androidMain runtime: gezginArgs/gezginNav/bindGezgin/route.toBundle). Bkz. [versions] notu.
+androidx-fragment-compose = { module = "androidx.fragment:fragment-compose", version.ref = "androidx-fragment" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
