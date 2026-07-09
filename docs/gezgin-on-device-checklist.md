@@ -325,16 +325,36 @@ KDoc'undaki "kalıntı risk — programatik pop animasyonsuz" notunun tam da ÖN
 
 ---
 
-## 13. `FullscreenModalContract` — cihaz-üstü kapsam dışı (sample'da kullanılmıyor)
+## 13. `@FullscreenModal` — tam-ekran occlusion + dismiss (Faz 7.2 / GAP-1)
 
-`FullscreenModalContract`/`@FullscreenModal` bu sample'a bilinçli olarak eklenmedi (bkz.
-`sample/README.md` "Faz 4 — gerçek modal overlay" son paragrafı — Dialog/BottomSheet contract
-desenleri zaten yeterli kanıt sağlıyor). Görsel tam-ekran occlusion doğrulaması `gezgin-core`'un
-kendi desktop uiTest'i (Task 4.3) ile fonksiyonel olarak pinlendi; cihaz-üstü GÖRSEL doğrulaması
-(scrim yok, içerik tam ekranı kaplıyor) sample'a bir `@FullscreenModal` route'u eklenirse bu maddeye
-gerçek adımlar yazılacak.
+`gezgin-core`'un desktop uiTest'i (Task 4.3) `@FullscreenModal` render'ının FONKSİYONEL doğruluğunu
+(`usePlatformDefaultWidth=false` → tam-ekran) pinledi; ama tam-ekran GÖRSEL occlusion (arka ekranın
+`@Dialog`/`@BottomSheet`'in aksine GÖRÜNMEMESİ — kenar boşluğu/scrim halkası YOK) ve dismiss davranışı
+yalnız gerçek cihazda/gerçek compositor'da gözlenebilir. Sample'daki route: `ItemImageViewerRoute`
+(`HomeGraph.kt`) → `ItemImageViewerScreen` (`HomeScreens.kt`).
 
-**Durum:** [ ] Kapsam dışı (sample'da `@FullscreenModal` kullanımı yok)
+**Ön koşul:** `sample:app` cihaza/emülatöre kurulu.
+
+**Adımlar:**
+1. Dashboard → bir ürüne dokun (`ItemDetailScreenRoute`) → "Görseli tam ekran gör" ile
+   `ItemImageViewerRoute`'u aç (`@FullscreenModal`).
+2. Ekranı gözle: içerik (görsel yer tutucu + "Kapat") ekranın TAMAMINI kaplamalı; arkadaki
+   `ItemDetailScreenRoute` `@Dialog`/`@BottomSheet`'te olduğu gibi kenardan GÖRÜNMEMELİ (scrim halkası/
+   kenar boşluğu YOK — `usePlatformDefaultWidth=false`, tam-ekran render).
+3. İçeriğin dışına (varsa kenar bölgesine) dokun — KAPANMAMALI (`dismissOnClickOutside = false`).
+4. Sistem geri tuşuna bas (ya da predictive-back gesture'ını tamamla) — KAPANMALI
+   (`dismissOnBackPress` varsayılan `true` → `onDismissRequest` → `back()`); açan `ItemDetailScreenRoute`
+   geri görünmeli.
+5. Tekrar aç, bu kez "Kapat" düğmesine dokun — modal kapanıp `ItemDetailScreenRoute`'a dönmeli
+   (`nav.backToItemDetail()`).
+
+**Beklenen:** Tam-ekran modal alttaki ekranı TAMAMEN örter (dialog/sheet'ten görsel olarak ayrı);
+dış-tık kapatmaz, geri tuşu/gesture ve "Kapat" düğmesi kapatır ve her ikisi de açan detay ekranına döner.
+
+**İlgili spec §:** `docs/gezgin-design.md` §7; `gezgin-core` `Contracts.kt` (`FullscreenModalContract` —
+`usePlatformDefaultWidth` YOK) + `DialogSceneStrategy` (tam-ekran `DialogProperties`).
+
+**Durum:** [ ] Doğrulanmadı
 
 ---
 
@@ -540,7 +560,7 @@ entry codegen'in AYNI `register<XRoute>(SCREEN, …)` yüzeyini ürettiği — g
 | 10 | Dialog/sheet dismiss → Canceled + sonuç teslimi | Evet | [ ] Doğrulanmadı |
 | 11 | Predictive-back modal üstünde | Evet | [ ] Doğrulanmadı |
 | 12 | Sheet swipe-dismiss animasyonu + hide-then-result | Evet | [ ] Doğrulanmadı |
-| 13 | `FullscreenModalContract` görsel occlusion | — | [ ] Kapsam dışı (sample'da yok) |
+| 13 | `@FullscreenModal` tam-ekran occlusion + dismiss (`ItemImageViewerRoute`) | Evet | [ ] Doğrulanmadı (kod hazır — Faz 7.2 örneği eklendi) |
 | 14 | MVI-mode: VM config-change ömrü + tek-seferlik efekt + MVI'dan logout | Evet | [ ] Doğrulanmadı |
 | 15 | PD "Etkinlikleri saklama" — `@FragmentScreen` (`HelpFragment`; args decode + `onUpdate` re-bind) | Evet | [ ] Doğrulanmadı (kod hazır) |
 | 16 | Legacy Fragment `OnBackPressedDispatcher` LIFO-bypass | Hayır (bilgilendirici) | [ ] Bilgilendirici |
