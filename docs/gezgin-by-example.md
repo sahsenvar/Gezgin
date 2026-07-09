@@ -302,10 +302,15 @@ Back stack gözlemlenebilir veri olduğu için Redux-vari araçlar bedava:
 navigator.backStack    // StateFlow<List<Route>>   → devtools / "şu an neredeyiz" göstergesi
 navigator.events       // Flow<NavEvent>           → analytics / ekran-görüntüleme logları
 
+// Observe-only middleware: events'i DIŞARIDAN collect edersin (GezginDisplay param'ı DEĞİL) —
+// OkHttp interceptor gibi "takılır" ama akışı etkilemez, yalnız gözler.
+LaunchedEffect(nav) {
+    nav.events.collect { event -> /* NavLogger / Analytics */ }
+}
+
 GezginDisplay(
     navigator   = nav,
     transitions = navTransitions { forward { /* app-geneli ileri */ } backward { /* app-geneli geri */ } },
-    middleware  = listOf(NavLogger, Analytics),      // OkHttp interceptor gibi takılır
 ) { shopEntries() }                                  // multi-module: her feature kendi entry bundle'ını verir
 ```
 
