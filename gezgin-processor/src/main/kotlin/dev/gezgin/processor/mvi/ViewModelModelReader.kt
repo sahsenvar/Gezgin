@@ -91,14 +91,16 @@ class ViewModelModelReader(
         // MN3 (Faz-5 recheck) — `walkForGezginMvi` substitutes only DIRECT type-param forwarding
         // (`Base<S,I,E> : GezginMvi<S,I,E>`). A NESTED forward (`Base<S,I,E> : GezginMvi<Wrapped<S>,I,E>`)
         // leaves an unbound `S` inside `Wrapped<S>`. Resolving/`toTypeName()`-ing that dangling parameter
-        // trips the SAME KSP transitive-substitution bug the walk avoids (`NoSuchElementException: No
-        // TypeParameter found for index …`), which would ESCAPE the processor and fail the round with an
-        // opaque internal error instead of a diagnostic. Materialize the S/I/E TypeNames here, in one
-        // guarded spot; a failure means "nested generic forwarding" → clean `MV1` reject (task's "reject"
-        // option for MN3). The direct-forwarding and concrete cases materialize without incident.
+        // trips the SAME KSP transitive-substitution bug the walk avoids: KSP throws exactly
+        // `NoSuchElementException("No TypeParameter found for index …")`, which would ESCAPE the processor
+        // and fail the round with an opaque internal error instead of a diagnostic. Materialize the S/I/E
+        // TypeNames here, in one guarded spot, catching ONLY that specific exception → clean `MV1` reject
+        // (task's "reject" option for MN3). Any OTHER exception (a genuinely broken/transient KSP state,
+        // unrelated to nested forwarding) is NOT swallowed — it propagates so it can't be mis-diagnosed as
+        // MV1. The direct-forwarding and concrete cases materialize without incident.
         val sie: Triple<TypeName, TypeName, TypeName> = try {
             Triple(state.toTypeName(), intent.toTypeName(), effect.toTypeName())
-        } catch (e: RuntimeException) {
+        } catch (e: NoSuchElementException) {
             error(
                 "MV1",
                 "$vmSimpleName: GezginMvi<S,I,E>'nin tip argümanları çözülemedi (${e.message}) — büyük " +

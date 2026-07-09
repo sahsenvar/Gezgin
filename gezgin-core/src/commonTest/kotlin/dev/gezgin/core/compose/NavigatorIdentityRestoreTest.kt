@@ -58,6 +58,28 @@ class NavigatorIdentityRestoreTest {
     }
 
     @Test
+    fun `adoptRestored idempotent - ayni snapshot iki kez re-point ederse state sabit, StateFlow instance korunur (MN-1)`() {
+        // MN-1 idempotence pin: adoptRestored'ın AYNI snapshot'la tekrar çağrılması state'i aynı değere
+        // sabitler (ne stack büyür ne slot diriltilir). Android caller `adoptChecked` ile config-change'te
+        // re-adopt'u zaten engeller (o katman commonTest'te simüle edilemez); bu test altındaki runtime
+        // garantisini — re-adopt'un kendisinin zararsız/idempotent olduğunu — doğrudan pinler.
+        val navigator = RawNavigator(start = Feed, topology = testTopology)
+        val displaySource = navigator.keysState
+        navigator.navigate(Catalog)
+        navigator.navigate(Product("3"))                   // [Feed, Catalog, Product(3)]
+        val snapshot = navigator.save()
+
+        navigator.adoptRestored(snapshot)
+        val afterFirst = displaySource.value.map { it.route }
+        navigator.adoptRestored(snapshot)                  // ikinci re-point — idempotent olmalı
+        val afterSecond = displaySource.value.map { it.route }
+
+        assertEquals(afterFirst, afterSecond)
+        assertEquals(listOf<Route>(Feed, Catalog, Product("3")), afterSecond)
+        assertSame(displaySource, navigator.keysState)     // aynı akış instance'ı → mevcut collector'lar kopmaz
+    }
+
+    @Test
     fun `adoptRestored farkli bir stack'i benimser - taze instance snapshot'a doner (PD yolu)`() {
         // PD: rememberNavigator taze bir navigator'ı `start`'ta kurar, sonra Bundle'daki snapshot'ı adopt eder.
         val session1 = RawNavigator(start = Feed, topology = testTopology)

@@ -138,12 +138,15 @@ class RawNavigator(
     }
 
     /**
-     * C1 — config-change/PD restore: bu AYNI facade'in underlying state'ini [restored]'a re-point eder.
-     * Yeni bir `RawNavigator` KURULMAZ → bu instance'ı ctor'da yakalamış her sahip (özellikle rotasyondan
-     * sağ çıkan bir ViewModel) restore'dan sonra da display'in gözlemlediği state'i sürmeye devam eder
-     * (spec §225 "stable RawNavigator"). `bus`/StateFlow instance'ları KORUNUR (aynı `keysState`/`backStack`
-     * → mevcut collector'lar kopmaz), yalnız içerikleri restore edilmiş snapshot'a döner. Ctor'un
-     * `restored != null` yolunun birebir eşleniği (event yayınlamaz — bu bir kuruluş, navigasyon değil).
+     * C1 — PD (process death) restore: bu AYNI facade'in underlying state'ini [restored]'a re-point eder.
+     * Android'de YALNIZ taze holder'ın PD-adopt yolunda çağrılır (config-change'te holder + canlı navigator
+     * retained kalır → re-adopt YOK, MN-1). Yeni bir `RawNavigator` KURULMAZ → bu instance'ı ctor'da
+     * yakalamış her sahip (özellikle rotasyondan sağ çıkan bir ViewModel) restore'dan sonra da display'in
+     * gözlemlediği state'i sürmeye devam eder (spec §225 "stable RawNavigator"). `bus`/StateFlow
+     * instance'ları KORUNUR (aynı `keysState`/`backStack` → mevcut collector'lar kopmaz), yalnız içerikleri
+     * restore edilmiş snapshot'a döner. Ctor'un `restored != null` yolunun birebir eşleniği; İDEMPOTENT
+     * (aynı snapshot'la tekrar çağrı state'i aynı değere sabitler, bkz. NavigatorIdentityRestoreTest) ve
+     * event yayınlamaz — bu bir kuruluş, navigasyon değil.
      */
     internal fun adoptRestored(restored: SavedState) {
         state = GezginState(restored.keys, restored.nextId, topology)
