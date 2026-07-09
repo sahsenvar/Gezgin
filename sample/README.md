@@ -73,6 +73,7 @@ artı iç içe `AvatarFlow` → `ZoomFlow` (`@FlowGraph` içinde `@FlowGraph`).
 | `BottomSheetContract` + `LocalGezginSheetState` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `sheetState.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `HomeScreens.kt` |
 | Transition cascade (3 seviye) | app `navTransitions{forward{...}backward{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsScreenRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `ProfileGraph.kt` |
 | **MVI-mode add-on** (`@ViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) | `SettingsScreenRoute` | `SettingsMvi.kt` — bkz. aşağıdaki "Faz 5 — MVI-mode" |
+| **`@FragmentScreen`** (brownfield Fragment interop, View-tabanlı) | `HelpScreenRoute` | `HelpFragment.kt` + `fragment_help.xml` — bkz. aşağıdaki "Faz 6 — Fragment interop" |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
 | `onRootBack = finish()` | — | `MainActivity.kt` |
 | PD-safe restore | `rememberNavigator` PD-safe `Saver`; bkz. `gezgin-core` (`GezginDisplay`) dokümantasyonu — bu sample ek bir test EKLEMEZ, framework'ün kendi restore testleri kapsar | — |
@@ -209,6 +210,97 @@ olarak gerçek bir Hilt/Koin Gradle bağımlılığı EKLENMEZ; `viewModel` reso
 **Cihaz-üstü doğrulama:** MVI-mode'un yalnız derlemeden görülemeyen davranışları (VM'in config-change'te
 hayatta kalması, efektin rotation'da tekrar oynamaması, logout'un stack'i doğru temizlemesi)
 `docs/gezgin-on-device-checklist.md` madde 14'te insan-doğrulaması olarak listelendi.
+
+## Faz 6 — Fragment interop (brownfield, §11/§11.1)
+
+Faz 6, kütüphaneye **brownfield migration** köprüsünü ekledi: elde zaten var olan, **View-tabanlı** bir
+`androidx.fragment.app.Fragment`'ı yeniden yazmadan Gezgin'in Nav3 back-stack'ine **leaf** olarak sokan
+`@FragmentScreen` annotation'ı + `FragmentEntryCodegen` (üretilen `provideXEntry` bir
+`androidx.fragment.compose.AndroidFragment<XFragment>` host eder) + `gezgin-core/androidMain`'in
+`gezginArgs`/`gezginNav` delege'leri. MVI-mode gibi bu makine de o ana dek yalnız kctfork'un **plugin'siz
+golden-text** derlemesiyle (Task 6.1/6.2) kanıtlanmıştı — gerçek AGP + compose-compiler + gerçek
+`AndroidFragment` derlemesi HİÇ çalıştırılmamıştı. **Faz 6.4 bu boşluğu kapatır:** aşağıdaki `HelpFragment`,
+gerçek `:sample:app:assembleDebug` (gerçek `AndroidFragment` + Fragment derlemesi) ile Fragment interop'un
+ilk uçtan-uca kanıtıdır (MVI-mode'un Faz 5.3'teki `SettingsScreen` emsali gibi).
+
+### Neden bu route/Fragment seçildi (kapsam adjudication)
+
+MVI-mode **ileriye dönük** bir yazım biçimi olduğu için Faz 5.3 MEVCUT bir ekranı (`SettingsScreen`) MVI'a
+çevirmişti. Fragment interop ise **geriye dönük** bir köprüdür — "henüz yeniden yazmadığın" ekranlar içindir.
+Bu yüzden mevcut bir Compose ekranını Fragment'a GERİ çevirmek (bir regresyon gibi okunurdu, ve
+`AppNavBehaviorTest.kt`/README iddialarıyla çakışabilirdi) yerine, hikâyeyi dürüstçe anlatan **yeni, küçük,
+adanmış bir route** eklendi: `HomeGraph.HelpScreenRoute(topic)` — "henüz Compose'a taşımadığımız yardım
+ekranı". `HomeGraph`'a bağlandı çünkü Dashboard uygulamanın hub'ı; oradan bir "Yardım" butonu doğal.
+
+- **Route (`:sample:navigation`), Fragment (`:feature:home`) ayrı modüllerde** → codegen route paketini
+  Fragment'ın kendi paketinden DEĞİL, route declaration'ından okur (cross-module doğrulaması).
+- **Navigator'LI yol canlı çalıştırılır:** `HelpScreenRoute` `@BackTo(DashboardScreenRoute)` deklare eder →
+  bir `HelpNavigator` KAZANIR. Böylece `gezginNav`'ın registry-tabanlı yolu GERÇEKTEN egzersiz edilir
+  (edge'siz-yaprak/FS5 yolu DEĞİL — o Task 6.2'nin codegen testlerinde kapsanır; buranın işi navigator'LI
+  yolun canlı çalıştığını kanıtlamak). Dashboard'a `@GoTo(HelpScreenRoute)` giriş kenarı → `goToHelp(topic)`.
+
+### Sözleşmenin tamamı (`HelpFragment.kt` + `fragment_help.xml`)
+
+```kotlin
+@FragmentScreen(HelpScreenRoute::class)
+class HelpFragment : Fragment() {                          // hiçbir Gezgin arayüzü YOK; parametreli ctor YOK
+    private val args by gezginArgs<HelpScreenRoute>()      // route'u kendi `arguments` Bundle'ından decode → PD-safe
+    private val nav  by gezginNav<HelpNavigator>()         // bind sonrası canlı navigator (instance-registry)
+
+    override fun onCreateView(...) = inflater.inflate(R.layout.fragment_help, container, false)   // GERÇEK View, Compose YOK
+
+    override fun onViewCreated(view, ...) {
+        view.findViewById<TextView>(R.id.help_topic).text = "Konu: ${args.topic}"     // gezginArgs → görünür içerik
+        view.findViewById<Button>(R.id.help_back).setOnClickListener { nav.backToDashboard() }  // gezginNav → gerçek nav
+    }
+}
+```
+
+- **`gezginArgs<HelpScreenRoute>()`** — route Fragment'ın `arguments` Bundle'ından decode edilir (`onUpdate`
+  zamanlamasından bağımsız; `arguments` örnekleme anında kurulur). `onViewCreated`'da güvenle okunur.
+- **`gezginNav<HelpNavigator>()`** — bind (= `AndroidFragment.onUpdate`'in ilk çalışması) sonrası canlı
+  navigator'ı instance-anahtarlı registry'den okur. `nav` erişimi buton tık lambdasına ERTELENİR — o an bind
+  kesinlikle tamamlanmıştır (delege lazy olduğu için erken okunmaz).
+- **Üretilen `provideHelpEntry()` elle yazılmaz** — `FragmentEntryCodegen` onu core-mode `GezginEntries.kt`'den
+  AYRI bir `GezginFragmentEntries.kt`'ye üretir; `homeGraphEntries()` bundle'ı onu çağırır. Gözlenen şekil:
+
+  ```kotlin
+  public fun GezginEntryScope.provideHelpEntry() {
+    register<HomeGraph.HelpScreenRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
+      val raw = LocalGezginRawNavigator.current
+      val nav = raw.helpNavigator(LocalGezginEntryId.current)
+      AndroidFragment<HelpFragment>(
+        arguments = route.toBundle(raw),
+        onUpdate = { fragment -> bindGezgin(fragment, route, nav) },
+      )
+    }
+  }
+  ```
+
+### ZORUNLU precondition — host `FragmentActivity`/`AppCompatActivity` olmalı
+
+Fragment interop'u kullanan HER tüketicinin sağlaması gereken **tek precondition**: `AndroidFragment`,
+görünüm ağacında bir `FragmentActivity`/`AppCompatActivity` host'u (`FragmentManager.findFragmentManager(view)`)
+YOKSA runtime'da fırlatır (Task 6.0 §1e.1 — bir düz `ComponentActivity` host ilk `AndroidFragment`'ta
+crash eder). Bu yüzden `MainActivity` `ComponentActivity`'den **`AppCompatActivity`**'ye taşındı ve
+`sample:app` kendi `androidx.appcompat:appcompat`'ını AÇIKÇA getirir (gezgin-core `fragment-compose`'u
+`implementation` tuttuğundan tüketiciye SIZMAZ — host'unu tüketici yönetir). **Not:** `AppCompatActivity`
+ayrıca bir `Theme.AppCompat` (ya da türevi) tema gerektirir → `AndroidManifest.xml` teması
+`Theme.AppCompat.Light.NoActionBar`'a çekildi (`res/values/themes.xml`); UI'ı yine Compose'un `MaterialTheme`'i
+çizer. (Alternatif: `FragmentActivity` — tema gerektirmez; sample real-world brownfield emsali için
+`AppCompatActivity`'yi tercih etti.)
+
+### Legacy `OnBackPressedDispatcher` — kullanıcı sorumluluğu
+
+Bir legacy Fragment'ın KENDİ `OnBackPressedDispatcher` callback'i Nav3'ün tek-otorite back-stack'ini LIFO'da
+geçebilir; migration sırasında KALDIRILMALIDIR (§11.1 — Gezgin bunu otomatik sessizleştirmez). `HelpFragment`
+böyle bir callback deklare ETMEZ (geri, `GezginDisplay`'in normal back yoluyla çalışır), ama tüketicilerin
+bilmesi gereken bir nottur. Dialog/BottomSheet Fragment varyantları interop kapsamı DIŞIDIR (§11.2 — çift
+`Window`/çift-otorite; içeriği native `@Dialog`/`@BottomSheet`'e taşınır).
+
+**Cihaz-üstü doğrulama:** Fragment interop'un yalnız derlemeden görülemeyen davranışları (PD/config-change
+sonrası `gezginArgs` route + `gezginNav` re-bind, doğru stack derinliğinde restore) `docs/gezgin-on-device-checklist.md`
+madde 15-17'de insan-doğrulaması olarak listelendi.
 
 ## Davranış testleri
 

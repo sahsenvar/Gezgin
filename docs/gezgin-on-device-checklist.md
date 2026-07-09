@@ -391,12 +391,15 @@ kod: `sample/feature/profile/.../SettingsMvi.kt`, üretilen `.../GezginMviEntrie
 > doğru stack derinliği — yalnız gerçek bir `FragmentActivity` + Android runtime'da gözlemlenebilir; aşağıdaki
 > 15–17. kalemler bunu kapsar.
 >
-> **Ortak ön koşul / bağımlılık (Task 6.4):** 15–17, sample'a bir `@FragmentScreen`-host'lu örnek ekran
-> eklenmesini gerektirir; o ekran Task 6.4'te gelecek. Ayrıca `AndroidFragment` bir `FragmentActivity`/
-> `AppCompatActivity` host OLMADAN fırlatır (Task 6.0 §1e.1) — sample'ın `MainActivity`'si bu kalemler
-> yazıldığında hâlâ `ComponentActivity`; Task 6.4 onu `FragmentActivity`/`AppCompatActivity`'ye taşımalı.
+> **Ortak ön koşul (Task 6.4 tamamlandı):** 15–17, sample'a bir `@FragmentScreen`-host'lu örnek ekran
+> eklenmesini gerektirir; bu ekran Task 6.4'te eklendi — `:sample:feature:home`'daki **`HelpFragment`**
+> (View-tabanlı, `fragment_help.xml` inflate eder), `:sample:navigation`'daki **`HelpScreenRoute(topic)`**
+> route'una `@FragmentScreen` ile bağlı; Dashboard'dan `nav.goToHelp("navigasyon")` ile açılır (`@GoTo`),
+> `HelpNavigator.backToDashboard()` ile geri döner (`@BackTo`). Ayrıca `AndroidFragment` bir `FragmentActivity`/
+> `AppCompatActivity` host OLMADAN fırlatır (Task 6.0 §1e.1) — sample'ın `MainActivity`'si Task 6.4'te
+> `ComponentActivity`'den **`AppCompatActivity`**'ye taşındı (host-Activity ön koşulu artık karşılandı).
 > Bu yüzden host-Activity gereksinimi AYRI bir kalem DEĞİL, 15–17'nin ortak ön koşulu olarak burada tutuldu.
-> 15 ve 17 ancak 6.4 tamamlandıktan SONRA koşulabilir.
+> Kalemler artık gerçek bir cihazda koşulabilir (kod tarafı hazır; kalan iş insan-doğrulaması).
 
 ---
 
@@ -408,16 +411,16 @@ reçetesini bir `@FragmentScreen`-host'lu YAPRAK için tekrarlar. Task 6.0 spike
 doğrulayamadı; `route.toBundle()`'ın PD-güvenliği de `FragmentRouteSerializationTest`'te yalnız birim
 düzeyinde kanıtlı. Bu madde ikisini de gerçek process-death'te gözler.
 
-**Ön koşul:** Task 6.4'ün Fragment örneğini barındıran modül cihaza/emülatöre kurulu; Geliştirici
-seçenekleri açık; host Activity `FragmentActivity`/`AppCompatActivity` (Task 6.4 bağımlılığı — yukarıdaki
-Faz 6 prefatory notu; 6.4 öncesi bu madde koşulamaz). Örnek ekran = Task 6.4'te eklenen `@FragmentScreen`-
-host'lu leaf (`gezginArgs<Route>()` + varsa `gezginNav<Navigator>()` kullanan).
+**Ön koşul:** `:sample:app` cihaza/emülatöre kurulu (`./gradlew :sample:app:installDebug`); Geliştirici
+seçenekleri açık; host Activity `AppCompatActivity` (Task 6.4'te taşındı — yukarıdaki Faz 6 prefatory notu).
+Örnek ekran = `HelpFragment` (`gezginArgs<HelpScreenRoute>()` + `gezginNav<HelpNavigator>()` kullanır).
 
 **Adımlar:**
 1. Ayarlar → Sistem → Geliştirici seçenekleri → **"Etkinlikleri saklama"** ("Don't keep activities") AÇIK.
-2. Uygulamayı aç, Fragment-host'lu ekrana bir edge ile ilerle (örn. `goToLegacyScreen()` → `@GoTo`), tercihen
-   bu ekranın ALTINDA en az bir başka entry olacak şekilde (birkaç seviye derin bir stack → doğru restore-
-   derinliği de gözlenir). Ekranda `gezginArgs`'tan okunan route argümanının (örn. bir id/başlık) ekrana
+2. Uygulamayı aç, Dashboard'dan **"Yardım (legacy Fragment)"** butonuyla (`nav.goToHelp("navigasyon")` →
+   `@GoTo(HelpScreenRoute)`) `HelpFragment` ekranına git. Bu ekranın ALTINDA en az bir entry vardır (start
+   `LoginScreenRoute` → `loginSuccess` → Dashboard → Help; birkaç seviye derin stack → doğru restore-derinliği
+   de gözlenir). Ekranda `gezginArgs`'tan okunan `topic`'in ("Konu: navigasyon") `help_topic` TextView'ına
    yansıdığını doğrula.
 3. Home tuşuna bas (arka plana at) — "Etkinlikleri saklama" açıkken Android Activity'yi HEMEN `onDestroy()`
    eder → `rememberSaveable`/`FragmentState` round-trip'i gerçekten tetiklenir, Gezgin backstack'i
@@ -432,16 +435,17 @@ host'lu leaf (`gezginArgs<Route>()` + varsa `gezginNav<Navigator>()` kullanan).
   (`FragmentRouteSerializationTest`'in birim kanıtının ötesinde): route Gezgin'in KENDİ backstack PD'sinden
   taze üretilip `arguments`'a yeniden encode edilir (§B4/§1d), FragmentManager'ın bağımsız arg persistansına
   bağlı değil.
-- (c) `gezginNav<Navigator>()` (ekran bir navigator kullanıyorsa) restore sonrası bir navigasyon edge'ini
-  (örn. bir butonla `nav.goToX()`/`nav.back()`) HÂLÂ tetikleyebilir — "bind yok" hatası fırlatmaz. Bu,
+- (c) `gezginNav<HelpNavigator>()` restore sonrası bir navigasyon edge'ini ("Panoya dön" butonu →
+  `nav.backToDashboard()`) HÂLÂ tetikleyebilir — "bind yok" hatası fırlatmaz. Bu,
   yeniden yaratılan Fragment instance'ı için `AndroidFragment`→`onUpdate`→`bindGezgin` re-bind'inin (Task
   6.0'ın kaynakta doğruladığı, canlı doğrulayamadığı mekanizma) çalıştığının kanıtıdır.
 
 **İlgili spec §:** `docs/gezgin-design.md` §11.1 (`gezginArgs`/`gezginNav`/`onUpdate` bind sözleşmesi), §1.10/
 §12 (PD); Task 6.0 §1c/§1d/§2 + Post-review addendum; kod: `gezgin-core/.../fragment/FragmentBinding.android.kt`
-(`bindGezgin`/`gezginBoundNav`), `.../fragment/FragmentRouteBundle.android.kt` (`toBundle`/`decodeGezginRoute`).
+(`bindGezgin`/`gezginBoundNav`), `.../fragment/FragmentRouteBundle.android.kt` (`toBundle`/`decodeGezginRoute`);
+sample: `HelpFragment.kt`, `HomeGraph.kt` (`HelpScreenRoute`).
 
-**Durum:** [ ] Doğrulanmadı (Task 6.4 bekliyor)
+**Durum:** [ ] Doğrulanmadı (kod hazır — Task 6.4 örneği eklendi; insan cihaz-doğrulaması bekliyor)
 
 ---
 
@@ -453,8 +457,8 @@ Gezgin runtime'ının zorlamadığı, dokümante edilmiş bir KULLANICI sorumlul
 edilecek bir bug değil) — madde 6/8 gibi bilgilendirici. Bu madde, sınırlamanın gerçekten GÖZLEMLENEBİLİR
 olduğunu bir insanın nasıl doğrulayacağını tarif eder (V1'de otomatik test edilmez).
 
-**Ön koşul:** Task 6.4'ün `@FragmentScreen` ekranı mevcut (yukarıdaki Faz 6 prefatory notu). Geçici olarak, o
-Fragment'ın `onViewCreated`'ında kendi geri callback'ini kaydet: `requireActivity().onBackPressedDispatcher.
+**Ön koşul:** `@FragmentScreen` ekranı mevcut — `HelpFragment` (Task 6.4). Geçici olarak, `HelpFragment`'ın
+`onViewCreated`'ında kendi geri callback'ini kaydet: `requireActivity().onBackPressedDispatcher.
 addCallback(viewLifecycleOwner) { android.util.Log.d("FS_BACK", "fragment kendi callback'i geri'yi yuttu");
 /* isteyerek NavDisplay'e geçirme yok */ }`.
 
@@ -484,18 +488,22 @@ Spec §11.1 kapanış satırı brownfield migration'ın çekirdek vaadi: `@Fragm
 yaprağı Fragment-host'ludan Composable-host'luya çevirmenin — route/graph bildiriminde HİÇBİR değişiklik
 olmadan — navigasyon grafiği açısından AYNI pozisyonda çalışan bir ekran ürettiğini doğrular.
 
-**Ön koşul:** Sample'da Task 6.4'ün `@FragmentScreen` interop ekranı mevcut ve derleniyor (yukarıdaki Faz 6
-prefatory notu). Bu madde bir KOD DÖNÜŞÜMÜ + yeniden-derleme + davranış-karşılaştırması içerir (saf cihaz-üstü
-tık-adımı değil); dönüşüm GERİ ALINABİLİR bir doğrulama egzersizidir, kalıcı bir sample değişikliği değil.
+**Ön koşul:** Sample'da `@FragmentScreen` interop ekranı mevcut ve derleniyor — `HelpFragment` →
+`HomeGraph.HelpScreenRoute` (Task 6.4). Bu madde bir KOD DÖNÜŞÜMÜ + yeniden-derleme + davranış-karşılaştırması
+içerir (saf cihaz-üstü tık-adımı değil); dönüşüm GERİ ALINABİLİR bir doğrulama egzersizidir, kalıcı bir sample
+değişikliği değil (commit'lenmez).
 
 **Adımlar:**
-1. Sample'ın Fragment-interop ekranını NOT ET: hangi route (`XRoute`), hangi graph/edge üyeliği, hangi
-   navigator (`XNavigator`), hangi deeplink (varsa) — ve onu açan edge (örn. `goToLegacyScreen()`).
-2. `@FragmentScreen class XFragment : Fragment() { val args by gezginArgs<XRoute>(); val nav by
-   gezginNav<XNavigator>() }`'i `@Screen @Composable fun XScreen(route: XRoute, nav: XNavigator) {…}`'e
-   çevir — Fragment'ın `onViewCreated` içeriğini composable gövdeye, `gezginArgs`→`route` param, `gezginNav`→
-   `nav` param olacak şekilde taşı. `XRoute`/graph/edge/`XNavigator`/deeplink bildirimlerine DOKUNMA.
-3. KSP + `assembleDebug` yeniden derle; aynı edge'le (`goToLegacyScreen()`) ekrana git.
+1. Ekranın koordinatlarını NOT ET: route `HomeGraph.HelpScreenRoute(topic)`, `HomeGraph` üyesi,
+   `@BackTo(DashboardScreenRoute)` edge'i → `HelpNavigator`, deeplink yok; açan edge Dashboard'ın
+   `@GoTo(HelpScreenRoute)` → `goToHelp(topic)`.
+2. `HelpFragment.kt`'deki `@FragmentScreen class HelpFragment : Fragment() { val args by
+   gezginArgs<HelpScreenRoute>(); val nav by gezginNav<HelpNavigator>() }`'i geçici olarak
+   `@Screen @Composable fun HelpScreen(route: HelpScreenRoute, nav: HelpNavigator) {…}`'e çevir — Fragment'ın
+   `onViewCreated`/XML içeriğini composable gövdeye (`Text("Konu: ${route.topic}")` + `Button(onClick =
+   { nav.backToDashboard() })`), `gezginArgs`→`route` param, `gezginNav`→`nav` param olacak şekilde taşı.
+   `HelpScreenRoute`/`HomeGraph`/`@BackTo`/`HelpNavigator` bildirimlerine DOKUNMA.
+3. KSP + `assembleDebug` yeniden derle; aynı edge'le (`nav.goToHelp("navigasyon")`) ekrana git.
 
 **Beklenen:** (a) Route/graph/navigator/deeplink bildirimi DEĞİŞMEDEN proje derlenir (codegen artık
 `FragmentEntryCodegen` yerine core `EntryCodegen` yolundan `provideXEntry` üretir — grafik açısından fark
@@ -508,7 +516,7 @@ vaadini — kanıtlar.
 sabit"); kod: `gezgin-processor/.../codegen/FragmentEntryCodegen.kt` vs `.../codegen/EntryCodegen.kt` (iki
 entry codegen'in AYNI `register<XRoute>(SCREEN, …)` yüzeyini ürettiği — grafik-şeffaflığın codegen kanıtı).
 
-**Durum:** [ ] Doğrulanmadı (Task 6.4 bekliyor)
+**Durum:** [ ] Doğrulanmadı (kod hazır — Task 6.4 örneği eklendi; insan cihaz-doğrulaması bekliyor)
 
 ---
 
@@ -530,11 +538,13 @@ entry codegen'in AYNI `register<XRoute>(SCREEN, …)` yüzeyini ürettiği — g
 | 12 | Sheet swipe-dismiss animasyonu + hide-then-result | Evet | [ ] Doğrulanmadı |
 | 13 | `FullscreenModalContract` görsel occlusion | — | [ ] Kapsam dışı (sample'da yok) |
 | 14 | MVI-mode: VM config-change ömrü + tek-seferlik efekt + MVI'dan logout | Evet | [ ] Doğrulanmadı |
-| 15 | PD "Etkinlikleri saklama" — `@FragmentScreen` (args decode + `onUpdate` re-bind) | Evet | [ ] Doğrulanmadı (6.4 bekliyor) |
+| 15 | PD "Etkinlikleri saklama" — `@FragmentScreen` (`HelpFragment`; args decode + `onUpdate` re-bind) | Evet | [ ] Doğrulanmadı (kod hazır) |
 | 16 | Legacy Fragment `OnBackPressedDispatcher` LIFO-bypass | Hayır (bilgilendirici) | [ ] Bilgilendirici |
-| 17 | Migration-swap `@FragmentScreen` → `@Screen` | Evet (kod dönüşümü) | [ ] Doğrulanmadı (6.4 bekliyor) |
+| 17 | Migration-swap `@FragmentScreen` → `@Screen` (`HelpFragment`→`HelpScreen`) | Evet (kod dönüşümü) | [ ] Doğrulanmadı (kod hazır) |
 
 Kullanıcı cihazla döndüğünde: `sample:shopr`'ı bir Android cihaza/emülatöre kur
 (`./gradlew :sample:shopr:installDebug`), yukarıdaki 1/3/4'ü sırayla koş, kutuları işaretle, bulguları bu
-dosyaya (ilgili maddenin altına) not düş. Faz 6 Fragment kalemleri (15–17) Task 6.4 sample örneği
-eklendikten SONRA koşulur (16 bilgilendirici — istendiğinde geçici callback ile gözlemlenir).
+dosyaya (ilgili maddenin altına) not düş. Faz 6 Fragment kalemleri (15–17) için `:sample:app`'i kur
+(`./gradlew :sample:app:installDebug`) — örnek ekran (`HelpFragment`, Dashboard'daki "Yardım (legacy
+Fragment)" butonu) Task 6.4'te eklendi, kod tarafı hazır (16 bilgilendirici — istendiğinde geçici callback
+ile gözlemlenir).
