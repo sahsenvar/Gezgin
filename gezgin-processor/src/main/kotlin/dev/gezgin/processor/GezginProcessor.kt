@@ -1,6 +1,5 @@
 package dev.gezgin.processor
 
-import com.google.devtools.ksp.getClassDeclarationByName
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
@@ -11,6 +10,7 @@ import dev.gezgin.processor.codegen.EntryCodegen
 import dev.gezgin.processor.codegen.FragmentEntryCodegen
 import dev.gezgin.processor.codegen.MviEntryCodegen
 import dev.gezgin.processor.codegen.NavigatorCodegen
+import dev.gezgin.processor.codegen.NavigatorProbe
 import dev.gezgin.processor.codegen.TestApiCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.entry.EntryModelReader
@@ -79,6 +79,22 @@ class GezginProcessor(
                         environment.logger.error(
                             "[PKG] nav modülü route'ları ortak bir pakette olmalı — ortak paket öneki boş " +
                                 "(kaynaklar ayrışık top-level paketlere dağılmış)",
+                        )
+                        return emptyList()
+                    }
+
+                    // [PKG] (M2) — navigator'lar HER ZAMAN targetPackage'a üretilir, ama cross-module probe/
+                    // factory-import route DECLARATION'ının paketinde (routePackageName) arar. Çok-alt-paketli
+                    // bir nav modülü (targetPackage = ortak önek, alt-paketler farklı) navigator'ı route'un
+                    // paketi DIŞINDA üretir → cross-module fragment/core/MVI probe'u sessizce ıskalar (M2 false
+                    // negative). "Her graph/route paketi == targetPackage" şartıyla routePackageName lookup'ları
+                    // KESİN olur; bu paket varsayımını sözleşmeye çevirir (alpha-kabul edilebilir kısıt).
+                    val strayPackages = TopologyCodegen.declaredPackages(model).filter { it != packageName }
+                    if (strayPackages.isNotEmpty()) {
+                        environment.logger.error(
+                            "[PKG] nav modülünün her graph/route'u AYNI pakette olmalı (hedef paket: " +
+                                "$packageName) — navigator'lar oraya üretilir; farklı paket cross-module probe'u " +
+                                "ıskalatır. Ortak paket dışına düşen paket(ler): ${strayPackages.sorted()}",
                         )
                         return emptyList()
                     }
@@ -176,35 +192,22 @@ class GezginProcessor(
                     // like EntryCodegen; the opt-out lets those tests assert the golden text without OK exit).
                     if (fragmentModels.isNotEmpty()) {
                         // Fragment nav-wiring GUARD (SC2/MV7 parity, one phase later, FS5). Whether a
-                        // @FragmentScreen route earns a NavigatorCodegen `xNavigator` factory is a
-                        // GRAPH-derived fact — computed HERE (where `model` is in scope), NOT in the
-                        // graph-unaware FragmentModelReader. Two branches by where the route lives:
-                        //  - SAME-module route (in THIS model): decide from the in-memory GraphModel via
-                        //    NavigatorCodegen.hasNavigator, exactly like SC2/MV7. Its navigator, if earned, is
-                        //    generated in THIS SAME KSP round → NOT yet resolvable on the classpath, so the
-                        //    model check is the ONLY reliable source here (a classpath probe can't replace it).
-                        //  - CROSS-module route (routeModel == null, compiled in another module): its navigator,
-                        //    IF the route earns one, is an ALREADY-COMPILED `XNavigator` class visible on the
-                        //    classpath NOW → PROBE it deterministically (getClassDeclarationByName) instead of the
-                        //    old `?: true` blind optimism. A bare @FragmentScreen has NO per-entry nav signal (unlike
-                        //    core/MVI, which only reach this check when the function signature requests `nav`), so
-                        //    `?: true` nav-wired EVERY cross-module Fragment — including a genuinely display-only
-                        //    leaf whose cross-module route has ZERO edges (no navigator). That emitted a
-                        //    `raw.xNavigator()` call to a nonexistent factory: an unresolved reference, the EXACT
-                        //    bug FS5 exists to kill, just relocated to the cross-module case. The probe fixes it:
-                        //    class resolves → wire nav; doesn't → the FS5 no-nav path (2-arg bindGezgin; gezginNav
-                        //    throws the actionable [FS5] runtime error). The leaf is NOT rejected at KSP time.
+                        // @FragmentScreen route earns a NavigatorCodegen `xNavigator` factory is a GRAPH-derived
+                        // fact — computed HERE (where `model` is in scope), NOT in the graph-unaware
+                        // FragmentModelReader. Delegated to the SHARED [NavigatorProbe] (same helper core-mode
+                        // SC2 / MVI-mode MV7 call): same-module → in-memory model; cross-module → identity-verified
+                        // classpath probe (`@GezginNavigatorFor`). See NavigatorProbe's KDoc for the M1/M2 rationale.
                         val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)
                         val routesByFq = model.routes.associateBy(RouteModel::fqName)
                         FragmentEntryCodegen.generate(fragmentModels) { entry ->
-                            val routeModel = routesByFq[entry.routeFq]
-                            if (routeModel != null) {
-                                NavigatorCodegen.hasNavigator(routeModel, graphsByFq)
-                            } else {
-                                resolver.getClassDeclarationByName(
-                                    "${entry.routePackageName}.${entry.x}Navigator",
-                                ) != null
-                            }
+                            NavigatorProbe.routeEarnsNavigator(
+                                resolver = resolver,
+                                routeModel = routesByFq[entry.routeFq],
+                                graphsByFq = graphsByFq,
+                                routePackageName = entry.routePackageName,
+                                x = entry.x,
+                                routeFq = entry.routeFq,
+                            )
                         }.forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
                     }
                 }

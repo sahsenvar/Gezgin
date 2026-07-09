@@ -12,6 +12,7 @@ import com.google.devtools.ksp.symbol.KSValueArgument
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import dev.gezgin.processor.codegen.NavigatorCodegen
+import dev.gezgin.processor.codegen.NavigatorProbe
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
@@ -266,7 +267,12 @@ class EntryModelReader(
         if (!checkKindContractAndNoBack(fnName, routeDecl!!, kind)) return null
 
         if (navParam != null) {
-            val hasNavigator = routeModel?.let { NavigatorCodegen.hasNavigator(it, graphsByFq) } ?: true
+            // Cross-module'de (routeModel == null) eski `?: true` kör iyimserliği yerine kimlik-doğrulamalı
+            // classpath probe'u (fragment FS5 ile PAYLAŞILAN tek yardımcı) — navigator'sız cross-module route
+            // artık üretilen kodda `raw.xNavigator()` unresolved reference'ı yerine temiz [SC2] verir.
+            val hasNavigator = NavigatorProbe.routeEarnsNavigator(
+                resolver, routeModel, graphsByFq, routeDecl!!.packageName.asString(), x, routeFq,
+            )
             if (!hasNavigator) {
                 error(
                     "SC2",
@@ -528,7 +534,11 @@ class EntryModelReader(
         val vmWantsNav = VmDiClassifier.classify(vm, routeFq, navigatorTypeFq).vmHasNav
         val effectWantsNav = effect != null && effect.hasNavParam
         if (vmWantsNav || effectWantsNav) {
-            val hasNavigator = routeModel?.let { NavigatorCodegen.hasNavigator(it, graphsByFq) } ?: true
+            // SC2 ile aynı paylaşılan probe: cross-module'de kimlik-doğrulamalı classpath lookup, eski
+            // `?: true` yerine (navigator'sız cross-module route → temiz [MV7], üretilen kodda unresolved DEĞİL).
+            val hasNavigator = NavigatorProbe.routeEarnsNavigator(
+                resolver, routeModel, graphsByFq, routeDecl!!.packageName.asString(), x, routeFq,
+            )
             if (!hasNavigator) {
                 error(
                     "MV7",
