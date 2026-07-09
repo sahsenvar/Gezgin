@@ -17,7 +17,7 @@ annotation class GoTo(val target: KClass<out Route>, val singleTop: Boolean = tr
 /**
  * Replace kenarı (§4.1): mevcut hedefi `target` ile değiştirir — `clearUpTo` (varsayılan `Self`) + `inclusive`
  * ile ne kadarının temizleneceği belirlenir; auth-success/onboarding gibi geri-dönülmez geçişler için.
- * Codegen tipli `replaceX()` üretir.
+ * Codegen tipli `replaceToX()` üretir.
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable

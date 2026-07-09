@@ -13,5 +13,5 @@ Yayınlanan üç artefakt (group: `dev.gezgin`; ayrıntı [docs/gezgin-design.md
 | Modül | Rol | Açıklama |
 |---|---|---|
 | `gezgin-core` | Zorunlu temel | DI-agnostik: annotation'lar, runtime, `GezginDisplay` (Compose display katmanı), core codegen ve modal scene strategy'leri (Dialog/BottomSheet). |
-| `gezgin-processor` | Zorunlu | KSP2 symbol processor — tipli navigator'ları, entry provider'larını ve deep-link tablosunu üretir. `ksp(project(":gezgin-processor"))` ile uygulanır. |
+| `gezgin-processor` | Zorunlu | KSP2 symbol processor — tipli navigator'ları ve entry provider'larını üretir. `ksp(project(":gezgin-processor"))` ile uygulanır. |
 | `gezgin-mvi` | Opsiyonel add-on | `gezgin-core`'a bağımlı MVI binder: `@ViewModel`/`@ScreenEffect` + `GezginMvi<S,I,E>` sözleşmesi + codegen binder (`provideXEntry`) + `ObserveAsEvents` + DI-detection (Hilt/Koin, androidx fallback). |

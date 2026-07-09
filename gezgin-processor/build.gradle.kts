@@ -42,8 +42,8 @@ publishing {
             pom {
                 name.set("gezgin-processor")
                 description.set(
-                    "Gezgin KSP2 symbol processor — tipli navigator'ları, entry provider'larını ve " +
-                        "deep-link tablosunu üretir; ksp(project(\":gezgin-processor\")) ile uygulanır.",
+                    "Gezgin KSP2 symbol processor — tipli navigator'ları ve entry provider'larını " +
+                        "üretir; ksp(project(\":gezgin-processor\")) ile uygulanır.",
                 )
             }
         }
