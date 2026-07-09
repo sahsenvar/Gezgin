@@ -81,6 +81,12 @@ fun GezginDisplay(
                     "guard'ı (KALICI: modal genuinely root OLAMAZ — OverlayScene ≥1 underlaid entry " +
                     "ister, §7). route: ${rootRoute::class.simpleName}"
             }
+            // M4 — kind-lookup kancasını navigator'a enjekte et: replaceTo (clearUpTo=root) MUTASYONDAN
+            // ÖNCE, sonuçtaki kök modal olacaksa reddedebilsin. Kind yalnız burada (registry) bilinir;
+            // kayıtsız route → `false` (modal değil varsay; kayıtsızlığın açık hatası toNavEntry'de).
+            navigator.modalRootGuard = { route ->
+                registered.registry[route::class]?.kind?.let { it != EntryKind.SCREEN } ?: false
+            }
         }
     }
     val keys by navigator.keysState.collectAsState()   // id taşır → id-only değişim de recompose eder (4a)

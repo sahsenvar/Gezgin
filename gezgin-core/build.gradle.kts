@@ -53,6 +53,11 @@ kotlin {
         // modülünde üretilen `provideXEntry` içinde geçer, kullanıcı kendi fragment-compose sürümünü ekler.
         androidMain.dependencies {
             implementation(libs.androidx.fragment.compose)
+            // C1 (spec §225) — host ViewModel-scope'lu kimlik-stabil navigator holder'ı için
+            // `viewModel {}`/`viewModelFactory`/`initializer`. Yalnız androidMain: config-change'i atlayan
+            // retention SADECE Android'de gerekli (desktop actual `rememberSaveable` kullanır). gezgin-mvi
+            // ile AYNI KMP artefaktı (org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose).
+            implementation(libs.jb.lifecycle.viewmodel.compose)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

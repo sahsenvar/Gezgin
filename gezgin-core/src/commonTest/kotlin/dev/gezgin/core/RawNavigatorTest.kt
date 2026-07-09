@@ -271,4 +271,98 @@ class RawNavigatorTest {
         val n = nav()                                           // start=Feed, no Payment pushed
         assertNull(n.entryIdOf(Payment::class))
     }
+
+    // --- Faz4 M3: entry-scoped backWithResult (sonuç SAHİBİ entry'ye pinli) ---
+
+    // Sahip entry HÂLÂ top → deliver + pop (mevcut happy-path korunur).
+    @Test fun backWithResultEntryScopedDeliversWhenOwnerIsTop() = runTest {
+        val n = nav()
+        val feedId = n.currentEntryId
+        n.launchForResult(feedId, "e1", Product("B"))          // Feed bekliyor: target = B
+        val bId = n.currentEntryId
+        val r = async { n.results<Any>(feedId, "e1").first() }
+        runCurrent()
+        n.backWithResult(bId, ChosenAddress("ok"))             // sahip (B) top → deliver + pop
+        assertEquals(NavResult.Value(ChosenAddress("ok")), r.await())
+        assertEquals(Feed, n.current)
+    }
+
+    // Sahip entry artık top DEĞİL (jest'le kapandı, sonuç GEÇ geldi) → SESSİZ NO-OP: alttaki yabancı-tipli
+    // slota KİRLİ Value teslim edilmez ve o entry pop edilmez. Eski call-time-top semantiği burada
+    // Value'yu B'nin (Feed'in beklediği) slotuna yazıp B'yi pop ederdi — M3'ün kapattığı yarış.
+    @Test fun backWithResultEntryScopedNoOpsWhenOwnerNotTop_noDirtyDelivery() = runTest {
+        val n = nav()
+        val feedId = n.currentEntryId
+        n.launchForResult(feedId, "e1", Product("B"))          // Feed bekliyor: target = B
+        val bId = n.currentEntryId
+        n.launchForResult(bId, "e2", Product("S"))             // B bekliyor: target = S (ör. bir sheet)
+        val sId = n.currentEntryId
+        n.back()                                               // S jest'le kapandı → top artık B
+        assertEquals(Product("B"), n.current)
+        val sizeBefore = n.backStack.value.size
+        val feedSlot = async { n.results<Any>(feedId, "e1").first() }
+        runCurrent()
+        n.backWithResult(sId, ChosenAddress("late"))           // S'nin GEÇ sonucu — S artık top DEĞİL → no-op
+        runCurrent()
+        assertEquals(sizeBefore, n.backStack.value.size)       // B pop EDİLMEDİ
+        assertEquals(Product("B"), n.current)
+        assertFalse(feedSlot.isCompleted)                      // Feed'in slotuna ChosenAddress SIZMADI
+        feedSlot.cancel()
+    }
+
+    // Sugar overload (call-time-top) sahibi = çağrı anındaki top → entry-scoped ile eşdeğer davranır.
+    @Test fun backWithResultCallTimeTopSugarDelivers() = runTest {
+        val n = nav()
+        val feedId = n.currentEntryId
+        n.launchForResult(feedId, "e1", Product("B"))
+        val r = async { n.results<Any>(feedId, "e1").first() }
+        runCurrent()
+        n.backWithResult(ChosenAddress("ok"))                  // = backWithResult(currentEntryId, …)
+        assertEquals(NavResult.Value(ChosenAddress("ok")), r.await())
+        assertEquals(Feed, n.current)
+    }
+
+    // --- Faz4 M4: modal-kind-at-root reddi MUTASYONDAN ÖNCE (RawNavigator.modalRootGuard) ---
+
+    // replaceTo sonuçtaki kökü modal yapacaksa → fırlat + state DEĞİŞMEZ (error-boundary host'unda
+    // navigator kalıcı geçersiz `[modal]` stack'inde kalmaz). Eski davranış önce `[modal]`'a mutate ederdi.
+    @Test fun replaceToModalAtRootRejectedBeforeMutation() {
+        val n = nav()
+        n.navigate(Catalog)                                    // [Feed, Catalog]
+        n.modalRootGuard = { it is DialogDefault }             // DialogDefault = modal kind
+        val before = n.backStack.value
+        val e = assertFailsWith<IllegalArgumentException> {
+            n.replaceTo(DialogDefault("x"), clearUpTo = Feed::class, inclusive = true)   // sonuç kök = modal
+        }
+        assertTrue(e.message?.contains("modal") == true)
+        assertEquals(before, n.backStack.value)                // MUTASYON YOK
+        assertEquals(Catalog, n.current)
+    }
+
+    // Sonuçtaki kök SCREEN ise → izin verilir (mutasyon olur).
+    @Test fun replaceToScreenAtRootAllowed() {
+        val n = nav()
+        n.navigate(Catalog)
+        n.modalRootGuard = { it is DialogDefault }
+        n.replaceTo(Product("p"), clearUpTo = Feed::class, inclusive = true)   // kök = Product (screen)
+        assertEquals(listOf<Route>(Product("p")), n.backStack.value)
+    }
+
+    // Modal KÖKTE DEĞİL (kök korunuyor) → izin verilir (normal modal senaryosu — bir SCREEN üstünde).
+    @Test fun replaceToModalAboveRootAllowed() {
+        val n = nav()
+        n.navigate(Catalog)                                    // [Feed, Catalog]
+        n.modalRootGuard = { it is DialogDefault }
+        n.replaceTo(DialogDefault("d"))                        // yalnız top değişir; kök hâlâ Feed (screen)
+        assertEquals(listOf<Route>(Feed, DialogDefault("d")), n.backStack.value)
+    }
+
+    // backTo (ve diğer op'lar) guard'a HİÇ girmez — kökü değiştiremezler (daima ≥1 dip entry korunur).
+    @Test fun backToUnaffectedByModalRootGuard() {
+        val n = nav()
+        n.navigate(Catalog); n.navigate(Product("1"))
+        n.modalRootGuard = { true }                            // her şeyi modal say — backTo yine çalışmalı
+        n.backTo(Catalog::class)
+        assertEquals(listOf<Route>(Feed, Catalog), n.backStack.value)
+    }
 }
