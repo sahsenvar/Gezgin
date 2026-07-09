@@ -673,6 +673,46 @@ class MviModelReaderTest {
     }
 
     @Test
+    fun `MN3 — nested generic forwarding (Base S colon GezginMvi Wrapped S) is rejected with MV1`() {
+        // walkForGezginMvi substitutes only DIRECT type-param forwarding; a NESTED `Wrapped<S>` leaves an
+        // unbound `S` that would otherwise leak a dangling type variable into the state TypeName. MV1 reject.
+        assertViolates(
+            "MV1",
+            """
+            package dev.gezgin.mn3
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class Wrapped<T>(val v: T)
+            data class SData(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            // GezginMvi's S is Wrapped<S'> where S' is Base's own type param — NESTED forwarding.
+            abstract class Base<S, I0, E0> : GezginMvi<Wrapped<S>, I0, E0>
+
+            @ViewModel(R::class)
+            class Vm : Base<SData, I, E>() {
+                override val uiState: StateFlow<Wrapped<SData>> = MutableStateFlow(Wrapped(SData(0)))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(R::class)
+            @Composable
+            fun Content(state: Wrapped<SData>, onIntent: (I) -> Unit) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
     fun `SC8 — MVI @FullscreenModal content whose route implements DialogContract is rejected`() {
         assertViolates(
             "SC8",

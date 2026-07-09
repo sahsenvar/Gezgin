@@ -16,6 +16,7 @@ import dev.gezgin.processor.fixtures.KOIN_STUBS
 import dev.gezgin.processor.fixtures.MVI_NAV_SOURCE
 import dev.gezgin.processor.fixtures.MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHEET_MVI_SOURCE
+import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -258,6 +259,58 @@ class MviEntryCodegenTest {
         assertNotNull(mvi, "MVI-mode GezginMviEntries.kt missing: ${result.messages}")
         assertContains(core.readText(), "providePlainEntry")
         assertContains(mvi.readText(), "provideMEntry")
+    }
+
+    @Test
+    fun `MJ1 — nav-named non-navigator @InjectedParam is OTHER not NAV (no spurious MV7, no default)`() {
+        // `About` (SHOP_SOURCE) is in-model but earns NO navigator. Under the OLD name-over-type rule a
+        // `nav`-named param classified NAV → vmHasNav=true → a SPURIOUS [MV7] (and, in Koin, a default
+        // that crashes at runtime). Now the RESOLVED `AnalyticsTracker` type wins → OTHER → no MV7, and no
+        // default resolver (the `viewModel` param becomes required). generateMvi throws if any [MV*] fires.
+        val text = generateMvi(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            SourceFile.kotlin("KoinStubs.kt", KOIN_STUBS),
+            SourceFile.kotlin(
+                "Mj1.kt",
+                """
+                package dev.gezgin.mj1
+
+                import androidx.compose.runtime.Composable
+                import dev.gezgin.core.annotation.Screen
+                import dev.gezgin.mvi.GezginMvi
+                import dev.gezgin.mvi.annotation.ViewModel
+                import dev.gezgin.shop.HomeGraph.About
+                import kotlinx.coroutines.flow.MutableStateFlow
+                import kotlinx.coroutines.flow.StateFlow
+                import org.koin.core.annotation.InjectedParam
+                import org.koin.core.annotation.KoinViewModel
+
+                data class AboutState(val n: Int)
+                sealed interface AboutIntent { data object Go : AboutIntent }
+                data class AboutEffect(val m: String)
+                class AnalyticsTracker
+
+                // NAMED `nav` but TYPED AnalyticsTracker (resolvable, NOT the navigator) → OTHER.
+                @ViewModel(About::class)
+                @KoinViewModel
+                class AboutVm(@InjectedParam nav: AnalyticsTracker) :
+                    GezginMvi<AboutState, AboutIntent, AboutEffect> {
+                    override val uiState: StateFlow<AboutState> = MutableStateFlow(AboutState(0))
+                    override fun onIntent(intent: AboutIntent) {}
+                }
+
+                @Screen(About::class)
+                @Composable
+                fun AboutContent(state: AboutState, onIntent: (AboutIntent) -> Unit) {
+                }
+                """.trimIndent(),
+            ),
+        )
+        // No default resolver (OTHER param can't be Gezgin-supplied → `viewModel` required, no `= {`).
+        assertFalse(text.contains("koinViewModel"), "no default should be emitted (nav is OTHER): $text")
+        assertFalse(text.contains("parametersOf"), "no default should be emitted (nav is OTHER): $text")
+        // No nav wiring — an OTHER param must not force a navigator factory call.
+        assertFalse(text.contains("Navigator"), "OTHER param must not trigger nav wiring: $text")
     }
 
     @Test
