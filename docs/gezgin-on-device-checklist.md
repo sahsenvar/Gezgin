@@ -567,6 +567,27 @@ entry codegen'in AYNI `register<XRoute>(SCREEN, …)` yüzeyini ürettiği — g
 
 ---
 
+## 18. Cross-module nav-probe × incremental derleme (izleme — TEMİZ yeniden-derleme gerekir)
+
+Cross-module nav-wiring PROBE'u (`NavigatorProbe`, `@GezginNavigatorFor` kimlik damgasıyla) `:navigation`
+modülündeki bir route'un navigator'ı olup olmadığını feature modülünün KSP turunda classpath'ten okur ve
+sonucu üretilen `GezginFragmentEntries.kt`/`GezginEntries.kt`/`GezginMviEntries.kt`'ye SABİTLER. Doğruluk,
+route topolojisi değişince (bir route SON edge'ini kaybedince navigator sınıfı yok olur, ya da tersi) KSP'nin
+classpath-ABI değişiminde feature modülünü yeniden işlemesine bağlıdır — aralıklı (incremental) KSP
+izolasyonunda bu tetiklenmeyebilir.
+
+**Adım:** `:navigation`'da `HelpScreenRoute`'un `@BackTo(DashboardScreenRoute)` edge'ini SİL (navigator artık
+kazanılmaz), yalnız `:navigation`'ı yeniden derle, feature modülünü (`:sample:feature:home`) YENİDEN DERLEME
+(incremental). **Beklenen sınır:** feature'ın önceki `GezginFragmentEntries.kt`'si `helpNavigator()` çağrısını
+tutmaya devam edebilir → derleme kırılır ya da bayat nav bağlanır. **Aksiyon:** nav modülünde edge topolojisi
+değiştiğinde feature modüllerinde TEMİZ yeniden-derleme (`clean` + `assembleDebug`) gerekir. Bu bilinçli bir
+sınır (madde 17'nin "yeniden-derleme" konvansiyonuyla aynı sınıf); kalıcı çözüm probe edilen declaration'ı
+KSP `Dependencies`'e kaydetmektir (KSP sürümü izin verince).
+
+**Durum:** [ ] Bilgilendirici — bilinen sınır; nav-topoloji değişiminde clean build ile giderilir
+
+---
+
 ## Özet tablo
 
 | # | Kalem | Cihaz gerekli mi | Durum |
@@ -588,6 +609,7 @@ entry codegen'in AYNI `register<XRoute>(SCREEN, …)` yüzeyini ürettiği — g
 | 15 | PD "Etkinlikleri saklama" — `@FragmentScreen` (`HelpFragment`; args decode + `onUpdate` re-bind) | Evet | [ ] Doğrulanmadı (kod hazır) |
 | 16 | Legacy Fragment `OnBackPressedDispatcher` LIFO-bypass | Hayır (bilgilendirici) | [ ] Bilgilendirici |
 | 17 | Migration-swap `@FragmentScreen` → `@Screen` (`HelpFragment`→`HelpScreen`) | Evet (kod dönüşümü) | [ ] Doğrulanmadı (kod hazır) |
+| 18 | Cross-module nav-probe × incremental derleme (nav-topoloji değişince clean build) | Evet (kod dönüşümü) | [ ] Bilgilendirici (bilinen sınır) |
 
 Kullanıcı cihazla döndüğünde, yukarıdaki **"İki ayrı sample uygulaması"** notundaki dağılıma göre koş
 (her maddede kutuyu işaretle, bulguları o maddenin altına not düş):
