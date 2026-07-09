@@ -18,6 +18,18 @@ kotlinpoet = "2.2.0"
 kctfork = "0.9.0"
 androidx-activity-compose = "1.9.3"
 androidx-compose-bom = "2024.10.01"
+# gezgin-mvi (Faz 5) DI-detection FQN'leri — spike task-5.0 (2026-07-08, Maven Central/dl.google.com metadata ile doğrulandı).
+# gezgin-mvi bunlara RUNTIME bağımlı DEĞİL (DI-agnostik, §15): codegen bu annotation'ları STRING-FQN ile okur
+# (gezgin-processor'ın `dev.gezgin.core.*` FQN'lerini okuduğu desen). Bu entry'ler 5.2/5.3 sample/kullanıcı içindir.
+# Koin annotations: org.koin.core.annotation.KoinViewModel + org.koin.core.annotation.InjectedParam
+#   (org.koin.android.annotation.KoinViewModel DEPRECATED → core.annotation). Runtime: org.koin.compose.viewmodel.koinViewModel.
+koin = "4.2.2"          # io.insert-koin:koin-annotations / koin-compose-viewmodel — latest stable (Maven Central, 2026-07-08)
+# Hilt: dagger.hilt.android.lifecycle.HiltViewModel + dagger.assisted.{AssistedInject,Assisted,AssistedFactory}.
+# hiltViewModel<VM,VMF>(creationCallback=…) Nav3 ile UYUMLU (§spike: ViewModelStoreOwner overload + HasDefaultViewModelProviderFactory).
+hilt = "2.60.1"         # com.google.dagger:hilt-android — latest stable (Maven Central, 2026-07-08)
+androidx-hilt = "1.4.0" # androidx.hilt:hilt-navigation-compose — latest stable (dl.google.com, 2026-07-08).
+#   NOT: 1.4.0'da androidx.hilt.navigation.compose.hiltViewModel @Deprecated → androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+#   (yeni artefakt: androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0). Codegen 5.2'de hedef paketi seçer.
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -33,6 +45,19 @@ androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runt
 # portu gerçek KMP (desktop/ios/js) NavDisplay sağlıyor; bu yüzden JB koordinatı kullanılıyor.
 jb-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "jb-navigation3" }
 jb-lifecycle-viewmodel-navigation3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "jb-lifecycle-nav3" }
+# gezgin-mvi (Faz 5) — JB Compose Multiplatform lifecycle-compose. jb-lifecycle-nav3 (2.10.0-alpha05) ile AYNI release
+# train'i (org.jetbrains.androidx.lifecycle grubu; Maven Central metadata 2026-07-08 doğrulandı — üç artefakt de 2.10.0-alpha05
+# yayınlıyor) → ayrı version ref'e gerek yok. viewmodel-compose → androidx.lifecycle.viewmodel.compose.{viewModel,viewModelFactory}
+# (commonMain, KMP); runtime-compose → androidx.lifecycle.compose.{collectAsStateWithLifecycle,LocalLifecycleOwner} (commonMain, KMP).
+# `api` çünkü codegen'li provideXEntry (feature modülünde) bu API'leri KULLANIR (androidx-fallback resolver + state gözleme).
+jb-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "jb-lifecycle-nav3" }
+jb-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "jb-lifecycle-nav3" }
+# DI-detection hedefleri (gezgin-mvi RUNTIME dep'i DEĞİL — 5.2/5.3 sample/kullanıcı için kayıt; bkz. [versions] koin/hilt notları).
+koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "androidx-hilt" }
 # sample:shopr (Task 3.6) — plain Android application (NOT KMP), so plain androidx.* coordinates
 # (not the org.jetbrains.compose.* CMP ones gezgin-core uses) + a BOM to keep ui/material3/activity
 # compose versions mutually consistent.

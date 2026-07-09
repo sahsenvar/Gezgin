@@ -7,12 +7,15 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.squareup.kotlinpoet.ksp.writeTo
 import dev.gezgin.processor.codegen.EntryCodegen
+import dev.gezgin.processor.codegen.MviEntryCodegen
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.TestApiCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.entry.EntryModelReader
 import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.dumpText
+import dev.gezgin.processor.mvi.ViewModelModelReader
+import dev.gezgin.processor.mvi.dumpMviText
 
 /**
  * Reads the semantic [dev.gezgin.processor.model.GraphModel] (Task 2.2), validates it against the
@@ -99,18 +102,45 @@ class GezginProcessor(
                     }
                 }
 
-                // Task 3.4: `provideXEntry` core-mode codegen — opt-OUT (default true, mirrors
-                // `gezgin.emitSerializers`). The opt-out exists purely for kctfork test infra where
-                // registering the compose-compiler plugin isn't wired up (see EntryCodegenTest);
-                // real (Gradle/AGP) builds always emit. Runs INDEPENDENTLY of graph ownership: a
-                // feature module registers cross-module routes' `@Screen`s (§3.3) with no graphs of
-                // its own. Each entry qualifies its navigator factory against the ROUTE's package
-                // ([EntryFunctionModel.routePackageName]), not this module's (absent) target package.
+                // Faz 5.1/5.2 — MVI add-on read + validate. @ViewModel classes first (MV1/MV4 +
+                // DI-detection), then feed them to the entry reader so MVI-mode `@Screen(state,onIntent)`
+                // content can pair with its same-module @ViewModel by route (MV2/MV3/MV5/MV6). Core-mode
+                // (route,nav) reading is untouched — vmModels is empty in any module with no @ViewModel.
+                // Reading runs UNCONDITIONALLY (validation + the dump must not depend on codegen
+                // emission — only WRITING generated entries is gated by `gezgin.emitEntries` below).
+                val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
+                val (entries, entriesOk) = EntryModelReader(resolver, environment.logger, model, vmModels).read()
+
+                if (environment.options["gezgin.dumpMvi"].toBoolean()) {
+                    environment.codeGenerator.createNewFile(
+                        dependencies = Dependencies.ALL_FILES,
+                        packageName = "",
+                        fileName = "GezginMviDump",
+                        extensionName = "txt",
+                    ).use { it.write(dumpMviText(vmModels, entries).toByteArray()) }
+                }
+
+                // `provideXEntry` codegen — opt-OUT (default true, mirrors `gezgin.emitSerializers`).
+                // The opt-out exists purely for kctfork test infra where the compose-compiler plugin
+                // isn't wired up (see EntryCodegenTest); real (Gradle/AGP) builds always emit. Runs
+                // INDEPENDENTLY of graph ownership: a feature module registers cross-module routes'
+                // `@Screen`s (§3.3) with no graphs of its own, qualifying each navigator factory against
+                // the ROUTE's package ([EntryFunctionModel.routePackageName]), not this module's (absent)
+                // target package. Faz 5.2 emits BOTH modes: core-mode `(route,nav)` via EntryCodegen into
+                // `GezginEntries.kt`, and MVI-mode `(state,onIntent)` via MviEntryCodegen into a SEPARATE
+                // `GezginMviEntries.kt` (VM resolver / DI-detection / @ScreenEffect wiring / Problem-2
+                // resolver params) — same package, distinct file, no collision (SC6 keeps provideXEntry
+                // names unique across both modes).
                 val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
-                if (emitEntries) {
-                    val (entries, entriesOk) = EntryModelReader(resolver, environment.logger, model).read()
-                    if (entriesOk && entries.isNotEmpty()) {
-                        EntryCodegen.generate(entries)
+                if (emitEntries && vmOk && entriesOk) {
+                    val coreEntries = entries.filter { it.mvi == null }
+                    if (coreEntries.isNotEmpty()) {
+                        EntryCodegen.generate(coreEntries)
+                            .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
+                    }
+                    val mviEntries = entries.filter { it.mvi != null }
+                    if (mviEntries.isNotEmpty()) {
+                        MviEntryCodegen.generate(mviEntries)
                             .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
                     }
                 }

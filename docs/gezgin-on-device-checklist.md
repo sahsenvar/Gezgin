@@ -338,6 +338,44 @@ gerçek adımlar yazılacak.
 
 ---
 
+## 14. MVI-mode (`SettingsScreen`) — VM ömrü, tek-seferlik efekt, MVI'dan logout (Faz 5.3)
+
+Faz 5.3, `sample:app`'in `SettingsScreen`'ini MVI-mode'a çevirdi (`@ViewModel(SettingsScreenRoute)` +
+stateless `@Screen` `SettingsContent(state, onIntent)` + `@ScreenEffect SettingsEffects`, androidx-fallback
+resolver — bkz. `sample/feature/profile/src/main/.../SettingsMvi.kt` ve `sample/README.md` "Faz 5 —
+MVI-mode"). Bu, MVI-mode'un ilk GERÇEK (kctfork-dışı) uçtan-uca kanıtı: `assembleDebug` yeşil ve
+`GezginMviEntries.kt` üretiliyor, ama aşağıdaki üç davranış **yalnız gerçek cihazda/emülatörde** —
+gerçek `ViewModelStore` + `Lifecycle` + Android runtime ile — gözlenebilir; derleme bunları KANITLAMAZ.
+
+**Ön koşul:** `sample:app` cihaza/emülatöre kurulu (`./gradlew :sample:app:installDebug`); `adb logcat`
+erişilebilir (efekt Log/Toast'unu gözlemek için).
+
+**Adımlar:**
+1. Login → giriş yap → Dashboard → Profil → "Ayarlar" ile `SettingsScreenRoute`'a git (slideIn/Out
+   transition'ı da gözle — route-seviyesi override MVI-mode'da korunuyor).
+2. "Koyu tema" switch'ini AÇ: (a) Switch AÇIK duruma geçmeli; (b) ekranda bir Toast ("Tema tercihi
+   kaydedildi") görünmeli; (c) `adb logcat -d -t 200 | grep SettingsMvi` bir kez `effect: Tema tercihi
+   kaydedildi` yazmalı.
+3. Cihazı DÖNDÜR (portrait↔landscape — configuration change). Switch AÇIK kalmalı (state VM'de tutuluyor,
+   `remember`'da değil → sıfırlanmaz); dönme sırasında Toast/log TEKRAR tetiklenmemeli (efekt tek-seferlik,
+   `MutableSharedFlow` replay=0 + `ObserveAsEvents` STARTED-collect → recomposition/rotation'da replay YOK).
+4. "Çıkış yap"a bas — VM'in `onIntent(Logout)`'u `nav.logout()`'u çağırır.
+
+**Beklenen / Pas kriteri:**
+- 2: Switch açılır, Toast + tek `SettingsMvi` log satırı; **toggle başına tam bir** efekt (birden fazla değil).
+- 3: `darkTheme` AÇIK korunur (rotation sonrası sıfırlanmaz — VM survives config change); Toast/log rotation'da
+  **tekrar oynamaz** (recomposition/config-change replay yok).
+- 4: `logout()` core-mode dönüşüm-öncesiyle BİREBİR aynı davranır — stack Dashboard'a kadar (dahil) temizlenir,
+  Login gelir; geri tuşu Dashboard'a/Settings'e dönmez (davranış testi
+  `logoutClearUpToDashboardInclusive_stacksASecondLoginEntry`'nin pinlediği çift-Login sonucu MVI-mode'da da aynı).
+
+**İlgili spec §:** `docs/gezgin-design.md` §10.1 (MVI-mode binding); `gezgin-mvi` `GezginMvi`/`ObserveAsEvents`;
+kod: `sample/feature/profile/.../SettingsMvi.kt`, üretilen `.../GezginMviEntries.kt`.
+
+**Durum:** [ ] Doğrulanmadı
+
+---
+
 ## Özet tablo
 
 | # | Kalem | Cihaz gerekli mi | Durum |
@@ -355,6 +393,7 @@ gerçek adımlar yazılacak.
 | 11 | Predictive-back modal üstünde | Evet | [ ] Doğrulanmadı |
 | 12 | Sheet swipe-dismiss animasyonu + hide-then-result | Evet | [ ] Doğrulanmadı |
 | 13 | `FullscreenModalContract` görsel occlusion | — | [ ] Kapsam dışı (sample'da yok) |
+| 14 | MVI-mode: VM config-change ömrü + tek-seferlik efekt + MVI'dan logout | Evet | [ ] Doğrulanmadı |
 
 Kullanıcı cihazla döndüğünde: `sample:shopr`'ı bir Android cihaza/emülatöre kur
 (`./gradlew :sample:shopr:installDebug`), yukarıdaki 1/3/4'ü sırayla koş, kutuları işaretle, bulguları bu

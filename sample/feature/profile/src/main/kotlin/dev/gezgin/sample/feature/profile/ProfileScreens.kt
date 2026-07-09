@@ -10,7 +10,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,9 +33,7 @@ import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.PickSourceScreenRout
 import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute
 import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialogRoute
 import dev.gezgin.sample.navigation.ProfileGraph.ProfileScreenRoute
-import dev.gezgin.sample.navigation.ProfileGraph.SettingsScreenRoute
 import dev.gezgin.sample.navigation.ProfileNavigator
-import dev.gezgin.sample.navigation.SettingsNavigator
 import dev.gezgin.sample.navigation.ZoomNavigator
 import kotlinx.coroutines.launch
 
@@ -78,28 +75,9 @@ fun ProfileScreen(route: ProfileScreenRoute, nav: ProfileNavigator) {
     }
 }
 
-@Screen
-@Composable
-fun SettingsScreen(route: SettingsScreenRoute, nav: SettingsNavigator) {
-    var darkTheme by remember { mutableStateOf(false) }
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Ayarlar")
-            ThemeToggle(darkTheme) { darkTheme = it }
-            // `logout()` = `replaceTo(LoginScreenRoute, clearUpTo = DashboardScreenRoute, inclusive = true)`:
-            // stack Dashboard dahil temizlenir, yerine Login gelir (geri ile Dashboard'a dönülmez).
-            Button(onClick = { nav.logout() }) { Text("Çıkış yap") }
-        }
-    }
-}
-
-@Composable
-private fun ThemeToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Column {
-        Text("Koyu tema")
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
+// NOT: `SettingsScreen` Faz 5.3'te MVI-mode'a çevrildi — bkz. `SettingsMvi.kt`
+// (`@ViewModel(SettingsScreenRoute)` + stateless `@Screen(SettingsScreenRoute)` `SettingsContent` +
+// `@ScreenEffect SettingsEffects`). `logout()` artık VM'in `onIntent`'inden çağrılır (§10 A deseni).
 
 /**
  * `@Dialog` kind — bkz. AuthScreens.kt'deki not (yalnız kind annotation'ı, `@Screen` YOK). Gerçek
