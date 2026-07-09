@@ -1,5 +1,6 @@
 package dev.gezgin.processor.codegen
 
+import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
@@ -24,6 +25,10 @@ private const val FLOW_PKG = "kotlinx.coroutines.flow"
 private val RAW_NAVIGATOR = ClassName(CORE_PKG, "RawNavigator")
 private val NAV_RESULT = ClassName(CORE_PKG, "NavResult")
 private val FLOW = ClassName(FLOW_PKG, "Flow")
+
+// İç codegen kimlik damgası — üretilen her navigator'a KÖKEN route'uyla basılır. Cross-module PROBE
+// (NavigatorProbe) sınıfı ADIYLA bulup KİMLİKLE (routeFq) doğrular; ada-çakışan decoy'u eler. Bkz. FS5/M1.
+private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavigatorFor")
 
 /**
  * Task 2.5: emits a typed per-source `<X>Navigator` for every route that declares at least one
@@ -130,6 +135,12 @@ object NavigatorCodegen {
         val navigatorClass = ClassName(packageName, navigatorClassName)
 
         val classSpec = TypeSpec.classBuilder(navigatorClassName)
+            // Kimlik damgası (FS5/M1): probe bu sınıfı ADIYLA bulup route KİMLİĞİYLE doğrular.
+            .addAnnotation(
+                AnnotationSpec.builder(GEZGIN_NAVIGATOR_FOR)
+                    .addMember("route = %T::class", ClassName.bestGuess(route.fqName))
+                    .build(),
+            )
             .primaryConstructor(
                 FunSpec.constructorBuilder()
                     .addModifiers(KModifier.INTERNAL)

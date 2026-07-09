@@ -53,13 +53,15 @@ object TopologyCodegen {
     private const val GENERATED_TOPOLOGY_FILE = "GezginGenerated"
     private const val GENERATED_SERIALIZERS_FILE = "GezginSerializers"
 
-    /** Shortest common package prefix across every graph/route fqName in [model]. Empty if [model] is empty. */
-    fun targetPackage(model: GraphModel): String {
-        val packages = (model.graphs.map { it.fqName } + model.routes.map { it.fqName })
+    /** Every distinct package a graph/route in [model] declares — the `[PKG]` (M2) equality check's input. */
+    fun declaredPackages(model: GraphModel): List<String> =
+        (model.graphs.map { it.fqName } + model.routes.map { it.fqName })
             .map { ClassName.bestGuess(it).packageName }
             .distinct()
-        return packages.reduceOrNull(::commonDotPrefix).orEmpty()
-    }
+
+    /** Shortest common package prefix across every graph/route fqName in [model]. Empty if [model] is empty. */
+    fun targetPackage(model: GraphModel): String =
+        declaredPackages(model).reduceOrNull(::commonDotPrefix).orEmpty()
 
     private fun commonDotPrefix(a: String, b: String): String =
         a.split(".").zip(b.split("."))
