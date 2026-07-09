@@ -41,9 +41,10 @@ sealed interface HomeGraph : Route {
      *
      * `dismissOnClickOutside = false`: yanlış bir dış-tık tam-ekran önizleyiciyi kapatmamalı;
      * `dismissOnBackPress` VARSAYILAN (`true`) kalır → geri tuşu/predictive-gesture kapatır. Modal'ın
-     * explicit "Kapat" düğmesi de `back()` ile pop'lar → açan `ItemDetailScreenRoute`'a döner (görsel
-     * doğrudan onun altındadır). Result taşımaz (düz `@GoTo` + `back()` — result deseni zaten
-     * `FilterBottomSheet`/dialog'lar/`AvatarFlow`'da kanıtlı).
+     * explicit "Kapat" düğmesi `backToItemDetail()` ile pop'lar → açan `ItemDetailScreenRoute`'a döner
+     * (görsel doğrudan onun altındadır; bu tipli çıkış, navigator'ı kazandıran `@BackTo` kenarının
+     * kendisidir — bkz. aşağıdaki `@BackTo` notu). Result taşımaz (düz `@GoTo` girişi — result deseni
+     * zaten `FilterBottomSheet`/dialog'lar/`AvatarFlow`'da kanıtlı).
      */
     @BackTo(ItemDetailScreenRoute::class)
     @Serializable

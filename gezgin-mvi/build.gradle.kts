@@ -40,6 +40,8 @@ android { namespace = "dev.gezgin.mvi"; compileSdk = 36; defaultConfig { minSdk 
 // İskelet — gerçek bir Maven repository/credentials YOK; `./gradlew publish` çalıştırılmaz, yalnız
 // `assemble`/`build`'in bu bloktan etkilenmediği doğrulanır. KMP publication'ları `maven-publish` ile
 // otomatik kurulur; yalnız POM metadata'sı tembel (`configureEach`) eklenir. Repository/signing YOK.
+// NOT (gerçek yayın günü için): `android { publishLibraryVariants("release") }` HENÜZ eklenmedi — bkz.
+// gezgin-core/build.gradle.kts'teki aynı not; V1 sonrası gerçek yayın kontrol listesine eklenmeli.
 publishing {
     publications.withType<MavenPublication>().configureEach {
         pom {

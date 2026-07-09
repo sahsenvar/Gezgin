@@ -76,6 +76,9 @@ android { namespace = "dev.gezgin.core"; compileSdk = 36; defaultConfig { minSdk
 // burada yalnız POM metadata'sı (group=dev.gezgin project'ten gelir) `configureEach` ile tembel eklenir.
 // Repository/signing bilinçle EKLENMEDİ → yalnız `publishToMavenLocal`/`generatePomFile*` görevleri mümkün,
 // gerçek uzak yayın yolu yok.
+// NOT (gerçek yayın günü için): `android { publishLibraryVariants("release") }` HENÜZ eklenmedi — güncel
+// Kotlin Gradle Plugin bunu vermeden Android varyantını publish etmez; bu iskelet bugün hiçbir şeyi
+// publish etmediği için zararsız, ama V1 sonrası gerçek yayın adımının kontrol listesine eklenmeli.
 publishing {
     publications.withType<MavenPublication>().configureEach {
         pom {
