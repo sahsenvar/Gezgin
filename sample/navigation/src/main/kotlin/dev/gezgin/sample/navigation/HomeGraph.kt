@@ -49,7 +49,7 @@ sealed interface HomeGraph : Route {
     @BackTo(ItemDetailScreenRoute::class)
     @Serializable
     data class ItemImageViewerRoute(val id: String) : HomeGraph, FullscreenModalContract {
-        override val dismissOnClickOutside = false
+        override val dismissOnClickOutside: Boolean get() = false
     }
 
     /**
@@ -63,7 +63,7 @@ sealed interface HomeGraph : Route {
     @Serializable
     data class FilterBottomSheetRoute(val current: String) :
         HomeGraph, ResultRoute<SortOrder>, BottomSheetContract {
-        override val skipPartiallyExpanded = true
+        override val skipPartiallyExpanded: Boolean get() = true
     }
 
     /**

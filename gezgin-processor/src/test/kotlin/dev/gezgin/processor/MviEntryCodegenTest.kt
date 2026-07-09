@@ -164,6 +164,10 @@ class MviEntryCodegenTest {
                 "imageLoader: @Composable () -> ImageLoader)",
         )
         assertContains(text, "register<SheetRoute>(kind = EntryKind.BOTTOM_SHEET, noBack = false) { route ->")
+        // The generated register injects `LocalGezginSheetState.current` (a material3 `SheetState`), so
+        // the generated file — not the user's content — must opt in to the ERROR-level experimental API;
+        // otherwise the consumer module fails to compile.
+        assertContains(text, "@OptIn(ExperimentalMaterial3Api::class)")
         // Role extra reads its Local; resolver extra is invoked — all content args NAMED (MN1).
         assertContains(
             text,

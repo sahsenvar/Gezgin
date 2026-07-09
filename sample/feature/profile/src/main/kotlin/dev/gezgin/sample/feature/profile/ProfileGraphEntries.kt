@@ -10,6 +10,8 @@ fun GezginEntryScope.profileGraphEntries() {
     // BuildInfo` resolver param'ı olarak eklenir → kurulumda AÇIKÇA sağlanmalı. Bu explicit çağrı-yeri
     // Problem 2'nin tüketici-tarafı kanıtıdır (mekanizma yalnız processor fixture'ında değil, sample'da).
     provideSettingsEntry(buildInfo = { BuildInfo(version = "1.0.0") })
+    // MVI-mode @BottomSheet (Integ M3) — generated into GezginMviEntries.kt (EntryKind.BOTTOM_SHEET).
+    provideNotificationsSheetEntry()
     provideEditNameDialogEntry()
     providePickSourceEntry()
     provideCropEntry()

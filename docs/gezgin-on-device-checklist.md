@@ -300,6 +300,18 @@ hemen sheet aç) eski scrim'den kalıntı/flicker olmamalı.
 **İlgili spec §:** `docs/gezgin-design.md` §7; `gezgin-core` `Contracts.kt` (`DialogContract`/
 `BottomSheetContract`).
 
+**Bilinen sınırlama (desktop — upstream Nav3 JB alpha05):** `gezginOnBack`'in `NavDisplay.onBack`
+guard'ı koşulsuz `navigator.back()` çağırır. Desktop'ta bir `@Dialog` — Nav3'ün KENDİ
+`DialogSceneStrategy`'si (Gezgin'in değil) — gesture/scrim ile kapatıldığında `onDismissRequest`
+bu global `onBack`'e düşer; nadir bir yarışta (dismiss + hızlı ikinci back) ikinci `back()` alttaki
+ekranı da pop'layabilir. Entry'ye-pinlenmiş bir düzeltme (R1'in `backWithResult(entryId, …)` deseninin
+karşılığı), dismiss'i o dialog entry'sine bağlamak için Nav3'ün built-in `DialogSceneStrategy`'sini
+Gezgin-özel bir stratejiyle DEĞİŞTİRMEYİ (upstream davranışı çoğaltmayı) gerektirir → kapsam dışı,
+bilinen-sınırlama olarak not edildi. Android'de Compose `Dialog` penceresi back'i kendi içinde
+tükettiğinden `onDismissRequest` tek sefer düşer (gözlem Android-öncelikli). Gezgin'in KENDİ sahiplendiği
+`GezginBottomSheetSceneStrategy` (sheet) aynı tek-kapı `back()`→`Canceled` yolunu kullanır ve commonTest'te
+(`GezginBottomSheetDismissTest`) pinlidir.
+
 **Durum:** [ ] Doğrulanmadı
 
 ---

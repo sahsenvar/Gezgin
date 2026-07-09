@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel as AndroidxViewModel
 import dev.gezgin.core.annotation.Screen
+import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.ObserveAsEvents
 import dev.gezgin.mvi.annotation.ScreenEffect
@@ -23,10 +24,8 @@ import dev.gezgin.mvi.annotation.ViewModel
 import dev.gezgin.sample.navigation.ProfileGraph.SettingsScreenRoute
 import dev.gezgin.sample.navigation.SettingsNavigator
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -92,15 +91,15 @@ class SettingsViewModel(private val nav: SettingsNavigator) :
     private val _uiState = MutableStateFlow(SettingsState())
     override val uiState: StateFlow<SettingsState> = _uiState.asStateFlow()
 
-    private val _effects = MutableSharedFlow<SettingsEffect>(extraBufferCapacity = 1)
-    override val effects: Flow<SettingsEffect> = _effects.asSharedFlow()
+    private val _effects = GezginEffects<SettingsEffect>()
+    override val effects: Flow<SettingsEffect> = _effects.flow
 
     override fun onIntent(intent: SettingsIntent) {
         when (intent) {
             SettingsIntent.ToggleTheme -> {
                 _uiState.update { it.copy(darkTheme = !it.darkTheme) }
-                // Tek-seferlik efekt: state değişimiyle birlikte bir kez emit (rotation'da tekrar oynamaz).
-                _effects.tryEmit(SettingsEffect.ShowMessage("Tema tercihi kaydedildi"))
+                // Loss-free tek-seferlik efekt: gözlemci örtülü/STOPPED olsa da kuyruğa alınır (GezginEffects).
+                _effects.send(SettingsEffect.ShowMessage("Tema tercihi kaydedildi"))
             }
             // §10 A deseni ("VM-driven, önerilen"): nav VM'e enjekte, üretilen nav metodu doğrudan çağrılır.
             // `logout()` = `replaceTo(LoginScreenRoute, clearUpTo = DashboardScreenRoute, inclusive = true)`.

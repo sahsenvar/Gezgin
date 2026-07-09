@@ -8,7 +8,7 @@
 
 - **String route yok.** Navigasyon grafiği = `sealed interface` ağacı; gidilecek yer = tip.
 - **Tanımlamadığın yere gidiş _derlenmez_.** Her ekran için tipli bir navigator üretilir; sadece deklare ettiğin kenarların metodu olur.
-- **Boilerplate codegen'de.** Graph wiring, deep-link tablosu, result kanalı, entry kaydı — hepsi KSP üretir.
+- **Boilerplate codegen'de.** Graph wiring, result kanalı, entry kaydı — hepsi KSP üretir (deep-link tablosu → 🔮 V2).
 - **State-as-data çekirdek.** Back stack = gözlemlenebilir + serializable veri → test (UI'sız), log, process-death restore, MVI _bedavaya_ gelir.
 - **DI-agnostik.** Koin/Hilt/manuel — kütüphane seni bir DI'a mahkûm etmez.
 
@@ -255,14 +255,14 @@ navigator.handleDeepLink("shopr://product/42")
 // kullanıcı geri tuşuna basınca Feed'e düşer, app'ten atılmaz.
 ```
 
-`{id}` yer tutucusu **derlemede** route property'leriyle eşleştirilir:
+V2'de `{id}` yer tutucusu **derlemede** route property'leriyle eşleştirilecek:
 
 ```kotlin
 @DeepLink("shopr://product/{productId}")       // ❌ DERLENMEZ — route'ta productId yok (sadece id var)
 data class ProductRoute(val id: String) : HomeGraph
 ```
 
-**Neden önemli:** Tipik kütüphanelerde deep-link bir string-eşleştirme; yanlış param adını **kullanıcı tıklayınca** öğrenirsin. Gezgin'de typo/eksik/decode-edilemez param = **build hatası**. Üstelik hedefin atalarını (graph zinciri) doğru kurar.
+**Neden önemli (🔮 V2 hedefi):** Tipik kütüphanelerde deep-link bir string-eşleştirme; yanlış param adını **kullanıcı tıklayınca** öğrenirsin. Gezgin'in V2 yönünde typo/eksik/decode-edilemez param = **build hatası** olacak; üstelik hedefin atalarını (graph zinciri) doğru kuracak.
 
 ---
 

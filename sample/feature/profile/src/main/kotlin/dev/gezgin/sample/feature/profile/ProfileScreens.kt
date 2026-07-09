@@ -26,6 +26,7 @@ import dev.gezgin.core.annotation.Dialog
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.sample.navigation.AvatarChoice
 import dev.gezgin.sample.navigation.CropNavigator
+import dev.gezgin.sample.navigation.NotificationLevel
 import dev.gezgin.sample.navigation.EditNameDialogNavigator
 import dev.gezgin.sample.navigation.PickSourceNavigator
 import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.CropScreenRoute
@@ -44,6 +45,7 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(route: ProfileScreenRoute, nav: ProfileNavigator) {
     var name by remember { mutableStateOf("Gezgin Kullanıcı") }
     var avatarUri by remember { mutableStateOf<String?>(null) }
+    var notifications by remember { mutableStateOf(NotificationLevel.ALL) }
     val scope = rememberCoroutineScope()
 
     // Launch+collect deseni (§6, VM'siz): `launchPickAvatar()` tetikler, `pickAvatarResults` Flow'u
@@ -59,6 +61,7 @@ fun ProfileScreen(route: ProfileScreenRoute, nav: ProfileNavigator) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Profil: $name")
             Text("Avatar: ${avatarUri ?: "(seçilmedi)"}")
+            Text("Bildirimler: $notifications")
             Button(
                 onClick = {
                     // suspend @GoForResult tüketimi — Dashboard'daki `pickSort` ile aynı desen, farklı
@@ -71,6 +74,14 @@ fun ProfileScreen(route: ProfileScreenRoute, nav: ProfileNavigator) {
             ) { Text("Adı düzenle") }
             Button(onClick = { nav.goToSettings() }) { Text("Ayarlar") }
             Button(onClick = { nav.launchPickAvatar() }) { Text("Avatar seç") }
+            Button(
+                onClick = {
+                    scope.launch {
+                        val result = nav.goToPickNotificationsForResult(notifications)
+                        if (result is NavResult.Value) notifications = result.value
+                    }
+                },
+            ) { Text("Bildirimler") }
         }
     }
 }
