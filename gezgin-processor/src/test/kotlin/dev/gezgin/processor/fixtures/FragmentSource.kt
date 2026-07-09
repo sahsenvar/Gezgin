@@ -60,17 +60,23 @@ val FRAGMENT_SOURCE = """
  * Stand-ins for the `XNavigator` classes [dev.gezgin.processor.codegen.NavigatorCodegen] would generate in
  * the ROUTES' OWN module. In a real multi-module build that module compiles first, so its navigators are
  * already-compiled classes on the Fragment module's classpath; the cross-module nav-wiring PROBE
- * (`GezginProcessor`, `resolver.getClassDeclarationByName("<routePkg>.<X>Navigator")`) then resolves them and
- * emits nav wiring. The single-compilation kctfork harness has no separate module, so these hand-written
- * source classes model that "already compiled elsewhere" navigator — a bare `class` is enough, the probe only
- * checks the FQN RESOLVES. Paired with [FRAGMENT_ROUTES]/[FRAGMENT_SOURCE] (routes `OrderChain`/`Archived`)
- * this exercises the cross-module WITH-navigator branch deterministically (replacing the old `?: true`
- * optimism, which nav-wired blindly whether or not a navigator existed).
+ * ([dev.gezgin.processor.codegen.NavigatorProbe]) then resolves them BY NAME and verifies IDENTITY via the
+ * `@GezginNavigatorFor` marker before emitting nav wiring. The single-compilation kctfork harness has no
+ * separate module, so these hand-written source classes model that "already compiled elsewhere" navigator —
+ * they MUST carry the same `@GezginNavigatorFor(route)` stamp NavigatorCodegen emits, else the identity check
+ * (FS5/M1) rejects them as name-only decoys. Paired with [FRAGMENT_ROUTES]/[FRAGMENT_SOURCE] (routes
+ * `OrderChain`/`Archived`) this exercises the cross-module WITH-navigator branch deterministically (replacing
+ * the old `?: true` optimism, which nav-wired blindly whether or not a navigator existed).
  */
 val FRAGMENT_ROUTE_NAVIGATOR_STUBS = """
     package dev.gezgin.fragroutes
 
+    import dev.gezgin.core.annotation.GezginNavigatorFor
+
+    @GezginNavigatorFor(OrderChainRoute::class)
     class OrderChainNavigator
+
+    @GezginNavigatorFor(ArchivedRoute::class)
     class ArchivedNavigator
 """.trimIndent()
 

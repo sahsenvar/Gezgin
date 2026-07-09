@@ -1006,5 +1006,75 @@ class ValidationTest {
         assertContains(result.messages, "[PKG]", message = result.messages)
     }
 
+    @Test
+    fun `PKG - graphs in different sub-packages of a common prefix are rejected (M2)`() {
+        // Nav module with graphs under com.app.nav.home + com.app.nav.auth → common prefix com.app.nav
+        // (NON-empty). The OLD [PKG] rejected only an EMPTY prefix, so this was ACCEPTED and navigators
+        // were emitted into com.app.nav while the routes live in the sub-packages — a cross-module
+        // fragment/core/MVI probe, which looks in the route's OWN package, then silently MISSED (M2 false
+        // negative). The tightened [PKG] requires every graph/route package == targetPackage.
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "Home.kt",
+                """
+                package com.app.nav.home
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                interface HomeGraph : Route {
+                    data object H : HomeGraph
+                }
+                """.trimIndent(),
+            ),
+            SourceFile.kotlin(
+                "Auth.kt",
+                """
+                package com.app.nav.auth
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                interface AuthGraph : Route {
+                    data object A : AuthGraph
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        assertContains(result.messages, "[PKG]", message = result.messages)
+    }
+
+    @Test
+    fun `PKG allow - all graphs and routes in ONE package is accepted (regression, mirrors the sample)`() {
+        // The canonical §3.3 nav module (like the sample's single `dev.gezgin.sample.navigation`): every
+        // graph/route in one package → targetPackage == every package → the tightened [PKG] must NOT fire.
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "Nav.kt",
+                """
+                package com.app.nav
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                interface HomeGraph : Route {
+                    data object H : HomeGraph
+                }
+
+                @NavGraph
+                interface AuthGraph : Route {
+                    data object A : AuthGraph
+                }
+                """.trimIndent(),
+            ),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    }
+
     // endregion
 }
