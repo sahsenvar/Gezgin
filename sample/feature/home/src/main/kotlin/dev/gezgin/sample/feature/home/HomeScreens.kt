@@ -61,6 +61,9 @@ fun DashboardScreen(route: DashboardScreenRoute, nav: DashboardNavigator) {
                 TextButton(onClick = { nav.goToItemDetail(id) }) { Text(id) }
             }
             Button(onClick = { nav.goToProfile() }) { Text("Profil") }
+            // Faz 6.4 — legacy View-tabanlı @FragmentScreen yaprağına giriş (@GoTo(HelpScreenRoute) →
+            // üretilen goToHelp(topic)). Fragment gezginArgs ile `topic`'i TextView'ında gösterir.
+            Button(onClick = { nav.goToHelp(topic = "navigasyon") }) { Text("Yardım (legacy Fragment)") }
             Button(
                 onClick = {
                     // suspend @GoForResult(named) tüketimi — result doğrudan liste state'ine akar.

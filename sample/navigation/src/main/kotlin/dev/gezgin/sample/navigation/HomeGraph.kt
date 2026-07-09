@@ -21,6 +21,7 @@ sealed interface HomeGraph : Route {
     /** APP START (arg-less / G1). Cross-feature @GoTo to ProfileGraph (B1). Named flow-less result. */
     @GoTo(ItemDetailScreenRoute::class)
     @GoTo(ProfileGraph.ProfileScreenRoute::class)
+    @GoTo(HelpScreenRoute::class)                                        // Faz 6.4 — legacy Fragment yaprağına giriş kenarı
     @GoForResult(FilterBottomSheetRoute::class, name = "pickSort")       // named screen-mode (SortOrder)
     @Serializable
     data object DashboardScreenRoute : HomeGraph
@@ -53,4 +54,21 @@ sealed interface HomeGraph : Route {
     @ReplaceTo(DashboardScreenRoute::class, name = "continueToDashboard")
     @Serializable
     data class WelcomeScreenRoute(val name: String? = null) : HomeGraph
+
+    /**
+     * Faz 6.4 — brownfield Fragment interop örneği (§11.1). Bu route "henüz Compose'a TAŞINMAMIŞ"
+     * legacy bir yardım ekranını temsil eder: karşılığı bir `@Screen` composable DEĞİL, `:feature:home`'daki
+     * View-tabanlı `@FragmentScreen HelpFragment` (XML layout inflate eden gerçek bir `Fragment`). Route'un
+     * DECLARATION'ı burada (`:sample:navigation`), Fragment'ı ayrı bir modülde → codegen route paketini
+     * Fragment'ın kendi paketinden DEĞİL, route declaration'ından okur (cross-module).
+     *
+     * `@BackTo(DashboardScreenRoute)` bir gerçek navigasyon kenarıdır → route bir `HelpNavigator` KAZANIR
+     * (`gezginNav<HelpNavigator>()` bunun canlı örneğini registry'den okur; `nav.backToDashboard()` + `back()`).
+     * Böylece `gezginNav`'ın navigator'LI yolu canlı host altında GERÇEKTEN çalıştırılır (edge'siz-yaprak/FS5
+     * yolu DEĞİL — o Task 6.2 codegen testlerinde kapsanır). `topic` ctor param'ı `gezginArgs<HelpScreenRoute>()`
+     * ile Fragment'ın `TextView`'ına yansır (route Bundle'dan → PD-safe).
+     */
+    @BackTo(DashboardScreenRoute::class)
+    @Serializable
+    data class HelpScreenRoute(val topic: String) : HomeGraph
 }

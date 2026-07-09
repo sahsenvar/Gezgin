@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Faz 6.4 — gerçek View-tabanlı legacy yardım ekranı (Compose DEĞİL). Brownfield'ın gerçek senaryosu:
+  onCreateView bu XML'i inflate eder, onViewCreated findViewById ile bağlar. `@FragmentScreen HelpFragment`
+  `gezginArgs`'tan gelen route verisini `help_topic` TextView'ına yazar, `help_back` Button'ı
+  `gezginNav`'ın canlı navigator'ıyla geri gider.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/help_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Yardım (legacy Fragment)"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/help_topic"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/help_note"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Bu ekran henüz Compose'a taşınmadı — Gezgin'e @FragmentScreen ile leaf olarak bağlı bir androidx.fragment.app.Fragment." />
+
+    <Button
+        android:id="@+id/help_back"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Panoya dön" />
+
+</LinearLayout>

@@ -37,6 +37,14 @@ kotlin {
             api(libs.jb.navigation3.ui)
             api(libs.jb.lifecycle.viewmodel.navigation3)
         }
+        // Faz 6 (Fragment interop, §11) — androidMain-only runtime (`dev.gezgin.core.fragment`):
+        // gezginArgs/gezginNav delege'leri + bind-registry + route.toBundle. `androidx.fragment.app.Fragment`
+        // ve `android.os.Bundle` tiplerini kullanır (fragment-compose transitively `fragment`'ı getirir).
+        // `implementation` (Task 6.0 kararı): kullanıcıya SIZMAZ — `AndroidFragment` çağrısı yalnız KULLANICI
+        // modülünde üretilen `provideXEntry` içinde geçer, kullanıcı kendi fragment-compose sürümünü ekler.
+        androidMain.dependencies {
+            implementation(libs.androidx.fragment.compose)
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)

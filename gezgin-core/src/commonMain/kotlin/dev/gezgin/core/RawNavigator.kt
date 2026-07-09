@@ -19,13 +19,16 @@ import kotlinx.serialization.json.Json
  * slot'ları [SavedState]'ten geri yüklenir, `start` PUSH EDİLMEZ (§1.10). Yani `restored != null`
  * iken ctor'a verilen [start] parametresi YOK SAYILIR (yalnız restore'suz ilk açılışta kullanılır).
  * [json] — restore'da slot payload decode'u için (SerializersModule gerektiren result tipleri —
- * açık polimorfizm/@Contextual — encode'daki modülle SİMETRİK decode edilsin diye).
+ * açık polimorfizm/@Contextual — encode'daki modülle SİMETRİK decode edilsin diye). Faz 6 (§11):
+ * `internal` yapıldı (eskiden `private`) — Fragment interop'un `androidMain` `route.toBundle(nav)`
+ * yardımcısı bu AYNI app-Json'ı (polimorfik Route modülüyle) `arguments` Bundle encode'unda yeniden
+ * kullanır (ikinci Json ÜRETMEZ → backstack PD'siyle simetri). Yalnız modül-içi görünür, public'e sızmaz.
  */
 class RawNavigator(
     start: Route,
     private val topology: GezginTopology,
     internal val onRootBack: () -> Unit = {},
-    private val json: Json = Json,
+    internal val json: Json = Json,
     restored: SavedState? = null,
 ) {
     private val state =

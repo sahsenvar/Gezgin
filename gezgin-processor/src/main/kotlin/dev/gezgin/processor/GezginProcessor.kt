@@ -1,5 +1,6 @@
 package dev.gezgin.processor
 
+import com.google.devtools.ksp.getClassDeclarationByName
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
@@ -7,12 +8,17 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.squareup.kotlinpoet.ksp.writeTo
 import dev.gezgin.processor.codegen.EntryCodegen
+import dev.gezgin.processor.codegen.FragmentEntryCodegen
 import dev.gezgin.processor.codegen.MviEntryCodegen
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.TestApiCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.entry.EntryModelReader
+import dev.gezgin.processor.fragment.FragmentModelReader
+import dev.gezgin.processor.fragment.dumpFragmentText
+import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.ModelReader
+import dev.gezgin.processor.model.RouteModel
 import dev.gezgin.processor.model.dumpText
 import dev.gezgin.processor.mvi.ViewModelModelReader
 import dev.gezgin.processor.mvi.dumpMviText
@@ -111,6 +117,14 @@ class GezginProcessor(
                 val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
                 val (entries, entriesOk) = EntryModelReader(resolver, environment.logger, model, vmModels).read()
 
+                // Task 6.1 — brownfield Fragment interop (§11). Reads @FragmentScreen classes into
+                // FragmentEntryModels (FS1 no-arg-ctor / FS2 route-sanity guardrails), cross-checking each
+                // route against the already-built `entries` (core + MVI) so a route can't be registered by
+                // BOTH a @FragmentScreen and a @Screen/MVI content (FS3). EntryModelReader is untouched —
+                // this is a post-hoc cross-check, not a shared-map change (see FragmentModelReader KDoc).
+                // Codegen (the AndroidFragment `provideXEntry`) is Task 6.2; 6.1 only reads/validates/dumps.
+                val (fragmentModels, fragOk) = FragmentModelReader(resolver, environment.logger, entries).read()
+
                 if (environment.options["gezgin.dumpMvi"].toBoolean()) {
                     environment.codeGenerator.createNewFile(
                         dependencies = Dependencies.ALL_FILES,
@@ -118,6 +132,15 @@ class GezginProcessor(
                         fileName = "GezginMviDump",
                         extensionName = "txt",
                     ).use { it.write(dumpMviText(vmModels, entries).toByteArray()) }
+                }
+
+                if (environment.options["gezgin.dumpFragment"].toBoolean()) {
+                    environment.codeGenerator.createNewFile(
+                        dependencies = Dependencies.ALL_FILES,
+                        packageName = "",
+                        fileName = "GezginFragmentDump",
+                        extensionName = "txt",
+                    ).use { it.write(dumpFragmentText(fragmentModels).toByteArray()) }
                 }
 
                 // `provideXEntry` codegen — opt-OUT (default true, mirrors `gezgin.emitSerializers`).
@@ -131,8 +154,11 @@ class GezginProcessor(
                 // `GezginMviEntries.kt` (VM resolver / DI-detection / @ScreenEffect wiring / Problem-2
                 // resolver params) — same package, distinct file, no collision (SC6 keeps provideXEntry
                 // names unique across both modes).
+                // `fragOk` joins the gate so an FS-guardrail violation (e.g. an FS3 route collision
+                // between a @FragmentScreen and a @Screen) fails the build cleanly instead of emitting the
+                // surviving registration. Fragment-less modules always have `fragOk = true` → zero change.
                 val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
-                if (emitEntries && vmOk && entriesOk) {
+                if (emitEntries && vmOk && entriesOk && fragOk) {
                     val coreEntries = entries.filter { it.mvi == null }
                     if (coreEntries.isNotEmpty()) {
                         EntryCodegen.generate(coreEntries)
@@ -142,6 +168,44 @@ class GezginProcessor(
                     if (mviEntries.isNotEmpty()) {
                         MviEntryCodegen.generate(mviEntries)
                             .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
+                    }
+                    // Task 6.2 — Fragment interop `provideXEntry` (§11.1): each @FragmentScreen becomes an
+                    // `AndroidFragment<XFragment>`-hosting entry, grouped by Fragment package into a THIRD
+                    // dedicated file `GezginFragmentEntries.kt` (screen-only, §11.2). Same emitEntries gate
+                    // (kctfork has no compose-compiler plugin → the emitted body ICEs the backend, exactly
+                    // like EntryCodegen; the opt-out lets those tests assert the golden text without OK exit).
+                    if (fragmentModels.isNotEmpty()) {
+                        // Fragment nav-wiring GUARD (SC2/MV7 parity, one phase later, FS5). Whether a
+                        // @FragmentScreen route earns a NavigatorCodegen `xNavigator` factory is a
+                        // GRAPH-derived fact — computed HERE (where `model` is in scope), NOT in the
+                        // graph-unaware FragmentModelReader. Two branches by where the route lives:
+                        //  - SAME-module route (in THIS model): decide from the in-memory GraphModel via
+                        //    NavigatorCodegen.hasNavigator, exactly like SC2/MV7. Its navigator, if earned, is
+                        //    generated in THIS SAME KSP round → NOT yet resolvable on the classpath, so the
+                        //    model check is the ONLY reliable source here (a classpath probe can't replace it).
+                        //  - CROSS-module route (routeModel == null, compiled in another module): its navigator,
+                        //    IF the route earns one, is an ALREADY-COMPILED `XNavigator` class visible on the
+                        //    classpath NOW → PROBE it deterministically (getClassDeclarationByName) instead of the
+                        //    old `?: true` blind optimism. A bare @FragmentScreen has NO per-entry nav signal (unlike
+                        //    core/MVI, which only reach this check when the function signature requests `nav`), so
+                        //    `?: true` nav-wired EVERY cross-module Fragment — including a genuinely display-only
+                        //    leaf whose cross-module route has ZERO edges (no navigator). That emitted a
+                        //    `raw.xNavigator()` call to a nonexistent factory: an unresolved reference, the EXACT
+                        //    bug FS5 exists to kill, just relocated to the cross-module case. The probe fixes it:
+                        //    class resolves → wire nav; doesn't → the FS5 no-nav path (2-arg bindGezgin; gezginNav
+                        //    throws the actionable [FS5] runtime error). The leaf is NOT rejected at KSP time.
+                        val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)
+                        val routesByFq = model.routes.associateBy(RouteModel::fqName)
+                        FragmentEntryCodegen.generate(fragmentModels) { entry ->
+                            val routeModel = routesByFq[entry.routeFq]
+                            if (routeModel != null) {
+                                NavigatorCodegen.hasNavigator(routeModel, graphsByFq)
+                            } else {
+                                resolver.getClassDeclarationByName(
+                                    "${entry.routePackageName}.${entry.x}Navigator",
+                                ) != null
+                            }
+                        }.forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
                     }
                 }
             }

@@ -293,9 +293,9 @@ class OrderChainFragment : Fragment() {
     // onViewCreated: nav.goToOrderDetail(...) ; nav.back()
 }
 ```
-- Parametreli Fragment ctor **yasak** (framework no-arg ctor + Bundle ile yeniden yaratır → parametreli ctor çöker/arg'ı sessizce kaybeder). Tipli arg `gezginArgs<Route>()` accessor'ından (registry-based; `onCreateDialog`'da bile erişilebilir).
+- Parametreli Fragment ctor **yasak** (framework no-arg ctor + Bundle ile yeniden yaratır → parametreli ctor çöker/arg'ı sessizce kaybeder). Tipli arg `gezginArgs<Route>()` accessor'ından: route Fragment'ın kendi `arguments: Bundle`'ından decode edilir (**registry değil — Bundle-backed**, PD-safe), `onUpdate` zamanlamasından bağımsız; `onCreateView`/`onViewCreated`'dan itibaren güvenle okunur (`onAttach`/`onCreate` yalnız ilk-yaratım instance'ında güvenli, taze-process FragmentManager-restore branch'inde değil).
 - Codegen: `androidx.fragment.compose.AndroidFragment` + `arguments = route.toBundle()` (PD-safe) + `onUpdate { bindGezgin(route, nav) }` (canlı ref re-attach).
-- **Lifecycle sözleşmesi:** `gezginArgs`/`gezginNav` bind sonrası geçerli (bind = `AndroidFragment.onUpdate`); bind öncesi erişim açıklayıcı hata fırlatır. Legacy fragment'ın kendi `OnBackPressedDispatcher` callback'i NavDisplay'i LIFO'da geçer → migration'da kaldırılmalı (dokümante edilir).
+- **Lifecycle sözleşmesi (iki delege = iki farklı kaynak = iki farklı geçerlilik penceresi):** `gezginArgs` **Bundle-backed**'dir (yukarı bkz.) → `onCreateView`/`onViewCreated`'dan itibaren PD-safe, `onUpdate`'e bağlı DEĞİL. `gezginNav` ise **canlı-instance registry**'sinden okur; bu registry'yi `AndroidFragment.onUpdate` doldurur (canlı navigator serileştirilemez, Bundle'a giremez) → `gezginNav` bind (= ilk `onUpdate`) tamamlanana dek geçersizdir, bind öncesi erişim açıklayıcı hata fırlatır (pratikte `nav` yalnız kullanıcı etkileşiminde okunur → bind kesin bitmiştir). Legacy fragment'ın kendi `OnBackPressedDispatcher` callback'i NavDisplay'i LIFO'da geçer → migration'da kaldırılmalı (dokümante edilir).
 - **Migration swap:** `@FragmentScreen class XFragment {…}` → `@Screen @Composable fun XScreen(route, nav) {…}`. Graph/edge/navigator/deeplink sabit.
 
 ### 11.2 Dialog / BottomSheet — fragment interop YOK (bilinçli kesim, M5)
