@@ -175,6 +175,108 @@ class FragmentModelReaderTest {
         )
     }
 
+    @Test
+    fun `FS3 — a @FragmentScreen and an MVI-mode @Screen(state,onIntent) on the same route are rejected`() {
+        // Coverage nicety (task-6.1 review Minor): FS3 vs the OTHER cross-kind — an MVI-mode content
+        // @Screen (paired with a @ViewModel by route) registers R, and a @FragmentScreen(R) would be a
+        // second register<R>. Structurally identical to the core-@Screen case; the built `entries` list
+        // FragmentModelReader cross-checks already carries MVI-mode content (EntryModelReader shares one
+        // seenRouteFqs across core + MVI), so FS3 fires here too.
+        assertViolates(
+            "FS3",
+            """
+            package dev.gezgin.fs3mvi
+
+            import androidx.compose.runtime.Composable
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(R::class)
+            class Vm(route: R) : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(route.x))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
+            }
+
+            @FragmentScreen(R::class)
+            class FooFragment : Fragment()
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `FS4 — two @FragmentScreen classes in one package resolving to the same X (provideXEntry clash)`() {
+        // `Detail` and `DetailRoute` are DIFFERENT routes (no FS3), but the X derivation strips the "Route"
+        // suffix — both resolve to X="Detail" i.e. the SAME `provideDetailEntry()` name in the SAME package.
+        // Without FS4, FragmentEntryCodegen would emit two identical-signature functions → conflicting
+        // overloads. Mirrors core-mode's SC6 (same-kind, Fragment vs Fragment).
+        assertViolates(
+            "FS4",
+            """
+            package dev.gezgin.fs4dup
+
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+
+            class Detail : Route
+            class DetailRoute : Route
+
+            @FragmentScreen(Detail::class)
+            class DetailFragment : Fragment()
+
+            @FragmentScreen(DetailRoute::class)
+            class DetailRouteFragment : Fragment()
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `FS4 — a @FragmentScreen and a core-mode @Screen resolving to the same X in one package (cross-kind)`() {
+        // The load-bearing cross-kind case: a core @Screen (provideDetailEntry via GezginEntries.kt) and a
+        // @FragmentScreen whose route also derives X="Detail" (provideDetailEntry via GezginFragmentEntries.kt)
+        // sit in the SAME package — Kotlin package-level fn names collide across files, so this is a real
+        // clash. Different routes (Detail vs DetailRoute) → no FS3/SC4; caught solely by FS4's (pkg, x) key.
+        assertViolates(
+            "FS4",
+            """
+            package dev.gezgin.fs4cross
+
+            import androidx.compose.runtime.Composable
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+            import dev.gezgin.core.annotation.Screen
+
+            class Detail : Route
+            class DetailRoute : Route
+
+            @Screen
+            @Composable
+            fun DetailScreen(route: Detail) {
+            }
+
+            @FragmentScreen(DetailRoute::class)
+            class DetailRouteFragment : Fragment()
+            """.trimIndent(),
+        )
+    }
+
     // endregion
 
     // region Regression — coexistence with core-mode / MVI-mode

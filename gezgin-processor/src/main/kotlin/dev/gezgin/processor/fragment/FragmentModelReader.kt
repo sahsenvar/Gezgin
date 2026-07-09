@@ -44,8 +44,16 @@ private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
  *   already share `EntryModelReader`'s single `seenRouteFqs`) AND (b) previously-seen `@FragmentScreen`s.
  *   Mirrors `SC4`/`MV4` semantics: a route claimed by two registrations would compile two
  *   `register<Route>` calls and crash at runtime. → no model emitted for the colliding Fragment.
+ * - **`FS4` — provide-name clash (cross-kind aware, mirrors `SC6`).** Two entries in the SAME package that
+ *   derive the SAME `x` produce two identical-signature `provideXEntry()` declarations — and Kotlin
+ *   package-level function names collide across FILES too, so this catches a Fragment entry clashing with
+ *   another Fragment entry (same-kind, e.g. `Detail`/`DetailRoute` routes → both `provideDetailEntry`) AND a
+ *   Fragment entry clashing with an existing core-mode / MVI-mode `provideXEntry` name (cross-kind, since
+ *   `GezginFragmentEntries.kt` sits beside `GezginEntries.kt` / `GezginMviEntries.kt` in one package). Same
+ *   `(packageName, x)` uniqueness key `EntryModelReader`'s `SC6` uses, cross-checked against the same
+ *   materialized [entries] plus previously-seen Fragments. → no model emitted for the colliding Fragment.
  *
- * **FS3 wiring choice (post-hoc cross-check, not shared-map seeding):** rather than seeding
+ * **FS3/FS4 wiring choice (post-hoc cross-check, not shared-map seeding):** rather than seeding
  * `EntryModelReader`'s private `seenRouteFqs` (which would require changing its constructor and would
  * report the cross-kind collision under `SC4`), this reader runs AFTER the entry reader and cross-checks
  * the already-built [entries] list — the materialized output of that shared map. This keeps
@@ -66,6 +74,13 @@ class FragmentModelReader(
     // caught (FS3 cross-kind) exactly like two Fragments colliding (FS3 same-kind).
     private val ownerByRouteFq: MutableMap<String, String> =
         entries.associate { it.routeFq to it.functionSimpleName }.toMutableMap()
+
+    // (packageName, x) -> the entry that already emits `provideXEntry()` there (a core/MVI fn name, or an
+    // earlier Fragment's simple name). Seeded from the built entries — same `SC6` key ([EntryFunctionModel]
+    // carries both `packageName` and `x`) — so a Fragment `provideXEntry` clashing with a core/MVI one is
+    // caught (FS4 cross-kind) exactly like two Fragments clashing (FS4 same-kind).
+    private val ownerByProvideName: MutableMap<Pair<String, String>, String> =
+        entries.associate { (it.packageName to it.x) to it.functionSimpleName }.toMutableMap()
 
     fun read(): Pair<List<FragmentEntryModel>, Boolean> {
         val models = resolver.getSymbolsWithAnnotation(FRAGMENT_SCREEN_FQ)
@@ -125,18 +140,40 @@ class FragmentModelReader(
             )
             return null
         }
+
+        val packageName = decl.packageName.asString()
+        val x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString())
+
+        // FS4 — provide-name clash (cross-kind: vs core/MVI provideXEntry; same-kind: vs earlier
+        // @FragmentScreen). Same (packageName, x) as an existing entry → two provideXEntry() with the same
+        // name in one package (Kotlin fn names collide across files too) → "conflicting overloads". Mirrors
+        // SC6 exactly. Checked AFTER FS3 so a same-route pair reports the more specific FS3 first.
+        val provideKey = packageName to x
+        val previousProvideOwner = ownerByProvideName[provideKey]
+        if (previousProvideOwner != null) {
+            error(
+                "FS4",
+                "$packageName paketinde provide${x}Entry() birden çok destination tarafından üretiliyor: " +
+                    "$previousProvideOwner, $fragmentSimpleName — route adlarının aynı 'X' türetimine (${x}) " +
+                    "çözülmesi (SC6 ile aynı kural; @FragmentScreen entry'si core/MVI provideXEntry'siyle de " +
+                    "çakışabilir — aynı pakette GezginFragmentEntries.kt, GezginEntries.kt yan yana)",
+            )
+            return null
+        }
+
         ownerByRouteFq[routeFq] = fragmentSimpleName
+        ownerByProvideName[provideKey] = fragmentSimpleName
 
         return FragmentEntryModel(
             fragmentFq = fragmentFq,
             fragmentSimpleName = fragmentSimpleName,
-            packageName = decl.packageName.asString(),
+            packageName = packageName,
             routeFq = routeFq,
             // Read off the route DECLARATION (KSP-resolvable cross-module), not this module's model —
             // same reasoning as EntryFunctionModel.routePackageName / .noBack.
             routePackageName = routeDecl.packageName.asString(),
             noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
-            x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString()),
+            x = x,
         )
     }
 
