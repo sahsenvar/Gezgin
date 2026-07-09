@@ -467,6 +467,12 @@ class EntryModelReader(
                     )
                     extrasInvalid = true
                 }
+            } else if (p.hasDefault) {
+                // MN4 (Faz-5 recheck) — a resolver extra WITH a Kotlin default need NOT be Gezgin-supplied:
+                // the generated content call passes NAMED args (MN1), so an omitted defaulted param falls
+                // back to the composable's own default. Don't force a mandatory `@Composable () -> T`
+                // resolver for it (§10.1 "minimal ceremony") — drop it from both lists.
+                Unit
             } else {
                 resolverExtras += extra
             }
@@ -532,6 +538,7 @@ class EntryModelReader(
                 vm = vm,
                 effectFunSimpleName = effect?.simpleName,
                 effectFunPackageName = effect?.packageName,
+                effectFlowParamName = effect?.flowParamName,
                 effectHasNavParam = effect?.hasNavParam ?: false,
                 roleExtraParams = roleExtras,
                 resolverExtraParams = resolverExtras,
@@ -545,6 +552,8 @@ class EntryModelReader(
         val packageName: String,
         /** `E`'s KotlinPoet TypeName (generics-preserving) — the join key against `vm.effectTypeName`. */
         val effectTypeName: TypeName?,
+        /** The `Flow<E>` param's NAME — 5.2 emits the effect call named (MN1). Null if the binder has none. */
+        val flowParamName: String?,
         val hasNavParam: Boolean,
     )
 
@@ -567,6 +576,7 @@ class EntryModelReader(
                 val effectArgType = flowParam?.type?.resolve()?.arguments?.firstOrNull()?.type?.resolve()
                 val effectTypeFq = effectArgType?.fqOf()
                 val effectTypeName = effectArgType?.toTypeName()
+                val flowParamName = flowParam?.name?.asString()
                 val hasNavParam = fn.parameters.any { it.name?.asString() == "nav" }
 
                 when {
@@ -582,7 +592,7 @@ class EntryModelReader(
                     )
                 }
 
-                EffectFun(simpleName, fn.packageName.asString(), effectTypeName, hasNavParam)
+                EffectFun(simpleName, fn.packageName.asString(), effectTypeName, flowParamName, hasNavParam)
             }
             .toList()
 

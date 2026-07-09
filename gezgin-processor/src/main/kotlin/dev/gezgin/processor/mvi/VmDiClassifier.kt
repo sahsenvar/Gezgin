@@ -61,18 +61,22 @@ object VmDiClassifier {
     /** The aggregate [VmDiClassification] both `EntryModelReader` (MV7) and `MviEntryCodegen` consume. */
     fun classify(vm: ViewModelModel, routeFq: String, navigatorTypeFq: String): VmDiClassification {
         val relevant = relevantParams(vm)
-        val roles = relevant.map { roleOf(it, routeFq, navigatorTypeFq) }
-        val routeCount = roles.count { it == Role.ROUTE }
-        val navCount = roles.count { it == Role.NAV }
-        val otherCount = roles.count { it == Role.OTHER }
+        val roles = relevant.map { it to roleOf(it, routeFq, navigatorTypeFq) }
+        val routeCount = roles.count { it.second == Role.ROUTE }
+        val navCount = roles.count { it.second == Role.NAV }
+        // MN4 (Faz-5 recheck) — an OTHER param WITH a Kotlin default is NOT Gezgin-supplied and NOT blocking:
+        // the default ctor call (androidx, named args) simply omits it → the VM's own default applies. Only
+        // a NON-defaulted OTHER (`@Assisted userId: String`) blocks the default (Problem 1). This keeps
+        // `class Vm(nav: XNavigator, retries: Int = 3)` on the default resolver path (`Vm(nav = nav)`).
+        val blockingOtherCount = roles.count { it.second == Role.OTHER && !it.first.hasDefault }
         return VmDiClassification(
             vmHasNav = navCount > 0,
             vmHasRoute = routeCount > 0,
-            // A default is emittable only when every relevant param is route/nav (no OTHER — Problem 1)
-            // AND neither role is duplicated: two route- (or two nav-) typed params can't be positionally
-            // disambiguated by the resolver, so a default would silently emit `VM(args, args)`. In that
-            // case fall back to "no default" — the `viewModel` param becomes required (user resolves it).
-            emitDefault = otherCount == 0 && routeCount <= 1 && navCount <= 1,
+            // A default is emittable only when every NON-defaulted relevant param is route/nav (no blocking
+            // OTHER — Problem 1) AND neither role is duplicated: two route- (or two nav-) typed params can't
+            // be positionally disambiguated, so a default would silently emit `VM(args, args)`. In that case
+            // fall back to "no default" — the `viewModel` param becomes required (user resolves it).
+            emitDefault = blockingOtherCount == 0 && routeCount <= 1 && navCount <= 1,
         )
     }
 }
