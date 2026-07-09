@@ -46,6 +46,7 @@ class AppNavBehaviorTest {
     private fun GezginTestNavigator.zoom() = on(ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute::class, RawNavigator::zoomNavigator)
     private fun GezginTestNavigator.dashboard() = on(HomeGraph.DashboardScreenRoute::class, RawNavigator::dashboardNavigator)
     private fun GezginTestNavigator.itemDetail() = on(HomeGraph.ItemDetailScreenRoute::class, RawNavigator::itemDetailNavigator)
+    private fun GezginTestNavigator.itemImageViewer() = on(HomeGraph.ItemImageViewerRoute::class, RawNavigator::itemImageViewerNavigator)
     private fun GezginTestNavigator.forgotPassword() = on(AuthGraph.ForgotPasswordDialogRoute::class, RawNavigator::forgotPasswordDialogNavigator)
 
     // (a) login → signUp flow → terms → quitAndGoTo(Welcome): the whole SignUpFlow segment is torn
@@ -271,6 +272,27 @@ class AppNavBehaviorTest {
         nav.dashboard().goToProfile()
         assertEquals(
             listOf(HomeGraph.DashboardScreenRoute, ProfileGraph.ProfileScreenRoute),
+            nav.backStack,
+        )
+    }
+
+    // (l) @FullscreenModal round-trip (Faz 7.2 / GAP-1): the ItemImageViewerRoute modal is reached from
+    // ItemDetail via the plain @GoTo edge (`goToItemImageViewer`, singleTop=true) and dismissed via its
+    // @BackTo(ItemDetailScreenRoute) edge (`backToItemDetail()`, inclusive=false). The dismiss pops ONLY
+    // the modal — the opening ItemDetail (directly below it) survives, leaving exactly
+    // [Dashboard, ItemDetail]; the whole Dashboard→ItemDetail chain is NOT torn down. Pins the genuinely
+    // new navigation edge added in Task 7.2 (no earlier test navigates to ItemImageViewer at all).
+    @Test fun itemImageViewerBackToItemDetail_popsOnlyModalLeavesDashboardAndItemDetail() {
+        val nav = GezginTestNavigator(start = HomeGraph.DashboardScreenRoute, topology = gezginTopology)
+
+        nav.dashboard().goToItemDetail("item-1")
+        nav.itemDetail().goToItemImageViewer("item-1")
+        assertEquals(HomeGraph.ItemImageViewerRoute("item-1"), nav.current)
+
+        nav.itemImageViewer().backToItemDetail()
+
+        assertEquals(
+            listOf(HomeGraph.DashboardScreenRoute, HomeGraph.ItemDetailScreenRoute("item-1")),
             nav.backStack,
         )
     }

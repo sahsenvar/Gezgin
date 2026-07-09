@@ -5,11 +5,34 @@
 > Android'in `androidx.activity.compose.BackHandler`/sistem-back/predictive-back/gerçek
 > `ComponentActivity` ömrünü sağlayamaz (bkz. `gezgin-core/src/androidMain/.../PlatformDisplay.android.kt`)
 > — bu yüzden bu kalemler `.superpowers/sdd/progress.md`'nin Task 3.3 notunda "ON-DEVICE CHECKLIST"
-> olarak ayrıldı ve kullanıcı seyahatten dönünce koşulacak. `sample:shopr` (Task 3.6, bkz.
-> `sample/shopr/`) bu koşuların **gerçek uygulaması** — her madde altta o sample'daki hangi ekranı
-> kullanacağını söylüyor.
+> olarak ayrıldı ve kullanıcı seyahatten dönünce koşulacak. Kalemlerin **gerçek uygulaması İKİ ayrı
+> sample app**'e dağılmıştır (bu dosya beş faz boyunca, her faz farklı bir implementer'la birikti; erken
+> kalemler `sample:shopr`, sonraki kalemler multi-module `sample/` için yazıldı) — hangi maddeyi hangi
+> app'te koşacağın hemen aşağıdaki **"İki ayrı sample uygulaması"** notunda KESİN olarak listelenmiştir;
+> ayrıca her maddenin **Ön koşul** satırı hedef app'i tekrar söyler.
 >
 > Format: her madde **Ön koşul / Adımlar / Beklenen / İlgili spec § / Durum kutusu**.
+
+---
+
+## ⚠️ İki ayrı sample uygulaması — hangi maddeyi hangi app'te koşarsın
+
+Bu checklist **iki farklı sample app**'e referans verir. Bir maddeyi koşmadan ÖNCE hangi app'i kurman
+gerektiğini buradan doğrula (madde numaralarına göre kesin dağılım):
+
+- **`:sample:shopr`** — erken, ayrı, ikincil tek-modül örnek (**Feed / Catalog / Product / CheckoutFlow /
+  Payment / OrderPlaced** ekranları). Kur: `./gradlew :sample:shopr:installDebug`.
+  **Kapsadığı maddeler: 1, 3, 4, 7.**
+- **multi-module `sample/` (`:sample:app`)** — birincil, kapsamlı showcase (**Login / Dashboard /
+  ItemDetail / ItemImageViewer / Profile / Settings / Help** ekranları). Kur: `./gradlew :sample:app:installDebug`.
+  **Kapsadığı maddeler: 2, 9, 10, 11, 12, 13, 14, 15, 17.**
+- **Cihaz GEREKMEYEN maddeler** (bilgilendirici / KMP-gelecek — bir app kurmaya gerek yok): **5** (madde 9'a
+  yönlendirir), **6, 8, 16**.
+
+> **Notlar:** (1) madde **2** `1–8` aralığında olmasına rağmen zaten `:sample:app`'i hedefler — Task 7.1
+> denetiminin "madde 1–8 shopr, 9+ multi-module" özeti bir YAKLAŞIKLIKTI; kesin dağılım yukarıdaki gibidir.
+> (2) `:sample:shopr` bu fazda bilinçli olarak DEĞİŞTİRİLMEZ/KALDIRILMAZ (yalnız hangi app'i açacağın
+> netleştirildi) — shopr-hedefli maddeler multi-module sample'a TAŞINMAZ; ikisi ayrı örnek olarak kalır.
 
 ---
 
@@ -566,9 +589,12 @@ entry codegen'in AYNI `register<XRoute>(SCREEN, …)` yüzeyini ürettiği — g
 | 16 | Legacy Fragment `OnBackPressedDispatcher` LIFO-bypass | Hayır (bilgilendirici) | [ ] Bilgilendirici |
 | 17 | Migration-swap `@FragmentScreen` → `@Screen` (`HelpFragment`→`HelpScreen`) | Evet (kod dönüşümü) | [ ] Doğrulanmadı (kod hazır) |
 
-Kullanıcı cihazla döndüğünde: `sample:shopr`'ı bir Android cihaza/emülatöre kur
-(`./gradlew :sample:shopr:installDebug`), yukarıdaki 1/3/4'ü sırayla koş, kutuları işaretle, bulguları bu
-dosyaya (ilgili maddenin altına) not düş. Faz 6 Fragment kalemleri (15–17) için `:sample:app`'i kur
-(`./gradlew :sample:app:installDebug`) — örnek ekran (`HelpFragment`, Dashboard'daki "Yardım (legacy
-Fragment)" butonu) Task 6.4'te eklendi, kod tarafı hazır (16 bilgilendirici — istendiğinde geçici callback
-ile gözlemlenir).
+Kullanıcı cihazla döndüğünde, yukarıdaki **"İki ayrı sample uygulaması"** notundaki dağılıma göre koş
+(her maddede kutuyu işaretle, bulguları o maddenin altına not düş):
+
+- **`:sample:shopr`** (`./gradlew :sample:shopr:installDebug`) — maddeler **1, 3, 4, 7** (madde 7 simüle).
+- **`:sample:app`** (`./gradlew :sample:app:installDebug`) — maddeler **2, 9, 10, 11, 12, 13, 14, 15, 17**;
+  örnek ekranların tümü kod tarafında hazır (`ItemImageViewerRoute` Faz 7.2'de, `SettingsScreen` MVI-mode
+  Faz 5.3'te, `HelpFragment` — Dashboard'daki "Yardım (legacy Fragment)" butonu — Task 6.4'te eklendi).
+- **Cihaz gerektirmeyen** (bilgilendirici) maddeler: **5, 6, 8, 16** — kurulum gerektirmez; 16 istendiğinde
+  geçici callback ile gözlemlenir.
