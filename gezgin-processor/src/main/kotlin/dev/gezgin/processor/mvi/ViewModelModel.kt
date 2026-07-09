@@ -11,8 +11,10 @@ import com.squareup.kotlinpoet.TypeName
  * - [HILT_ASSISTED] — `@HiltViewModel(assistedFactory = VM.Factory::class)` + `@AssistedInject` ctor
  *   with `@Assisted` params → `hiltViewModel<VM, VM.Factory>(creationCallback = { it.create(args, nav) })`
  *   (Android-only; the factory FQ is [ViewModelModel.assistedFactoryFq]).
- * - [HILT_PLAIN] — `@HiltViewModel` with NO assisted factory (route arrives via `SavedStateHandle`) →
- *   `hiltViewModel<VM>()`; Gezgin supplies nothing, so this always has a default and never wires nav.
+ * - [HILT_PLAIN] — `@HiltViewModel` with NO assisted factory → `hiltViewModel<VM>()`; Gezgin supplies
+ *   NOTHING and Nav3 has no path that writes the route into `SavedStateHandle`, so this VM receives NO
+ *   route data (a parameterized route is rejected with `MV12`, [EntryModelReader]). It always has a
+ *   default resolver and never wires nav; use [HILT_ASSISTED] for a route-data-carrying screen.
  * - [KOIN] — `@KoinViewModel`, `@InjectedParam` ctor params → `koinViewModel { parametersOf(args, nav) }`.
  * - [ANDROIDX] — no DI annotation at all → `viewModel(factory = viewModelFactory { initializer { VM(...) } })`
  *   (the shape proven to compile in `gezgin-mvi`'s `CounterMvi` fixture); every ctor param is
@@ -39,6 +41,19 @@ data class VmCtorParam(
     val typeFq: String,
     /** `true` if annotated `@dagger.assisted.Assisted` (Hilt) or `@org.koin.core.annotation.InjectedParam` (Koin). */
     val diAnnotated: Boolean,
+    /**
+     * `KSType.isError` — the param TYPE failed to resolve (typically a same-module `nav: XNavigator` whose
+     * navigator class isn't generated yet in this KSP round). Faz-5 recheck MJ1: the `nav` NAME is a
+     * fallback classifier ONLY when the type is unresolvable — a RESOLVED non-navigator type (e.g. a Koin
+     * `@InjectedParam nav: AnalyticsTracker`) must classify by TYPE (OTHER), not be hijacked by the name.
+     */
+    val isError: Boolean = false,
+    /**
+     * `KSValueParameter.hasDefault` — the param has a Kotlin default value. Faz-5 recheck MN4: a
+     * defaulted OTHER param need NOT be supplied by Gezgin (the ctor call omits it), so it must not force
+     * the `viewModel` resolver to become required.
+     */
+    val hasDefault: Boolean = false,
 )
 
 /**

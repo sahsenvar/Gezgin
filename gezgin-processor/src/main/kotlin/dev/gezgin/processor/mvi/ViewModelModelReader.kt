@@ -7,6 +7,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.google.devtools.ksp.symbol.KSValueArgument
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.ksp.toTypeName
 
 internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.ViewModel"
@@ -87,6 +88,28 @@ class ViewModelModelReader(
         }
         val (state, intent, effect) = mviArgs
 
+        // MN3 (Faz-5 recheck) — `walkForGezginMvi` substitutes only DIRECT type-param forwarding
+        // (`Base<S,I,E> : GezginMvi<S,I,E>`). A NESTED forward (`Base<S,I,E> : GezginMvi<Wrapped<S>,I,E>`)
+        // leaves an unbound `S` inside `Wrapped<S>`. Resolving/`toTypeName()`-ing that dangling parameter
+        // trips the SAME KSP transitive-substitution bug the walk avoids (`NoSuchElementException: No
+        // TypeParameter found for index …`), which would ESCAPE the processor and fail the round with an
+        // opaque internal error instead of a diagnostic. Materialize the S/I/E TypeNames here, in one
+        // guarded spot; a failure means "nested generic forwarding" → clean `MV1` reject (task's "reject"
+        // option for MN3). The direct-forwarding and concrete cases materialize without incident.
+        val sie: Triple<TypeName, TypeName, TypeName> = try {
+            Triple(state.toTypeName(), intent.toTypeName(), effect.toTypeName())
+        } catch (e: RuntimeException) {
+            error(
+                "MV1",
+                "$vmSimpleName: GezginMvi<S,I,E>'nin tip argümanları çözülemedi (${e.message}) — büyük " +
+                    "olasılıkla iç içe jenerik forwarding (ör. Base<S> : GezginMvi<Wrapped<S>, …>); KSP bu " +
+                    "tip-parametresi ikamesini desteklemiyor. GezginMvi'yi doğrudan somut tiplerle implement " +
+                    "et ya da ara-tabanı `Base<S,I,E> : GezginMvi<S,I,E>` biçiminde forward et (§10.1)",
+            )
+            return null
+        }
+        val (stateTypeName, intentTypeName, effectTypeName) = sie
+
         // MV4 — two @ViewModel classes on the same route would both try to register the same MVI entry.
         val previousOwner = seenRouteFqs[routeFq]
         if (previousOwner != null) {
@@ -104,12 +127,16 @@ class ViewModelModelReader(
         // decide whether a default is even possible (only when every DI-relevant param is route/nav).
         val (di, assistedFactoryFq) = detectDi(decl)
         val ctorParams = decl.primaryConstructor?.parameters.orEmpty().map { p ->
+            val resolved = p.type.resolve()
             VmCtorParam(
                 name = p.name?.asString().orEmpty(),
                 // Best-effort: a same-module `nav: XNavigator` type isn't generated yet in this KSP
-                // round, so it may be unresolved — codegen matches nav by NAME in that case.
-                typeFq = p.type.resolve().fqOrString(),
+                // round, so it may be unresolved — codegen matches nav by NAME in that case (only when
+                // [isError], per MJ1 — a RESOLVED non-navigator `nav` is NOT hijacked by the name).
+                typeFq = resolved.fqOrString(),
                 diAnnotated = p.annotations.any { it.fqName() == ASSISTED_FQ || it.fqName() == INJECTED_PARAM_FQ },
+                isError = resolved.isError,
+                hasDefault = p.hasDefault,
             )
         }
 
@@ -119,11 +146,11 @@ class ViewModelModelReader(
             packageName = decl.packageName.asString(),
             routeFq = routeFq,
             stateTypeFq = state.fqOrString(),
-            stateTypeName = state.toTypeName(),
+            stateTypeName = stateTypeName,
             intentTypeFq = intent.fqOrString(),
-            intentTypeName = intent.toTypeName(),
+            intentTypeName = intentTypeName,
             effectTypeFq = effect.fqOrString(),
-            effectTypeName = effect.toTypeName(),
+            effectTypeName = effectTypeName,
             di = di,
             assistedFactoryFq = assistedFactoryFq,
             ctorParams = ctorParams,

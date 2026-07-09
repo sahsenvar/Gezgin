@@ -22,10 +22,14 @@ data class VmDiClassification(
  * whether a VM's ctor needs `nav`/`route` and whether a default resolver is even emittable — so that
  * logic lives here ONCE rather than being duplicated in each (a drift hazard flagged in review).
  *
- * A ctor param is classified by [VmCtorParam.name]/[VmCtorParam.typeFq] because a same-module
- * `nav: XNavigator` type is not yet generated in the KSP round that reads it (its `typeFq` may be an
- * unresolved error type) — so nav is matched by the `nav` name convention as well as by type. The route
- * type always resolves (user-defined), so ROUTE is matched by type.
+ * **Classification precedence (Faz-5 recheck MJ1): TYPE decides, name is only a fallback.** A param is
+ * NAV when its type IS the route's `${x}Navigator` ([VmCtorParam.typeFq] == [navigatorTypeFq]). The `nav`
+ * NAME classifies NAV *only* when the type failed to resolve ([VmCtorParam.isError]) — the one legitimate
+ * case being a same-module `nav: XNavigator` whose navigator class isn't generated yet in this KSP round.
+ * A RESOLVED non-navigator param named `nav` (e.g. a Koin `@InjectedParam nav: AnalyticsTracker`) is
+ * classified by its type (OTHER) — NOT hijacked by the name, which previously produced a default resolver
+ * that compiled but crashed in Koin's by-TYPE param lookup at first render (and a spurious `MV7`). The
+ * route type always resolves (user-defined), so ROUTE is matched by type.
  */
 object VmDiClassifier {
 
@@ -36,7 +40,10 @@ object VmDiClassifier {
 
     fun roleOf(param: VmCtorParam, routeFq: String, navigatorTypeFq: String): Role = when {
         param.typeFq == routeFq -> Role.ROUTE
-        param.name == "nav" || param.typeFq == navigatorTypeFq -> Role.NAV
+        param.typeFq == navigatorTypeFq -> Role.NAV
+        // Name is a fallback ONLY for an unresolvable type (a same-module, not-yet-generated navigator);
+        // a RESOLVED `nav`-named param that isn't the navigator type is OTHER (MJ1), never NAV-by-name.
+        param.name == "nav" && param.isError -> Role.NAV
         else -> Role.OTHER
     }
 
@@ -54,18 +61,22 @@ object VmDiClassifier {
     /** The aggregate [VmDiClassification] both `EntryModelReader` (MV7) and `MviEntryCodegen` consume. */
     fun classify(vm: ViewModelModel, routeFq: String, navigatorTypeFq: String): VmDiClassification {
         val relevant = relevantParams(vm)
-        val roles = relevant.map { roleOf(it, routeFq, navigatorTypeFq) }
-        val routeCount = roles.count { it == Role.ROUTE }
-        val navCount = roles.count { it == Role.NAV }
-        val otherCount = roles.count { it == Role.OTHER }
+        val roles = relevant.map { it to roleOf(it, routeFq, navigatorTypeFq) }
+        val routeCount = roles.count { it.second == Role.ROUTE }
+        val navCount = roles.count { it.second == Role.NAV }
+        // MN4 (Faz-5 recheck) — an OTHER param WITH a Kotlin default is NOT Gezgin-supplied and NOT blocking:
+        // the default ctor call (androidx, named args) simply omits it → the VM's own default applies. Only
+        // a NON-defaulted OTHER (`@Assisted userId: String`) blocks the default (Problem 1). This keeps
+        // `class Vm(nav: XNavigator, retries: Int = 3)` on the default resolver path (`Vm(nav = nav)`).
+        val blockingOtherCount = roles.count { it.second == Role.OTHER && !it.first.hasDefault }
         return VmDiClassification(
             vmHasNav = navCount > 0,
             vmHasRoute = routeCount > 0,
-            // A default is emittable only when every relevant param is route/nav (no OTHER — Problem 1)
-            // AND neither role is duplicated: two route- (or two nav-) typed params can't be positionally
-            // disambiguated by the resolver, so a default would silently emit `VM(args, args)`. In that
-            // case fall back to "no default" — the `viewModel` param becomes required (user resolves it).
-            emitDefault = otherCount == 0 && routeCount <= 1 && navCount <= 1,
+            // A default is emittable only when every NON-defaulted relevant param is route/nav (no blocking
+            // OTHER — Problem 1) AND neither role is duplicated: two route- (or two nav-) typed params can't
+            // be positionally disambiguated, so a default would silently emit `VM(args, args)`. In that case
+            // fall back to "no default" — the `viewModel` param becomes required (user resolves it).
+            emitDefault = blockingOtherCount == 0 && routeCount <= 1 && navCount <= 1,
         )
     }
 }

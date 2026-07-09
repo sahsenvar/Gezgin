@@ -1,6 +1,8 @@
 package dev.gezgin.processor.fragment
 
 import com.google.devtools.ksp.getAllSuperTypes
+import com.google.devtools.ksp.getConstructors
+import com.google.devtools.ksp.isPublic
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotated
@@ -8,6 +10,7 @@ import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
+import com.google.devtools.ksp.symbol.Modifier
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.entry.EntryFunctionModel
 
@@ -15,6 +18,14 @@ internal const val FRAGMENT_SCREEN_FQ = "dev.gezgin.core.annotation.FragmentScre
 private const val ROUTE_FQ = "dev.gezgin.core.Route"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
 private const val FRAGMENT_FQ = "androidx.fragment.app.Fragment"
+
+// Modal presentation contracts (§7) — a @FragmentScreen route implementing one is FS7 (fragment interop
+// is screen-only §11.2; the contract would be silently ignored).
+private val MODAL_CONTRACT_FQS = setOf(
+    "dev.gezgin.core.DialogContract",
+    "dev.gezgin.core.FullscreenModalContract",
+    "dev.gezgin.core.BottomSheetContract",
+)
 
 /**
  * Task 6.1 — reads every `@FragmentScreen(Route::class)`-annotated CLASS (spec §11/§11.1/§11.2 brownfield
@@ -29,16 +40,22 @@ private const val FRAGMENT_FQ = "androidx.fragment.app.Fragment"
  * exactly like the `dev.gezgin.mvi.*` reads.
  *
  * Guardrails (`FS`-family — Fragment Screen):
- * - **`FS1` — parameterized-ctor rejection (§11.1, "parametreli Fragment ctor yasak").** A
- *   `@FragmentScreen` class whose primary constructor has ANY parameter is rejected: Android recreates
- *   Fragments via a no-arg ctor after PD/config-change, so ctor params would be silently lost or crash.
- *   The route/nav arrive through `gezginArgs`/`gezginNav` (Task 6.2), never the ctor. → no model emitted.
- * - **`FS2` — route type sanity.** The resolved route type must implement `dev.gezgin.core.Route`
- *   (mirrors [dev.gezgin.processor.entry.EntryModelReader]'s `SC5` — same [getAllSuperTypes] walk; a
- *   plain interface-implementation check, not a generic-substitution case). The annotation's
- *   `route: KClass<out Route>` bound already enforces this at the frontend, so `FS2` is a defensive
- *   guard for the degenerate cases (a route arg that fails to resolve, or resolves to a non-`Route`
- *   type despite the bound). → no model emitted.
+ * - **`FS1` — FragmentFactory-instantiability (§11.1).** Android recreates Fragments after PD/config-
+ *   change via a PUBLIC no-arg ctor (`clazz.getConstructor().newInstance()`). `FS1` rejects every shape
+ *   that would pass the frontend but crash inside `FragmentFactory.instantiate`: an `abstract` class
+ *   (`InstantiationException`); an `inner` class (its ctor carries the outer instance); a parameterized
+ *   primary ctor (the common case — a tailored gezginArgs/gezginNav message); and a class with only
+ *   secondary ctors or a private/protected ctor (no accessible no-arg ctor → `NoSuchMethodException`).
+ *   route/nav arrive through `gezginArgs`/`gezginNav` (Task 6.2), never the ctor. → no model emitted.
+ * - **`FS2` — route type sanity + no bare `Route`.** The resolved route type must implement
+ *   `dev.gezgin.core.Route` (mirrors `SC5` — same [getAllSuperTypes] walk) AND must not be the bare
+ *   `Route` interface itself: unlike `@Screen` (where `Route::class` is a "derive from `route:` param"
+ *   SENTINEL), `@FragmentScreen`'s route arg is mandatory and concrete, so `@FragmentScreen(Route::class)`
+ *   would emit a `register<Route>` no concrete-class push ever matches — a DEAD registration. → no model.
+ * - **`FS7` — screen-only, no modal contract (§11.2).** A route implementing a modal presentation
+ *   contract (`DialogContract`/`BottomSheetContract`/`FullscreenModalContract`) is rejected: fragment
+ *   interop always registers `kind = SCREEN`, so the contract would be SILENTLY ignored (the user asked
+ *   for a modal, got a full-screen fragment). Hard-error like `SC8`/`MV8` (silent-drop). → no model.
  * - **`FS3` — duplicate route registration (cross-kind aware).** A route may back only ONE registration.
  *   [FragmentModelReader] cross-checks each `@FragmentScreen`'s route against BOTH (a) the already-built
  *   [entries] (core-mode `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal` + MVI-mode content, which
@@ -114,7 +131,32 @@ class FragmentModelReader(
         val fragmentFq = decl.qualifiedName?.asString() ?: return null
         val fragmentSimpleName = decl.simpleName.asString()
 
-        // FS1 — parametreli Fragment ctor yasak (§11.1). Android's no-arg-ctor recreation contract.
+        // FS1 — the Fragment must be FragmentFactory-instantiable: Android recreates it after PD/config-
+        // change via a PUBLIC no-arg constructor (`clazz.getConstructor().newInstance()`). Four shapes
+        // otherwise pass the frontend but crash at first display inside FragmentFactory.instantiate:
+        //   abstract → InstantiationException; inner → ctor carries the outer instance → NoSuchMethodException;
+        //   parameterized primary ctor / secondary-ctor-only / private ctor → no accessible no-arg ctor.
+        // route/nav arrive through gezginArgs/gezginNav (Task 6.2), never the ctor (§11.1).
+        if (Modifier.ABSTRACT in decl.modifiers) {
+            error(
+                "FS1",
+                "$fragmentSimpleName: @FragmentScreen abstract bir sınıfa konamaz — Android onu argsız " +
+                    "ctor'la yeniden yaratamaz (FragmentFactory.instantiate → InstantiationException). " +
+                    "Somut bir Fragment alt sınıfı yap (§11.1)",
+            )
+            return null
+        }
+        if (Modifier.INNER in decl.modifiers) {
+            error(
+                "FS1",
+                "$fragmentSimpleName: @FragmentScreen'li Fragment `inner` olamaz — inner ctor dış-sınıf " +
+                    "örneğini taşır, argsız yeniden-yaratma çöker (NoSuchMethodException). Top-level ya da " +
+                    "`static` (nested) bir sınıf yap (§11.1)",
+            )
+            return null
+        }
+
+        // FS1 — parametreli primary ctor yasak (§11.1) — en sık hata, özel/aksiyonel mesaj.
         val ctorParams = decl.primaryConstructor?.parameters.orEmpty()
         if (ctorParams.isNotEmpty()) {
             error(
@@ -123,6 +165,20 @@ class FragmentModelReader(
                     "şu param(lar)ı var: ${ctorParams.joinToString { it.name?.asString().orEmpty() }} " +
                     "(Android PD/config-change'de Fragment'ı argsız ctor'la yeniden yaratır; route/nav " +
                     "ctor'dan DEĞİL gezginArgs/gezginNav delege'lerinden gelir, §11.1)",
+            )
+            return null
+        }
+
+        // FS1 — erişilebilir (public) argümansız ctor şart (yalnız-secondary-ctor'lu ya da private-ctor'lu
+        // sınıfları yakalar; bunlarda `getConstructor()` public argsız ctor bulamaz → NoSuchMethodException).
+        val hasPublicNoArgCtor = decl.getConstructors().any { it.parameters.isEmpty() && it.isPublic() }
+        if (!hasPublicNoArgCtor) {
+            error(
+                "FS1",
+                "$fragmentSimpleName: @FragmentScreen'li Fragment'ın erişilebilir (public) argümansız bir " +
+                    "ctor'u yok — yalnız secondary ctor'lu ya da private/protected ctor'lu bir sınıf argsız " +
+                    "yeniden-yaratmada çöker (NoSuchMethodException). Public bir `constructor()` (ya da hiç " +
+                    "ctor bildirmeyen) Fragment yaz (§11.1)",
             )
             return null
         }
@@ -160,13 +216,46 @@ class FragmentModelReader(
             return null
         }
         val routeFq = routeDecl.qualifiedName?.asString()
-        val implementsRoute = routeFq == ROUTE_FQ ||
-            routeDecl.getAllSuperTypes().any { it.declaration.qualifiedName?.asString() == ROUTE_FQ }
+        // FS2 — the bare `Route` interface itself is NOT a valid destination. Unlike @Screen (where
+        // `Route::class` is a "derive from the route: param" SENTINEL), @FragmentScreen's route arg is
+        // MANDATORY and concrete — `@FragmentScreen(Route::class)` would emit `register<Route>` which no
+        // concrete-class push (`key.route::class`) ever matches → DEAD registration (runtime "no entry").
+        if (routeFq == ROUTE_FQ) {
+            error(
+                "FS2",
+                "$fragmentSimpleName: @FragmentScreen(Route::class) — Route arayüzünün KENDİSİ route olamaz " +
+                    "(somut bir route sınıfı ver). @Screen'deki `Route::class` = 'route: param'ından türet' " +
+                    "sentinel'inin @FragmentScreen'de karşılığı yok; register<Route> hiçbir push'la eşleşmez " +
+                    "→ ölü kayıt (§11.1)",
+            )
+            return null
+        }
+        val implementsRoute = routeDecl.getAllSuperTypes().any { it.declaration.qualifiedName?.asString() == ROUTE_FQ }
         if (routeFq == null || !implementsRoute) {
             error(
                 "FS2",
                 "$fragmentSimpleName: route tipi (${routeDecl.qualifiedName?.asString()}) " +
                     "dev.gezgin.core.Route implement etmiyor",
+            )
+            return null
+        }
+
+        // FS7 (Faz-6 recheck) — Fragment interop is screen-only (§11.2). A route implementing a modal
+        // presentation contract (Dialog/BottomSheet/FullscreenModal) would be registered as a plain SCREEN
+        // (FragmentEntryCodegen unconditionally `kind = SCREEN`) with the contract SILENTLY ignored — the
+        // user asked for a modal but gets a full-screen fragment, no diagnostic. Rejected like SC8/MV8
+        // (silent-drop → hard error): fragment interop cannot present modals.
+        val modalContract = routeDecl.getAllSuperTypes()
+            .mapNotNull { it.declaration.qualifiedName?.asString() }
+            .firstOrNull { it in MODAL_CONTRACT_FQS }
+        if (modalContract != null) {
+            error(
+                "FS7",
+                "$fragmentSimpleName: route ${routeFq.substringAfterLast('.')} " +
+                    "${modalContract.substringAfterLast('.')} implement ediyor ama @FragmentScreen ekranları " +
+                    "YALNIZ screen-mode render edilir (§11.2) — modal contract SESSİZCE yok sayılırdı " +
+                    "(kullanıcı modal isterken düz tam-ekran fragment alırdı). Contract'ı route'tan kaldır ya " +
+                    "da modal'ı Fragment yerine @Dialog/@BottomSheet/@FullscreenModal composable ile kur",
             )
             return null
         }

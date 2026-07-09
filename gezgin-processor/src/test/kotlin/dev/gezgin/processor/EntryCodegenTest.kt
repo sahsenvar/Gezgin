@@ -349,4 +349,211 @@ class EntryCodegenTest {
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)
         assertTrue(result.messages.contains("[SC5]"), result.messages)
     }
+
+    // region SC7 (@NoBack × modal) + SC8 (kind↔contract mismatch) — Faz-4 recheck M1/M2
+
+    /** Compiles a single self-contained source and returns the full KSP/compiler messages. */
+    private fun messagesOf(source: String): String =
+        compileGezgin(SourceFile.kotlin("Bad.kt", source), kspArgs = mapOf("gezgin.emitSerializers" to "false")).messages
+
+    @Test
+    fun `SC7 — @NoBack + @BottomSheet is unconditionally rejected at KSP`() {
+        // Runtime EntryAdapter would crash on first navigation (require(kind != BOTTOM_SHEET)); the ban is
+        // unconditional (contract-independent) so it is statically decidable → promote to a KSP reject.
+        val msg = messagesOf(
+            """
+            package dev.gezgin.sc7bs
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BottomSheet
+            import dev.gezgin.core.annotation.NoBack
+
+            @NoBack
+            data class SheetRoute(val x: Int = 0) : Route
+
+            @BottomSheet
+            @Composable
+            fun SheetScreen(route: SheetRoute) {
+            }
+            """.trimIndent(),
+        )
+        assertTrue(msg.contains("[SC7]"), msg)
+    }
+
+    @Test
+    fun `SC7 — @NoBack + @Dialog with NO DialogContract is rejected (default dismissOnBackPress=true)`() {
+        val msg = messagesOf(
+            """
+            package dev.gezgin.sc7dlg
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Dialog
+            import dev.gezgin.core.annotation.NoBack
+
+            @NoBack
+            data class PlainDialogRoute(val x: Int = 0) : Route
+
+            @Dialog
+            @Composable
+            fun PlainDialog(route: PlainDialogRoute) {
+            }
+            """.trimIndent(),
+        )
+        assertTrue(msg.contains("[SC7]"), msg)
+    }
+
+    @Test
+    fun `SC7 allow — @NoBack + @Dialog WITH DialogContract is accepted (override not KSP-known)`() {
+        // The route implements DialogContract and CAN set dismissOnBackPress=false (a runtime value KSP
+        // can't read) → SC7 must NOT fire; the runtime requireBackDismissCompatible stays as the net.
+        val msg = messagesOf(
+            """
+            package dev.gezgin.sc7ok
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.DialogContract
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Dialog
+            import dev.gezgin.core.annotation.NoBack
+
+            @NoBack
+            data class ConfirmRoute(val x: Int = 0) : Route, DialogContract {
+                override val dismissOnBackPress get() = false
+            }
+
+            @Dialog
+            @Composable
+            fun ConfirmDialog(route: ConfirmRoute) {
+            }
+            """.trimIndent(),
+        )
+        assertTrue(!msg.contains("[SC7]") && !msg.contains("[SC8]"), msg)
+    }
+
+    @Test
+    fun `SC7 allow — @NoBack + @Screen is accepted (terminal screen, no modal)`() {
+        val msg = messagesOf(
+            """
+            package dev.gezgin.sc7scr
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.NoBack
+            import dev.gezgin.core.annotation.Screen
+
+            @NoBack
+            data class TerminalRoute(val x: Int = 0) : Route
+
+            @Screen
+            @Composable
+            fun TerminalScreen(route: TerminalRoute) {
+            }
+            """.trimIndent(),
+        )
+        assertTrue(!msg.contains("[SC7]") && !msg.contains("[SC8]"), msg)
+    }
+
+    @Test
+    fun `SC8 — @FullscreenModal route implementing DialogContract is rejected (mismatch)`() {
+        // The user's "non-dismissable" intent is silently dropped: the FullscreenModal adapter reads
+        // `route as? FullscreenModalContract` = null → type defaults. Reject the kind↔contract mismatch.
+        val msg = messagesOf(
+            """
+            package dev.gezgin.sc8mis
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.DialogContract
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FullscreenModal
+
+            data class BadModalRoute(val x: Int = 0) : Route, DialogContract {
+                override val dismissOnClickOutside get() = false
+            }
+
+            @FullscreenModal
+            @Composable
+            fun BadModal(route: BadModalRoute) {
+            }
+            """.trimIndent(),
+        )
+        assertTrue(msg.contains("[SC8]"), msg)
+    }
+
+    @Test
+    fun `SC8 allow — @Dialog route implementing DialogContract is accepted (match)`() {
+        val msg = messagesOf(
+            """
+            package dev.gezgin.sc8ok
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.DialogContract
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Dialog
+
+            data class GoodDialogRoute(val x: Int = 0) : Route, DialogContract {
+                override val dismissOnClickOutside get() = false
+            }
+
+            @Dialog
+            @Composable
+            fun GoodDialog(route: GoodDialogRoute) {
+            }
+            """.trimIndent(),
+        )
+        assertTrue(!msg.contains("[SC8]") && !msg.contains("[SC7]"), msg)
+    }
+
+    @Test
+    fun `SC8 allow — contract-less @Dialog route is accepted`() {
+        val msg = messagesOf(
+            """
+            package dev.gezgin.sc8none
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Dialog
+
+            data class PlainRoute(val x: Int = 0) : Route
+
+            @Dialog
+            @Composable
+            fun PlainDialog(route: PlainRoute) {
+            }
+            """.trimIndent(),
+        )
+        assertTrue(!msg.contains("[SC8]") && !msg.contains("[SC7]"), msg)
+    }
+
+    @Test
+    fun `SC2 — nav param typed as a resolvable NON-navigator (RawNavigator) is rejected (Integ m4)`() {
+        // `Feed` DOES earn a FeedNavigator (the hasNavigator check passes), but the `nav:` param is typed
+        // `RawNavigator` — a real, already-compiled type (NOT an as-yet-ungenerated same-round navigator, so
+        // NOT an error type). The generated `FeedScreen(route, nav)` would type-mismatch inside
+        // GezginEntries.kt; SC2's type check catches it up front instead.
+        val result = compileGezgin(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            SourceFile.kotlin(
+                "Bad.kt",
+                """
+                package dev.gezgin.shopui
+
+                import androidx.compose.runtime.Composable
+                import dev.gezgin.core.RawNavigator
+                import dev.gezgin.core.annotation.Screen
+                import dev.gezgin.shop.HomeGraph.Feed
+
+                @Screen
+                @Composable
+                fun FeedScreen(route: Feed, nav: RawNavigator) {
+                }
+                """.trimIndent(),
+            ),
+        )
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)
+        assertTrue(result.messages.contains("[SC2]"), result.messages)
+    }
+
+    // endregion
 }
