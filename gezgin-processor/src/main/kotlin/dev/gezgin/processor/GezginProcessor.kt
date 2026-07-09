@@ -12,6 +12,8 @@ import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.TestApiCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.entry.EntryModelReader
+import dev.gezgin.processor.fragment.FragmentModelReader
+import dev.gezgin.processor.fragment.dumpFragmentText
 import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.dumpText
 import dev.gezgin.processor.mvi.ViewModelModelReader
@@ -111,6 +113,14 @@ class GezginProcessor(
                 val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
                 val (entries, entriesOk) = EntryModelReader(resolver, environment.logger, model, vmModels).read()
 
+                // Task 6.1 — brownfield Fragment interop (§11). Reads @FragmentScreen classes into
+                // FragmentEntryModels (FS1 no-arg-ctor / FS2 route-sanity guardrails), cross-checking each
+                // route against the already-built `entries` (core + MVI) so a route can't be registered by
+                // BOTH a @FragmentScreen and a @Screen/MVI content (FS3). EntryModelReader is untouched —
+                // this is a post-hoc cross-check, not a shared-map change (see FragmentModelReader KDoc).
+                // Codegen (the AndroidFragment `provideXEntry`) is Task 6.2; 6.1 only reads/validates/dumps.
+                val (fragmentModels, fragOk) = FragmentModelReader(resolver, environment.logger, entries).read()
+
                 if (environment.options["gezgin.dumpMvi"].toBoolean()) {
                     environment.codeGenerator.createNewFile(
                         dependencies = Dependencies.ALL_FILES,
@@ -118,6 +128,15 @@ class GezginProcessor(
                         fileName = "GezginMviDump",
                         extensionName = "txt",
                     ).use { it.write(dumpMviText(vmModels, entries).toByteArray()) }
+                }
+
+                if (environment.options["gezgin.dumpFragment"].toBoolean()) {
+                    environment.codeGenerator.createNewFile(
+                        dependencies = Dependencies.ALL_FILES,
+                        packageName = "",
+                        fileName = "GezginFragmentDump",
+                        extensionName = "txt",
+                    ).use { it.write(dumpFragmentText(fragmentModels).toByteArray()) }
                 }
 
                 // `provideXEntry` codegen — opt-OUT (default true, mirrors `gezgin.emitSerializers`).
@@ -131,8 +150,11 @@ class GezginProcessor(
                 // `GezginMviEntries.kt` (VM resolver / DI-detection / @ScreenEffect wiring / Problem-2
                 // resolver params) — same package, distinct file, no collision (SC6 keeps provideXEntry
                 // names unique across both modes).
+                // `fragOk` joins the gate so an FS-guardrail violation (e.g. an FS3 route collision
+                // between a @FragmentScreen and a @Screen) fails the build cleanly instead of emitting the
+                // surviving registration. Fragment-less modules always have `fragOk = true` → zero change.
                 val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
-                if (emitEntries && vmOk && entriesOk) {
+                if (emitEntries && vmOk && entriesOk && fragOk) {
                     val coreEntries = entries.filter { it.mvi == null }
                     if (coreEntries.isNotEmpty()) {
                         EntryCodegen.generate(coreEntries)
