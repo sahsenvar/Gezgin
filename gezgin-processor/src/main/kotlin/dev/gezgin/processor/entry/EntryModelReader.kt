@@ -26,6 +26,20 @@ private const val FULLSCREEN_MODAL_FQ = "dev.gezgin.core.annotation.FullscreenMo
 private const val ROUTE_FQ = "dev.gezgin.core.Route"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
 
+// Modal presentation contracts (§7) — read as string FQs (no compile dep beyond gezgin-core, which is
+// already a dep). SC8 (kind↔contract mismatch) + SC7 (@NoBack × modal) key off the route's supertypes.
+private const val DIALOG_CONTRACT_FQ = "dev.gezgin.core.DialogContract"
+private const val FULLSCREEN_MODAL_CONTRACT_FQ = "dev.gezgin.core.FullscreenModalContract"
+private const val BOTTOM_SHEET_CONTRACT_FQ = "dev.gezgin.core.BottomSheetContract"
+
+/** The single presentation contract each kind reads at runtime (null for SCREEN — carries no contract). */
+private val CONTRACT_BY_KIND = mapOf(
+    EntryKindModel.DIALOG to DIALOG_CONTRACT_FQ,
+    EntryKindModel.FULLSCREEN_MODAL to FULLSCREEN_MODAL_CONTRACT_FQ,
+    EntryKindModel.BOTTOM_SHEET to BOTTOM_SHEET_CONTRACT_FQ,
+)
+private val ALL_KIND_CONTRACT_FQS = CONTRACT_BY_KIND.values.toSet()
+
 // MVI-mode (§10.1) FQ constants — read as strings, no compile dep on gezgin-mvi.
 private const val SHEET_STATE_FQ = "androidx.compose.material3.SheetState"
 private const val FLOW_FQ = "kotlinx.coroutines.flow.Flow"
@@ -235,6 +249,12 @@ class EntryModelReader(
         }
         seenRouteFqs[routeFq] = fnName
 
+        val packageName = fn.packageName.asString()
+        val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
+
+        // SC8 (kind↔contract) + SC7 (@NoBack × modal) — shared, statically decidable (see the helper).
+        if (!checkKindContractAndNoBack(fnName, routeDecl!!, kind)) return null
+
         if (navParam != null) {
             val hasNavigator = routeModel?.let { NavigatorCodegen.hasNavigator(it, graphsByFq) } ?: true
             if (!hasNavigator) {
@@ -245,10 +265,25 @@ class EntryModelReader(
                 )
                 return null
             }
+            // Integ m4 — the `nav:` param TYPE must be the route's own `${x}Navigator`; otherwise the
+            // generated `XScreen(route, nav)` call site would type-mismatch inside GezginEntries.kt
+            // (a confusing generated-code error instead of a clean [SC2]). Same technique as VmDiClassifier:
+            // a same-module navigator type isn't generated yet in this KSP round (its FQ resolves to an
+            // error type), so we accept an unresolved type by NAME `nav` and only reject a RESOLVED,
+            // wrong-typed param.
+            val navParamType = navParam.type.resolve()
+            val navParamFq = navParamType.declaration.qualifiedName?.asString()
+            val expectedNavigatorFq = VmDiClassifier.navigatorTypeFq(routeDecl!!.packageName.asString(), x)
+            if (!navParamType.isError && navParamFq != expectedNavigatorFq) {
+                error(
+                    "SC2",
+                    "$fnName: nav: param'ının tipi ($navParamFq) beklenen navigator tipi değil " +
+                        "($expectedNavigatorFq) — üretilen ${x}Screen(route, nav) çağrısı tip uyuşmazlığıyla " +
+                        "GezginEntries.kt içinde patlardı. nav param'ını `nav: ${x}Navigator` yap (§10.1)",
+                )
+                return null
+            }
         }
-
-        val packageName = fn.packageName.asString()
-        val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
 
         // SC6 (Minor 5) — iki entry fonksiyonu AYNI pakette AYNI `x`'e (dolayısıyla aynı
         // `provideXEntry` fonksiyon adına) çözülürse KotlinPoet aynı dosyaya iki eş-imzalı fonksiyon
@@ -345,6 +380,9 @@ class EntryModelReader(
             return null
         }
         seenRouteFqs[routeFq] = fnName
+
+        // SC8 (kind↔contract) + SC7 (@NoBack × modal) — shared with core-mode, statically decidable.
+        if (!checkKindContractAndNoBack(fnName, routeDecl!!, kind)) return null
 
         // MV2 — the content's route must have a @ViewModel in THIS module (§10.1 same-module triple).
         val vm = vmByRouteFq[routeFq]
@@ -569,6 +607,87 @@ class EntryModelReader(
     }
 
     // endregion
+
+    /**
+     * `SC8` (kind↔contract mismatch) + `SC7` (@NoBack × modal) — both STATICALLY decidable and shared by
+     * core-mode and MVI-mode. Everything they need — the `kind` (annotation arg), the route's supertypes,
+     * and its `@NoBack` — is visible in one compilation unit regardless of which module the route was
+     * compiled in ([getAllSuperTypes] + `hasAnnotation` are cross-module-safe, exactly like `noBack`).
+     * Returns `true` if clean; on the first violation it reports the bracketed error and returns `false`
+     * (the caller emits no model). `SC8` is checked BEFORE `SC7` so a wrong-contract modal reports the
+     * more specific mismatch rather than the (also-true) missing-matching-contract `SC7`.
+     *
+     * **`SC8`** — the modal presentation contract a route implements MUST match its kind annotation. An
+     * `@FullscreenModal` route implementing `DialogContract` (or a `@Screen` implementing ANY kind
+     * contract) is read at runtime via `route as? XContract` for the KIND's contract only → the wrong
+     * contract casts to `null` → the route's overrides (e.g. a deliberately non-dismissable modal) are
+     * SILENTLY dropped to type-defaults, with no diagnostic. A route may also implement TWO kind
+     * contracts (only the kind's is ever read); every non-matching one is a mismatch.
+     *
+     * **`SC7`** — `@NoBack` is statically incompatible with certain modal kinds → a GUARANTEED runtime
+     * crash (`EntryAdapter`'s `require`), which repo precedent (MV8) promotes to a KSP rejection:
+     * - (a) `@BottomSheet` + `@NoBack` is UNCONDITIONALLY banned (swipe-to-dismiss can't be disabled by
+     *   any prop; `@NoBack`'s back-swallow leaves the sheet visually hidden but on-stack — desync).
+     * - (b) `@Dialog`/`@FullscreenModal` + `@NoBack` crashes ONLY when the route does NOT implement its
+     *   contract: the default `dismissOnBackPress=true` is statically known → `requireBackDismissCompatible`
+     *   always fails. A route that DOES implement the contract may set `dismissOnBackPress=false` (a
+     *   runtime route-instance value KSP can't read), so it keeps the runtime check rather than a KSP reject.
+     */
+    private fun checkKindContractAndNoBack(fnName: String, routeDecl: KSClassDeclaration, kind: EntryKindModel): Boolean {
+        val routeSimple = routeDecl.simpleName.asString()
+        val implementedContracts = routeDecl.getAllSuperTypes()
+            .mapNotNull { it.declaration.qualifiedName?.asString() }
+            .filter { it in ALL_KIND_CONTRACT_FQS }
+            .toSet()
+        val expectedContract = CONTRACT_BY_KIND[kind] // null for SCREEN
+
+        // SC8 — every implemented kind-contract that isn't THIS kind's contract is a silent-drop mismatch.
+        val mismatched = implementedContracts.filter { it != expectedContract }
+        if (mismatched.isNotEmpty()) {
+            val mismatch = mismatched.first().substringAfterLast('.')
+            error(
+                "SC8",
+                "$fnName: route $routeSimple @${kind.name}-kind ama $mismatch implement ediyor — kind ile " +
+                    "presentation contract eşleşmeli (@Dialog↔DialogContract, @FullscreenModal↔" +
+                    "FullscreenModalContract, @BottomSheet↔BottomSheetContract). Adapter yalnız kind'ın " +
+                    "contract'ını okur → yanlış contract `route as? …` ile null'a düşer, override'ların " +
+                    "(ör. dismissOnClickOutside=false) SESSİZCE düşer. Ya kind'ı düzelt ya contract'ı kaldır (§7)",
+            )
+            return false
+        }
+
+        // SC7 — @NoBack × modal (route's own @NoBack, cross-module-safe like `noBack`).
+        if (routeDecl.hasAnnotation(NO_BACK_FQ)) {
+            when (kind) {
+                EntryKindModel.BOTTOM_SHEET -> {
+                    error(
+                        "SC7",
+                        "$fnName: @NoBack + @BottomSheet tutarsız (route $routeSimple) — swipe-to-dismiss " +
+                            "hiçbir prop'la kapatılamaz → @NoBack geri-yutması sheet'i görünmez bırakıp " +
+                            "entry'yi stack'te tutar (görsel/state desync). @BottomSheet'te @NoBack " +
+                            "KULLANMAYIN; ilk navigasyonda kesin runtime crash olurdu (§7, EntryAdapter guard)",
+                    )
+                    return false
+                }
+                EntryKindModel.DIALOG, EntryKindModel.FULLSCREEN_MODAL -> {
+                    if (expectedContract !in implementedContracts) {
+                        error(
+                            "SC7",
+                            "$fnName: @NoBack + @${kind.name} ama route $routeSimple " +
+                                "${expectedContract!!.substringAfterLast('.')} implement etmiyor → " +
+                                "dismissOnBackPress default TRUE (statik biliniyor) = @NoBack ile tezat, " +
+                                "ilk navigasyonda kesin runtime crash. Route'a `$routeSimple : …, " +
+                                "${expectedContract.substringAfterLast('.')} { override val " +
+                                "dismissOnBackPress get() = false }` ekle ya da @NoBack'i kaldır (§7)",
+                        )
+                        return false
+                    }
+                }
+                EntryKindModel.SCREEN -> Unit // @NoBack + @Screen legal (terminal ekran)
+            }
+        }
+        return true
+    }
 
     private fun KSType.fqOf(): String = declaration.qualifiedName?.asString() ?: toString()
 

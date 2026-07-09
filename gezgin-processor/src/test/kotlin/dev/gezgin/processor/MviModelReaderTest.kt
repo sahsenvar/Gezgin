@@ -633,4 +633,81 @@ class MviModelReaderTest {
     }
 
     // endregion
+
+    // region SC7 (@NoBack × modal) + SC8 (kind↔contract mismatch) — MVI-mode parity (Faz-4 recheck)
+
+    @Test
+    fun `SC7 — MVI @BottomSheet content on a @NoBack route is rejected`() {
+        assertViolates(
+            "SC7",
+            """
+            package dev.gezgin.sc7mvi
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BottomSheet
+            import dev.gezgin.core.annotation.NoBack
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            @NoBack
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @BottomSheet(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `SC8 — MVI @FullscreenModal content whose route implements DialogContract is rejected`() {
+        assertViolates(
+            "SC8",
+            """
+            package dev.gezgin.sc8mvi
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.DialogContract
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FullscreenModal
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route, DialogContract {
+                override val dismissOnClickOutside get() = false
+            }
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @FullscreenModal(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    // endregion
 }
