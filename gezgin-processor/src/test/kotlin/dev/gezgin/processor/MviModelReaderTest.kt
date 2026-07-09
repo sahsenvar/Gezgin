@@ -673,6 +673,104 @@ class MviModelReaderTest {
     }
 
     @Test
+    fun `MV11 — @ScreenEffect with an extra param beyond Flow and nav is rejected (MJ5)`() {
+        // An extra `extra: SomeState` has no wiring path (no effect-binder resolver mechanism); codegen
+        // would emit `Effects(effects = vm.effects)` and die with "No value passed for parameter". MV11.
+        assertViolates(
+            "MV11",
+            """
+            package dev.gezgin.mv11extra
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.Flow
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+            class SomeState
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
+            }
+
+            // Extra `extra: SomeState` beyond {Flow<E>, nav} — MV11.
+            @ScreenEffect
+            @Composable
+            fun Effects(effects: Flow<E>, extra: SomeState) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV11 — @ScreenEffect nav param typed as a non-navigator is rejected (MJ5)`() {
+        // `Home` earns a HomeNavigator (via @GoTo), so MV7 passes; but the effect's `nav: SomethingElse` is
+        // a RESOLVED non-navigator type → the generated `HEffects(effects = …, nav = nav)` would type-clash.
+        assertViolates(
+            "MV11",
+            """
+            package dev.gezgin.mv11nav
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.Flow
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            @NavGraph
+            interface G : Route {
+                @GoTo(Other::class)
+                data class Home(val id: String) : G
+                data object Other : G
+            }
+
+            data class HState(val n: Int)
+            sealed interface HIntent { data object Go : HIntent }
+            data class HEffect(val m: String)
+            class SomethingElse
+
+            @ViewModel(G.Home::class)
+            class HVm(route: G.Home) : GezginMvi<HState, HIntent, HEffect> {
+                override val uiState: StateFlow<HState> = MutableStateFlow(HState(0))
+                override fun onIntent(intent: HIntent) {}
+            }
+
+            @Screen(G.Home::class)
+            @Composable
+            fun HContent(state: HState, onIntent: (HIntent) -> Unit) {
+            }
+
+            // nav is a RESOLVED non-navigator type → MV11.
+            @ScreenEffect
+            @Composable
+            fun HEffects(effects: Flow<HEffect>, nav: SomethingElse) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
     fun `MN3 — nested generic forwarding (Base S colon GezginMvi Wrapped S) is rejected with MV1`() {
         // walkForGezginMvi substitutes only DIRECT type-param forwarding; a NESTED `Wrapped<S>` leaves an
         // unbound `S` that would otherwise leak a dangling type variable into the state TypeName. MV1 reject.

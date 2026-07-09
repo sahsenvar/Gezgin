@@ -122,6 +122,12 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  * - `MV10` — a Problem-2 content extra whose name collides with an emitted identifier
  *   (`viewModel`/`nav`/`route`/`vm`), which would produce broken generated code.
  *
+ * **MVI guardrails (Faz 5 recheck):**
+ * - `MV11` — a `@ScreenEffect` binder whose signature isn't a subset of `{Flow<E>, nav: XNavigator}`:
+ *   an EXTRA param (e.g. `SnackbarHostState` — no wiring path, unlike content's Problem-2 resolvers) or a
+ *   `nav` param whose RESOLVED type isn't the matched route's `${x}Navigator`. Both would otherwise emit
+ *   compile-broken code inside `GezginMviEntries.kt`; rejected up front with an actionable message.
+ *
  * (`MV1`/`MV4` — `@ViewModel` must implement `GezginMvi`, and no two `@ViewModel`s per route — live in
  * [dev.gezgin.processor.mvi.ViewModelModelReader], whose output [vmModels] this reader consumes.)
  */
@@ -510,6 +516,23 @@ class EntryModelReader(
             }
         }
 
+        // MV11 (Faz-5 recheck MJ5) — a matched @ScreenEffect's `nav` param TYPE must be THIS route's own
+        // `${x}Navigator`; otherwise the generated `XEffects(effects = …, nav = nav)` call type-mismatches
+        // inside GezginMviEntries.kt. Same isError-tolerant technique as the core `nav:` check: a
+        // same-module navigator isn't generated yet in this round (its type is an error type) → accept by
+        // the `nav` NAME; reject only a RESOLVED, wrong-typed nav param.
+        if (effectWantsNav && effect!!.navParamTypeFq != null && !effect.navParamIsError &&
+            effect.navParamTypeFq != navigatorTypeFq
+        ) {
+            error(
+                "MV11",
+                "@ScreenEffect ${effect.simpleName}'in nav param tipi (${effect.navParamTypeFq}) bu route'un " +
+                    "navigator'ı değil ($navigatorTypeFq) — üretilen ${effect.simpleName}(effects = …, nav = nav) " +
+                    "çağrısı GezginMviEntries.kt içinde tip uyuşmazlığıyla patlardı. nav param'ını `nav: ${x}Navigator` yap",
+            )
+            return null
+        }
+
         // SC6 — shared with core-mode: two entries → same provideXEntry name in one package.
         val provideKey = packageName to x
         val previousProvideOwner = seenProvideNames[provideKey]
@@ -555,6 +578,10 @@ class EntryModelReader(
         /** The `Flow<E>` param's NAME — 5.2 emits the effect call named (MN1). Null if the binder has none. */
         val flowParamName: String?,
         val hasNavParam: Boolean,
+        /** The `nav` param's flattened type FQ (if any) — MJ5 validates it against the matched route's navigator. */
+        val navParamTypeFq: String?,
+        /** `true` if the `nav` param type failed to resolve (same-module, as-yet-ungenerated navigator). */
+        val navParamIsError: Boolean,
     )
 
     /**
@@ -577,7 +604,26 @@ class EntryModelReader(
                 val effectTypeFq = effectArgType?.fqOf()
                 val effectTypeName = effectArgType?.toTypeName()
                 val flowParamName = flowParam?.name?.asString()
-                val hasNavParam = fn.parameters.any { it.name?.asString() == "nav" }
+                val navParam = fn.parameters.firstOrNull { it.name?.asString() == "nav" }
+                val navParamType = navParam?.type?.resolve()
+                val hasNavParam = navParam != null
+
+                // MV11 (Faz-5 recheck MJ5) — the binder signature must be a SUBSET of {Flow<E>, nav}. An
+                // extra param (e.g. `snackbarHostState: SnackbarHostState`) has no wiring path — codegen
+                // emits `XEffects(effects = vm.effects[, nav = nav])` and the generated file dies with a
+                // cryptic "No value passed for parameter". There is no effect-binder resolver mechanism
+                // (unlike content Problem-2), so reject up front with an actionable message.
+                val extraParams = fn.parameters.filter { it != flowParam && it != navParam }
+                if (extraParams.isNotEmpty()) {
+                    error(
+                        "MV11",
+                        "@ScreenEffect $simpleName şu fazladan param(lar)ı alıyor: " +
+                            extraParams.joinToString { it.name?.asString().orEmpty() } +
+                            " — binder imzası yalnız fun XEffects(effects: Flow<E>[, nav: XNavigator]) olabilir " +
+                            "(efekt binder'ının content'teki gibi resolver-extra mekanizması YOK; " +
+                            "SnackbarHostState gibi bağımlılıkları content'te Problem-2 resolver'ıyla ver)",
+                    )
+                }
 
                 when {
                     effectTypeName == null -> error(
@@ -592,7 +638,15 @@ class EntryModelReader(
                     )
                 }
 
-                EffectFun(simpleName, fn.packageName.asString(), effectTypeName, flowParamName, hasNavParam)
+                EffectFun(
+                    simpleName = simpleName,
+                    packageName = fn.packageName.asString(),
+                    effectTypeName = effectTypeName,
+                    flowParamName = flowParamName,
+                    hasNavParam = hasNavParam,
+                    navParamTypeFq = navParamType?.fqOf(),
+                    navParamIsError = navParamType?.isError ?: false,
+                )
             }
             .toList()
 
