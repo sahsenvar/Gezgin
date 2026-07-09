@@ -52,6 +52,16 @@ private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
  *   `GezginFragmentEntries.kt` sits beside `GezginEntries.kt` / `GezginMviEntries.kt` in one package). Same
  *   `(packageName, x)` uniqueness key `EntryModelReader`'s `SC6` uses, cross-checked against the same
  *   materialized [entries] plus previously-seen Fragments. → no model emitted for the colliding Fragment.
+ * - **`FS5` — nav-wiring guard (dispatch-site + RUNTIME, NOT a KSP rejection here).** Core-mode's `SC2` and
+ *   MVI-mode's `MV7` REJECT a nav-wanting entry whose route earns no navigator. A `@FragmentScreen` can't be
+ *   rejected the same way: an edge-less leaf (a display-only brownfield screen that only reads `gezginArgs`
+ *   and never navigates) is LEGITIMATE. So `FS5` is split and lives OUTSIDE this graph-unaware reader: the
+ *   whether-the-route-earns-a-navigator predicate (`NavigatorCodegen.hasNavigator`, `?: true`
+ *   cross-module-optimistic — exactly like `SC2`/`MV7`) is computed at [dev.gezgin.processor.GezginProcessor]'s
+ *   codegen dispatch site, [dev.gezgin.processor.codegen.FragmentEntryCodegen] SUPPRESSES nav wiring (no
+ *   `val nav = raw.xNavigator(...)`, binds via the no-nav `bindGezgin(fragment, route)` overload) when it's
+ *   false, and `gezginNav` throws the actionable `[FS5]` error at runtime (gezgin-core
+ *   `FragmentBinding.android.kt`). This reader is untouched (no `GraphModel` in its ctor).
  *
  * **FS3/FS4 wiring choice (post-hoc cross-check, not shared-map seeding):** rather than seeding
  * `EntryModelReader`'s private `seenRouteFqs` (which would require changing its constructor and would

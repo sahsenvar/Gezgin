@@ -15,7 +15,9 @@ import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.entry.EntryModelReader
 import dev.gezgin.processor.fragment.FragmentModelReader
 import dev.gezgin.processor.fragment.dumpFragmentText
+import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.ModelReader
+import dev.gezgin.processor.model.RouteModel
 import dev.gezgin.processor.model.dumpText
 import dev.gezgin.processor.mvi.ViewModelModelReader
 import dev.gezgin.processor.mvi.dumpMviText
@@ -172,8 +174,21 @@ class GezginProcessor(
                     // (kctfork has no compose-compiler plugin → the emitted body ICEs the backend, exactly
                     // like EntryCodegen; the opt-out lets those tests assert the golden text without OK exit).
                     if (fragmentModels.isNotEmpty()) {
-                        FragmentEntryCodegen.generate(fragmentModels)
-                            .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
+                        // Fragment nav-wiring GUARD (SC2/MV7 parity, one phase later, FS5). Whether a
+                        // @FragmentScreen route earns a NavigatorCodegen `xNavigator` factory is a
+                        // GRAPH-derived fact — computed HERE (where `model` is in scope), NOT in the
+                        // graph-unaware FragmentModelReader. Mirrors SC2/MV7 exactly, including the `?: true`
+                        // cross-module-optimistic fallback: a route THIS module's model doesn't know (compiled
+                        // in another module) MUST default to "assume it has a navigator". When false (an
+                        // edge-less leaf — a legitimate display-only brownfield screen), FragmentEntryCodegen
+                        // suppresses the `val nav = raw.xNavigator(...)` line (which would be an unresolved
+                        // reference) and binds via the no-nav `bindGezgin(fragment, route)` overload; gezginNav
+                        // then throws the actionable [FS5] runtime error. The leaf is NOT rejected at KSP time.
+                        val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)
+                        val routesByFq = model.routes.associateBy(RouteModel::fqName)
+                        FragmentEntryCodegen.generate(fragmentModels) { entry ->
+                            routesByFq[entry.routeFq]?.let { NavigatorCodegen.hasNavigator(it, graphsByFq) } ?: true
+                        }.forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
                     }
                 }
             }

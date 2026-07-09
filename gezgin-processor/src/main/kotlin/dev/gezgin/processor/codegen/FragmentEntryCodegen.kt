@@ -52,32 +52,41 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * **Screen-only (§11.2).** Fragment interop has no dialog/bottom-sheet/fullscreen variant — every emitted
  * `register` is `kind = EntryKind.SCREEN`, unconditionally.
  *
- * **Navigator wiring — UNCONDITIONAL** (Task 6.0 verbatim binding shape). Unlike core-mode's conditional
- * `hasNavParam`, a Fragment always wires `nav` because `bindGezgin(fragment, route, nav)` always needs it and
- * `gezginNav` is a first-class part of the interop contract. The factory call (`raw.xNavigator(entryId)`,
- * qualified against [FragmentEntryModel.routePackageName] — cross-module-safe, exactly like [EntryCodegen]).
- * KNOWN LIMITATION: a `@FragmentScreen` route with NO edges/back-edges/result-contract earns no
- * `NavigatorCodegen`-generated `xNavigator` factory, so its emitted `raw.xNavigator(...)` would be an
- * unresolved reference — realistically never hit (a brownfield screen navigates); a future
- * `routeHasNavigator` flag on the model could gate it, deliberately deferred (YAGNI; no new cross-cutting
- * model/graph threading into the reader).
+ * **Navigator wiring — CONDITIONAL (SC2/MV7 parity, one phase later).** A Fragment wires `nav`
+ * (`val nav = raw.xNavigator(entryId)` + the 3-arg `bindGezgin(fragment, route, nav)`) **only when the route
+ * actually earns a navigator** — the `navWired` flag [generate]'s `hasNavigator` predicate supplies per entry
+ * (computed at the [dev.gezgin.processor.GezginProcessor] dispatch site via
+ * [NavigatorCodegen.hasNavigator], `?: true` cross-module-optimistic, exactly like core-mode's `SC2` and
+ * MVI-mode's `MV7`). A `@FragmentScreen` route with NO edges/back-edges/result-contract earns no
+ * `NavigatorCodegen`-generated `xNavigator` factory — a realistic, legitimate case (a display-only brownfield
+ * leaf like Settings/About that only reads `gezginArgs` and never navigates). For that leaf the emitted body
+ * SUPPRESSES the `val nav = ...` line (which would be an unresolved reference) and binds via the no-nav
+ * `bindGezgin(fragment, route)` overload; `gezginNav` then throws the actionable `[FS5]` runtime error
+ * (gezgin-core `FragmentBinding.android.kt`) rather than the codegen calling a factory that doesn't exist.
+ * The leaf is NOT rejected at KSP time (that would forbid a legitimate display-only Fragment). The factory
+ * call, when wired, is qualified against [FragmentEntryModel.routePackageName] — cross-module-safe, exactly
+ * like [EntryCodegen].
  */
 object FragmentEntryCodegen {
 
-    fun generate(entries: List<FragmentEntryModel>): List<FileSpec> =
+    /**
+     * @param hasNavigator per-entry predicate — `true` iff the entry's route earns a `NavigatorCodegen`
+     *   `xNavigator` factory (see class KDoc). Supplied by [dev.gezgin.processor.GezginProcessor], which
+     *   holds the [dev.gezgin.processor.model.GraphModel] this reader is deliberately kept unaware of.
+     */
+    fun generate(
+        entries: List<FragmentEntryModel>,
+        hasNavigator: (FragmentEntryModel) -> Boolean,
+    ): List<FileSpec> =
         entries.groupBy { it.packageName }.map { (packageName, group) ->
             FileSpec.builder(packageName, "GezginFragmentEntries")
-                .apply { group.forEach { addFunction(provideFragmentEntryFun(it)) } }
+                .apply { group.forEach { addFunction(provideFragmentEntryFun(it, hasNavigator(it))) } }
                 .build()
         }
 
-    private fun provideFragmentEntryFun(entry: FragmentEntryModel): FunSpec {
+    private fun provideFragmentEntryFun(entry: FragmentEntryModel, navWired: Boolean): FunSpec {
         val routeClass = ClassName.bestGuess(entry.routeFq)
         val fragmentClass = ClassName.bestGuess(entry.fragmentFq)
-        // The navigator FACTORY extension lives in the route's OWN package ([routePackageName]) — a
-        // different package (and, cross-module, a different MODULE) than this file's, so `%M` (imported),
-        // identical to EntryCodegen/MviEntryCodegen.
-        val factoryFun = MemberName(entry.routePackageName, NavigatorCodegen.rawFactoryFunName(entry.x))
 
         val body = CodeBlock.builder()
             .add(
@@ -87,13 +96,29 @@ object FragmentEntryCodegen {
                 entry.noBack,
             )
             .indent()
-            // `raw` bound to a val (needed TWICE: once for the factory, once for route.toBundle(raw)).
+            // `raw` bound to a val — needed for route.toBundle(raw), and (when wired) the navigator factory.
             .add("val raw = %M.current\n", LOCAL_RAW_NAVIGATOR)
-            .add("val nav = raw.%M(%M.current)\n", factoryFun, LOCAL_ENTRY_ID)
+            .apply {
+                if (navWired) {
+                    // The navigator FACTORY extension lives in the route's OWN package ([routePackageName]) —
+                    // a different package (and, cross-module, a different MODULE) than this file's, so `%M`
+                    // (imported), identical to EntryCodegen/MviEntryCodegen. Only emitted when the route earns
+                    // a navigator (else `raw.xNavigator(...)` would be an unresolved reference).
+                    val factoryFun = MemberName(entry.routePackageName, NavigatorCodegen.rawFactoryFunName(entry.x))
+                    add("val nav = raw.%M(%M.current)\n", factoryFun, LOCAL_ENTRY_ID)
+                }
+            }
             .add("%M<%T>(\n", ANDROID_FRAGMENT, fragmentClass)
             .indent()
             .add("arguments = route.%M(raw),\n", TO_BUNDLE)
-            .add("onUpdate = { fragment -> %M(fragment, route, nav) },\n", BIND_GEZGIN)
+            .apply {
+                if (navWired) {
+                    add("onUpdate = { fragment -> %M(fragment, route, nav) },\n", BIND_GEZGIN)
+                } else {
+                    // No navigator for this route → no-nav bindGezgin overload; gezginNav throws [FS5].
+                    add("onUpdate = { fragment -> %M(fragment, route) },\n", BIND_GEZGIN)
+                }
+            }
             .unindent()
             .add(")\n")
             .unindent()

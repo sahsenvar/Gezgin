@@ -20,8 +20,11 @@ import kotlin.properties.ReadOnlyProperty
 
 /** Registry girdisi: bir `@FragmentScreen` Fragment'ının `gezginNav` ile eriştiği CANLI navigator facade.
  *  (Route BURADA tutulmaz — `gezginArgs` onu `arguments` Bundle'ından okur, §B4.) Navigator tipi üretilen
- *  `XNavigator` olduğundan gezgin-core onu bilmez → `Any`; `gezginNav` reified tipe cast'ler. */
-private class BoundGezgin(val nav: Any)
+ *  `XNavigator` olduğundan gezgin-core onu bilmez → `Any?`; `gezginNav` reified tipe cast'ler. [nav] `null`
+ *  ise route hiçbir navigator KAZANMAZ (edge'siz yaprak — hiç edge/back-edge/result-contract yok → üretilmiş
+ *  bir `XNavigator` yok, §11.1): Fragment bind EDİLMİŞTİR ama `gezginNav` okunamaz ([gezginBoundNav] FS5
+ *  fırlatır) — bu "henüz bind yok" (registry'de kayıt HİÇ yok) durumundan AYRIDIR. */
+private class BoundGezgin(val nav: Any?)
 
 /**
  * Fragment-instance → canlı navigator yan-tablosu. **Zayıf anahtar (`WeakHashMap`):** config-change/PD ile
@@ -50,20 +53,53 @@ fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
 }
 
 /**
- * `gezginNav`'ın registry okuması + bind-öncesi açıklayıcı hata (inline olmayan gerçek gövde; [gezginNav]
- * yalnız reified cast'i inline'lar → `boundRegistry`/`BoundGezgin` private kalabilir).
+ * [bindGezgin]'in NAV'SIZ aşırı-yüklemesi — route bir navigator KAZANMADIĞINDA (edge'siz yaprak: hiç
+ * @GoTo/@ReplaceTo/@BackTo/... edge'i, result-contract'ı yok → [dev.gezgin.processor.codegen.NavigatorCodegen]
+ * ona bir `XNavigator` ÜRETMEZ, §11.1). ÜRETİLEN `provideXEntry` bu durumda `nav`'ı hiç bağlamaz ve
+ * `onUpdate = { fragment -> bindGezgin(fragment, route) }` çağırır (var olmayan bir factory'i ASLA çağırmaz —
+ * SC2/MV7'nin bir faz sonraki karşılığı; koşul [dev.gezgin.processor.GezginProcessor]'da `NavigatorCodegen.
+ * hasNavigator` ile hesaplanır). Fragment'ı navigator'sız BAĞLAR: `gezginArgs` (Bundle'dan) yine çalışır; ama
+ * `gezginNav` okunursa [gezginBoundNav] `[FS5]` hatası fırlatır — "bind yok" değil, "navigator YOK". Meşru bir
+ * görüntü-yalnızca (display-only) brownfield ekranı (Settings/About) bu yolu izler; KSP-zamanı REDDEDİLMEZ.
+ *
+ * **KOŞULSUZ put** — nav'lı aşırı-yükleme ile aynı idempotency sözleşmesi (bind-once guard YOK): config-
+ * change/PD sonrası yeni instance yeniden bağlanmalı. `public`: üretilen kod tüketici modülünde.
+ */
+@Suppress("UNUSED_PARAMETER")
+fun bindGezgin(fragment: Fragment, route: Route) {
+    boundRegistry[fragment] = BoundGezgin(nav = null)
+}
+
+/**
+ * `gezginNav`'ın registry okuması + İKİ ayrı açıklayıcı hata (inline olmayan gerçek gövde; [gezginNav] yalnız
+ * reified cast'i inline'lar → `boundRegistry`/`BoundGezgin` private kalabilir):
+ * - registry'de kayıt HİÇ yoksa → "henüz bind edilmedi" (`onUpdate` daha çalışmadı).
+ * - kayıt var ama `nav == null` ise → `[FS5]` "route'un navigator'ı YOK" (edge'siz yaprak, nav'sız
+ *   [bindGezgin] ile bağlandı). Bu iki durum KASITEN ayrık mesajlarla ayrılır.
  */
 @PublishedApi
-internal fun gezginBoundNav(fragment: Fragment): Any =
-    boundRegistry[fragment]?.nav ?: error(
+internal fun gezginBoundNav(fragment: Fragment): Any {
+    val bound = boundRegistry[fragment] ?: error(
         "gezginNav yalnız AndroidFragment'ın onUpdate'i bu Fragment instance'ını bind ettikten SONRA " +
             "okunabilir (bind = ilk onUpdate; §11.1 lifecycle sözleşmesi). ${fragment::class.simpleName} " +
             "için henüz bind yok — canlı navigator serileştirilemez, arguments'tan gelemez.",
     )
+    return bound.nav ?: error(
+        "[FS5] gezginNav okunamaz: ${fragment::class.simpleName}'ın @FragmentScreen route'unun bir " +
+            "navigator'ı YOK — hiç @GoTo/@ReplaceTo/@BackTo/... edge'i (ve result-contract'ı) tanımlamıyor, " +
+            "dolayısıyla NavigatorCodegen ona bir XNavigator ÜRETMEDİ (bu Fragment navigator'sız bağlandı). " +
+            "Bu 'henüz bind edilmedi'den FARKLI bir durumdur. Çözüm: gezginNav'ı yalnız en az bir navigasyon " +
+            "edge'i tanımlayan bir route'ta kullan (route'a bir edge ekle) ya da bu görüntü-yalnızca ekrandan " +
+            "gezginNav delegesini kaldır (yalnız gezginArgs kullan).",
+    )
+}
 
 /**
  * `@Screen`'in `nav` param'ının Fragment karşılığı (§11.1). `by gezginNav<XNavigator>()` — bind-sonrası canlı
- * navigator'ı reified tipe cast'leyerek döndürür; bind-öncesi ([gezginBoundNav]) açıklayıcı hata fırlatır.
+ * navigator'ı reified tipe cast'leyerek döndürür. [gezginBoundNav] iki durumu ayrı hatalarla ayırır: henüz
+ * bind edilmediyse "bind yok", route'un navigator'ı yoksa (edge'siz yaprak, nav'sız [bindGezgin] ile bağlandı)
+ * `[FS5]` "navigator YOK". (Genelde ikincisi zaten derleme-zamanı yakalanır: navigator'ı olmayan bir route'un
+ * `XNavigator` tipi hiç ÜRETİLMEZ → `gezginNav<XNavigator>()` çözümlenemez; FS5 kalıntı bir runtime ağıdır.)
  */
 inline fun <reified N> gezginNav(): ReadOnlyProperty<Fragment, N> =
     ReadOnlyProperty { fragment, _ -> gezginBoundNav(fragment) as N }

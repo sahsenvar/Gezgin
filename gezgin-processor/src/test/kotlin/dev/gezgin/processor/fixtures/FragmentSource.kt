@@ -55,3 +55,28 @@ val FRAGMENT_SOURCE = """
     @FragmentScreen(ArchivedRoute::class)
     class ArchivedFragment : Fragment()
 """.trimIndent()
+
+/**
+ * Fix-round fixture pinning the CONDITIONAL nav-wiring guard (the FS5 / SC2-MV7-parity fix). Compiled
+ * ALONGSIDE [SHOP_SOURCE] so its two `@FragmentScreen` leaves target routes that ARE in this module's model
+ * with a KNOWN navigator status (unlike [FRAGMENT_ROUTES], whose graph-less routes fall to the `?: true`
+ * cross-module-optimistic fallback):
+ * - `FeedFragment` → `HomeGraph.Feed`, which earns a `FeedNavigator` (has `@GoTo`/`@GoForResult` edges) →
+ *   nav wiring MUST be emitted exactly as before (regression pin for the WITH-navigator case).
+ * - `AboutFragment` → `HomeGraph.About`, [SHOP_SOURCE]'s deliberately-bare route (no edges/back-edges/
+ *   result-contract) → earns NO navigator → nav wiring MUST be SUPPRESSED (no `val nav`, no `aboutNavigator`
+ *   import, 2-arg `bindGezgin(fragment, route)`), the edge-less-leaf display-only case.
+ */
+val FRAGMENT_NAV_SPLIT_SOURCE = """
+    package dev.gezgin.shopfrag
+
+    import androidx.fragment.app.Fragment
+    import dev.gezgin.core.annotation.FragmentScreen
+    import dev.gezgin.shop.HomeGraph
+
+    @FragmentScreen(HomeGraph.Feed::class)
+    class FeedFragment : Fragment()
+
+    @FragmentScreen(HomeGraph.About::class)
+    class AboutFragment : Fragment()
+""".trimIndent()

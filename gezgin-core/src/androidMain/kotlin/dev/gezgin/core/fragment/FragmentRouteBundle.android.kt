@@ -48,13 +48,13 @@ fun Route.toBundle(nav: RawNavigator): Bundle {
 }
 
 /**
- * [toBundle]'ın tersi — Bundle'daki polimorfik route'u [nav]'ın app-Json'ıyla decode eder. Simetrik inverse
- * (§B2); üretim yolunda `gezginArgs` [decodeGezginRoute]'u tutucu-Json ile doğrudan kullandığından bu
- * `internal` (modül-içi test/simetri) kalır.
+ * [toBundle]'ın tersi — Bundle'daki polimorfik route'u [json] ile decode eder. `gezginArgs`'ın kapsamsız
+ * decode yolu (`gezginBoundRoute` → yakalanan [gezginFragmentJson]) BUNU doğrudan çağırır; ayrı bir
+ * `Bundle.toRoute(nav)` simetrik-inverse sarmalayıcısı YOKTUR — o yalnız `nav.json`'ı bu fonksiyona iletirdi,
+ * hiçbir yerden çağrılmıyordu ve `Bundle` (Android) olduğu için Robolectric'siz test edilemezdi (Task 6.0'ın
+ * "Robolectric yok" kararı). Serileştirme mekanizması yine `FragmentRouteSerializationTest`'te (commonTest,
+ * `Bundle`'sız) polimorfik round-trip ile kanıtlanır.
  */
-internal fun Bundle.toRoute(nav: RawNavigator): Route = decodeGezginRoute(nav.json, this)
-
-/** Hem [Bundle.toRoute] hem `gezginArgs`'ın paylaştığı polimorfik decode çekirdeği. */
 internal fun decodeGezginRoute(json: Json, bundle: Bundle): Route {
     val encoded = requireNotNull(bundle.getString(GEZGIN_FRAGMENT_ROUTE_KEY)) {
         "Bundle '$GEZGIN_FRAGMENT_ROUTE_KEY' taşımıyor — bu Bundle Gezgin route.toBundle() ile üretilmedi " +
