@@ -18,6 +18,7 @@ import dev.gezgin.processor.model.RouteModel
 import dev.gezgin.processor.mvi.SCREEN_EFFECT_FQ
 import dev.gezgin.processor.mvi.ViewModelModel
 import dev.gezgin.processor.mvi.VmDiClassifier
+import dev.gezgin.processor.mvi.VmDiKind
 
 private const val SCREEN_FQ = "dev.gezgin.core.annotation.Screen"
 private const val DIALOG_FQ = "dev.gezgin.core.annotation.Dialog"
@@ -127,6 +128,9 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  *   an EXTRA param (e.g. `SnackbarHostState` — no wiring path, unlike content's Problem-2 resolvers) or a
  *   `nav` param whose RESOLVED type isn't the matched route's `${x}Navigator`. Both would otherwise emit
  *   compile-broken code inside `GezginMviEntries.kt`; rejected up front with an actionable message.
+ * - `MV12` — a plain `@HiltViewModel` (no assisted factory) bound to a route that CARRIES DATA
+ *   (parameterized ctor). Nav3 has no path that writes the route into `SavedStateHandle`, so such a VM
+ *   silently reads null route data; rejected with a "use HILT_ASSISTED / parameterless route" message.
  *
  * (`MV1`/`MV4` — `@ViewModel` must implement `GezginMvi`, and no two `@ViewModel`s per route — live in
  * [dev.gezgin.processor.mvi.ViewModelModelReader], whose output [vmModels] this reader consumes.)
@@ -404,6 +408,25 @@ class EntryModelReader(
         // Mark matched as soon as a VM pairs with a content (even if MV5 fails below) so MV3 doesn't
         // also fire for the same VM — MV3 is strictly "no content at all", not "invalid content".
         matchedVmRoutes += routeFq
+
+        // MV12 (Faz-5 recheck MJ4) — a plain `@HiltViewModel` (no assisted factory) receives NOTHING from
+        // Gezgin: the old premise "route arrives via SavedStateHandle" is FALSE in Nav3 (no mechanism
+        // writes the route into the handle → `ssh.get("id")` is silently null). So a plain-Hilt VM whose
+        // ROUTE carries data (parameterized ctor) can never read that data → reject with an actionable
+        // message rather than emit code that compiles and silently reads null. A parameterless route is
+        // fine (the VM needs no route data). Route-data-carrying screens must use HILT_ASSISTED (factory)
+        // or a Gezgin-supplied resolver.
+        if (vm.di == VmDiKind.HILT_PLAIN && routeDecl!!.primaryConstructor?.parameters.orEmpty().isNotEmpty()) {
+            error(
+                "MV12",
+                "$fnName: route ${routeFq.substringAfterLast('.')} parametreli (route verisi taşıyor) ama " +
+                    "@ViewModel ${vm.vmSimpleName} düz @HiltViewModel (assistedFactory YOK) — Nav3'te plain-Hilt " +
+                    "VM route argümanlarına ERİŞEMEZ: route'u SavedStateHandle'a yazan bir mekanizma yok, " +
+                    "`SavedStateHandle.get(...)` her zaman null döner. Route verisi taşıyan ekran için " +
+                    "@HiltViewModel(assistedFactory = …) (HILT_ASSISTED) kullan ya da route'u parametresiz yap (§10.1)",
+            )
+            return null
+        }
 
         // MV5 — content (state, onIntent) must satisfy the VM's GezginMvi<S,I,E> contract. Compare by
         // KotlinPoet TypeName (structural, generics-preserving) NOT flattened FQ: an FQ compare collapses

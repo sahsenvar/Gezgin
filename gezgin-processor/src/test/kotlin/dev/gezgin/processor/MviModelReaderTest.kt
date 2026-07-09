@@ -5,6 +5,7 @@ import com.tschuchort.compiletesting.SourceFile
 import dev.gezgin.processor.CompileHarness.compileGezgin
 import dev.gezgin.processor.CompileHarness.findGeneratedResource
 import dev.gezgin.processor.CompileHarness.generatedSourceFor
+import dev.gezgin.processor.fixtures.HILT_STUBS
 import dev.gezgin.processor.fixtures.MV7_NO_NAV_SOURCE
 import dev.gezgin.processor.fixtures.MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
@@ -669,6 +670,45 @@ class MviModelReaderTest {
             fun Content(state: S, onIntent: (I) -> Unit) {
             }
             """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV12 — plain HiltViewModel on a route that carries data is rejected (MJ4)`() {
+        // Nav3 has no path that writes the route into SavedStateHandle, so a plain-Hilt VM whose route
+        // carries data (`OrderRoute(orderId)`) would silently read null. Reject with an actionable message.
+        assertViolates(
+            "MV12",
+            """
+            package dev.gezgin.mv12
+
+            import androidx.compose.runtime.Composable
+            import dagger.hilt.android.lifecycle.HiltViewModel
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class OrderRoute(val orderId: String) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(OrderRoute::class)
+            @HiltViewModel
+            class OrderVm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(OrderRoute::class)
+            @Composable
+            fun OrderContent(state: S, onIntent: (I) -> Unit) {
+            }
+            """.trimIndent(),
+            SourceFile.kotlin("HiltStubs.kt", HILT_STUBS),
         )
     }
 

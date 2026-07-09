@@ -200,7 +200,11 @@ val HILT_ASSISTED_MVI_SOURCE = """
     }
 """.trimIndent()
 
-/** Plain Hilt (no assisted factory), no ctor params → `hiltViewModel<PlainVm>()`, no nav. */
+/**
+ * Plain Hilt (no assisted factory) → `hiltViewModel<PlainVm>()`, no nav. The route is PARAMETERLESS: a
+ * plain-Hilt VM receives NO route data in Nav3 (no SavedStateHandle path), so a route-data-carrying route
+ * is an `MV12` reject (see `MviModelReaderTest`); a data-object route is the only valid plain-Hilt shape.
+ */
 val HILT_PLAIN_MVI_SOURCE = """
     package dev.gezgin.hiltplain
 
@@ -213,7 +217,7 @@ val HILT_PLAIN_MVI_SOURCE = """
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
 
-    data class PlainRoute(val id: String = "x") : Route
+    data object PlainRoute : Route
     data class PlainState(val n: Int)
     sealed interface PlainIntent { data object Go : PlainIntent }
     data class PlainEffect(val m: String)

@@ -198,7 +198,8 @@ object MviEntryCodegen {
                 )
             }
 
-            // Plain Hilt supplies nothing itself (route via SavedStateHandle) — ignore args, no nav.
+            // Plain Hilt supplies nothing itself — Hilt injects everything; Gezgin passes no route/nav
+            // (a route-data-carrying route is rejected as MV12, since Nav3 can't feed SavedStateHandle).
             VmDiKind.HILT_PLAIN -> CodeBlock.of("{ %M<%T>() }", HILT_VIEW_MODEL, vmClass)
         }
     }
