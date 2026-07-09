@@ -26,8 +26,8 @@ import dev.gezgin.core.annotation.Dialog
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.sample.navigation.AvatarChoice
 import dev.gezgin.sample.navigation.CropNavigator
-import dev.gezgin.sample.navigation.NotificationLevel
 import dev.gezgin.sample.navigation.EditNameDialogNavigator
+import dev.gezgin.sample.navigation.NotificationLevel
 import dev.gezgin.sample.navigation.PickSourceNavigator
 import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.CropScreenRoute
 import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.PickSourceScreenRoute
