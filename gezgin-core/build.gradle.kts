@@ -4,7 +4,16 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
+    `maven-publish`
 }
+
+// Faz 7.4 — versiyonlama: proje ilk sürümü. Convention-plugin bilinçle kullanılmıyor (sample netliği
+// gerekçesi, bkz. sample/feature/*/build.gradle.kts) → yayınlanabilir 3 modülün (core/processor/mvi) her
+// birine AÇIKÇA yazılır. Root gradle.properties'e koymak gezgin-test + sample modüllerine de sızardı
+// (yayınlanmamalı) — bu yüzden modül-başına açık `version` tercih edildi.
+group = "dev.gezgin"
+version = "0.1.0-alpha01"
+
 kotlin {
     jvmToolchain(17)
     // jvm() = desktop Compose hedefi (Faz 3 GezginDisplay); compose.desktop.currentOs çalıştırma zamanı
@@ -60,3 +69,24 @@ kotlin {
     }
 }
 android { namespace = "dev.gezgin.core"; compileSdk = 36; defaultConfig { minSdk = 24 } }
+
+// İskelet — gerçek bir Maven repository/credentials YOK; `./gradlew publish` çalıştırılmaz, yalnız
+// `assemble`/`build`'in bu bloktan etkilenmediği doğrulanır. Kotlin-multiplatform plugin'i `maven-publish`
+// uygulanınca hedef-başına publication'ları (kotlinMultiplatform/jvm/android/metadata) otomatik kurar;
+// burada yalnız POM metadata'sı (group=dev.gezgin project'ten gelir) `configureEach` ile tembel eklenir.
+// Repository/signing bilinçle EKLENMEDİ → yalnız `publishToMavenLocal`/`generatePomFile*` görevleri mümkün,
+// gerçek uzak yayın yolu yok.
+// NOT (gerçek yayın günü için): `android { publishLibraryVariants("release") }` HENÜZ eklenmedi — güncel
+// Kotlin Gradle Plugin bunu vermeden Android varyantını publish etmez; bu iskelet bugün hiçbir şeyi
+// publish etmediği için zararsız, ama V1 sonrası gerçek yayın adımının kontrol listesine eklenmeli.
+publishing {
+    publications.withType<MavenPublication>().configureEach {
+        pom {
+            name.set("gezgin-core")
+            description.set(
+                "DI-agnostik runtime + core codegen + Compose display katmanı (GezginDisplay) + " +
+                    "modal scene strategy'leri — Gezgin'in zorunlu temeli.",
+            )
+        }
+    }
+}

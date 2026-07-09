@@ -2,12 +2,16 @@
 
 package dev.gezgin.sample.feature.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -20,10 +24,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.BottomSheet
+import dev.gezgin.core.annotation.FullscreenModal
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.core.compose.LocalGezginSheetState
 import dev.gezgin.sample.navigation.DashboardNavigator
@@ -31,8 +37,10 @@ import dev.gezgin.sample.navigation.FilterBottomSheetNavigator
 import dev.gezgin.sample.navigation.HomeGraph.DashboardScreenRoute
 import dev.gezgin.sample.navigation.HomeGraph.FilterBottomSheetRoute
 import dev.gezgin.sample.navigation.HomeGraph.ItemDetailScreenRoute
+import dev.gezgin.sample.navigation.HomeGraph.ItemImageViewerRoute
 import dev.gezgin.sample.navigation.HomeGraph.WelcomeScreenRoute
 import dev.gezgin.sample.navigation.ItemDetailNavigator
+import dev.gezgin.sample.navigation.ItemImageViewerNavigator
 import dev.gezgin.sample.navigation.SortOrder
 import dev.gezgin.sample.navigation.WelcomeNavigator
 import kotlinx.coroutines.launch
@@ -101,6 +109,9 @@ fun ItemDetailScreen(route: ItemDetailScreenRoute, nav: ItemDetailNavigator) {
             Text("Ürün: ${route.id}")
             Text("Bu ekran örneğinde ziyaret sayacı: $visits")
             Button(onClick = { nav.goToRelated(route.id) }) { Text("İlgili ürün (aynı id, yeni entry)") }
+            // Faz 7.2 (GAP-1) — @FullscreenModal-kind hedefe giriş (@GoTo(ItemImageViewerRoute) →
+            // üretilen goToItemImageViewer(id)). Tam-ekran ürün görseli önizleyici açılır.
+            Button(onClick = { nav.goToItemImageViewer(route.id) }) { Text("Görseli tam ekran gör") }
             TextButton(onClick = { nav.backToDashboard() }) { Text("Panoya dön") }
         }
     }
@@ -151,6 +162,43 @@ fun FilterSheetScreen(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavig
  * `WelcomeNavigator`'da generated `back()` YOK — declared `@ReplaceTo` (`continueToDashboard`) tek
  * çıkış.
  */
+/**
+ * Faz 7.2 (GAP-1) — `@FullscreenModal` kind: tam-ekran ürün görseli önizleyici. `@Dialog`/`@BottomSheet`
+ * gibi kind composable'da yaşar; composable = SADECE içerik. Faz 4'ün `DialogSceneStrategy`'si bu route'u
+ * `DialogProperties(usePlatformDefaultWidth = false)` ile tam-ekran render eder (scrim'siz/kenar-boşluksuz —
+ * `DialogContract`'tan AYRI render kontratı; `FullscreenModalContract`'ın `usePlatformDefaultWidth`'i YOK).
+ *
+ * `ItemImageViewerRoute.dismissOnClickOutside = false` (bkz. `HomeGraph.kt`) → dış-tık kapatmaz;
+ * `dismissOnBackPress` varsayılan `true` → geri tuşu/predictive-gesture kapatır (`onDismissRequest` →
+ * `back()`). Explicit "Kapat" düğmesi `nav.backToItemDetail()` ile açan `ItemDetailScreenRoute`'a pop'lar
+ * (görsel doğrudan onun üstünde açıldığı için bu, `back()`'in de yapacağı şeydir; route'un modal-çıkışını
+ * TİPLİ navigator üzerinden yürütür — düz `@GoTo` girişi + tipli geri, result taşımadan).
+ */
+@FullscreenModal
+@Composable
+fun ItemImageViewerScreen(route: ItemImageViewerRoute, nav: ItemImageViewerNavigator) {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("Ürün görseli — tam ekran")
+            // Görsel yer tutucu — gerçek uygulamada bir Coil/AsyncImage olurdu; referans örnekte
+            // tam-ekran render'ı kanıtlamak için ekranı dolduran bir placeholder yeterli.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("Görsel: ${route.id}")
+            }
+            Button(
+                onClick = { nav.backToItemDetail() },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Kapat") }
+        }
+    }
+}
+
 @Screen
 @Composable
 fun WelcomeScreen(route: WelcomeScreenRoute, nav: WelcomeNavigator) {

@@ -63,16 +63,18 @@ artı iç içe `AvatarFlow` → `ZoomFlow` (`@FlowGraph` içinde `@FlowGraph`).
 | `@QuitAndGoTo` | `TermsScreenRoute` → `WelcomeScreenRoute` | `AuthScreens.kt` |
 | `@Quit` | `TermsScreenRoute` | `AuthScreens.kt` |
 | `@BackToStart` | `TermsScreenRoute` → `CredentialsScreenRoute` | `AuthScreens.kt` |
-| `@BackTo` | `ItemDetailScreenRoute` → `DashboardScreenRoute` | `HomeScreens.kt` |
+| `@BackTo` | `ItemDetailScreenRoute` → `DashboardScreenRoute`; `ItemImageViewerRoute` → `ItemDetailScreenRoute` (fullscreen modal'ın tipli çıkışı) | `HomeScreens.kt` |
 | `@NoBack` (cross-module) | `WelcomeScreenRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `HomeGraph.kt` / `HomeScreens.kt` |
 | `backWithResult` | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | ilgili dosyalar |
 | `quitWith` | `CropScreenRoute`, `ZoomScreenRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `ProfileScreens.kt` |
-| Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 | gerçek overlay render — bkz. aşağıdaki "Faz 4 — gerçek modal overlay" | tüm feature dosyaları |
+| Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 / `@FullscreenModal`×1 | gerçek overlay render — bkz. aşağıdaki "Faz 4 — gerçek modal overlay" | tüm feature dosyaları |
 | `DialogContract` — SABİT desen | `ForgotPasswordDialogRoute.dismissOnClickOutside = false` | `AuthGraph.kt`, `AuthScreens.kt` |
 | `DialogContract` — KOŞULLU desen | `EditNameDialogRoute.dismissOnClickOutside` ← `current.isNotBlank()` | `ProfileGraph.kt`, `ProfileScreens.kt` |
 | `BottomSheetContract` + `LocalGezginSheetState` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `sheetState.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `HomeScreens.kt` |
+| **`@FullscreenModal` + `FullscreenModalContract`** (tam-ekran modal, `usePlatformDefaultWidth` YOK → `DialogContract`'tan AYRI render kontratı) | `ItemImageViewerRoute.dismissOnClickOutside = false` (dış-tık kapatmaz; `dismissOnBackPress` varsayılan `true` → geri/gesture kapatır); giriş `@GoTo(ItemImageViewerRoute)` `ItemDetailScreenRoute`'tan | `HomeGraph.kt`, `HomeScreens.kt` |
 | Transition cascade (3 seviye) | app `navTransitions{forward{...}backward{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsScreenRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `ProfileGraph.kt` |
 | **MVI-mode add-on** (`@ViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) | `SettingsScreenRoute` | `SettingsMvi.kt` — bkz. aşağıdaki "Faz 5 — MVI-mode" |
+| **MVI Problem 2** (rol-DIŞI content param → ZORUNLU `@Composable () -> T` resolver param) | `SettingsContent(..., buildInfo: BuildInfo)` → `provideSettingsEntry(buildInfo = { BuildInfo("1.0.0") })` | `SettingsMvi.kt`, `ProfileGraphEntries.kt` |
 | **`@FragmentScreen`** (brownfield Fragment interop, View-tabanlı) | `HelpScreenRoute` | `HelpFragment.kt` + `fragment_help.xml` — bkz. aşağıdaki "Faz 6 — Fragment interop" |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
 | `onRootBack = finish()` | — | `MainActivity.kt` |
@@ -125,13 +127,24 @@ kütüphane kullanıcısına REFERANS teşkil edecek şekilde bu API'leri gerçe
   KDoc'undaki "kalıntı risk" notu). Kullanıcı swipe-down/scrim-tap/geri-tuşu ile kapatırsa
   (`BottomSheetContract` varsayılanları) yine `Canceled`.
 
-**`FullscreenModalContract`/`@FullscreenModal` bu sample'da KULLANILMIYOR** — bilinçli karar: kapsama
-tablosu zaten `@Dialog`×2 (SABİT+KOŞULLU desen) ve `@BottomSheet`×1'i (sheetState + hide-then-result)
-sergiliyor; `FullscreenModalContract`'ın davranışı `DialogContract`'ın basit bir paraleli
-(`usePlatformDefaultWidth` yok, adapter'da sabit `false`) — core seviyesinde zaten uiTest kanıtı var
-(Task 4.3). Sample'a üçüncü bir modal route eklemek yeni bir kapsam tablosu satırı dışında ek bir
-API deseni göstermeyecekti; mevcut ikisi (Dialog/BottomSheet contract + sheetState + dismiss→Canceled)
-referans için yeterli görüldü.
+- **`@FullscreenModal` + `FullscreenModalContract` (Faz 7.2 / GAP-1)** — `ItemImageViewerRoute`
+  (`HomeGraph.kt`): `ItemDetailScreenRoute`'tan `@GoTo(ItemImageViewerRoute)` ile açılan tam-ekran
+  ürün görseli önizleyici (`ItemImageViewerScreen`, `HomeScreens.kt`). `FullscreenModalContract`,
+  `DialogContract`'ın bir kopyası DEĞİL: `usePlatformDefaultWidth` **yok** — tam-ekran tanımı gereği
+  adapter'da SABİT `false` → `DialogSceneStrategy` bunu scrim'siz/kenar-boşluksuz tam-ekran render eder;
+  `DialogContract`'tan AYRI bir render kontratı. Route yalnız dismiss davranışını taşır:
+  `dismissOnClickOutside = false` (yanlış dış-tık tam-ekran önizleyiciyi kapatmasın),
+  `dismissOnBackPress` varsayılan `true` (geri tuşu/predictive-gesture kapatır → `onDismissRequest` →
+  `back()`). Explicit "Kapat" düğmesi `nav.backToItemDetail()` ile açan detay ekranına döner.
+
+  > **Not (kapsam kararı güncellemesi):** Faz 4.4, bu route'u bilinçle atlamıştı ("`FullscreenModal`,
+  > `DialogContract`'ın basit bir paraleli; core'da uiTest var, üçüncü modal yeni API deseni öğretmez").
+  > O gerekçe ESKİ bar altında ("desenlerin cross-module çalıştığını kanıtla") geçerliydi. Kullanıcının
+  > yeni **"tüm özellikleri kullanan örnek"** barı altında ise public bir annotation (`@FullscreenModal`)
+  > + public bir tip (`FullscreenModalContract`, `DialogContract`'tan farklı render kontratı) için
+  > sample'da SIFIR satır olması gerçek bir kapsama boşluğuydu; Faz 7.2 (GAP-1) bunu kapatır. (Tam-ekran
+  > modal route'u codegen'de bir navigator KAZANması için — bare bir leaf-modal kazanmaz — `@BackTo`
+  > tipli çıkışı taşır; giriş kenarı düz `@GoTo`, result taşımaz.)
 
 ## Faz 5 — MVI-mode (opsiyonel `:gezgin-mvi` add-on)
 
@@ -182,16 +195,28 @@ DEĞİŞMEDEN çözülür; codegen artık `GezginMviEntries.kt`'ye üretir, `Gez
 public fun GezginEntryScope.provideSettingsEntry(
   viewModel: @Composable (nav: SettingsNavigator, args: ProfileGraph.SettingsScreenRoute) -> SettingsViewModel =
     { nav, args -> viewModel(factory = viewModelFactory { initializer { SettingsViewModel(nav) } }) },
+  buildInfo: @Composable () -> BuildInfo,                 // ← Problem 2 resolver'ı (default'suz/ZORUNLU), aşağıya bkz.
 ) {
   register<ProfileGraph.SettingsScreenRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
     val nav = LocalGezginRawNavigator.current.settingsNavigator(LocalGezginEntryId.current)
     val vm = viewModel(nav, route)
     val state by vm.uiState.collectAsStateWithLifecycle()
     SettingsEffects(vm.effects)
-    SettingsContent(state, vm::onIntent)
+    SettingsContent(state, vm::onIntent, buildInfo = buildInfo())
   }
 }
 ```
+
+**Problem 2 (Faz 7.2 / GAP-2) — rol-DIŞI content param → EK resolver param (§10.1).** MVI-mode bir
+`@Screen`/`@Dialog`/`@BottomSheet` content'i rol-bazlı sağlananların (`state` / `onIntent` /
+`sheetState`) DIŞINDA bir param alırsa, `MviEntryCodegen` onu `provideXEntry`'ye **kullanıcı-sağlamalı,
+default'suz (ZORUNLU)** bir `@Composable () -> T` resolver param'ına dönüştürür ve content'e NAMED arg
+olarak geçer. Burada `SettingsContent(..., buildInfo: BuildInfo)` (`SettingsMvi.kt`) → üretilen
+`provideSettingsEntry`'ye `buildInfo: @Composable () -> BuildInfo` eklenir → kurulumda AÇIKÇA verilmek
+ZORUNDA: `ProfileGraphEntries.kt`'de `provideSettingsEntry(buildInfo = { BuildInfo(version = "1.0.0") })`.
+Bu explicit, zorunlu çağrı-yeri Problem 2'nin **tüketici-tarafı** kanıtıdır (mekanizma artık yalnız
+processor fixture'ında değil, gerçek sample'da). `buildInfo` gerçekçi bir bağımlılık gibi okunur —
+bir ayarlar ekranı doğal olarak sürüm satırı gösterir; content onu yalnız salt-okunur tüketir.
 
 **Hilt/Koin override — yalnız örnek, wire EDİLMEZ (sample'ı yalın tutmak için).** Bu sample'a bilinçli
 olarak gerçek bir Hilt/Koin Gradle bağımlılığı EKLENMEZ; `viewModel` resolver'ı override etmek için

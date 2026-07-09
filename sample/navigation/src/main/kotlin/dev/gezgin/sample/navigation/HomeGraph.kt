@@ -1,6 +1,7 @@
 package dev.gezgin.sample.navigation
 
 import dev.gezgin.core.BottomSheetContract
+import dev.gezgin.core.FullscreenModalContract
 import dev.gezgin.core.ResultRoute
 import dev.gezgin.core.Route
 import dev.gezgin.core.annotation.BackTo
@@ -27,9 +28,29 @@ sealed interface HomeGraph : Route {
     data object DashboardScreenRoute : HomeGraph
 
     @GoTo(ItemDetailScreenRoute::class, singleTop = false, name = "goToRelated")  // 2nd named edge to same target (N9/R2)
+    @GoTo(ItemImageViewerRoute::class)                                            // Faz 7.2 — @FullscreenModal-kind hedefe giriş kenarı (goToItemImageViewer(id))
     @BackTo(DashboardScreenRoute::class)
     @Serializable
     data class ItemDetailScreenRoute(val id: String) : HomeGraph
+
+    /**
+     * Faz 7.2 (GAP-1) — `@FullscreenModal`-kind route: tam-ekran ürün görseli önizleyici. `@Screen`/
+     * `@Dialog`/`@BottomSheet` gibi `@FullscreenModal` de composable'da (`:feature:home`); route yalnız
+     * kind'ı ve modal davranışını taşır. `FullscreenModalContract`'ın `usePlatformDefaultWidth` YOK
+     * (tam-ekran tanımı gereği adapter'da SABİT `false`) → `DialogContract`'tan AYRI bir render kontratı.
+     *
+     * `dismissOnClickOutside = false`: yanlış bir dış-tık tam-ekran önizleyiciyi kapatmamalı;
+     * `dismissOnBackPress` VARSAYILAN (`true`) kalır → geri tuşu/predictive-gesture kapatır. Modal'ın
+     * explicit "Kapat" düğmesi `backToItemDetail()` ile pop'lar → açan `ItemDetailScreenRoute`'a döner
+     * (görsel doğrudan onun altındadır; bu tipli çıkış, navigator'ı kazandıran `@BackTo` kenarının
+     * kendisidir — bkz. aşağıdaki `@BackTo` notu). Result taşımaz (düz `@GoTo` girişi — result deseni
+     * zaten `FilterBottomSheet`/dialog'lar/`AvatarFlow`'da kanıtlı).
+     */
+    @BackTo(ItemDetailScreenRoute::class)
+    @Serializable
+    data class ItemImageViewerRoute(val id: String) : HomeGraph, FullscreenModalContract {
+        override val dismissOnClickOutside = false
+    }
 
     /**
      * `@BottomSheet`-kind result producer — real `ModalBottomSheet` overlay (Faz 4:

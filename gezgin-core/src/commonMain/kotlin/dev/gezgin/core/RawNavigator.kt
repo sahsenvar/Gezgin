@@ -37,6 +37,10 @@ class RawNavigator(
     private val bus = ResultBus()
 
     private val _backStack = MutableStateFlow<List<Route>>(emptyList())
+    /**
+     * Public, gözlemlenebilir back stack (§10) — devtools / "şu an neredeyiz" göstergesi. Yalnız `Route`
+     * taşır (id'siz); display'in ihtiyaç duyduğu id-duyarlı akış [keysState]'tir (internal).
+     */
     val backStack: StateFlow<List<Route>> = _backStack.asStateFlow()
 
     private val _keysState = MutableStateFlow<List<GezginKey>>(emptyList())
@@ -61,6 +65,7 @@ class RawNavigator(
     /** GezginDisplay adapter'ı için raw entry görünümü. */
     internal val keys: List<GezginKey> get() = state.stack
 
+    /** Stack'in tepesindeki (şu an aktif) route. */
     val current: Route get() = state.stack.last().route
 
     init {
@@ -133,6 +138,7 @@ class RawNavigator(
         popTopAndEmit()                  // (2) düz pop — pending-target Canceled'ı da settleRemoved verir
     }
 
+    /** `@ReplaceTo` runtime'ı: `clearUpTo`'ya kadar (null = yalnız top) temizleyip `route`'u iter; çıkarılan pending-target'lara Canceled teslim eder. */
     fun replaceTo(route: Route, clearUpTo: KClass<out Route>? = null, inclusive: Boolean = true) {
         val before = state.stack.toList()
         val enterFlow = resolveEnterFlow(route)
@@ -144,6 +150,7 @@ class RawNavigator(
         settleRemoved(removed)
     }
 
+    /** `@BackTo` runtime'ı: stack'te `target`'a kadar pop (`inclusive` ise target da). Target yoksa `BackToTargetMissing` event'i, pop YOK. */
     fun backTo(target: KClass<out Route>, inclusive: Boolean = false) {
         val removed = state.backTo(target, inclusive)
         if (removed == null) {

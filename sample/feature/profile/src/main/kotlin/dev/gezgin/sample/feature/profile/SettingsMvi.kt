@@ -64,6 +64,15 @@ import kotlinx.coroutines.flow.update
 /** UI state — yalnız gözlenen `darkTheme` toggle'ı (VM'de tutulur → config-change'te korunur). */
 data class SettingsState(val darkTheme: Boolean = false)
 
+/**
+ * Faz 7.2 (GAP-2) — §10.1 "Problem 2" kanıtı için basit bir bağımlılık tipi. Bir ayarlar ekranı
+ * gerçekçi olarak sürüm bilgisi gösterir; `BuildInfo` MVI-mode `@Screen` content'ine rol-DIŞI
+ * (state/onIntent/sheetState değil) bir param olarak girer → codegen onu `provideSettingsEntry`'nin
+ * EK, kullanıcı-sağlamalı `@Composable () -> BuildInfo` resolver param'ına dönüştürür (bkz.
+ * `SettingsContent` + `ProfileGraphEntries.kt` çağrı-yeri).
+ */
+data class BuildInfo(val version: String)
+
 /** Kullanıcı niyetleri — content `onIntent(...)` ile tetikler, VM `onIntent`'te işler. */
 sealed interface SettingsIntent {
     data object ToggleTheme : SettingsIntent
@@ -100,14 +109,23 @@ class SettingsViewModel(private val nav: SettingsNavigator) :
     }
 }
 
+/**
+ * MVI-mode stateless content. `state`/`onIntent` = ROL-bazlı paramlar (codegen VM'den besler).
+ * `buildInfo: BuildInfo` = ROL-DIŞI param (§10.1 "Problem 2"): codegen bunu üretilen
+ * `provideSettingsEntry`'ye EK bir `buildInfo: @Composable () -> BuildInfo` resolver param'ı olarak
+ * ekler (default'suz → ZORUNLU); kurulumda `ProfileGraphEntries.kt` bunu açıkça sağlar. Content saf
+ * kalır — param'ı yalnız okuyup gösterir (sürüm satırı).
+ */
 @Screen(SettingsScreenRoute::class)
 @Composable
-fun SettingsContent(state: SettingsState, onIntent: (SettingsIntent) -> Unit) {
+fun SettingsContent(state: SettingsState, onIntent: (SettingsIntent) -> Unit, buildInfo: BuildInfo) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Ayarlar")
             ThemeToggle(state.darkTheme) { onIntent(SettingsIntent.ToggleTheme) }
             Button(onClick = { onIntent(SettingsIntent.Logout) }) { Text("Çıkış yap") }
+            // Problem-2 resolver param'ının salt-okunur tüketimi (gerçekçi bir ayarlar satırı).
+            Text("Sürüm ${buildInfo.version}")
         }
     }
 }

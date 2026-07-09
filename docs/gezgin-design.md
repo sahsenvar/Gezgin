@@ -310,10 +310,16 @@ Legacy `DialogFragment`/`BottomSheetDialogFragment` için **köprü yok**. Bir d
 @Composable
 fun App() {
     val navigator = rememberNavigator(start = HomeRoute)
+
+    // Observe-only middleware (§10.1): navigator.events akışını DIŞARIDAN collect edersin —
+    // GezginDisplay'in bir constructor param'ı DEĞİL. Akışı hiçbir şekilde etkilemez (log/analytics).
+    LaunchedEffect(navigator) {
+        navigator.events.collect { event -> /* NavLogger / Analytics */ }
+    }
+
     GezginDisplay(
         navigator   = navigator,
         transitions = navTransitions { forward { /* app-geneli */ } backward { /* app-geneli */ } },
-        middleware  = listOf(NavLogger, Analytics),
     ) {                                              // this: GezginEntryScope
         homeFeatureEntries()                         // kullanıcı-yazımı bundle'lar
         orderFeatureEntries()
