@@ -159,6 +159,10 @@ yeni bir ekran gerekmedi.
   `onIntent(ToggleTheme)` state'teki `darkTheme`'i çevirir + bir efekt emit eder; `onIntent(Logout)`
   enjekte edilmiş `nav.logout()`'u **doğrudan** çağırır (spec §10 A deseni: "VM-driven, önerilen" —
   nav VM'e enjekte, üretilen nav metodu VM içinden çağrılır).
+  <br>**İsim kuralı:** navigator ctor-param'ı mutlaka `nav` adlı olmalı — DI-detection onu **ada göre**
+  tanır (aynı-modül `SettingsNavigator` tipi henüz üretilmediğinden). `navigator` gibi başka bir ad
+  default `viewModel` resolver'ının onu tanımamasına yol açar (`viewModel` param'ı zorunlu olur). Route
+  param'ı tipe göre eşlenir, bu kısıt yalnız nav için geçerlidir.
 - stateless **`@Screen(SettingsScreenRoute) fun SettingsContent(state, onIntent)`** — eski
   `fun SettingsScreen(route, nav)`'in yerine; UI yalnız `state` okur + `onIntent` tetikler.
 - **`@ScreenEffect fun SettingsEffects(effects: Flow<SettingsEffect>)`** — `gezgin-mvi`'nin

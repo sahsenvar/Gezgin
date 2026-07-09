@@ -9,6 +9,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.model.GraphModel
@@ -30,6 +31,14 @@ private const val SHEET_STATE_FQ = "androidx.compose.material3.SheetState"
 private const val FLOW_FQ = "kotlinx.coroutines.flow.Flow"
 private const val FUNCTION1_FQ = "kotlin.Function1"
 private const val UNIT_FQ = "kotlin.Unit"
+
+// Problem-2 (§10.1) content-extra names that collide with the identifiers `MviEntryCodegen`'s emitted
+// `provideXEntry` introduces: the resolver param `viewModel`, and the register-body locals `route`
+// (lambda param), `nav` (nav-wired factory), `vm` (the resolved VM). An extra colliding with one of
+// these would emit broken generated code (e.g. an extra `nav: XNavigator` → `nav = nav()`, calling the
+// navigator instance as if it were the resolver lambda) — MV10 rejects it at model-read time. (`state`/
+// `onIntent` are the MVI signature params, filtered out BEFORE the extras loop, so they never reach it.)
+private val RESERVED_EXTRA_NAMES = setOf("viewModel", "nav", "route", "vm")
 
 private val KIND_BY_ANNOTATION_FQ = mapOf(
     SCREEN_FQ to EntryKindModel.SCREEN,
@@ -79,15 +88,25 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  * one package (`SC6`), is rejected.
  *
  * **MVI guardrails (Faz 5.1):**
- * - `MV2` — an MVI-mode content whose route has no `@ViewModel` in THIS module (state/onIntent don't
- *   pair with any `@ViewModel(Route)`).
+ * - `MV2` — an MVI-mode content whose route has no `@ViewModel` in THIS module (route-linked, not
+ *   state/onIntent-type-matched).
  * - `MV3` — a `@ViewModel` with no matching MVI-mode content in this module (symmetric to `MV2`).
  * - `MV5` — a matched content's `state`/`onIntent` types don't satisfy the VM's `GezginMvi<S,I,E>`
- *   contract: `state` ≠ `S`, or `onIntent` is not a `(I) -> Unit` function type.
- * - `MV6` — a `@ScreenEffect`'s `Flow<E>` `E` matches no `@ViewModel`'s effect type (`E`).
+ *   contract: `state` ≠ `S` (compared by [TypeName], generics-preserving), or `onIntent` is not a
+ *   `(I) -> Unit` function type.
+ * - `MV6` — a `@ScreenEffect`'s `Flow<E>` `E` (by [TypeName]) matches no `@ViewModel`'s effect type (`E`).
  * - `MV7` — MVI-mode `SC2` parity: nav is wired (the matched VM's ctor wants `nav`, or the matched
  *   `@ScreenEffect` takes a `nav` param) but the route earns no navigator ([NavigatorCodegen.hasNavigator]
  *   false) — otherwise codegen would emit an unresolved `<x>Navigator()` factory call.
+ *
+ * **MVI guardrails (Faz 5 final review):**
+ * - `MV8` — a `sheetState: SheetState` extra on a non-`BOTTOM_SHEET`-kind MVI content: role-injected
+ *   `LocalGezginSheetState.current` `error()`s outside a `@BottomSheet`, so codegen would emit
+ *   compile-clean code that crashes at first render. Classified as a role extra ONLY on `BOTTOM_SHEET`.
+ * - `MV9` — two `@ScreenEffect` binders resolving to the same effect type `E` (symmetric to `MV4`):
+ *   only one wires to any VM, the other silently dangles.
+ * - `MV10` — a Problem-2 content extra whose name collides with an emitted identifier
+ *   (`viewModel`/`nav`/`route`/`vm`), which would produce broken generated code.
  *
  * (`MV1`/`MV4` — `@ViewModel` must implement `GezginMvi`, and no two `@ViewModel`s per route — live in
  * [dev.gezgin.processor.mvi.ViewModelModelReader], whose output [vmModels] this reader consumes.)
@@ -333,7 +352,8 @@ class EntryModelReader(
             error(
                 "MV2",
                 "$fnName: MVI-mode content ama route ${routeFq.substringAfterLast('.')} için eşleşen @ViewModel " +
-                    "bu modülde yok — state/onIntent tipleri hiçbir @ViewModel(Route) ile örtüşmüyor (§10.1)",
+                    "bu modülde yok — content'i VM'e ROUTE üzerinden bağlar (state/onIntent TİPİYLE değil); " +
+                    "aynı route'a @ViewModel(${routeFq.substringAfterLast('.')}::class) ekle (§10.1)",
             )
             return null
         }
@@ -341,10 +361,15 @@ class EntryModelReader(
         // also fire for the same VM — MV3 is strictly "no content at all", not "invalid content".
         matchedVmRoutes += routeFq
 
-        // MV5 — content (state, onIntent) must satisfy the VM's GezginMvi<S,I,E> contract.
-        val stateFq = stateParam.type.resolve().fqOf()
-        if (stateFq != vm.stateTypeFq) {
-            error("MV5", "$fnName: state param tipi ($stateFq) VM ${vm.vmSimpleName}'in state tipi (${vm.stateTypeFq}) ile örtüşmüyor")
+        // MV5 — content (state, onIntent) must satisfy the VM's GezginMvi<S,I,E> contract. Compare by
+        // KotlinPoet TypeName (structural, generics-preserving) NOT flattened FQ: an FQ compare collapses
+        // `Wrapper<Int>` and `Wrapper<String>` to the same `…Wrapper` and would let a generic-arg mismatch
+        // slip through to a downstream Kotlin error inside the generated GezginMviEntries.kt instead of a
+        // clean [MV5]. The content's param types are ordinary already-compiled types here, so `toTypeName()`
+        // resolves fully (unlike a same-module navigator type — cf. VmCtorParam's FQ-only note).
+        val stateTypeName = stateParam.type.resolve().toTypeName()
+        if (stateTypeName != vm.stateTypeName) {
+            error("MV5", "$fnName: state param tipi ($stateTypeName) VM ${vm.vmSimpleName}'in state tipi (${vm.stateTypeName}) ile örtüşmüyor")
             return null
         }
         val onIntentType = onIntentParam.type.resolve()
@@ -358,27 +383,63 @@ class EntryModelReader(
             )
             return null
         }
-        val intentArgFq = onIntentType.arguments.getOrNull(0)?.type?.resolve()?.fqOf()
-        if (intentArgFq != vm.intentTypeFq) {
-            error("MV5", "$fnName: onIntent'in intent tipi ($intentArgFq) VM ${vm.vmSimpleName}'in intent tipi (${vm.intentTypeFq}) ile örtüşmüyor")
+        val intentArgTypeName = onIntentType.arguments.getOrNull(0)?.type?.resolve()?.toTypeName()
+        if (intentArgTypeName != vm.intentTypeName) {
+            error("MV5", "$fnName: onIntent'in intent tipi ($intentArgTypeName) VM ${vm.vmSimpleName}'in intent tipi (${vm.intentTypeName}) ile örtüşmüyor")
             return null
         }
 
         // Problem 2 — record params beyond {state, onIntent}. sheetState (by TYPE) is role-provided
         // (Local-injected via Faz-4's LocalGezginSheetState); everything else becomes a 5.2 resolver
-        // param. Deliberately NOT SC3-rejected here — that hard-reject is core-mode only (§10.1).
+        // param. Deliberately NOT SC3-rejected here — that hard-reject is core-mode only (§10.1) — but
+        // MV10 (reserved name) and MV8 (sheetState off a @BottomSheet) ARE rejected: both would otherwise
+        // reach codegen and emit compile-clean-but-broken/crashing code, against the compile-safe philosophy.
         val roleExtras = mutableListOf<MviExtraParam>()
         val resolverExtras = mutableListOf<MviExtraParam>()
+        var extrasInvalid = false
         params.filter { it.name?.asString() != "state" && it.name?.asString() != "onIntent" }.forEach { p ->
+            val pName = p.name?.asString().orEmpty()
+            // MV10 — an extra colliding with an emitted identifier (`viewModel`/`nav`/`route`/`vm`) would
+            // emit broken generated code. Reject at read time rather than letting codegen produce it.
+            if (pName in RESERVED_EXTRA_NAMES) {
+                error(
+                    "MV10",
+                    "$fnName: '$pName' bir content-extra param adı olamaz — üretilen register gövdesinde " +
+                        "ayrılmış bir isim (viewModel/nav/route/vm). Farklı bir ad kullan " +
+                        "(MVI'da nav erişimi content'e değil VM ctor'una aittir)",
+                )
+                extrasInvalid = true
+                return@forEach
+            }
             val t = p.type.resolve()
-            val extra = MviExtraParam(p.name?.asString().orEmpty(), t.fqOf(), t.toTypeName())
-            if (t.declaration.qualifiedName?.asString() == SHEET_STATE_FQ) roleExtras += extra else resolverExtras += extra
+            val extra = MviExtraParam(pName, t.fqOf(), t.toTypeName())
+            if (t.declaration.qualifiedName?.asString() == SHEET_STATE_FQ) {
+                // MV8 — sheetState is a @BottomSheet-ONLY role extra (Local-injected via Faz-4's
+                // LocalGezginSheetState, whose default `error()`s outside a @BottomSheet content). On a
+                // SCREEN/DIALOG/FULLSCREEN_MODAL kind, codegen would still emit
+                // `sheetState = LocalGezginSheetState.current` → compiles clean, crashes at first render.
+                // Classify as a valid role extra ONLY on BOTTOM_SHEET; else reject.
+                if (kind == EntryKindModel.BOTTOM_SHEET) {
+                    roleExtras += extra
+                } else {
+                    error(
+                        "MV8",
+                        "$fnName: sheetState param'ı yalnız @BottomSheet content'inde geçerli (rol-extra, " +
+                            "LocalGezginSheetState'ten beslenir) — bu content $kind, @BottomSheet değil",
+                    )
+                    extrasInvalid = true
+                }
+            } else {
+                resolverExtras += extra
+            }
         }
+        if (extrasInvalid) return null
 
         // @ScreenEffect wiring — the effect binder carries no route (§10.1), so it links by effect
-        // type: its Flow<E> E must equal this VM's effect type. (Its E→VM validity is MV6, run once
-        // in readScreenEffectFuns.) First match wins if two binders share an effect type (rare).
-        val effect = effectFuns.firstOrNull { it.effectTypeFq == vm.effectTypeFq }
+        // type: its Flow<E> E must equal this VM's effect type. Match by TypeName (see the MV5/MV6 note)
+        // so a generic-arg effect mismatch can't wire the wrong VM. (Its E→VM validity is MV6, and two
+        // binders sharing an E are rejected as MV9 — both run once in readScreenEffectFuns.)
+        val effect = effectFuns.firstOrNull { it.effectTypeName == vm.effectTypeName }
 
         val packageName = fn.packageName.asString()
         val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
@@ -444,43 +505,67 @@ class EntryModelReader(
     private data class EffectFun(
         val simpleName: String,
         val packageName: String,
-        val effectTypeFq: String?,
+        /** `E`'s KotlinPoet TypeName (generics-preserving) — the join key against `vm.effectTypeName`. */
+        val effectTypeName: TypeName?,
         val hasNavParam: Boolean,
     )
 
     /**
-     * Reads every `@ScreenEffect` composable and extracts its `Flow<E>` `E` type. Also runs `MV6`: an
-     * effect binder whose `E` matches no `@ViewModel`'s effect type (or that has no `Flow<E>` param at
-     * all) is a dangling/mis-typed binder → error.
+     * Reads every `@ScreenEffect` composable and extracts its `Flow<E>` `E` type. Also runs `MV6` (an
+     * effect binder whose `E` matches no `@ViewModel`'s effect type — compared by [TypeName], NOT
+     * flattened FQ, so a generic-arg mismatch is caught here rather than downstream — or that has no
+     * `Flow<E>` param at all → dangling/mis-typed) and `MV9` (two binders resolving to the SAME `E`,
+     * symmetric to `MV4`: only one could ever wire to a given VM, the other silently dangles).
      */
     private fun readScreenEffectFuns(): List<EffectFun> {
-        val vmEffectFqs = vmModels.map { it.effectTypeFq }.toSet()
-        return resolver.getSymbolsWithAnnotation(SCREEN_EFFECT_FQ)
+        val vmEffectTypeNames = vmModels.map { it.effectTypeName }.toSet()
+        val effectFuns = resolver.getSymbolsWithAnnotation(SCREEN_EFFECT_FQ)
             .filterIsInstance<KSFunctionDeclaration>()
             .map { fn ->
                 val simpleName = fn.simpleName.asString()
                 val flowParam = fn.parameters.firstOrNull { p ->
                     p.type.resolve().declaration.qualifiedName?.asString() == FLOW_FQ
                 }
-                val effectTypeFq = flowParam?.type?.resolve()?.arguments?.firstOrNull()?.type?.resolve()?.fqOf()
+                val effectArgType = flowParam?.type?.resolve()?.arguments?.firstOrNull()?.type?.resolve()
+                val effectTypeFq = effectArgType?.fqOf()
+                val effectTypeName = effectArgType?.toTypeName()
                 val hasNavParam = fn.parameters.any { it.name?.asString() == "nav" }
 
                 when {
-                    effectTypeFq == null -> error(
+                    effectTypeName == null -> error(
                         "MV6",
                         "@ScreenEffect $simpleName bir Flow<E> parametresi almıyor — binder imzası " +
                             "fun XEffects(effects: Flow<E>[, nav]) olmalı",
                     )
-                    effectTypeFq !in vmEffectFqs -> error(
+                    effectTypeName !in vmEffectTypeNames -> error(
                         "MV6",
-                        "@ScreenEffect $simpleName'in Flow<${effectTypeFq.substringAfterLast('.')}> tipi hiçbir " +
+                        "@ScreenEffect $simpleName'in Flow<${effectTypeFq?.substringAfterLast('.')}> tipi hiçbir " +
                             "@ViewModel'in GezginMvi effect (E) tipiyle eşleşmiyor",
                     )
                 }
 
-                EffectFun(simpleName, fn.packageName.asString(), effectTypeFq, hasNavParam)
+                EffectFun(simpleName, fn.packageName.asString(), effectTypeName, hasNavParam)
             }
             .toList()
+
+        // MV9 — two @ScreenEffect binders that resolve to the SAME effect type E both pass MV6, but only
+        // ONE can wire to any given VM (buildMviEntry's firstOrNull, over KSP's non-guaranteed traversal
+        // order) — the other silently dangles with no diagnostic. Symmetric to MV4 (two @ViewModel per
+        // route): reject the ambiguity up front rather than let a binder be silently dropped.
+        effectFuns
+            .groupBy { it.effectTypeName }
+            .forEach { (typeName, binders) ->
+                if (typeName != null && binders.size > 1) {
+                    error(
+                        "MV9",
+                        "birden çok @ScreenEffect binder'ı aynı effect (E) tipine ($typeName) çözülüyor: " +
+                            "${binders.joinToString { it.simpleName }} — bir E'ye yalnız bir binder bağlanabilir " +
+                            "(hangisinin VM'e bağlanacağı KSP sırasına kalır, biri sessizce boşta kalır)",
+                    )
+                }
+            }
+
+        return effectFuns
     }
 
     // endregion

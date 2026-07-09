@@ -387,4 +387,250 @@ class MviModelReaderTest {
     }
 
     // endregion
+
+    // region Guardrails MV8-MV10 (Faz 5 final review) + TypeName-compare (MV5/MV6) regression
+
+    @Test
+    fun `MV8 — sheetState param on a non-BottomSheet (Screen) MVI content is rejected`() {
+        // A @BottomSheet-kind content with sheetState PASSES (see the positive Problem-2 split test). On a
+        // @Screen kind, codegen would emit `sheetState = LocalGezginSheetState.current`, which compiles
+        // clean and crashes at first render (the Local `error()`s outside a @BottomSheet). MV8 rejects it.
+        assertViolates(
+            "MV8",
+            """
+            @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
+            package dev.gezgin.mv8
+
+            import androidx.compose.material3.SheetState
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            // sheetState on a @Screen (not @BottomSheet) — MV8.
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit, sheetState: SheetState) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV9 — two @ScreenEffect binders sharing one effect type are rejected`() {
+        // Both binders declare Flow<E> matching Vm's effect type (each MV6-clean on its own), but only one
+        // can wire to Vm — the other silently dangles. Symmetric to MV4; MV9 rejects the ambiguity.
+        assertViolates(
+            "MV9",
+            """
+            package dev.gezgin.mv9
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.Flow
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
+            }
+
+            @ScreenEffect
+            @Composable
+            fun EffectsA(effects: Flow<E>) {
+            }
+
+            @ScreenEffect
+            @Composable
+            fun EffectsB(effects: Flow<E>) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV10 — content extra named viewModel collides with the resolver param, rejected`() {
+        assertViolates(
+            "MV10",
+            """
+            package dev.gezgin.mv10a
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+            class Foo
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            // `viewModel` collides with the emitted resolver param — MV10.
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit, viewModel: Foo) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV10 — content extra named nav collides with the register-body local, rejected`() {
+        assertViolates(
+            "MV10",
+            """
+            package dev.gezgin.mv10b
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+            class Foo
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            // `nav` on MVI content is a first-timer mistake (nav belongs in the VM ctor) — the emitted
+            // `nav = nav()` would call the navigator instance as a lambda. MV10.
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit, nav: Foo) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV5 — generic-argument state mismatch (Wrapper Int vs Wrapper String) is caught by TypeName`() {
+        // The flattened FQ of both is `…Wrapper`, so an FQ-based MV5 would PASS and only surface as a
+        // Kotlin type error inside the generated GezginMviEntries.kt. TypeName comparison catches it here.
+        assertViolates(
+            "MV5",
+            """
+            package dev.gezgin.mv5gen
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class Wrapper<T>(val value: T)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<Wrapper<String>, I, E> {
+                override val uiState: StateFlow<Wrapper<String>> = MutableStateFlow(Wrapper("x"))
+                override fun onIntent(intent: I) {}
+            }
+
+            // state is Wrapper<Int> — flattens to the same `…Wrapper` FQ as the VM's Wrapper<String>.
+            @Screen(R::class)
+            @Composable
+            fun Content(state: Wrapper<Int>, onIntent: (I) -> Unit) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV6 — generic-argument effect mismatch (Flow Wrapper Int vs VM Wrapper String) is caught by TypeName`() {
+        // Same flattening trap as MV5, on the @ScreenEffect Flow<E> arg. TypeName catches Int vs String.
+        assertViolates(
+            "MV6",
+            """
+            package dev.gezgin.mv6gen
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.Flow
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class Wrapper<T>(val value: T)
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, Wrapper<String>> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
+            }
+
+            // Flow<Wrapper<Int>> — flattens to the same `…Wrapper` FQ as VM effect Wrapper<String>.
+            @ScreenEffect
+            @Composable
+            fun BadEffects(effects: Flow<Wrapper<Int>>) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    // endregion
 }
