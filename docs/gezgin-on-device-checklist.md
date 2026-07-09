@@ -376,6 +376,142 @@ kod: `sample/feature/profile/.../SettingsMvi.kt`, üretilen `.../GezginMviEntrie
 
 ---
 
+## Faz 6 — Fragment interop (§11) kalemleri: neden yalnız on-device (Robolectric adjudication)
+
+> Faz 6'nın `@FragmentScreen` interop'u (`AndroidFragment` host + `gezginArgs`/`gezginNav` + `route.toBundle`
+> bind-registry) için PD/config-change round-trip'i V1'de **otomatik** değil, yalnız cihaz-üstüdür. Task 6.0
+> spike'ı (bkz. `.superpowers/sdd/task-6.0-report.md` §2 ve "Post-review addendum") Robolectric +
+> `FragmentScenario`'yu V1 için — bağımsız incelemeyle iki kez onaylanmış gerekçeyle — REDDETTİ:
+> `FragmentScenario` Fragment'ı `EmptyFragmentActivity` + `ActivityScenario` ile host eder, Compose/
+> `AndroidFragment`'ı ve dolayısıyla yük-taşıyan `onUpdate → bindGezgin` re-bind yolunu TAMAMEN atlar → tam
+> da doğrulanması gereken şeyi doğrulayamaz. Serileştirme yarısı zaten saf-JVM `FragmentRouteSerializationTest`
+> (Task 6.2, commonTest, 3/3) ile; bind-registry mekanizması `:gezgin-core:compileDebugKotlinAndroid` derleme-
+> doğrulamasıyla (Task 6.2 §Deviation 4 ve Task 6.3 Part A kararı — bkz. `.superpowers/sdd/task-6.3-report.md`)
+> pinlendi. Geriye kalan CANLI davranış — process-death sonrası `arguments` route decode + `onUpdate` re-bind +
+> doğru stack derinliği — yalnız gerçek bir `FragmentActivity` + Android runtime'da gözlemlenebilir; aşağıdaki
+> 15–17. kalemler bunu kapsar.
+>
+> **Ortak ön koşul / bağımlılık (Task 6.4):** 15–17, sample'a bir `@FragmentScreen`-host'lu örnek ekran
+> eklenmesini gerektirir; o ekran Task 6.4'te gelecek. Ayrıca `AndroidFragment` bir `FragmentActivity`/
+> `AppCompatActivity` host OLMADAN fırlatır (Task 6.0 §1e.1) — sample'ın `MainActivity`'si bu kalemler
+> yazıldığında hâlâ `ComponentActivity`; Task 6.4 onu `FragmentActivity`/`AppCompatActivity`'ye taşımalı.
+> Bu yüzden host-Activity gereksinimi AYRI bir kalem DEĞİL, 15–17'nin ortak ön koşulu olarak burada tutuldu.
+> 15 ve 17 ancak 6.4 tamamlandıktan SONRA koşulabilir.
+
+---
+
+## 15. PD "Etkinlikleri saklama" round-trip — `@FragmentScreen` yaprağı (canlı `arguments` decode + `onUpdate` re-bind)
+
+Madde 4 Compose entry'ler için process-death round-trip'ini cihazda pinliyor; bu madde AYNI dev-option
+reçetesini bir `@FragmentScreen`-host'lu YAPRAK için tekrarlar. Task 6.0 spike'ı `AndroidFragment.onUpdate`
+→ `bindGezgin` re-bind yolunu KAYNAKTA doğruladı ama CANLI olarak (Robolectric reddedildiği için)
+doğrulayamadı; `route.toBundle()`'ın PD-güvenliği de `FragmentRouteSerializationTest`'te yalnız birim
+düzeyinde kanıtlı. Bu madde ikisini de gerçek process-death'te gözler.
+
+**Ön koşul:** Task 6.4'ün Fragment örneğini barındıran modül cihaza/emülatöre kurulu; Geliştirici
+seçenekleri açık; host Activity `FragmentActivity`/`AppCompatActivity` (Task 6.4 bağımlılığı — yukarıdaki
+Faz 6 prefatory notu; 6.4 öncesi bu madde koşulamaz). Örnek ekran = Task 6.4'te eklenen `@FragmentScreen`-
+host'lu leaf (`gezginArgs<Route>()` + varsa `gezginNav<Navigator>()` kullanan).
+
+**Adımlar:**
+1. Ayarlar → Sistem → Geliştirici seçenekleri → **"Etkinlikleri saklama"** ("Don't keep activities") AÇIK.
+2. Uygulamayı aç, Fragment-host'lu ekrana bir edge ile ilerle (örn. `goToLegacyScreen()` → `@GoTo`), tercihen
+   bu ekranın ALTINDA en az bir başka entry olacak şekilde (birkaç seviye derin bir stack → doğru restore-
+   derinliği de gözlenir). Ekranda `gezginArgs`'tan okunan route argümanının (örn. bir id/başlık) ekrana
+   yansıdığını doğrula.
+3. Home tuşuna bas (arka plana at) — "Etkinlikleri saklama" açıkken Android Activity'yi HEMEN `onDestroy()`
+   eder → `rememberSaveable`/`FragmentState` round-trip'i gerçekten tetiklenir, Gezgin backstack'i
+   `SavedState`'ten restore edilir.
+4. App switcher'dan uygulamaya geri dön.
+
+**Beklenen / Pas kriteri:**
+- (a) crash/ANR YOK; ekran aynı stack derinliğiyle geri gelir (başa/`Feed`'e sıfırlanma yok) — her diğer
+  kind'ın PD maddesinin de kontrol ettiği invariant.
+- (b) `gezginArgs<Route>()` restore sonrası HÂLÂ doğru route'u decode eder — ekrandaki argüman-türevi içerik
+  (id/başlık) restore-öncesiyle birebir aynı. Bu, `route.toBundle()`'ın PD-güvenliğinin CANLI kanıtıdır
+  (`FragmentRouteSerializationTest`'in birim kanıtının ötesinde): route Gezgin'in KENDİ backstack PD'sinden
+  taze üretilip `arguments`'a yeniden encode edilir (§B4/§1d), FragmentManager'ın bağımsız arg persistansına
+  bağlı değil.
+- (c) `gezginNav<Navigator>()` (ekran bir navigator kullanıyorsa) restore sonrası bir navigasyon edge'ini
+  (örn. bir butonla `nav.goToX()`/`nav.back()`) HÂLÂ tetikleyebilir — "bind yok" hatası fırlatmaz. Bu,
+  yeniden yaratılan Fragment instance'ı için `AndroidFragment`→`onUpdate`→`bindGezgin` re-bind'inin (Task
+  6.0'ın kaynakta doğruladığı, canlı doğrulayamadığı mekanizma) çalıştığının kanıtıdır.
+
+**İlgili spec §:** `docs/gezgin-design.md` §11.1 (`gezginArgs`/`gezginNav`/`onUpdate` bind sözleşmesi), §1.10/
+§12 (PD); Task 6.0 §1c/§1d/§2 + Post-review addendum; kod: `gezgin-core/.../fragment/FragmentBinding.android.kt`
+(`bindGezgin`/`gezginBoundNav`), `.../fragment/FragmentRouteBundle.android.kt` (`toBundle`/`decodeGezginRoute`).
+
+**Durum:** [ ] Doğrulanmadı (Task 6.4 bekliyor)
+
+---
+
+## 16. Legacy Fragment `OnBackPressedDispatcher` LIFO-bypass gözlemi (bilgilendirici, §11.1)
+
+Spec §11.1: bir legacy Fragment'ın KENDİ `OnBackPressedDispatcher` callback'i `NavDisplay`'in LIFO
+sıralamasını GEÇER (en son kaydolan callback önce tetiklenir) → migration sırasında KALDIRILMALIDIR. Bu,
+Gezgin runtime'ının zorlamadığı, dokümante edilmiş bir KULLANICI sorumluluğudur (bir sınırlama, "fix"
+edilecek bir bug değil) — madde 6/8 gibi bilgilendirici. Bu madde, sınırlamanın gerçekten GÖZLEMLENEBİLİR
+olduğunu bir insanın nasıl doğrulayacağını tarif eder (V1'de otomatik test edilmez).
+
+**Ön koşul:** Task 6.4'ün `@FragmentScreen` ekranı mevcut (yukarıdaki Faz 6 prefatory notu). Geçici olarak, o
+Fragment'ın `onViewCreated`'ında kendi geri callback'ini kaydet: `requireActivity().onBackPressedDispatcher.
+addCallback(viewLifecycleOwner) { android.util.Log.d("FS_BACK", "fragment kendi callback'i geri'yi yuttu");
+/* isteyerek NavDisplay'e geçirme yok */ }`.
+
+**Adımlar:**
+1. Fragment-host'lu ekrana ilerle (altında en az bir entry olsun ki "geri" anlamlı olsun).
+2. Sistem geri tuşuna/gesture'ına bas.
+3. `adb logcat -d -t 200 | grep FS_BACK` ile callback'in tetiklenip tetiklenmediğine bak; ekranın Gezgin
+   üzerinden bir önceki entry'ye DÖNÜP dönmediğini gözle.
+
+**Beklenen:** Fragment'ın kendi callback'i geri jestini YUTAR (`FS_BACK` loglanır) ve Gezgin'in kendi geri
+işlemesi (bir önceki entry'ye pop) TETİKLENMEZ — yani legacy callback LIFO'da Gezgin'in `NavDisplay.onBack`
+handler'ının ÖNÜNE geçer. Bu, §11.1'in "migration'da kaldırılmalı" uyarısının somut gözlemidir: callback
+kaldırılırsa (ya da hiç eklenmezse) geri jesti normal Gezgin pop'una düşer. **Aksiyon GEREKMEZ** — beklenen,
+kabul edilmiş, dokümante bir davranış; yalnız migrasyon yapan geliştiriciye bir hatırlatma.
+
+**İlgili spec §:** `docs/gezgin-design.md` §11.1 (legacy `OnBackPressedDispatcher` bypass notu); madde 1'deki
+M5′ ile aynı `OnBackPressedDispatcher` LIFO mekanizması, bu kez legacy-callback perspektifinden.
+
+**Durum:** [ ] Bilgilendirici — bilinen/kabul edilmiş sınırlama, migration'da kullanıcı kaldırır
+
+---
+
+## 17. Migration-swap — `@FragmentScreen` → `@Screen` (aynı navigasyon pozisyonu, sabit graph)
+
+Spec §11.1 kapanış satırı brownfield migration'ın çekirdek vaadi: `@FragmentScreen class XFragment {…}` →
+`@Screen @Composable fun XScreen(route, nav) {…}`, GRAPH/EDGE/NAVIGATOR/DEEPLINK sabit kalarak. Bu madde, bir
+yaprağı Fragment-host'ludan Composable-host'luya çevirmenin — route/graph bildiriminde HİÇBİR değişiklik
+olmadan — navigasyon grafiği açısından AYNI pozisyonda çalışan bir ekran ürettiğini doğrular.
+
+**Ön koşul:** Sample'da Task 6.4'ün `@FragmentScreen` interop ekranı mevcut ve derleniyor (yukarıdaki Faz 6
+prefatory notu). Bu madde bir KOD DÖNÜŞÜMÜ + yeniden-derleme + davranış-karşılaştırması içerir (saf cihaz-üstü
+tık-adımı değil); dönüşüm GERİ ALINABİLİR bir doğrulama egzersizidir, kalıcı bir sample değişikliği değil.
+
+**Adımlar:**
+1. Sample'ın Fragment-interop ekranını NOT ET: hangi route (`XRoute`), hangi graph/edge üyeliği, hangi
+   navigator (`XNavigator`), hangi deeplink (varsa) — ve onu açan edge (örn. `goToLegacyScreen()`).
+2. `@FragmentScreen class XFragment : Fragment() { val args by gezginArgs<XRoute>(); val nav by
+   gezginNav<XNavigator>() }`'i `@Screen @Composable fun XScreen(route: XRoute, nav: XNavigator) {…}`'e
+   çevir — Fragment'ın `onViewCreated` içeriğini composable gövdeye, `gezginArgs`→`route` param, `gezginNav`→
+   `nav` param olacak şekilde taşı. `XRoute`/graph/edge/`XNavigator`/deeplink bildirimlerine DOKUNMA.
+3. KSP + `assembleDebug` yeniden derle; aynı edge'le (`goToLegacyScreen()`) ekrana git.
+
+**Beklenen:** (a) Route/graph/navigator/deeplink bildirimi DEĞİŞMEDEN proje derlenir (codegen artık
+`FragmentEntryCodegen` yerine core `EntryCodegen` yolundan `provideXEntry` üretir — grafik açısından fark
+yok); (b) ekran AYNI navigasyon pozisyonunda açılır (aynı edge, aynı stack derinliği, aynı geri davranışı);
+(c) route argümanları ve navigator edge'leri Fragment sürümüyle BİREBİR aynı davranır. Bu, "Fragment yaprağı
+↔ Composable yaprağı" swap'ının navigasyon grafiğine ŞEFFAF olduğunu — brownfield migration'ın çekirdek
+vaadini — kanıtlar.
+
+**İlgili spec §:** `docs/gezgin-design.md` §11.1 (migration swap satırı: "Graph/edge/navigator/deeplink
+sabit"); kod: `gezgin-processor/.../codegen/FragmentEntryCodegen.kt` vs `.../codegen/EntryCodegen.kt` (iki
+entry codegen'in AYNI `register<XRoute>(SCREEN, …)` yüzeyini ürettiği — grafik-şeffaflığın codegen kanıtı).
+
+**Durum:** [ ] Doğrulanmadı (Task 6.4 bekliyor)
+
+---
+
 ## Özet tablo
 
 | # | Kalem | Cihaz gerekli mi | Durum |
@@ -394,7 +530,11 @@ kod: `sample/feature/profile/.../SettingsMvi.kt`, üretilen `.../GezginMviEntrie
 | 12 | Sheet swipe-dismiss animasyonu + hide-then-result | Evet | [ ] Doğrulanmadı |
 | 13 | `FullscreenModalContract` görsel occlusion | — | [ ] Kapsam dışı (sample'da yok) |
 | 14 | MVI-mode: VM config-change ömrü + tek-seferlik efekt + MVI'dan logout | Evet | [ ] Doğrulanmadı |
+| 15 | PD "Etkinlikleri saklama" — `@FragmentScreen` (args decode + `onUpdate` re-bind) | Evet | [ ] Doğrulanmadı (6.4 bekliyor) |
+| 16 | Legacy Fragment `OnBackPressedDispatcher` LIFO-bypass | Hayır (bilgilendirici) | [ ] Bilgilendirici |
+| 17 | Migration-swap `@FragmentScreen` → `@Screen` | Evet (kod dönüşümü) | [ ] Doğrulanmadı (6.4 bekliyor) |
 
 Kullanıcı cihazla döndüğünde: `sample:shopr`'ı bir Android cihaza/emülatöre kur
 (`./gradlew :sample:shopr:installDebug`), yukarıdaki 1/3/4'ü sırayla koş, kutuları işaretle, bulguları bu
-dosyaya (ilgili maddenin altına) not düş.
+dosyaya (ilgili maddenin altına) not düş. Faz 6 Fragment kalemleri (15–17) Task 6.4 sample örneği
+eklendikten SONRA koşulur (16 bilgilendirici — istendiğinde geçici callback ile gözlemlenir).
