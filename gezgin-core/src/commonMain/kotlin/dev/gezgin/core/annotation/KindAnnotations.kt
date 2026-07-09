@@ -13,6 +13,10 @@ import kotlin.reflect.KClass
 annotation class Screen(val route: KClass<out Route> = Route::class)
 
 /**
+ * Kind: route'u modal bir **dialog** overlay'i olarak render eder (§3.2/§7) — sunum property'leri için
+ * route opsiyonel [dev.gezgin.core.DialogContract] implement edebilir. `route = Route::class` sentinel'i
+ * için [Screen]'e bakınız.
+ *
  * Ad çakışması notu: `androidx.compose.ui.window.Dialog` (Compose'un kendi dialog composable'ı) ile
  * AYNI basit ad — aynı dosyada/paket-import'unda ikisi birden kullanılacaksa import alias'ı önerilir
  * (örn. `import androidx.compose.ui.window.Dialog as ComposeDialog`), aksi halde derleyici ambiguity
@@ -21,8 +25,18 @@ annotation class Screen(val route: KClass<out Route> = Route::class)
 @Target(AnnotationTarget.FUNCTION)
 annotation class Dialog(val route: KClass<out Route> = Route::class)
 
+/**
+ * Kind: route'u alttan açılan modal bir **bottom sheet** olarak render eder (§3.2/§7) — sunum property'leri
+ * için route opsiyonel [dev.gezgin.core.BottomSheetContract] implement edebilir; içerik
+ * `LocalGezginSheetState` ile sheet'i programatik kapatabilir.
+ */
 @Target(AnnotationTarget.FUNCTION)
 annotation class BottomSheet(val route: KClass<out Route> = Route::class)
 
+/**
+ * Kind: route'u **tam-ekran** modal overlay olarak render eder (§3.2/§7; scrim'siz, `usePlatformDefaultWidth`
+ * kavramı yok) — sunum property'leri için route opsiyonel [dev.gezgin.core.FullscreenModalContract]
+ * implement edebilir.
+ */
 @Target(AnnotationTarget.FUNCTION)
 annotation class FullscreenModal(val route: KClass<out Route> = Route::class)
