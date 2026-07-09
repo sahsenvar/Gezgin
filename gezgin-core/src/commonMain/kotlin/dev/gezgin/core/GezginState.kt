@@ -24,14 +24,26 @@ class GezginState(initial: List<GezginKey>, internal var nextId: Long, private v
     }
 
     fun replaceUpTo(route: Route, clearUpTo: KClass<out Route>?, inclusive: Boolean, enterFlow: Boolean = false): GezginKey {
-        val cutFrom = if (clearUpTo == null) _stack.lastIndex else {
+        val cutFrom = cutIndex(clearUpTo, inclusive)
+        while (_stack.size > cutFrom) _stack.removeAt(_stack.lastIndex)
+        return push(route, enterFlow = enterFlow, singleTop = false)!!   // !! güvenli: singleTop=false → push null dönemez
+    }
+
+    /**
+     * M4 — `replaceUpTo`'nun MUTASYON YAPMADAN sonuçtaki kök (dip) route'unu hesaplar: temizleme tüm
+     * stack'i kaldıracaksa (`cutFrom == 0`) yeni kök `route` olur, aksi halde mevcut dip korunur.
+     * [RawNavigator.replaceTo] bunu modal-kind-at-root reddi için state'i değiştirmeden önce kullanır.
+     */
+    fun resultingRootAfterReplace(route: Route, clearUpTo: KClass<out Route>?, inclusive: Boolean): Route =
+        if (cutIndex(clearUpTo, inclusive) == 0) route else _stack.first().route
+
+    /** `replaceUpTo`/`resultingRootAfterReplace` ortak kesme-indeksi: dip=0'a kadar korunacak entry sayısı. */
+    private fun cutIndex(clearUpTo: KClass<out Route>?, inclusive: Boolean): Int =
+        if (clearUpTo == null) _stack.lastIndex else {
             val i = _stack.indexOfLast { clearUpTo.isInstance(it.route) }   // nearest-ancestor (§4.2/M3)
             require(i >= 0) { "clearUpTo hedefi stack'te yok: ${clearUpTo.simpleName}" }
             if (inclusive) i else i + 1
         }
-        while (_stack.size > cutFrom) _stack.removeAt(_stack.lastIndex)
-        return push(route, enterFlow = enterFlow, singleTop = false)!!   // !! güvenli: singleTop=false → push null dönemez
-    }
 
     fun backTo(target: KClass<out Route>, inclusive: Boolean): List<GezginKey>? {
         val i = _stack.dropLast(1).indexOfLast { target.isInstance(it.route) }  // top hariç ara

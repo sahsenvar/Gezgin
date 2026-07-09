@@ -354,9 +354,13 @@ object NavigatorCodegen {
 
     private fun backWithResultFun(resultTypeFq: String): FunSpec {
         val resultType = ClassName.bestGuess(resultTypeFq)
+        // M3 — ctor'daki `entryId` bu tipli navigator'ın SAHİBİ entry'yi pinler. `raw.backWithResult(
+        // entryId, result)`: sonuç yalnız o entry HÂLÂ top iken teslim edilir (call-time-top DEĞİL) →
+        // sheet/dialog jest'le kapandıktan sonra geç gelen async sonuç, altındaki yabancı-tipli slota
+        // teslim edilmez ve o entry yanlışlıkla pop edilmez (kirli-teslim/çifte-back yarışı önlenir).
         return FunSpec.builder("backWithResult")
             .addParameter("result", resultType)
-            .addStatement("raw.backWithResult(result)")
+            .addStatement("raw.backWithResult(entryId, result)")
             .build()
     }
 
