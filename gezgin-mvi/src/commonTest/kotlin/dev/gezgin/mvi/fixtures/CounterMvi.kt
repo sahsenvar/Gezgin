@@ -10,15 +10,14 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.gezgin.core.Route
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.core.compose.GezginEntryScope
+import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.ObserveAsEvents
 import dev.gezgin.mvi.annotation.ScreenEffect
 import dev.gezgin.mvi.annotation.ViewModel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -52,15 +51,17 @@ class CounterViewModel(route: CounterRoute) :
     private val _uiState = MutableStateFlow(CounterState(route.start))
     override val uiState: StateFlow<CounterState> = _uiState.asStateFlow()
 
-    private val _effects = MutableSharedFlow<CounterEffect>(extraBufferCapacity = 1)
-    override val effects: Flow<CounterEffect> = _effects.asSharedFlow()
+    // Kayıpsız backing (MJ2): gözlemci yokken (örtülen/STOPPED entry) emit edilen efekt Channel'da tutulur,
+    // re-observe'de teslim edilir — MutableSharedFlow(replay=0)+tryEmit deseninin sessiz-düşürmesi YOK.
+    private val _effects = GezginEffects<CounterEffect>()
+    override val effects: Flow<CounterEffect> = _effects.flow
 
     override fun onIntent(intent: CounterIntent) {
         when (intent) {
             CounterIntent.Increment -> _uiState.update { it.copy(count = it.count + 1) }
             CounterIntent.Decrement -> _uiState.update { it.copy(count = it.count - 1) }
         }
-        _effects.tryEmit(CounterEffect.Toast("count=${_uiState.value.count}"))
+        _effects.send(CounterEffect.Toast("count=${_uiState.value.count}"))
     }
 }
 

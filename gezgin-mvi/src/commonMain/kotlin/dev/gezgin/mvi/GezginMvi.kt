@@ -21,7 +21,18 @@ interface GezginMvi<out S, in I, out E> {
     /** UI state akışı — codegen `collectAsStateWithLifecycle()` ile gözler, stateless content'e `state` verir. */
     val uiState: StateFlow<S>
 
-    /** Opsiyonel tek-seferlik efekt akışı (nav-olmayan yan etkiler). Yoksa `emptyFlow()`. `@ScreenEffect` bunu tüketir. */
+    /**
+     * Opsiyonel tek-seferlik efekt akışı (nav-olmayan yan etkiler; snackbar/toast/haptic). Yoksa
+     * `emptyFlow()`. `@ScreenEffect` bunu [ObserveAsEvents] ile **yalnız STARTED iken** tüketir → örtülen
+     * (covered) veya STOPPED entry'de gözlemci YOKTUR.
+     *
+     * **Backing sözleşmesi (kayıpsızlık, Faz 5 recheck / MJ2):** gözlemci yokken emit edilen efektin
+     * KAYBOLMAMASI için buffer'lı bir kaynak ŞART. ÖNERİLEN: [GezginEffects] (`Channel(UNLIMITED)
+     * .receiveAsFlow()`). `MutableSharedFlow(replay = 0) + tryEmit` deseni gözlemci yokken efekti SESSİZCE
+     * düşürür (bkz. [GezginEffects] KDoc'undaki gerekçe). Ayrıca döndürülen `Flow` **stabil bir instance**
+     * olmalı (tek `val` — her erişimde `receiveAsFlow()` çağıran `get()` DEĞİL), aksi halde
+     * [ObserveAsEvents]'in `LaunchedEffect` key'i her recomposition'da değişip collector'ı restart eder.
+     */
     val effects: Flow<E> get() = emptyFlow()
 
     /** Intent girişi — stateless content `onIntent(...)` ile çağırır. */
