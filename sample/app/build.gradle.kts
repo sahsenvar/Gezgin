@@ -42,4 +42,10 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.activity.compose)
     implementation(libs.kotlinx.serialization.json)
+
+    // Faz 6.4 — `AndroidFragment` host'unun ZORUNLU `FragmentActivity`/`AppCompatActivity` olması için
+    // (§11.1/Task 6.0 §1e.1). gezgin-core fragment-compose'u `implementation` tuttuğundan tüketiciye
+    // SIZMAZ → host modülü (bu :app) kendi appcompat'ını AÇIKÇA getirir. appcompat, `AppCompatActivity`
+    // + `Theme.AppCompat.*` + transitively `androidx.fragment`'ı sağlar.
+    implementation(libs.androidx.appcompat)
 }

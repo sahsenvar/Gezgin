@@ -2,8 +2,8 @@ package dev.gezgin.sample.app
 
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -30,8 +30,16 @@ import kotlinx.serialization.json.Json
  * `LoginScreenRoute`'tan başlamaktır — `loginSuccess()` bir `@ReplaceTo` olduğu için giriş yapınca geri tuşu
  * login'e DÖNMEZ (Dashboard stack'in tek elemanı olur). Bu, `spec §12`'nin auth-gate/decider konusunu
  * V2'ye erteleyen notuyla tutarlıdır.
+ *
+ * **Faz 6.4 — `AppCompatActivity` host (ZORUNLU precondition).** `ComponentActivity` iken
+ * `AppCompatActivity`'ye geçirildi: `@FragmentScreen` yaprakları `androidx.fragment.compose.AndroidFragment`
+ * ile host edilir ve bu composable görünüm ağacında bir `FragmentActivity`/`AppCompatActivity` host'u
+ * (`FragmentManager.findFragmentManager(view)`) YOKSA runtime'da fırlatır (Task 6.0 §1e.1). Bu, Fragment
+ * interop'u kullanan HER tüketicinin sağlaması gereken tek precondition'dır. `AppCompatActivity` bir
+ * `AppCompat` temasını da GEREKTİRİR → `AndroidManifest.xml` teması `Theme.AppCompat.Light.NoActionBar`'a
+ * çekildi (bkz. `res/values/themes.xml`).
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { GezginShowcaseApp(onRootBack = { finish() }) }

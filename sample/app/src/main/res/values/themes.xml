@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Faz 6.4 — `MainActivity` artık `AppCompatActivity` (AndroidFragment'in ZORUNLU FragmentActivity
+  host'u için, §11.1/Task 6.0 §1e.1). `AppCompatActivity` bir `Theme.AppCompat` (ya da türevi) tema
+  GEREKTİRİR — aksi halde "You need to use a Theme.AppCompat theme (or descendant)" ile runtime'da
+  fırlatır. Önceki platform teması (`@android:style/Theme.Material.Light.NoActionBar`) AppCompat
+  türevi DEĞİLDİ; görünümü koruyan en yakın AppCompat karşılığı `Theme.AppCompat.Light.NoActionBar`.
+  UI'ı Compose'un kendi `MaterialTheme`'i çizer; bu XML tema yalnız pencere/statusbar tabanıdır.
+-->
+<resources>
+    <style name="Theme.GezginShowcase" parent="Theme.AppCompat.Light.NoActionBar" />
+</resources>
