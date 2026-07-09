@@ -48,7 +48,7 @@ sealed interface AuthGraph : Route {
     @Serializable
     data class ForgotPasswordDialogRoute(val email: String? = null) :
         AuthGraph, ResultRoute<Boolean>, DialogContract {
-        override val dismissOnClickOutside = false
+        override val dismissOnClickOutside: Boolean get() = false
     }
 
     /** Result-less opaque flow (@QuitAndGoTo allowed — no awaiting caller). */

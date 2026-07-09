@@ -25,7 +25,8 @@ import dev.gezgin.core.Route
  * (saveable state = zorunlu; `rememberSaveable` her entry'de kendi `contentKey`=id slot'unda çalışır →
  * eşit-değerli iki route AYRI saved state; R2 saved-state tarafı, desktop dahil). PLATFORM:
  * [rememberPlatformEntryDecorators] — Android'de `rememberViewModelStoreNavEntryDecorator()` (per-entry
- * VM store; `LocalViewModelStoreOwner` host Activity'den), desktop'ta boş (owner garanti değil). Sıra
+ * VM store; `LocalViewModelStoreOwner` host Activity'den), desktop'ta AYNI per-entry VM store decorator'ı
+ * (owner host'tan garanti olmadığından Gezgin'in kendi pencere-scoped owner'ıyla — Faz 5 recheck / C1). Sıra
  * `[saveable] + platform`: VM store decorator'ı saveable'ın sağladığı `SavedStateRegistryOwner`'a
  * bağımlı → saveable önce/OUTER.
  *

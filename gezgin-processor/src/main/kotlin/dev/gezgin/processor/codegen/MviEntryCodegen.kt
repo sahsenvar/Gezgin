@@ -46,6 +46,14 @@ private val HILT_VIEW_MODEL = MemberName("androidx.hilt.navigation.compose", "hi
 
 private const val SHEET_STATE_FQ = "androidx.compose.material3.SheetState"
 
+// A @BottomSheet MVI content's `sheetState` role param is fed `LocalGezginSheetState.current` (a
+// material3 `SheetState`) FROM the generated register — so the generated file, not the user's content,
+// is the opt-in site for the ERROR-level `@ExperimentalMaterial3Api`. Emitted on the `provideXEntry`
+// only when a sheetState role extra is present (core-mode content reads the Local in its OWN file, so
+// this never applies there).
+private val OPT_IN = ClassName("kotlin", "OptIn")
+private val EXPERIMENTAL_MATERIAL3_API = ClassName("androidx.compose.material3", "ExperimentalMaterial3Api")
+
 /**
  * Faz 5.2 — emits `fun GezginEntryScope.provideXEntry(...)` for every MVI-mode [EntryFunctionModel]
  * (`entry.mvi != null`, spec §10.1). The counterpart to core-mode's [EntryCodegen]: same
@@ -137,6 +145,11 @@ object MviEntryCodegen {
         val funBuilder = FunSpec.builder("provide${entry.x}Entry")
             .receiver(ENTRY_SCOPE)
             .addParameter(viewModelParam)
+        if (mvi.roleExtraParams.any { it.typeFq == SHEET_STATE_FQ }) {
+            funBuilder.addAnnotation(
+                AnnotationSpec.builder(OPT_IN).addMember("%T::class", EXPERIMENTAL_MATERIAL3_API).build(),
+            )
+        }
         // Problem-2 resolver params — required (no sensible default), threaded as `name()` into content.
         mvi.resolverExtraParams.forEach { extra ->
             funBuilder.addParameter(

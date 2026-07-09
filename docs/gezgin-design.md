@@ -11,7 +11,7 @@
 Mevcut CMP/KMP navigasyon çözümlerinde tek pakette bulunmayan bir kombinasyon:
 
 - **Type-safe + compile-time güvenli** — string route yok; tanımsız yere gidiş **derlenmez**.
-- **Annotation + codegen** — az boilerplate; graph/wiring/result/deep-link/binder codegen'de.
+- **Annotation + codegen** — az boilerplate; graph/wiring/result/binder codegen'de (deep-link → 🔮 V2).
 - **State-as-data çekirdek** — test/log/restore/MVI'yı bedavaya getirir.
 - **MVI/Redux dostu** ama dayatmasız.
 - Nested navigation, multiple back stack, deep link (parent reconstruction), result passing, process-death restore, modal, route/screen/app transition, UI'sız test, **brownfield (Fragment) migration**.

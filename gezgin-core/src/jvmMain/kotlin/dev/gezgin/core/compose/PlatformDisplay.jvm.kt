@@ -78,11 +78,15 @@ internal actual fun GezginNavDisplay(
     modifier: Modifier,
     onBack: () -> Unit,
 ) {
+    // m3 — strateji zinciri stateless ama HER recomposition'da yeniden kurulmasın (Android actual'la
+    // aynı kimlik-stabilizasyonu; GezginDisplay'in decorator/onBack `remember`'ıyla tutarlı).
+    val sceneStrategy = remember {
+        DialogSceneStrategy<Route>() then GezginBottomSheetSceneStrategy() then SinglePaneSceneStrategy()
+    }
     NavDisplay(
         entries = entries,
         modifier = modifier,
-        sceneStrategy = DialogSceneStrategy<Route>() then GezginBottomSheetSceneStrategy() then
-            SinglePaneSceneStrategy(),
+        sceneStrategy = sceneStrategy,
         onBack = onBack,
     )
 }

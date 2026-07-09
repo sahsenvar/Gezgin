@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import dev.gezgin.core.BottomSheetContract
 import dev.gezgin.core.DialogContract
 import dev.gezgin.core.ResultFlow
 import dev.gezgin.core.ResultRoute
@@ -22,6 +23,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AvatarChoice(val uri: String)
 
+@Serializable
+enum class NotificationLevel { ALL, MENTIONS, NONE }
+
 @NavGraph
 @Serializable
 sealed interface ProfileGraph : Route {
@@ -32,6 +36,7 @@ sealed interface ProfileGraph : Route {
     @GoForResult(EditNameDialogRoute::class)                            // screen-mode (String)
     @GoTo(SettingsScreenRoute::class)
     @GoForResult(AvatarFlow::class, name = "pickAvatar")                // FLOW-mode result (AvatarChoice)
+    @GoForResult(NotificationsSheetRoute::class, name = "pickNotifications")  // MVI @BottomSheet result
     @Serializable
     data object ProfileScreenRoute : ProfileGraph
 
@@ -59,6 +64,14 @@ sealed interface ProfileGraph : Route {
     @Serializable
     data class EditNameDialogRoute(val current: String) : ProfileGraph, ResultRoute<String>, DialogContract {
         override val dismissOnClickOutside: Boolean get() = current.isNotBlank()
+    }
+
+    // MVI-mode @BottomSheet result producer (Integ M3) — @ViewModel/@BottomSheet-content/@ScreenEffect
+    // triple lives in :feature:profile (per-module KSP matching, §10.1).
+    @Serializable
+    data class NotificationsSheetRoute(val current: NotificationLevel) :
+        ProfileGraph, ResultRoute<NotificationLevel>, BottomSheetContract {
+        override val skipPartiallyExpanded: Boolean get() = true
     }
 
     /** Flow that RETURNS a result (ResultFlow<AvatarChoice>) — members get quitWith(AvatarChoice). */
