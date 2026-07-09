@@ -7,6 +7,7 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.squareup.kotlinpoet.ksp.writeTo
 import dev.gezgin.processor.codegen.EntryCodegen
+import dev.gezgin.processor.codegen.FragmentEntryCodegen
 import dev.gezgin.processor.codegen.MviEntryCodegen
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.TestApiCodegen
@@ -163,6 +164,15 @@ class GezginProcessor(
                     val mviEntries = entries.filter { it.mvi != null }
                     if (mviEntries.isNotEmpty()) {
                         MviEntryCodegen.generate(mviEntries)
+                            .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
+                    }
+                    // Task 6.2 — Fragment interop `provideXEntry` (§11.1): each @FragmentScreen becomes an
+                    // `AndroidFragment<XFragment>`-hosting entry, grouped by Fragment package into a THIRD
+                    // dedicated file `GezginFragmentEntries.kt` (screen-only, §11.2). Same emitEntries gate
+                    // (kctfork has no compose-compiler plugin → the emitted body ICEs the backend, exactly
+                    // like EntryCodegen; the opt-out lets those tests assert the golden text without OK exit).
+                    if (fragmentModels.isNotEmpty()) {
+                        FragmentEntryCodegen.generate(fragmentModels)
                             .forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
                     }
                 }
