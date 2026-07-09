@@ -1,6 +1,12 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    `maven-publish`
 }
+
+// Faz 7.4 — versiyonlama: proje ilk sürümü (bkz. gezgin-core/build.gradle.kts gerekçesi — modül-başına
+// açık `version`, root gradle.properties'e konmaz ki gezgin-test/sample'a sızmasın).
+group = "dev.gezgin"
+version = "0.1.0-alpha01"
 
 kotlin {
     jvmToolchain(17)
@@ -24,4 +30,22 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// İskelet — gerçek bir Maven repository/credentials YOK; `./gradlew publish` çalıştırılmaz, yalnız
+// `assemble`/`build`'in bu bloktan etkilenmediği doğrulanır. Düz JVM modülü → tek `java`-bileşenli
+// publication elle tanımlanır (KMP'nin aksine otomatik değil). Repository/signing bilinçle EKLENMEDİ.
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            pom {
+                name.set("gezgin-processor")
+                description.set(
+                    "Gezgin KSP2 symbol processor — tipli navigator'ları, entry provider'larını ve " +
+                        "deep-link tablosunu üretir; ksp(project(\":gezgin-processor\")) ile uygulanır.",
+                )
+            }
+        }
+    }
 }
