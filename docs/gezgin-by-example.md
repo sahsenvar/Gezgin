@@ -273,7 +273,7 @@ State-as-data çekirdek sayesinde navigasyon davranışını **Compose/emülatö
 ```kotlin
 @Test
 fun checkout_adres_secimini_doner() = runTest {
-    val nav = GezginTestNavigator(start = CartGraph.CartRoute)
+    val nav = GezginTestNavigator(start = CartGraph.CartRoute, topology = gezginTopology)   // gezginTopology: codegen üretir
 
     val result = async { nav.from<CheckoutRoute>().goToSelectAddressForResult(userId = "u1") }
     nav.deliverResult(Address(id = "1", label = "Ev"))
@@ -283,7 +283,7 @@ fun checkout_adres_secimini_doner() = runTest {
 
 @Test
 fun replaceTo_odeme_akisini_temizler() {
-    val nav = GezginTestNavigator(start = CartGraph.PaymentRoute("cart1"))
+    val nav = GezginTestNavigator(start = CartGraph.PaymentRoute("cart1"), topology = gezginTopology)
     nav.from<PaymentRoute>().replaceToOrderPlaced("order1")   // ödeme akışını temizle
     nav.current shouldBe OrderPlacedRoute("order1")
     nav.backStack shouldHaveSize 1                            // form gitti, geri ödemeye dönülemez
@@ -334,12 +334,12 @@ data class ProductRoute(val id: String) : HomeGraph {
 | Özellik | Gezgin'in yaklaşımı |
 |---|---|
 | Route güvenliği | sealed ağaç + tipli per-source navigator (derleme garantisi) |
-| Boilerplate | KSP codegen (wiring, deep-link, result, entry) |
+| Boilerplate | KSP codegen (wiring, result, entry; deep-link → 🔮 V2) |
 | Result passing | `ResultRoute<T>` + `backWithResult`; launch/receive ayrımı, PD-safe keyed slot |
 | Modal | render varyantı + route contract (DRY) |
 | Sekmeler (🔮 V2) | `@TabGraph` + per-sekme stack; V1 tek-stack, bottom-nav app-yönetimli |
 | Deep link (🔮 V2) | path-hiyerarşisi = back stack; compile-time placeholder |
 | Test | `GezginTestNavigator`, saf Kotlin |
-| Gözlemlenebilirlik | `backStack: StateFlow`, `events: Flow`, middleware |
+| Gözlemlenebilirlik | `backStack: StateFlow`, `events: Flow` (observe-only, `LaunchedEffect`'te collect) |
 | DI | agnostik (Koin/Hilt/manuel) |
 | Altyapı | Navigation 3 (Android stable; iOS/Desktop/Web JetBrains portu **alpha**, CMP 1.10+) |

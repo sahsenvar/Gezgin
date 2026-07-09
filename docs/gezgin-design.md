@@ -85,7 +85,7 @@ core:navigation    → TÜM sealed graph'lar + route'lar + contract'lar (Dialog/
 feature:A / feature:B / … / :app   → hepsi core:navigation'ı görür
 ```
 - Tek sealed ağaç → tüm route/navigator herkese görünür (cross-feature `@GoTo` **derlenir**); polimorfik serialization **compile-time** (runtime merge yok; deep-link reconstruction V2'de aynı ağaçtan gelir).
-- **Codegen dağılımı:** `core:navigation` → tipli navigator'lar + deep-link tablosu + graph topology + `SerializersModule`. `feature:X` → `@Screen`/`@ScreenEffect`/`@ViewModel` → codegen `EntryProviderScope.provideXEntry`'ler; **kullanıcı** `xFeatureEntries()` bundle'ını yazar. `:app` → `GezginDisplay { … }` + back stack (montaj).
+- **Codegen dağılımı:** `core:navigation` → tipli navigator'lar + graph topology + `SerializersModule` (deep-link tablosu **🔮 V2**, §5). `feature:X` → `@Screen`/`@ScreenEffect`/`@ViewModel` → codegen `GezginEntryScope.provideXEntry`'ler; **kullanıcı** `xFeatureEntries()` bundle'ını yazar. `:app` → `GezginDisplay { … }` + back stack (montaj).
 - Her feature KSP'si **yalnız kendi modülünü** işler; cross-module **tip** görünürlüğü yeter (annotation okuması gerekmez → ksp#527 yok). Navigator ctor `internal`; core:navigation her navigator için **public factory** üretir (`fun RawNavigator.xNavigator(): XNavigator`) → feature'ın üretilen entry kodu navigator'ı bu factory'den alır (cross-module derlenir).
 - Route-arg domain modelleri **`@Serializable` olmalı** (back stack serialize/PD). Tek-modül app: her şey tek modülde, aynı model tam ağaçla çalışır.
 
@@ -309,7 +309,9 @@ Legacy `DialogFragment`/`BottomSheetDialogFragment` için **köprü yok**. Bir d
 ```kotlin
 @Composable
 fun App() {
-    val navigator = rememberNavigator(start = HomeRoute)
+    // codegen üretir (core:navigation, §3.3/§14): gezginTopology + gezginSerializersModule
+    val json = remember { Json { serializersModule = gezginSerializersModule } }
+    val navigator = rememberNavigator(start = HomeRoute, topology = gezginTopology, json = json)
 
     // Observe-only middleware (§10.1): navigator.events akışını DIŞARIDAN collect edersin —
     // GezginDisplay'in bir constructor param'ı DEĞİL. Akışı hiçbir şekilde etkilemez (log/analytics).
@@ -337,7 +339,7 @@ fun App() {
 ## 13. Test API
 State-as-data → **UI/Compose'suz, saf Kotlin**:
 ```kotlin
-val nav = GezginTestNavigator(start = HomeRoute)
+val nav = GezginTestNavigator(start = HomeRoute, topology = gezginTopology)   // gezginTopology: codegen üretir (§14)
 nav.navigate(ProductRoute("42")); nav.back(); nav.replaceTo(HomeRoute)
 nav.backStack; nav.current                          // switchTo/activeTab/stackOf/handleDeepLink → V2
 
@@ -357,13 +359,14 @@ Enforcement'ı test etmeye gerek yok (compile-time garanti).
 - **Geri/çıkış:** `@NoBack` → navigator'dan `back()` çıkar + entry content'i Gezgin-sahipli enabled `NavigationBackHandler` ile sarılır (preview o entry'de başlamaz; M5′, §4.2); `@BackTo`/`@BackToStart`/`@Quit`/`@QuitAndGoTo` + `quitWith(T)` → tipli metotlar.
 - **MVI-mode (§10.1):** `@ViewModel(Route)` + stateless `@Screen(state,onIntent)` + opsiyonel `@ScreenEffect` → `GezginEntryScope.provideXEntry(viewModel = <DI-detected default>)` (Gezgin registry'sine register eder; kullanıcıya wrapper tip yok). S/I/E VM'in `GezginMvi<S,I,E>` supertype'ından; default resolver VM'in DI annotation'ı (`@HiltViewModel`/`@KoinViewModel`) + ctor `@Assisted`'ından. Bundle `xFeatureEntries()` = kullanıcı-yazımı.
 - **Fragment (§11.1):** `gezginArgs`/`gezginNav` accessor'ları + `AndroidFragment` (view-host). Yalnız `@FragmentScreen`; dialog/bottomsheet fragment interop yok.
-- Deep-link tablosu + placeholder doğrulaması · Guardrail 1 + derleme matrisi **E1–E5** (§8.1) · Modül başına `xFeatureEntries()` · Polymorphic serialization kaydı (`GezginKey` dahil).
+- **Deep-link tablosu + placeholder doğrulaması → 🔮 V2** (§5/§17; processor'da bugün deep-link codegen'i yok) · Guardrail 1 + derleme matrisi **E1–E5** (§8.1) · Modül başına `xFeatureEntries()` · Polymorphic serialization kaydı (`GezginKey` dahil).
 
 ---
 
 ## 15. Paketleme
-- `gezgin-core` (DI-agnostik): annotations, runtime, `GezginDisplay`, codegen, BottomSheet scene strategy.
-- `gezgin-mvi` (opsiyonel, `gezgin-core`'a bağımlı): `@ViewModel`/`@ScreenEffect` + `GezginMvi<S,I,E>` sözleşmesi + codegen binder (`EntryProviderScope.provideXEntry`) + `ObserveAsEvents` + **DI-detection** (VM'in `@HiltViewModel`/`@KoinViewModel` annotation'ı + ctor `@Assisted`/`@InjectedParam`'ından default resolver üretir; şimdilik Hilt+Koin, androidx fallback). Bağlantı seam'i: core'un `EntryProviderScope` + navigator'ları (mvi = entry-producer add-on; `GezginEntry` wrapper tipi **yok**).
+- `gezgin-core` (DI-agnostik): annotations, runtime, `GezginDisplay`, üretilen kodun runtime hedef yüzeyi (navigator facade / `GezginEntryScope`), BottomSheet scene strategy.
+- `gezgin-processor` (KSP2 symbol processor, zorunlu): tipli navigator'ları, entry provider'larını, graph topology + `SerializersModule`'ü üretir (`ksp(project(":gezgin-processor"))` ile uygulanır). **Tüm codegen burada** — `gezgin-core` codegen İÇERMEZ.
+- `gezgin-mvi` (opsiyonel, `gezgin-core`'a bağımlı): `@ViewModel`/`@ScreenEffect` + `GezginMvi<S,I,E>` sözleşmesi + codegen binder (`GezginEntryScope.provideXEntry`) + `ObserveAsEvents` + **DI-detection** (VM'in `@HiltViewModel`/`@KoinViewModel` annotation'ı + ctor `@Assisted`/`@InjectedParam`'ından default resolver üretir; şimdilik Hilt+Koin, androidx fallback). Bağlantı seam'i: core'un `GezginEntryScope` + navigator'ları (mvi = entry-producer add-on; `GezginEntry` wrapper tipi **yok**).
 - Ayrı `gezgin-koin`/`gezgin-hilt` add-on'una **gerek yok** — DI desteği gezgin-mvi codegen'inde. (İleride farklı DI'lar için genişletilebilir; manuel-DI → resolver override.)
 
 ---
