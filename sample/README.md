@@ -56,7 +56,7 @@ artı iç içe `AvatarFlow` → `ZoomFlow` (`@FlowGraph` içinde `@FlowGraph`).
 | `@StartDestination` / G1 (app start) | `SignUpFlow.CredentialsScreenRoute`, `AvatarFlow.PickSourceScreenRoute`, `ZoomFlow.ZoomScreenRoute`; gerçek app start = `LoginScreenRoute` | graph dosyaları, `MainActivity.kt` |
 | `@GoTo` (+ `singleTop=false` + `name=`) | `DashboardScreenRoute→ItemDetailScreenRoute`; `ItemDetailScreenRoute→ItemDetailScreenRoute` (`goToRelated`, R2 dup) | `HomeScreens.kt` |
 | `@ReplaceTo` (Self-default) | `LoginScreenRoute→DashboardScreenRoute` (`loginSuccess`), `WelcomeScreenRoute→DashboardScreenRoute` (`continueToDashboard`) | `AuthScreens.kt`, `HomeScreens.kt` |
-| `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsScreenRoute→LoginScreenRoute` | `ProfileScreens.kt` |
+| `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsScreenRoute→LoginScreenRoute` | `SettingsMvi.kt` (VM `onIntent`'ten çağrılır — MVI-mode) |
 | `@GoForResult` — screen×3 (Dialog/Dialog/Sheet) | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | `AuthScreens.kt`, `ProfileScreens.kt`, `HomeScreens.kt` |
 | `@GoForResult` — flow×1, named×2 | `AvatarFlow` (`pickAvatar`), `FilterBottomSheetRoute` (`pickSort`) | `ProfileScreens.kt`, `HomeScreens.kt` |
 | Üçlü tüketimin İKİ deseni | suspend `goToPickSortForResult` (Dashboard) **vs.** `launchPickAvatar()` + `pickAvatarResults.collect` VM'siz `LaunchedEffect` (Profile) | `HomeScreens.kt` / `ProfileScreens.kt` |
@@ -72,6 +72,7 @@ artı iç içe `AvatarFlow` → `ZoomFlow` (`@FlowGraph` içinde `@FlowGraph`).
 | `DialogContract` — KOŞULLU desen | `EditNameDialogRoute.dismissOnClickOutside` ← `current.isNotBlank()` | `ProfileGraph.kt`, `ProfileScreens.kt` |
 | `BottomSheetContract` + `LocalGezginSheetState` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `sheetState.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `HomeScreens.kt` |
 | Transition cascade (3 seviye) | app `navTransitions{forward{...}backward{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsScreenRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `ProfileGraph.kt` |
+| **MVI-mode add-on** (`@ViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) | `SettingsScreenRoute` | `SettingsMvi.kt` — bkz. aşağıdaki "Faz 5 — MVI-mode" |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
 | `onRootBack = finish()` | — | `MainActivity.kt` |
 | PD-safe restore | `rememberNavigator` PD-safe `Saver`; bkz. `gezgin-core` (`GezginDisplay`) dokümantasyonu — bu sample ek bir test EKLEMEZ, framework'ün kendi restore testleri kapsar | — |
@@ -130,6 +131,80 @@ sergiliyor; `FullscreenModalContract`'ın davranışı `DialogContract`'ın basi
 (Task 4.3). Sample'a üçüncü bir modal route eklemek yeni bir kapsam tablosu satırı dışında ek bir
 API deseni göstermeyecekti; mevcut ikisi (Dialog/BottomSheet contract + sheetState + dismiss→Canceled)
 referans için yeterli görüldü.
+
+## Faz 5 — MVI-mode (opsiyonel `:gezgin-mvi` add-on)
+
+Faz 5, kütüphaneye **opsiyonel** bir MVI binder'ı ekledi (`:gezgin-mvi` modülü: `GezginMvi<S,I,E>`
+sözleşmesi, `@ViewModel`/`@ScreenEffect` annotation'ları) + tam KSP codegen'i (`gezgin-processor`'ın
+`MviEntryCodegen`'i: Hilt/Koin/androidx-fallback için DI-detection default resolver'ı). O ana kadar
+MVI-mode yalnız kctfork'un **plugin'siz golden-text** derleme testleriyle kanıtlanmıştı — bunlar gerçek
+bir Compose/Android runtime'ını **çalıştıramaz** (kctfork backend'i gerçek composable çağrı bölgelerinde
+ICE veriyor). **Faz 5.3 bu boşluğu kapatır:** bu sample'daki `SettingsScreen`, gerçek AGP derlemesi
+(`:sample:app:assembleDebug`, gerçek compose-compiler plugin'i) ve on-device koşusuyla MVI-mode'a
+çevrildi — kütüphanenin ilk GERÇEK uçtan-uca MVI kanıtı.
+
+**Neden `SettingsScreen` (tüm modül veya `ProfileScreen` değil):** `SettingsScreen` kendi kendine yeten
+tek ekrandı — yerel bir `darkTheme` toggle'ı + tek bir `nav.logout()` çağrısı; taşınacak suspend
+result-await ya da composable-içi Flow-collection'ı YOK (o desenler `ProfileScreen`'de yaşıyor ve onları
+bir VM'e taşımak — VM-güdümlü suspend-result tüketimi + stream-collection — tek bir örnek dönüşümünün
+amacına (yalnız "runtime wiring derlenir + çalışır") oransız büyük/riskli bir işti). Ayrıca
+`SettingsScreenRoute` route-seviyesi transition override'ını (slideIn/Out — MVI-mode içeriğe dokunur,
+`Route.transition`'a DOKUNMAZ) korurken TEK ekran hem o mevcut özelliği hem de yeni MVI-mode'u sergiler;
+yeni bir ekran gerekmedi.
+
+Üçlü (`SettingsMvi.kt`, hepsi aynı modülde, aynı route'a eşlenir):
+
+- **`@ViewModel(SettingsScreenRoute) class SettingsViewModel(nav: SettingsNavigator) : ViewModel(),
+  GezginMvi<SettingsState, SettingsIntent, SettingsEffect>`** — gerçek androidx `ViewModel`.
+  `onIntent(ToggleTheme)` state'teki `darkTheme`'i çevirir + bir efekt emit eder; `onIntent(Logout)`
+  enjekte edilmiş `nav.logout()`'u **doğrudan** çağırır (spec §10 A deseni: "VM-driven, önerilen" —
+  nav VM'e enjekte, üretilen nav metodu VM içinden çağrılır).
+- stateless **`@Screen(SettingsScreenRoute) fun SettingsContent(state, onIntent)`** — eski
+  `fun SettingsScreen(route, nav)`'in yerine; UI yalnız `state` okur + `onIntent` tetikler.
+- **`@ScreenEffect fun SettingsEffects(effects: Flow<SettingsEffect>)`** — `gezgin-mvi`'nin
+  `ObserveAsEvents`'iyle tek-seferlik efekt (bir `Toast` + `Log.d`); `ToggleTheme`'de bir kez tetiklenir.
+  Bu, `@ScreenEffect`/`ObserveAsEvents`'in canlı Compose/Android runtime'da GERÇEKTEN çalıştığının ilk
+  kctfork-dışı kanıtı.
+
+**androidx-fallback resolver (gerçek Hilt/Koin bağımlılığı EKLENMEDİ).** `SettingsViewModel`'in tek ctor
+param'ı nav-tipli ve `@HiltViewModel`/`@KoinViewModel` taşımadığı için `MviEntryCodegen`'in DI-detection'ı
+otomatik olarak ANDROIDX default resolver'ı üretir — `provideSettingsEntry()`'yi ELLE yazmaya gerek yok
+(`ProfileGraphEntries.kt`'deki mevcut `provideSettingsEntry()` çağrısı, core-mode'dan MVI-mode'a geçince
+DEĞİŞMEDEN çözülür; codegen artık `GezginMviEntries.kt`'ye üretir, `GezginEntries.kt`'ye değil):
+
+```kotlin
+// sample/feature/profile/build/generated/ksp/debug/.../GezginMviEntries.kt (üretilen)
+public fun GezginEntryScope.provideSettingsEntry(
+  viewModel: @Composable (nav: SettingsNavigator, args: ProfileGraph.SettingsScreenRoute) -> SettingsViewModel =
+    { nav, args -> viewModel(factory = viewModelFactory { initializer { SettingsViewModel(nav) } }) },
+) {
+  register<ProfileGraph.SettingsScreenRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
+    val nav = LocalGezginRawNavigator.current.settingsNavigator(LocalGezginEntryId.current)
+    val vm = viewModel(nav, route)
+    val state by vm.uiState.collectAsStateWithLifecycle()
+    SettingsEffects(vm.effects)
+    SettingsContent(state, vm::onIntent)
+  }
+}
+```
+
+**Hilt/Koin override — yalnız örnek, wire EDİLMEZ (sample'ı yalın tutmak için).** Bu sample'a bilinçli
+olarak gerçek bir Hilt/Koin Gradle bağımlılığı EKLENMEZ; `viewModel` resolver'ı override etmek için
+`provideSettingsEntry`'yi elle yazmaya gerek yoktur — yalnızca `viewModel = { ... }` argümanı geçilir
+(codegen default'u zaten üretir):
+
+```kotlin
+// Hilt (gerçek Hilt bağımlılığı BU sample'a EKLENMEZ — yalnız örnek):
+//   provideSettingsEntry(viewModel = { nav, args ->
+//       hiltViewModel<SettingsViewModel, SettingsViewModel.Factory>(
+//           creationCallback = { factory -> factory.create(nav) }) })
+// Koin (yine yalnız örnek):
+//   provideSettingsEntry(viewModel = { nav, args -> koinViewModel { parametersOf(nav) } })
+```
+
+**Cihaz-üstü doğrulama:** MVI-mode'un yalnız derlemeden görülemeyen davranışları (VM'in config-change'te
+hayatta kalması, efektin rotation'da tekrar oynamaması, logout'un stack'i doğru temizlemesi)
+`docs/gezgin-on-device-checklist.md` madde 14'te insan-doğrulaması olarak listelendi.
 
 ## Davranış testleri
 
