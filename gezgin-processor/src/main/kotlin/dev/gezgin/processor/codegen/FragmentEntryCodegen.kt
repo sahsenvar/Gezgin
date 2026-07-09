@@ -55,9 +55,12 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * **Navigator wiring — CONDITIONAL (SC2/MV7 parity, one phase later).** A Fragment wires `nav`
  * (`val nav = raw.xNavigator(entryId)` + the 3-arg `bindGezgin(fragment, route, nav)`) **only when the route
  * actually earns a navigator** — the `navWired` flag [generate]'s `hasNavigator` predicate supplies per entry
- * (computed at the [dev.gezgin.processor.GezginProcessor] dispatch site via
- * [NavigatorCodegen.hasNavigator], `?: true` cross-module-optimistic, exactly like core-mode's `SC2` and
- * MVI-mode's `MV7`). A `@FragmentScreen` route with NO edges/back-edges/result-contract earns no
+ * (computed at the [dev.gezgin.processor.GezginProcessor] dispatch site: a SAME-module route decides from the
+ * in-memory `GraphModel` via [NavigatorCodegen.hasNavigator], exactly like core-mode's `SC2` and MVI-mode's
+ * `MV7`; a CROSS-module route — absent from this module's model — is decided by a classpath PROBE for the
+ * already-compiled `XNavigator` class, replacing the old `?: true` blind optimism that nav-wired every
+ * cross-module Fragment and mis-compiled a display-only cross-module leaf). A `@FragmentScreen` route with NO
+ * edges/back-edges/result-contract earns no
  * `NavigatorCodegen`-generated `xNavigator` factory — a realistic, legitimate case (a display-only brownfield
  * leaf like Settings/About that only reads `gezginArgs` and never navigates). For that leaf the emitted body
  * SUPPRESSES the `val nav = ...` line (which would be an unresolved reference) and binds via the no-nav

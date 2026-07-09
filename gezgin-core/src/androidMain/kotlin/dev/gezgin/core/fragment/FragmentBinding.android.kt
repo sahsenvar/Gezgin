@@ -9,10 +9,22 @@ import kotlin.properties.ReadOnlyProperty
  * Task 6.2 — `@FragmentScreen` interop'un CANLI-referans (`gezginNav`) ve tipli-arg (`gezginArgs`) erişim
  * yarısı (spec §11.1, Task 6.0 §1 "I1" split). İki delege İKİ FARKLI kaynaktan okur:
  * - **`gezginArgs<Route>()` → Fragment'ın kendi `arguments` Bundle'ı** ([decodeGezginRoute]). `arguments`
- *   Fragment örneklenirken (`setArguments`, `onUpdate`'ten ÖNCE) kurulur → onAttach'tan itibaren okunabilir,
- *   `onUpdate` zamanlamasından BAĞIMSIZ (spec 291 "route Bundle'dan → PD-safe"; §B4). Route'un PD kaynağı
- *   Gezgin'in KENDİ backstack'i (§1d) olduğundan taze-process restore'da entry yeniden render → `arguments`
- *   taze route'la yeniden üretilir → decode çalışır.
+ *   Fragment örneklenirken (`setArguments`, `onUpdate`'ten ÖNCE) kurulur → `onUpdate` zamanlamasından
+ *   BAĞIMSIZ decode edilir (spec 291 "route Bundle'dan → PD-safe"; §B4). Route'un PD kaynağı Gezgin'in KENDİ
+ *   backstack'i (§1d) olduğundan taze-process restore'da entry yeniden render → `arguments` taze route'la
+ *   yeniden üretilir → decode çalışır.
+ *
+ *   **Geçerlilik penceresi (KESİN sözleşme):** `gezginArgs`, `onCreateView`/`onViewCreated` ve sonrasından
+ *   itibaren HER durumda güvenle okunur. İLK-YARATIM instance'ında (`AndroidFragment` Fragment'ı KENDİ
+ *   örnekliyor: ilk kompozisyon `route.toBundle(raw)`'ı Fragment yaratılmadan ÖNCE değerlendirir →
+ *   [gezginFragmentJson] o an dolu) `onAttach`/`onCreate`'ten itibaren de güvenlidir. AMA taze-process
+ *   FragmentManager-RESTORE branch'inde DEĞİL: gerçek process-death'ten sonra
+ *   `FragmentActivity.onCreate(savedInstanceState)`, FM-saved Fragment'ı `setContent`'in ilk kompozisyonu
+ *   (dolayısıyla YENİ process'te `route.toBundle`) çalışmadan ÖNCE geri yükleyip ona `onAttach`/`onCreate`
+ *   dispatch eder → o an [gezginFragmentJson] hâlâ `null` ([gezginBoundRoute] açıklayıcı hata fırlatır). Bu
+ *   yüzden `onAttach`/`onCreate`'te okuma SPESİFİK olarak bu restore branch'inde garanti DEĞİLDİR;
+ *   `onCreateView`/`onViewCreated` (container yaratımı ilk kompozisyonun arkasında → `toBundle` her zaman önce
+ *   çalışmıştır) her iki branch'te de güvenlidir. Örnek `HelpFragment` zaten `onViewCreated`'da okur.
  * - **`gezginNav<Navigator>()` → aşağıdaki [boundRegistry]** ([bindGezgin] `onUpdate`'te doldurur). Canlı bir
  *   navigator facade'ının serileştirilebilir biçimi YOKTUR → instance-anahtarlı registry'de taşınmalı,
  *   Bundle'da değil. Bu yüzden `gezginNav` gerçekten `onUpdate` çalışana dek geçersizdir (spec 298).
@@ -115,7 +127,9 @@ internal fun gezginBoundRoute(fragment: Fragment): Route {
     val json = gezginFragmentJson ?: error(
         "gezginArgs okunmadan önce hiç Gezgin route.toBundle() değerlendirilmemiş — @FragmentScreen'li " +
             "Fragment yalnız Gezgin'in (GezginDisplay + üretilen provideXEntry) host ettiği bir entry olarak " +
-            "geçerlidir (§11.1).",
+            "geçerlidir (§11.1). Bu, process-death sonrası FragmentManager'ın Fragment'ı onCreate'te henüz " +
+            "route.toBundle() çalışmadan geri yüklediği durumda da olabilir — gezginArgs'ı onAttach/onCreate'te " +
+            "DEĞİL, onCreateView/onViewCreated'da okuyun (§B4).",
     )
     val bundle = fragment.arguments ?: error(
         "gezginArgs: ${fragment::class.simpleName}.arguments null — Fragment Gezgin route.toBundle() ile " +
@@ -127,7 +141,10 @@ internal fun gezginBoundRoute(fragment: Fragment): Route {
 /**
  * `@Screen`'in `route` param'ının Fragment karşılığı (§11.1). `by gezginArgs<XRoute>()` — Fragment'ın
  * `arguments` Bundle'ından tipli route'u decode edip reified tipe cast'ler. `onUpdate`'ten BAĞIMSIZ (arguments
- * örnekleme anında kurulur) → onAttach'tan itibaren PD-safe okunabilir (§B4).
+ * örnekleme anında kurulur). **Geçerlilik:** `onCreateView`/`onViewCreated` ve sonrasında HER durumda PD-safe;
+ * `onAttach`/`onCreate`'te yalnız İLK-YARATIM instance'ında güvenli, taze-process FragmentManager-restore
+ * branch'inde DEĞİL (o an [gezginFragmentJson] henüz `null` — bkz. dosya başı KDoc + [gezginBoundRoute]
+ * hatası). Route'u `onCreateView`/`onViewCreated`'da oku (§B4).
  */
 inline fun <reified R : Route> gezginArgs(): ReadOnlyProperty<Fragment, R> =
     ReadOnlyProperty { fragment, _ -> gezginBoundRoute(fragment) as R }

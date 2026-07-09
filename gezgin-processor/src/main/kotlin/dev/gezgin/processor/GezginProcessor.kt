@@ -1,5 +1,6 @@
 package dev.gezgin.processor
 
+import com.google.devtools.ksp.getClassDeclarationByName
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
@@ -177,17 +178,33 @@ class GezginProcessor(
                         // Fragment nav-wiring GUARD (SC2/MV7 parity, one phase later, FS5). Whether a
                         // @FragmentScreen route earns a NavigatorCodegen `xNavigator` factory is a
                         // GRAPH-derived fact — computed HERE (where `model` is in scope), NOT in the
-                        // graph-unaware FragmentModelReader. Mirrors SC2/MV7 exactly, including the `?: true`
-                        // cross-module-optimistic fallback: a route THIS module's model doesn't know (compiled
-                        // in another module) MUST default to "assume it has a navigator". When false (an
-                        // edge-less leaf — a legitimate display-only brownfield screen), FragmentEntryCodegen
-                        // suppresses the `val nav = raw.xNavigator(...)` line (which would be an unresolved
-                        // reference) and binds via the no-nav `bindGezgin(fragment, route)` overload; gezginNav
-                        // then throws the actionable [FS5] runtime error. The leaf is NOT rejected at KSP time.
+                        // graph-unaware FragmentModelReader. Two branches by where the route lives:
+                        //  - SAME-module route (in THIS model): decide from the in-memory GraphModel via
+                        //    NavigatorCodegen.hasNavigator, exactly like SC2/MV7. Its navigator, if earned, is
+                        //    generated in THIS SAME KSP round → NOT yet resolvable on the classpath, so the
+                        //    model check is the ONLY reliable source here (a classpath probe can't replace it).
+                        //  - CROSS-module route (routeModel == null, compiled in another module): its navigator,
+                        //    IF the route earns one, is an ALREADY-COMPILED `XNavigator` class visible on the
+                        //    classpath NOW → PROBE it deterministically (getClassDeclarationByName) instead of the
+                        //    old `?: true` blind optimism. A bare @FragmentScreen has NO per-entry nav signal (unlike
+                        //    core/MVI, which only reach this check when the function signature requests `nav`), so
+                        //    `?: true` nav-wired EVERY cross-module Fragment — including a genuinely display-only
+                        //    leaf whose cross-module route has ZERO edges (no navigator). That emitted a
+                        //    `raw.xNavigator()` call to a nonexistent factory: an unresolved reference, the EXACT
+                        //    bug FS5 exists to kill, just relocated to the cross-module case. The probe fixes it:
+                        //    class resolves → wire nav; doesn't → the FS5 no-nav path (2-arg bindGezgin; gezginNav
+                        //    throws the actionable [FS5] runtime error). The leaf is NOT rejected at KSP time.
                         val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)
                         val routesByFq = model.routes.associateBy(RouteModel::fqName)
                         FragmentEntryCodegen.generate(fragmentModels) { entry ->
-                            routesByFq[entry.routeFq]?.let { NavigatorCodegen.hasNavigator(it, graphsByFq) } ?: true
+                            val routeModel = routesByFq[entry.routeFq]
+                            if (routeModel != null) {
+                                NavigatorCodegen.hasNavigator(routeModel, graphsByFq)
+                            } else {
+                                resolver.getClassDeclarationByName(
+                                    "${entry.routePackageName}.${entry.x}Navigator",
+                                ) != null
+                            }
                         }.forEach { it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES) }
                     }
                 }

@@ -31,6 +31,12 @@ import kotlin.reflect.KClass
  * `gezginArgs`/`gezginNav` delegates (route rides the Fragment `arguments` Bundle, PD-safe; nav rides an
  * instance-keyed side-table). The processor enforces the no-arg-ctor rule at model-read time (`FS1`).
  *
+ * **Host precondition — the hosting `Activity` MUST be a `FragmentActivity`/`AppCompatActivity`.** Hosting a
+ * Fragment via `androidx.fragment.compose.AndroidFragment` needs a `FragmentManager` in the view tree, which
+ * only a `FragmentActivity` (or its `AppCompatActivity` subclass) provides — a plain `ComponentActivity`
+ * crashes at RUNTIME (not compile time) when this entry is first shown. Documented in the README, the sample
+ * `MainActivity`, and the on-device checklist too.
+ *
  * **Android-only in practice.** Like every other Gezgin annotation this declaration is trivially
  * cross-platform (it names only `KClass<out Route>`), so it lives in `commonMain`. But its *use* is
  * Android-only: its target, `androidx.fragment.app.Fragment`, exists only on Android, and there is

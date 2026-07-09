@@ -220,6 +220,28 @@ class FragmentModelReaderTest {
     }
 
     @Test
+    fun `FS6 — @FragmentScreen on a class that does not extend Fragment is rejected`() {
+        // The annotated class is a PLAIN class (no `: Fragment()`). Its route arg IS a valid Route → FS2
+        // passes; ctor is no-arg → FS1 passes. Only FS6's ANNOTATED-CLASS supertype check can catch this
+        // (FS2 checks the ROUTE arg, a structurally different thing). Without FS6 the mistake would surface
+        // as a confusing `T : Fragment` type-bound error inside the generated AndroidFragment<X> call.
+        assertViolates(
+            "FS6",
+            """
+            package dev.gezgin.fs6
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+
+            data class R(val x: Int = 0) : Route
+
+            @FragmentScreen(R::class)
+            class NotAFragment
+            """.trimIndent(),
+        )
+    }
+
+    @Test
     fun `FS4 — two @FragmentScreen classes in one package resolving to the same X (provideXEntry clash)`() {
         // `Detail` and `DetailRoute` are DIFFERENT routes (no FS3), but the X derivation strips the "Route"
         // suffix — both resolve to X="Detail" i.e. the SAME `provideDetailEntry()` name in the SAME package.

@@ -57,6 +57,45 @@ val FRAGMENT_SOURCE = """
 """.trimIndent()
 
 /**
+ * Stand-ins for the `XNavigator` classes [dev.gezgin.processor.codegen.NavigatorCodegen] would generate in
+ * the ROUTES' OWN module. In a real multi-module build that module compiles first, so its navigators are
+ * already-compiled classes on the Fragment module's classpath; the cross-module nav-wiring PROBE
+ * (`GezginProcessor`, `resolver.getClassDeclarationByName("<routePkg>.<X>Navigator")`) then resolves them and
+ * emits nav wiring. The single-compilation kctfork harness has no separate module, so these hand-written
+ * source classes model that "already compiled elsewhere" navigator — a bare `class` is enough, the probe only
+ * checks the FQN RESOLVES. Paired with [FRAGMENT_ROUTES]/[FRAGMENT_SOURCE] (routes `OrderChain`/`Archived`)
+ * this exercises the cross-module WITH-navigator branch deterministically (replacing the old `?: true`
+ * optimism, which nav-wired blindly whether or not a navigator existed).
+ */
+val FRAGMENT_ROUTE_NAVIGATOR_STUBS = """
+    package dev.gezgin.fragroutes
+
+    class OrderChainNavigator
+    class ArchivedNavigator
+""".trimIndent()
+
+/**
+ * Cross-module DISPLAY-ONLY leaf — the exact case FS5 exists to legitimize, and the gap the nav-wiring
+ * PROBE closes. `SettingsRoute` is graph-less (absent from any `GraphModel` → the `routesByFq[routeFq] == null`
+ * cross-module branch) AND has NO compiled `SettingsNavigator` class anywhere → the probe returns false → nav
+ * wiring MUST be suppressed (no `val nav`, no `settingsNavigator`, 2-arg `bindGezgin(fragment, route)`). Under
+ * the OLD `?: true` optimism this leaf was wrongly nav-wired → a `raw.settingsNavigator()` call to a
+ * nonexistent factory (unresolved reference) — the relocated FS5 bug this test pins as fixed.
+ */
+val FRAGMENT_DISPLAY_ONLY_SOURCE = """
+    package dev.gezgin.fragdisplay
+
+    import androidx.fragment.app.Fragment
+    import dev.gezgin.core.Route
+    import dev.gezgin.core.annotation.FragmentScreen
+
+    data class SettingsRoute(val id: String = "x") : Route
+
+    @FragmentScreen(SettingsRoute::class)
+    class SettingsFragment : Fragment()
+""".trimIndent()
+
+/**
  * Fix-round fixture pinning the CONDITIONAL nav-wiring guard (the FS5 / SC2-MV7-parity fix). Compiled
  * ALONGSIDE [SHOP_SOURCE] so its two `@FragmentScreen` leaves target routes that ARE in this module's model
  * with a KNOWN navigator status (unlike [FRAGMENT_ROUTES], whose graph-less routes fall to the `?: true`

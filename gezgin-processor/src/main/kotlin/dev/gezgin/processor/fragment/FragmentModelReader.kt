@@ -14,6 +14,7 @@ import dev.gezgin.processor.entry.EntryFunctionModel
 internal const val FRAGMENT_SCREEN_FQ = "dev.gezgin.core.annotation.FragmentScreen"
 private const val ROUTE_FQ = "dev.gezgin.core.Route"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
+private const val FRAGMENT_FQ = "androidx.fragment.app.Fragment"
 
 /**
  * Task 6.1 — reads every `@FragmentScreen(Route::class)`-annotated CLASS (spec §11/§11.1/§11.2 brownfield
@@ -56,12 +57,21 @@ private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
  *   MVI-mode's `MV7` REJECT a nav-wanting entry whose route earns no navigator. A `@FragmentScreen` can't be
  *   rejected the same way: an edge-less leaf (a display-only brownfield screen that only reads `gezginArgs`
  *   and never navigates) is LEGITIMATE. So `FS5` is split and lives OUTSIDE this graph-unaware reader: the
- *   whether-the-route-earns-a-navigator predicate (`NavigatorCodegen.hasNavigator`, `?: true`
- *   cross-module-optimistic — exactly like `SC2`/`MV7`) is computed at [dev.gezgin.processor.GezginProcessor]'s
+ *   whether-the-route-earns-a-navigator predicate (`NavigatorCodegen.hasNavigator` for a same-module route —
+ *   exactly like `SC2`/`MV7`; a classpath probe for the compiled `XNavigator` class for a cross-module route,
+ *   replacing the earlier `?: true` optimism) is computed at [dev.gezgin.processor.GezginProcessor]'s
  *   codegen dispatch site, [dev.gezgin.processor.codegen.FragmentEntryCodegen] SUPPRESSES nav wiring (no
  *   `val nav = raw.xNavigator(...)`, binds via the no-nav `bindGezgin(fragment, route)` overload) when it's
  *   false, and `gezginNav` throws the actionable `[FS5]` error at runtime (gezgin-core
  *   `FragmentBinding.android.kt`). This reader is untouched (no `GraphModel` in its ctor).
+ * - **`FS6` — annotated class must BE a `Fragment`.** The annotated CLASS must extend
+ *   `androidx.fragment.app.Fragment` ([getAllSuperTypes] string-FQN walk against [FRAGMENT_FQ], the EXACT
+ *   mechanism `FS2` uses for its Route check). This covers a case `FS2` **structurally cannot**: `FS2`
+ *   validates the annotation's `route` ARG type, `FS6` validates the ANNOTATED CLASS's own supertype — two
+ *   different things. The frontend's `route: KClass<out Route>` bound leaves the class type unconstrained, so
+ *   annotating a plain class / an `Activity` by mistake would otherwise surface as a confusing `T : Fragment`
+ *   type-bound error inside the GENERATED `AndroidFragment<XFragment>` call, not an actionable `[FS6]`. → no
+ *   model emitted.
  *
  * **FS3/FS4 wiring choice (post-hoc cross-check, not shared-map seeding):** rather than seeding
  * `EntryModelReader`'s private `seenRouteFqs` (which would require changing its constructor and would
@@ -113,6 +123,29 @@ class FragmentModelReader(
                     "şu param(lar)ı var: ${ctorParams.joinToString { it.name?.asString().orEmpty() }} " +
                     "(Android PD/config-change'de Fragment'ı argsız ctor'la yeniden yaratır; route/nav " +
                     "ctor'dan DEĞİL gezginArgs/gezginNav delege'lerinden gelir, §11.1)",
+            )
+            return null
+        }
+
+        // FS6 — the annotated CLASS must actually extend `androidx.fragment.app.Fragment`. This checks the
+        // ANNOTATED CLASS's own supertype — structurally DIFFERENT from FS2, which checks the annotation's
+        // ROUTE ARG type; FS2 cannot cover it. The Kotlin frontend does NOT block a non-Fragment class here
+        // (@FragmentScreen's only type bound is on `route: KClass<out Route>`), so without FS6 a realistic
+        // mistake — annotating a plain class or an Activity — surfaces as a confusing `T : Fragment`
+        // type-bound error deep inside the GENERATED `AndroidFragment<XFragment>` call rather than an
+        // actionable [FS*] KSP diagnostic pointing at the user's own annotation. Same string-FQN
+        // `getAllSuperTypes()` walk FS2 uses for its Route-implementation check.
+        val extendsFragment = decl.getAllSuperTypes().any {
+            it.declaration.qualifiedName?.asString() == FRAGMENT_FQ
+        }
+        if (!extendsFragment) {
+            error(
+                "FS6",
+                "$fragmentSimpleName: @FragmentScreen yalnız bir androidx.fragment.app.Fragment alt sınıfına " +
+                    "konulabilir — bu sınıf Fragment'ı extend ETMİYOR (düz bir sınıf/Activity'ye yanlışlıkla " +
+                    "eklenmiş olabilir). Fragment'ı `class $fragmentSimpleName : Fragment()` yap ya da " +
+                    "@FragmentScreen'i kaldır (route/nav bir Fragment host'una gezginArgs/gezginNav ile " +
+                    "teslim edilir, §11.1)",
             )
             return null
         }
