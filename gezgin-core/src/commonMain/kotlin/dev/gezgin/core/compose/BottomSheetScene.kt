@@ -21,8 +21,15 @@ import dev.gezgin.core.Route
  * `@BottomSheet` content'ine Gezgin'in enjekte ettiği [SheetState] (§7) — **register imzası
  * DEĞİŞMEDEN** sheet durumunu content'e taşıyan rol-param'ı. [LocalGezginEntryId]/
  * [LocalGezginRawNavigator] deseniyle simetrik: [GezginBottomSheetScene] `ModalBottomSheet`'i kurarken
- * `sheetState`'i bu Local ile sarar; `@BottomSheet` content'i `LocalGezginSheetState.current` ile okur
- * (örn. bir buton `scope.launch { sheetState.hide() }` ile sheet'i kapatabilir).
+ * `sheetState`'i bu Local ile sarar; `@BottomSheet` content'i `LocalGezginSheetState.current` ile okur.
+ *
+ * **DİKKAT — ÇIPLAK `hide()` state-desync üretir (m1):** bir buton'dan sheet'i kapatmak için
+ * `scope.launch { sheetState.hide() }` TEK BAŞINA YETMEZ — `hide()` yalnız sheet'i GÖRSEL olarak
+ * Hidden'a animasyonlar; `onDismissRequest`'i TETİKLEMEZ, dolayısıyla entry stack'in top'unda KALIR
+ * (geri tuşu artık "görünmez bir sheet"i kapatır). Doğru desen: gizle, SONRA navigator'la pop et —
+ * `scope.launch { sheetState.hide(); nav.back() }` (ya da `ResultRoute` sheet'inde
+ * `sheetState.hide(); nav.backWithResult(value)`). Bu, `@NoBack`×sheet yasağının [EntryAdapter]'daki
+ * gerekçesiyle (aynı desync) simetriktir — kütüphane kendi KDoc'unda o tuzağı önermemeli.
  *
  * **sheetState enjeksiyon kararı = CompositionLocal (register imzası sabit):** alternatif (register'a
  * `@BottomSheet` özel overload) imzayı çoğaltırdı. Local ile `register<R> { ... }` tek imza kalır; Faz 3.4
@@ -121,10 +128,13 @@ internal class GezginBottomSheetScene(
     }
 
     override fun hashCode(): Int {
-        return key.hashCode() * 31 +
-            entry.hashCode() * 31 +
-            overlaidEntries.hashCode() * 31 +
-            props.hashCode() * 31
+        // m6 — standart zincirleme (alan-sırası-duyarlı): toplam yerine 31*(…)+… — `equals`'ın karşılaştırdığı
+        // dört alanla birebir aynı sıra/set (data-class'ın üreteceğiyle eşdeğer hash kalitesi).
+        var result = key.hashCode()
+        result = 31 * result + entry.hashCode()
+        result = 31 * result + overlaidEntries.hashCode()
+        result = 31 * result + props.hashCode()
+        return result
     }
 
     override fun toString(): String =

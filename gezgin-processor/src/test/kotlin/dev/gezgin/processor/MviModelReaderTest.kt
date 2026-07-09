@@ -5,6 +5,7 @@ import com.tschuchort.compiletesting.SourceFile
 import dev.gezgin.processor.CompileHarness.compileGezgin
 import dev.gezgin.processor.CompileHarness.findGeneratedResource
 import dev.gezgin.processor.CompileHarness.generatedSourceFor
+import dev.gezgin.processor.fixtures.HILT_STUBS
 import dev.gezgin.processor.fixtures.MV7_NO_NAV_SOURCE
 import dev.gezgin.processor.fixtures.MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
@@ -627,6 +628,260 @@ class MviModelReaderTest {
             @ScreenEffect
             @Composable
             fun BadEffects(effects: Flow<Wrapper<Int>>) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    // endregion
+
+    // region SC7 (@NoBack × modal) + SC8 (kind↔contract mismatch) — MVI-mode parity (Faz-4 recheck)
+
+    @Test
+    fun `SC7 — MVI @BottomSheet content on a @NoBack route is rejected`() {
+        assertViolates(
+            "SC7",
+            """
+            package dev.gezgin.sc7mvi
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BottomSheet
+            import dev.gezgin.core.annotation.NoBack
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            @NoBack
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @BottomSheet(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV12 — plain HiltViewModel on a route that carries data is rejected (MJ4)`() {
+        // Nav3 has no path that writes the route into SavedStateHandle, so a plain-Hilt VM whose route
+        // carries data (`OrderRoute(orderId)`) would silently read null. Reject with an actionable message.
+        assertViolates(
+            "MV12",
+            """
+            package dev.gezgin.mv12
+
+            import androidx.compose.runtime.Composable
+            import dagger.hilt.android.lifecycle.HiltViewModel
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class OrderRoute(val orderId: String) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(OrderRoute::class)
+            @HiltViewModel
+            class OrderVm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(OrderRoute::class)
+            @Composable
+            fun OrderContent(state: S, onIntent: (I) -> Unit) {
+            }
+            """.trimIndent(),
+            SourceFile.kotlin("HiltStubs.kt", HILT_STUBS),
+        )
+    }
+
+    @Test
+    fun `MV11 — @ScreenEffect with an extra param beyond Flow and nav is rejected (MJ5)`() {
+        // An extra `extra: SomeState` has no wiring path (no effect-binder resolver mechanism); codegen
+        // would emit `Effects(effects = vm.effects)` and die with "No value passed for parameter". MV11.
+        assertViolates(
+            "MV11",
+            """
+            package dev.gezgin.mv11extra
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.Flow
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+            class SomeState
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
+            }
+
+            // Extra `extra: SomeState` beyond {Flow<E>, nav} — MV11.
+            @ScreenEffect
+            @Composable
+            fun Effects(effects: Flow<E>, extra: SomeState) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV11 — @ScreenEffect nav param typed as a non-navigator is rejected (MJ5)`() {
+        // `Home` earns a HomeNavigator (via @GoTo), so MV7 passes; but the effect's `nav: SomethingElse` is
+        // a RESOLVED non-navigator type → the generated `HEffects(effects = …, nav = nav)` would type-clash.
+        assertViolates(
+            "MV11",
+            """
+            package dev.gezgin.mv11nav
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.Flow
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            @NavGraph
+            interface G : Route {
+                @GoTo(Other::class)
+                data class Home(val id: String) : G
+                data object Other : G
+            }
+
+            data class HState(val n: Int)
+            sealed interface HIntent { data object Go : HIntent }
+            data class HEffect(val m: String)
+            class SomethingElse
+
+            @ViewModel(G.Home::class)
+            class HVm(route: G.Home) : GezginMvi<HState, HIntent, HEffect> {
+                override val uiState: StateFlow<HState> = MutableStateFlow(HState(0))
+                override fun onIntent(intent: HIntent) {}
+            }
+
+            @Screen(G.Home::class)
+            @Composable
+            fun HContent(state: HState, onIntent: (HIntent) -> Unit) {
+            }
+
+            // nav is a RESOLVED non-navigator type → MV11.
+            @ScreenEffect
+            @Composable
+            fun HEffects(effects: Flow<HEffect>, nav: SomethingElse) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MN3 — nested generic forwarding (Base S colon GezginMvi Wrapped S) is rejected with MV1`() {
+        // walkForGezginMvi substitutes only DIRECT type-param forwarding; a NESTED `Wrapped<S>` leaves an
+        // unbound `S` that would otherwise leak a dangling type variable into the state TypeName. MV1 reject.
+        assertViolates(
+            "MV1",
+            """
+            package dev.gezgin.mn3
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class Wrapped<T>(val v: T)
+            data class SData(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            // GezginMvi's S is Wrapped<S'> where S' is Base's own type param — NESTED forwarding.
+            abstract class Base<S, I0, E0> : GezginMvi<Wrapped<S>, I0, E0>
+
+            @ViewModel(R::class)
+            class Vm : Base<SData, I, E>() {
+                override val uiState: StateFlow<Wrapped<SData>> = MutableStateFlow(Wrapped(SData(0)))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(R::class)
+            @Composable
+            fun Content(state: Wrapped<SData>, onIntent: (I) -> Unit) {
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `SC8 — MVI @FullscreenModal content whose route implements DialogContract is rejected`() {
+        assertViolates(
+            "SC8",
+            """
+            package dev.gezgin.sc8mvi
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.DialogContract
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FullscreenModal
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.ViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route, DialogContract {
+                override val dismissOnClickOutside get() = false
+            }
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @ViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @FullscreenModal(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> Unit) {
             }
             """.trimIndent(),
         )

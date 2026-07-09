@@ -25,7 +25,8 @@ import dev.gezgin.core.Route
  * (saveable state = zorunlu; `rememberSaveable` her entry'de kendi `contentKey`=id slot'unda çalışır →
  * eşit-değerli iki route AYRI saved state; R2 saved-state tarafı, desktop dahil). PLATFORM:
  * [rememberPlatformEntryDecorators] — Android'de `rememberViewModelStoreNavEntryDecorator()` (per-entry
- * VM store; `LocalViewModelStoreOwner` host Activity'den), desktop'ta boş (owner garanti değil). Sıra
+ * VM store; `LocalViewModelStoreOwner` host Activity'den), desktop'ta AYNI per-entry VM store decorator'ı
+ * (owner host'tan garanti olmadığından Gezgin'in kendi pencere-scoped owner'ıyla — Faz 5 recheck / C1). Sıra
  * `[saveable] + platform`: VM store decorator'ı saveable'ın sağladığı `SavedStateRegistryOwner`'a
  * bağımlı → saveable önce/OUTER.
  *
@@ -80,6 +81,12 @@ fun GezginDisplay(
                 "GezginDisplay: start route modal kind olamaz (kind=$rootKind) — §12 kuruluş " +
                     "guard'ı (KALICI: modal genuinely root OLAMAZ — OverlayScene ≥1 underlaid entry " +
                     "ister, §7). route: ${rootRoute::class.simpleName}"
+            }
+            // M4 — kind-lookup kancasını navigator'a enjekte et: replaceTo (clearUpTo=root) MUTASYONDAN
+            // ÖNCE, sonuçtaki kök modal olacaksa reddedebilsin. Kind yalnız burada (registry) bilinir;
+            // kayıtsız route → `false` (modal değil varsay; kayıtsızlığın açık hatası toNavEntry'de).
+            navigator.modalRootGuard = { route ->
+                registered.registry[route::class]?.kind?.let { it != EntryKind.SCREEN } ?: false
             }
         }
     }

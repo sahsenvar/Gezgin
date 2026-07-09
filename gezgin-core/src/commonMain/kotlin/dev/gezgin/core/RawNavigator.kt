@@ -15,6 +15,17 @@ import kotlinx.serialization.json.Json
  * Faz 2 (codegen) and Faz 3 (display) wrap. Single-writer: all mutation happens through the
  * methods below, each of which keeps [backStack] and [events] in sync with the underlying state.
  *
+ * **Threading sözleşmesi (main-thread confinement, integ-m3):** bu tip thread-safe DEĞİLDİR. İçteki
+ * [GezginState] `_stack`'i düz bir `MutableList`'tir; tüm mutasyon op'ları (navigate/back/replaceTo/
+ * quit/…) VE display'in okumaları (`keysState`/`backStack` collect) AYNI thread'de — uygulamanın UI/
+ * main thread'inde — çalışmalıdır. Faz-5 deseni navigator'ı VM ctor'una taşıdığından bu sınır özellikle
+ * önemlidir: bir VM `viewModelScope.launch(Dispatchers.IO) { nav.quit() }` YAZMAMALI — off-main bir
+ * mutasyon composition okumalarıyla yarışıp stack'i sessizce bozar. Arka-plan işi bittikten sonra
+ * navigasyon yapılacaksa çağrı ana-thread'e taşınmalıdır (ör. `withContext(Dispatchers.Main) { … }` ya da
+ * doğrudan ana-thread'li `viewModelScope`'tan). commonMain'de (KMP) taşınabilir ucuz bir main-thread
+ * assert mekanizması yok (Android `Looper` gibi bir kanca common'da mevcut değil) → sözleşme yalnız bu
+ * KDoc ile taşınır, çalışma-zamanı guard'ı EKLENMEDİ.
+ *
  * [restored] — PD (process death) simülasyonu: non-null ise stack + nextId + pending result
  * slot'ları [SavedState]'ten geri yüklenir, `start` PUSH EDİLMEZ (§1.10). Yani `restored != null`
  * iken ctor'a verilen [start] parametresi YOK SAYILIR (yalnız restore'suz ilk açılışta kullanılır).
@@ -31,10 +42,23 @@ class RawNavigator(
     internal val json: Json = Json,
     restored: SavedState? = null,
 ) {
-    private val state =
+    // `var` (C1): identity-stabil facade — config-change'te [adoptRestored] AYNI instance'ın `state`'ini
+    // re-point eder (yeni RawNavigator KURMAZ). VM ctor'unda yakalanan navigator referansı böylece
+    // rotasyondan sonra da display'in gözlemlediği aynı akışları sürer (spec §225 "stable RawNavigator").
+    private var state =
         if (restored != null) GezginState(restored.keys, restored.nextId, topology)
         else GezginState(emptyList(), nextId = 0, topology = topology)
     private val bus = ResultBus()
+
+    /**
+     * Modal-kind-at-root reddi için display'in enjekte ettiği kanca (M4): bir route'un kayıtlı kind'ı
+     * `SCREEN` DIŞINDA (Dialog/BottomSheet/FullscreenModal) ise `true` döner. Varsayılan `{ false }` —
+     * display kablolamadan (saf RawNavigator birim testleri) hiçbir op reddedilmez. [GezginDisplay]
+     * registry'yi kurduktan SONRA set eder; [replaceTo] mutasyondan ÖNCE bununla kontrol eder →
+     * sonuçtaki stack'in kökü bir modal olacaksa state MUTATE EDİLMEDEN fırlatır (composition-zamanı
+     * `toNavEntry` guard'ı emniyet ağı olarak KALIR).
+     */
+    internal var modalRootGuard: (Route) -> Boolean = { false }
 
     private val _backStack = MutableStateFlow<List<Route>>(emptyList())
     /**
@@ -113,6 +137,23 @@ class RawNavigator(
         return ResultBus.Slot(saved.callerEntryId, saved.edgeId, saved.targetEntryId, result)
     }
 
+    /**
+     * C1 — PD (process death) restore: bu AYNI facade'in underlying state'ini [restored]'a re-point eder.
+     * Android'de YALNIZ taze holder'ın PD-adopt yolunda çağrılır (config-change'te holder + canlı navigator
+     * retained kalır → re-adopt YOK, MN-1). Yeni bir `RawNavigator` KURULMAZ → bu instance'ı ctor'da
+     * yakalamış her sahip (özellikle rotasyondan sağ çıkan bir ViewModel) restore'dan sonra da display'in
+     * gözlemlediği state'i sürmeye devam eder (spec §225 "stable RawNavigator"). `bus`/StateFlow
+     * instance'ları KORUNUR (aynı `keysState`/`backStack` → mevcut collector'lar kopmaz), yalnız içerikleri
+     * restore edilmiş snapshot'a döner. Ctor'un `restored != null` yolunun birebir eşleniği; İDEMPOTENT
+     * (aynı snapshot'la tekrar çağrı state'i aynı değere sabitler, bkz. NavigatorIdentityRestoreTest) ve
+     * event yayınlamaz — bu bir kuruluş, navigasyon değil.
+     */
+    internal fun adoptRestored(restored: SavedState) {
+        state = GezginState(restored.keys, restored.nextId, topology)
+        bus.restore(restored.pendingSlots.map(::decodeSlot))
+        refreshBackStack()
+    }
+
     // ---- public ops ----
 
     /** @GoTo — enterFlow'u topology'den çözer (hedef flow-start container-entry'si mi). */
@@ -140,6 +181,16 @@ class RawNavigator(
 
     /** `@ReplaceTo` runtime'ı: `clearUpTo`'ya kadar (null = yalnız top) temizleyip `route`'u iter; çıkarılan pending-target'lara Canceled teslim eder. */
     fun replaceTo(route: Route, clearUpTo: KClass<out Route>? = null, inclusive: Boolean = true) {
+        // M4 — modal-kind-at-root reddi MUTASYONDAN ÖNCE: replaceTo kökü temizleyip yerine bir modal
+        // koyacaksa (sonuçtaki stack'in dibi = bir modal route) state hiç değiştirilmeden fırlat.
+        // Aksi halde eski davranış (state önce `[modal]`'a döner, guard SONRAKİ composition'da patlar)
+        // error-boundary'li host'ta navigator'ı kalıcı geçersiz bir stack'te bırakırdı.
+        val resultingRoot = state.resultingRootAfterReplace(route, clearUpTo, inclusive)
+        require(!modalRootGuard(resultingRoot)) {
+            "replaceTo: sonuçtaki stack'in kökü modal kind olamaz (${resultingRoot::class.simpleName}) — " +
+                "bir modal'ın altında en az bir SCREEN entry olmalı (Nav3 OverlayScene invariant'ı, §7). " +
+                "clearUpTo=root ile bir modal'ı köke koymayın."
+        }
         val before = state.stack.toList()
         val enterFlow = resolveEnterFlow(route)
         val pushed = state.replaceUpTo(route, clearUpTo, inclusive, enterFlow = enterFlow)
@@ -198,13 +249,23 @@ class RawNavigator(
         settleRemoved(removed, deliverValue = result, valueTargetId = removed.first().id)
     }
 
-    /** top = pending target ise deliver + pop; değilse no-op (raw katman — sessizce yok sayar). */
-    fun backWithResult(result: Any?) {
+    /**
+     * M3 — entry-scoped `backWithResult`: SONUCU SAHİBİ entry'ye pinler. [entryId] artık top DEĞİLSE
+     * (ör. sheet jest'le kapatıldıktan sonra async iş sonucu geç geldi) SESSİZ NO-OP → değer, o slotu
+     * beklemeyen (başka tipte sonuç bekleyen) yabancı bir entry'nin slotuna teslim edilmez ve o entry
+     * yanlışlıkla pop edilmez (kirli-teslim/çifte-back yarışı önlenir). Faz 2 codegen'in ürettiği tipli
+     * `backWithResult(result)` ctor'daki `entryId`'yi bu overload'a bağlar.
+     */
+    fun backWithResult(entryId: Long, result: Any?) {
         val top = state.stack.last()
+        if (top.id != entryId) return            // sahip entry artık top değil → teslim etme, pop etme
         if (!isPendingTarget(top.id)) return
         bus.deliver(top.id, NavResult.Value(result))
         popTopAndEmit()
     }
+
+    /** Kolaylık: sahip = ÇAĞRI ANINDAKİ top (call-time-top). Tipli katman entry'ye bağlayan overload'ı kullanır. */
+    fun backWithResult(result: Any?) = backWithResult(currentEntryId, result)
 
     /** Çağrı anındaki top entry id — açık-caller overload'larına Faz 2 codegen'in bağlayacağı kanca. */
     val currentEntryId: Long get() = state.stack.last().id

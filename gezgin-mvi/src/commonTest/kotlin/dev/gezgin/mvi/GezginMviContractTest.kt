@@ -35,8 +35,8 @@ class GezginMviContractTest {
     fun effects_flow_emits_on_intent() = runTest {
         val vm = CounterViewModel(CounterRoute())
         val received = mutableListOf<CounterEffect>()
-        // effects = replay=0 SharedFlow → collector'ı emit'ten ÖNCE bağlamalı (UnconfinedTestDispatcher
-        // eager subscribe eder), aksi halde geç abone yayımı kaçırır (SharedFlow sözleşmesi, bug değil).
+        // Kayıpsız GezginEffects (Channel) backing'iyle collector emit'ten önce de sonra da bağlanabilir;
+        // burada önce bağlanıp gerçek-zamanlı teslim doğrulanır (UnconfinedTestDispatcher eager collect).
         val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             vm.effects.collect { received.add(it) }
         }
@@ -45,6 +45,30 @@ class GezginMviContractTest {
         val effect = received.single()
         assertTrue(effect is CounterEffect.Toast)
         assertEquals("count=1", effect.text)
+        job.cancel()
+    }
+
+    /**
+     * MJ2 kayıpsızlık kanıtı: gözlemci YOKKEN (Nav3'te örtülen / STOPPED entry'yi taklit eder) emit edilen
+     * efektler, yeniden gözlenince (STARTED'a dönüş) SIRAYLA teslim edilir. `MutableSharedFlow(replay=0)`
+     * backing'iyle bu iki efekt SESSİZCE DÜŞERDİ; [GezginEffects] (`Channel(UNLIMITED)`) ile kayıpsız.
+     */
+    @Test
+    fun effects_emitted_while_unobserved_are_delivered_on_reobservation() = runTest {
+        val vm = CounterViewModel(CounterRoute())
+        // Henüz HİÇBİR collector yok — efektleri şimdi üret.
+        vm.onIntent(CounterIntent.Increment)   // Toast(count=1)
+        vm.onIntent(CounterIntent.Increment)   // Toast(count=2)
+
+        // Şimdi "yeniden gözle": önce üretilen iki efekt kuyrukta tutulmuştu → sırayla gelir.
+        val received = mutableListOf<CounterEffect>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.effects.collect { received.add(it) }
+        }
+        assertEquals(
+            listOf("count=1", "count=2"),
+            received.map { (it as CounterEffect.Toast).text },
+        )
         job.cancel()
     }
 }

@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
 import dev.gezgin.core.GezginTopology
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
@@ -14,22 +13,27 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * `RawNavigator`'ı `rememberSaveable` ile kurar — PD (process death) simülasyonu §1.10/§12:
- * kaydedilen tip `String` (json-encoded [SavedState], [navigatorSaver]); restore'da ctor'un
- * `restored` parametresine geçer, ilk kuruluşta yok sayılır ve [start] kullanılır.
+ * `RawNavigator`'ı platform-uygun, KİMLİK-STABİL bir holder'da kurar — PD (process death) simülasyonu
+ * §1.10/§12: kaydedilen tip `String` (json-encoded [SavedState], [navigatorSaver]/[decodeSavedStateOrNull]).
+ *
+ * **C1 — config-change'te stable RawNavigator (spec §225):** instance edinimi [rememberRawNavigatorInstance]
+ * expect/actual'ına devredilir. Android actual'ı navigator'ı host `ViewModelStoreOwner` (Activity)
+ * scope'lu bir holder'da tutar → rotasyon (Activity recreation) AYNI instance'ı korur; VM ctor'unda
+ * yakalanan navigator referansı rotasyondan sonra da display'in gözlemlediği state'i sürer. Process
+ * death'te holder da ölür → taze instance kurulur ve `rememberSaveable`'daki serileştirilmiş snapshot
+ * [RawNavigator.adoptRestored] ile BİR KEZ benimsenir. Desktop actual'ı `rememberSaveable(navigatorSaver)`
+ * kullanır (CMP desktop'ta config-change YOK → kimlik composition ömrü boyunca zaten stabil; Faz-3
+ * davranışı değişmedi).
  *
  * **Kuruluş guard'ı (§12):** `start`'ın flow-chain'i `isResultFlow == true` bir üye İÇEREMEZ —
  * bir ResultFlow üyesi tek başına (bekleyen bir caller'ı olmadan) kökte/ilk entry olarak açılamaz
  * (§8.1). Modal-kind guard'ı BURADA DEĞİL — kind bilgisi entry-scope'ta (registry) yaşar, bu yüzden
  * [GezginDisplay] içinde (register lookup'tan SONRA) uygulanır.
  *
- * **Stale-lambda fix (deferred, final-review):** `saver`/`RawNavigator` her ikisi de yalnız İLK
- * composition'da kurulur (`remember`/`rememberSaveable` init-lambda'sı) — çağıranın `onRootBack`'i
- * bir state'e kapanan (closure) yeni bir lambda instance'ıysa (örn. `{ someState.value }`), sonraki
- * recomposition'larda geçilen TAZE lambda sessizce YOK SAYILIRDI (navigator kendi kopyasını ilk
- * çağrıdan sonsuza dek tutar). [rememberUpdatedState] BURADA bunu çözer: `RawNavigator`'a/`Saver`'a
- * SABİT (bir kez kurulan) bir sarmalayıcı lambda geçilir, ama o sarmalayıcı HER ÇAĞRISINDA en GÜNCEL
- * `onRootBack`'i çağırır.
+ * **Stale-lambda fix (deferred, final-review):** `stableOnRootBack` yalnız İLK composition'da kurulur
+ * (`remember` init-lambda'sı) — çağıranın `onRootBack`'i bir state'e kapanan (closure) yeni bir lambda
+ * instance'ıysa (örn. `{ someState.value }`), holder'a SABİT (bir kez kurulan) bir sarmalayıcı lambda
+ * geçilir, ama o sarmalayıcı HER ÇAĞRISINDA en GÜNCEL `onRootBack`'i çağırır ([rememberUpdatedState]).
  */
 @Composable
 fun rememberNavigator(
@@ -44,11 +48,22 @@ fun rememberNavigator(
     }
     val latestOnRootBack by rememberUpdatedState(onRootBack)
     val stableOnRootBack = remember { { latestOnRootBack() } }
-    val saver = remember { navigatorSaver(start, topology, json, stableOnRootBack) }
-    return rememberSaveable(saver = saver) {
-        RawNavigator(start = start, topology = topology, onRootBack = stableOnRootBack, json = json)
-    }
+    return rememberRawNavigatorInstance(start, topology, json, stableOnRootBack)
 }
+
+/**
+ * C1 — [RawNavigator] instance edinimi, platform-özel kimlik-stabilitesiyle. Android actual'ı host
+ * ViewModel-scope'lu bir holder'a sarar (config-change'te AYNI instance korunur) + `rememberSaveable`
+ * PD snapshot'ı [RawNavigator.adoptRestored] ile benimser. Desktop actual'ı `rememberSaveable`
+ * ([navigatorSaver]) kullanır (config-change yok → kimlik zaten stabil). Detay için [rememberNavigator] KDoc'u.
+ */
+@Composable
+internal expect fun rememberRawNavigatorInstance(
+    start: Route,
+    topology: GezginTopology,
+    json: Json,
+    onRootBack: () -> Unit,
+): RawNavigator
 
 /**
  * [RawNavigator] <-> `String` `Saver`'ı — [navigatorSaver] altında [encodeNavigatorState]/
@@ -110,6 +125,21 @@ internal fun decodeNavigatorStateOrNull(
 ): RawNavigator? = try {
     decodeNavigatorState(encoded, start, topology, json, onRootBack)
         .takeIf { it.keys.isNotEmpty() }   // şema-geçerli ama BOŞ stack → fresh-start (final re-review Minor 2; boş stack composition'da keys.first() ile patlardı)
+} catch (e: SerializationException) {
+    null
+} catch (e: IllegalArgumentException) {
+    null
+}
+
+/**
+ * C1 (Android PD-adopt yolu) — PD snapshot `String`'i doğrudan [SavedState]'e decode eder (navigator
+ * KURMADAN; [RawNavigator.adoptRestored]'a beslenir). [decodeNavigatorStateOrNull] ile AYNI fault-
+ * tolerance: bozuk/şema-uyumsuz json (eski uygulama versiyonu) `SerializationException`/
+ * `IllegalArgumentException` atarsa → `null` (adopt YOK, navigator `start`'ta kalır, crash-loop yok);
+ * şema-geçerli ama BOŞ stack de → `null` (composition'da `keys.first()` patlamasını önler).
+ */
+internal fun decodeSavedStateOrNull(encoded: String, json: Json): SavedState? = try {
+    json.decodeFromString(SavedState.serializer(), encoded).takeIf { it.keys.isNotEmpty() }
 } catch (e: SerializationException) {
     null
 } catch (e: IllegalArgumentException) {

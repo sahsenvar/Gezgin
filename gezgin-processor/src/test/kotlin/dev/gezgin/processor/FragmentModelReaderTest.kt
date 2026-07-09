@@ -341,4 +341,128 @@ class FragmentModelReaderTest {
     }
 
     // endregion
+
+    // region FS1 instantiability gaps + FS2 bare-Route + FS7 modal-contract (Faz-6 recheck)
+
+    @Test
+    fun `FS1 — abstract @FragmentScreen class is rejected`() {
+        assertViolates(
+            "FS1",
+            """
+            package dev.gezgin.fs1abs
+
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+
+            data class R(val x: Int = 0) : Route
+
+            @FragmentScreen(R::class)
+            abstract class BadFragment : Fragment()
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `FS1 — inner @FragmentScreen class is rejected`() {
+        assertViolates(
+            "FS1",
+            """
+            package dev.gezgin.fs1inner
+
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+
+            data class R(val x: Int = 0) : Route
+
+            class Outer {
+                @FragmentScreen(R::class)
+                inner class BadFragment : Fragment()
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `FS1 — secondary-ctor-only @FragmentScreen class (no accessible no-arg ctor) is rejected`() {
+        assertViolates(
+            "FS1",
+            """
+            package dev.gezgin.fs1sec
+
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+
+            data class R(val x: Int = 0) : Route
+
+            // Only a secondary ctor → no synthesized public no-arg ctor → NoSuchMethodException at runtime.
+            @FragmentScreen(R::class)
+            class BadFragment : Fragment {
+                constructor(id: String) : super()
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `FS1 — private-ctor @FragmentScreen class is rejected`() {
+        assertViolates(
+            "FS1",
+            """
+            package dev.gezgin.fs1priv
+
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+
+            data class R(val x: Int = 0) : Route
+
+            @FragmentScreen(R::class)
+            class BadFragment private constructor() : Fragment()
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `FS2 — @FragmentScreen(Route colon colon class) — the bare Route interface — is rejected (dead registration)`() {
+        assertViolates(
+            "FS2",
+            """
+            package dev.gezgin.fs2bare
+
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+
+            @FragmentScreen(Route::class)
+            class BadFragment : Fragment()
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `FS7 — @FragmentScreen route implementing a modal contract is rejected (screen-only)`() {
+        assertViolates(
+            "FS7",
+            """
+            package dev.gezgin.fs7
+
+            import androidx.fragment.app.Fragment
+            import dev.gezgin.core.BottomSheetContract
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.FragmentScreen
+
+            // A BottomSheetContract route bound to a Fragment would render as a plain SCREEN, contract
+            // silently ignored. FS7.
+            data class SheetRoute(val x: Int = 0) : Route, BottomSheetContract
+
+            @FragmentScreen(SheetRoute::class)
+            class SortSheetFragment : Fragment()
+            """.trimIndent(),
+        )
+    }
+
+    // endregion
 }

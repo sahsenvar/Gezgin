@@ -46,6 +46,14 @@ private val HILT_VIEW_MODEL = MemberName("androidx.hilt.navigation.compose", "hi
 
 private const val SHEET_STATE_FQ = "androidx.compose.material3.SheetState"
 
+// A @BottomSheet MVI content's `sheetState` role param is fed `LocalGezginSheetState.current` (a
+// material3 `SheetState`) FROM the generated register — so the generated file, not the user's content,
+// is the opt-in site for the ERROR-level `@ExperimentalMaterial3Api`. Emitted on the `provideXEntry`
+// only when a sheetState role extra is present (core-mode content reads the Local in its OWN file, so
+// this never applies there).
+private val OPT_IN = ClassName("kotlin", "OptIn")
+private val EXPERIMENTAL_MATERIAL3_API = ClassName("androidx.compose.material3", "ExperimentalMaterial3Api")
+
 /**
  * Faz 5.2 — emits `fun GezginEntryScope.provideXEntry(...)` for every MVI-mode [EntryFunctionModel]
  * (`entry.mvi != null`, spec §10.1). The counterpart to core-mode's [EntryCodegen]: same
@@ -64,8 +72,8 @@ private const val SHEET_STATE_FQ = "androidx.compose.material3.SheetState"
  *         val nav = LocalGezginRawNavigator.current.orderChainNavigator(LocalGezginEntryId.current)
  *         val vm = viewModel(nav, route)
  *         val state by vm.uiState.collectAsStateWithLifecycle()
- *         OrderChainEffects(vm.effects)              // @ScreenEffect matched (by effect type)
- *         OrderChainContent(state, vm::onIntent)     // stateless @Screen content
+ *         OrderChainEffects(effects = vm.effects)              // @ScreenEffect matched (by effect type)
+ *         OrderChainContent(state = state, onIntent = vm::onIntent)   // stateless @Screen content
  *     }
  * }
  * ```
@@ -137,6 +145,11 @@ object MviEntryCodegen {
         val funBuilder = FunSpec.builder("provide${entry.x}Entry")
             .receiver(ENTRY_SCOPE)
             .addParameter(viewModelParam)
+        if (mvi.roleExtraParams.any { it.typeFq == SHEET_STATE_FQ }) {
+            funBuilder.addAnnotation(
+                AnnotationSpec.builder(OPT_IN).addMember("%T::class", EXPERIMENTAL_MATERIAL3_API).build(),
+            )
+        }
         // Problem-2 resolver params — required (no sensible default), threaded as `name()` into content.
         mvi.resolverExtraParams.forEach { extra ->
             funBuilder.addParameter(
@@ -175,8 +188,12 @@ object MviEntryCodegen {
 
         return when (vm.di) {
             VmDiKind.ANDROIDX -> {
-                // Positional constructor call — args in the VM's DECLARED ctor order (all route/nav here).
-                val ctorArgs = vm.ctorParams.joinToString(", ") { if (roleOf(it) == VmDiClassifier.Role.NAV) "nav" else "args" }
+                // NAMED constructor call (MN1) over the route/nav params ONLY — order-independent, and any
+                // defaulted OTHER param (MN4, e.g. `retries: Int = 3`) is OMITTED so the VM's own default
+                // applies. `emitDefault` guarantees there are no NON-defaulted OTHER params here.
+                val ctorArgs = vm.ctorParams
+                    .filter { roleOf(it) != VmDiClassifier.Role.OTHER }
+                    .joinToString(", ") { "${it.name} = ${if (roleOf(it) == VmDiClassifier.Role.NAV) "nav" else "args"}" }
                 CodeBlock.of(
                     "{ %L -> %M(factory = %M { %M { %T(%L) } }) }",
                     header, ANDROIDX_VIEW_MODEL, VIEW_MODEL_FACTORY, INITIALIZER, vmClass, ctorArgs,
@@ -194,7 +211,8 @@ object MviEntryCodegen {
                 )
             }
 
-            // Plain Hilt supplies nothing itself (route via SavedStateHandle) — ignore args, no nav.
+            // Plain Hilt supplies nothing itself — Hilt injects everything; Gezgin passes no route/nav
+            // (a route-data-carrying route is rejected as MV12, since Nav3 can't feed SavedStateHandle).
             VmDiKind.HILT_PLAIN -> CodeBlock.of("{ %M<%T>() }", HILT_VIEW_MODEL, vmClass)
         }
     }
@@ -227,16 +245,22 @@ object MviEntryCodegen {
 
         if (mvi.effectFunSimpleName != null) {
             val effectFun = MemberName(requireNotNull(mvi.effectFunPackageName), mvi.effectFunSimpleName)
-            body.add(if (effectWantsNav) "%M(vm.effects, nav)\n" else "%M(vm.effects)\n", effectFun)
+            // MN1 — NAMED args so a `fun XEffects(nav: …, effects: Flow<E>)` (nav-first) binder wires
+            // correctly regardless of declared order. Flow param name is captured off the binder.
+            val flowName = requireNotNull(mvi.effectFlowParamName)
+            body.add(
+                if (effectWantsNav) "%M(%L = vm.effects, nav = nav)\n" else "%M(%L = vm.effects)\n",
+                effectFun, flowName,
+            )
         }
 
         body.add("%M(%L)\n", contentFun, contentArgs(mvi))
         return body.unindent().add("}\n").build()
     }
 
-    /** `state, vm::onIntent[, <extra> = <value>…]` — extras as NAMED args (order-independent). */
+    /** `state = state, onIntent = vm::onIntent[, <extra> = <value>…]` — ALL NAMED (MN1, order-independent). */
     private fun contentArgs(mvi: MviEntryModel): CodeBlock {
-        val args = CodeBlock.builder().add("state, vm::onIntent")
+        val args = CodeBlock.builder().add("state = state, onIntent = vm::onIntent")
         mvi.roleExtraParams.forEach { role -> args.add(roleExtraArg(role)) }
         mvi.resolverExtraParams.forEach { extra -> args.add(", %L = %L()", extra.name, extra.name) }
         return args.build()

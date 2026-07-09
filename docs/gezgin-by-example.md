@@ -8,7 +8,7 @@
 
 - **String route yok.** Navigasyon grafiği = `sealed interface` ağacı; gidilecek yer = tip.
 - **Tanımlamadığın yere gidiş _derlenmez_.** Her ekran için tipli bir navigator üretilir; sadece deklare ettiğin kenarların metodu olur.
-- **Boilerplate codegen'de.** Graph wiring, deep-link tablosu, result kanalı, entry kaydı — hepsi KSP üretir.
+- **Boilerplate codegen'de.** Graph wiring, result kanalı, entry kaydı — hepsi KSP üretir (deep-link tablosu → 🔮 V2).
 - **State-as-data çekirdek.** Back stack = gözlemlenebilir + serializable veri → test (UI'sız), log, process-death restore, MVI _bedavaya_ gelir.
 - **DI-agnostik.** Koin/Hilt/manuel — kütüphane seni bir DI'a mahkûm etmez.
 
@@ -255,14 +255,14 @@ navigator.handleDeepLink("shopr://product/42")
 // kullanıcı geri tuşuna basınca Feed'e düşer, app'ten atılmaz.
 ```
 
-`{id}` yer tutucusu **derlemede** route property'leriyle eşleştirilir:
+V2'de `{id}` yer tutucusu **derlemede** route property'leriyle eşleştirilecek:
 
 ```kotlin
 @DeepLink("shopr://product/{productId}")       // ❌ DERLENMEZ — route'ta productId yok (sadece id var)
 data class ProductRoute(val id: String) : HomeGraph
 ```
 
-**Neden önemli:** Tipik kütüphanelerde deep-link bir string-eşleştirme; yanlış param adını **kullanıcı tıklayınca** öğrenirsin. Gezgin'de typo/eksik/decode-edilemez param = **build hatası**. Üstelik hedefin atalarını (graph zinciri) doğru kurar.
+**Neden önemli (🔮 V2 hedefi):** Tipik kütüphanelerde deep-link bir string-eşleştirme; yanlış param adını **kullanıcı tıklayınca** öğrenirsin. Gezgin'in V2 yönünde typo/eksik/decode-edilemez param = **build hatası** olacak; üstelik hedefin atalarını (graph zinciri) doğru kuracak.
 
 ---
 
@@ -273,7 +273,7 @@ State-as-data çekirdek sayesinde navigasyon davranışını **Compose/emülatö
 ```kotlin
 @Test
 fun checkout_adres_secimini_doner() = runTest {
-    val nav = GezginTestNavigator(start = CartGraph.CartRoute)
+    val nav = GezginTestNavigator(start = CartGraph.CartRoute, topology = gezginTopology)   // gezginTopology: codegen üretir
 
     val result = async { nav.from<CheckoutRoute>().goToSelectAddressForResult(userId = "u1") }
     nav.deliverResult(Address(id = "1", label = "Ev"))
@@ -283,7 +283,7 @@ fun checkout_adres_secimini_doner() = runTest {
 
 @Test
 fun replaceTo_odeme_akisini_temizler() {
-    val nav = GezginTestNavigator(start = CartGraph.PaymentRoute("cart1"))
+    val nav = GezginTestNavigator(start = CartGraph.PaymentRoute("cart1"), topology = gezginTopology)
     nav.from<PaymentRoute>().replaceToOrderPlaced("order1")   // ödeme akışını temizle
     nav.current shouldBe OrderPlacedRoute("order1")
     nav.backStack shouldHaveSize 1                            // form gitti, geri ödemeye dönülemez
@@ -334,12 +334,12 @@ data class ProductRoute(val id: String) : HomeGraph {
 | Özellik | Gezgin'in yaklaşımı |
 |---|---|
 | Route güvenliği | sealed ağaç + tipli per-source navigator (derleme garantisi) |
-| Boilerplate | KSP codegen (wiring, deep-link, result, entry) |
+| Boilerplate | KSP codegen (wiring, result, entry; deep-link → 🔮 V2) |
 | Result passing | `ResultRoute<T>` + `backWithResult`; launch/receive ayrımı, PD-safe keyed slot |
 | Modal | render varyantı + route contract (DRY) |
 | Sekmeler (🔮 V2) | `@TabGraph` + per-sekme stack; V1 tek-stack, bottom-nav app-yönetimli |
 | Deep link (🔮 V2) | path-hiyerarşisi = back stack; compile-time placeholder |
 | Test | `GezginTestNavigator`, saf Kotlin |
-| Gözlemlenebilirlik | `backStack: StateFlow`, `events: Flow`, middleware |
+| Gözlemlenebilirlik | `backStack: StateFlow`, `events: Flow` (observe-only, `LaunchedEffect`'te collect) |
 | DI | agnostik (Koin/Hilt/manuel) |
 | Altyapı | Navigation 3 (Android stable; iOS/Desktop/Web JetBrains portu **alpha**, CMP 1.10+) |

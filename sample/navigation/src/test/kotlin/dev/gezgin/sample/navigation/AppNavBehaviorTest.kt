@@ -48,6 +48,9 @@ class AppNavBehaviorTest {
     private fun GezginTestNavigator.itemDetail() = on(HomeGraph.ItemDetailScreenRoute::class, RawNavigator::itemDetailNavigator)
     private fun GezginTestNavigator.itemImageViewer() = on(HomeGraph.ItemImageViewerRoute::class, RawNavigator::itemImageViewerNavigator)
     private fun GezginTestNavigator.forgotPassword() = on(AuthGraph.ForgotPasswordDialogRoute::class, RawNavigator::forgotPasswordDialogNavigator)
+    private fun GezginTestNavigator.help() = on(HomeGraph.HelpScreenRoute::class, RawNavigator::helpNavigator)
+    private fun GezginTestNavigator.filterBottomSheet() = on(HomeGraph.FilterBottomSheetRoute::class, RawNavigator::filterBottomSheetNavigator)
+    private fun GezginTestNavigator.notificationsSheet() = on(ProfileGraph.NotificationsSheetRoute::class, RawNavigator::notificationsSheetNavigator)
 
     // (a) login → signUp flow → terms → quitAndGoTo(Welcome): the whole SignUpFlow segment is torn
     // down (quitAndGoTo tears down the CURRENT flow unconditionally) and Welcome is pushed as a plain
@@ -295,5 +298,88 @@ class AppNavBehaviorTest {
             listOf(HomeGraph.DashboardScreenRoute, HomeGraph.ItemDetailScreenRoute("item-1")),
             nav.backStack,
         )
+    }
+
+    // (m) HelpScreenRoute (@FragmentScreen leaf) BOTH generated edges through generated navigators:
+    // Dashboard's `goToHelp(topic)` (@GoTo) pushes the legacy Fragment leaf, then Help's
+    // `@BackTo(DashboardScreenRoute)` (`backToDashboard()`) pops back to it. Pure nav logic — no
+    // Fragment binding — but until now the `Help` edges had zero coverage (grep: 0).
+    @Test fun goToHelpThenBackToDashboard_roundTripsViaGeneratedNavigators() {
+        val nav = GezginTestNavigator(start = HomeGraph.DashboardScreenRoute, topology = gezginTopology)
+
+        nav.dashboard().goToHelp("navigasyon")
+        assertEquals(HomeGraph.HelpScreenRoute("navigasyon"), nav.current)
+        assertEquals(
+            listOf(HomeGraph.DashboardScreenRoute, HomeGraph.HelpScreenRoute("navigasyon")),
+            nav.backStack,
+        )
+
+        nav.help().backToDashboard()
+        assertEquals(listOf(HomeGraph.DashboardScreenRoute), nav.backStack)
+    }
+
+    // (n) `pickSort` (Dashboard's named screen-mode @GoForResult → FilterBottomSheetRoute) via the
+    // suspend `goToPickSortForResult`: pushes synchronously, suspends on the result, and the sheet's
+    // typed `backWithResult` (entry-pinned) resumes it with the chosen SortOrder.
+    @Test fun pickSortSuspendResult_deliversSortOrder() = runTest {
+        val nav = GezginTestNavigator(start = HomeGraph.DashboardScreenRoute, topology = gezginTopology)
+        val dashboard = nav.dashboard()
+
+        val resultDeferred = async { dashboard.goToPickSortForResult(SortOrder.RELEVANCE.name) }
+        runCurrent()
+        assertEquals(HomeGraph.FilterBottomSheetRoute(SortOrder.RELEVANCE.name), nav.current)
+
+        nav.filterBottomSheet().backWithResult(SortOrder.PRICE_ASC)
+
+        assertEquals(NavResult.Value(SortOrder.PRICE_ASC), resultDeferred.await())
+        assertEquals(listOf(HomeGraph.DashboardScreenRoute), nav.backStack)
+    }
+
+    // (o) The SAME `pickSort` triple's launch+stream half: `launchPickSort` pushes without suspending,
+    // `pickSortResults` re-collects the pending slot, and `backWithResult` delivers the Value there —
+    // exercises `launchPickSort`/`pickSortResults` (the members `goToPickSortForResult` doesn't touch).
+    @Test fun pickSortLaunchStream_deliversValueToPickSortResults() = runTest {
+        val nav = GezginTestNavigator(start = HomeGraph.DashboardScreenRoute, topology = gezginTopology)
+        val dashboard = nav.dashboard()
+
+        dashboard.launchPickSort(SortOrder.RELEVANCE.name)
+        assertEquals(HomeGraph.FilterBottomSheetRoute(SortOrder.RELEVANCE.name), nav.current)
+
+        nav.filterBottomSheet().backWithResult(SortOrder.PRICE_DESC)
+
+        assertEquals(NavResult.Value(SortOrder.PRICE_DESC), dashboard.pickSortResults.first())
+    }
+
+    // (p) The MVI @BottomSheet (Integ M3) nav path: Profile's `goToPickNotificationsForResult`
+    // (named screen-mode @GoForResult) pushes the MVI-mode sheet route, and its entry-pinned typed
+    // `backWithResult` (what the VM's Confirm intent calls) delivers the chosen NotificationLevel.
+    @Test fun notificationsSheetSuspendResult_deliversSelectedLevel() = runTest {
+        val nav = GezginTestNavigator(start = ProfileGraph.ProfileScreenRoute, topology = gezginTopology)
+        val profile = nav.profile()
+
+        val resultDeferred = async { profile.goToPickNotificationsForResult(NotificationLevel.ALL) }
+        runCurrent()
+        assertEquals(ProfileGraph.NotificationsSheetRoute(NotificationLevel.ALL), nav.current)
+
+        nav.notificationsSheet().backWithResult(NotificationLevel.MENTIONS)
+
+        assertEquals(NavResult.Value(NotificationLevel.MENTIONS), resultDeferred.await())
+        assertEquals(listOf(ProfileGraph.ProfileScreenRoute), nav.backStack)
+    }
+
+    // (q) MVI @BottomSheet CANCELED path: a plain `back()` on the still-pending sheet (a swipe/scrim
+    // dismiss maps to the same `back()`) delivers Canceled to the awaiting caller — the sheet's
+    // gesture-dismiss branch of the same M3 route.
+    @Test fun notificationsSheetBack_deliversCanceled() = runTest {
+        val nav = GezginTestNavigator(start = ProfileGraph.ProfileScreenRoute, topology = gezginTopology)
+        val profile = nav.profile()
+
+        val resultDeferred = async { profile.goToPickNotificationsForResult(NotificationLevel.NONE) }
+        runCurrent()
+        assertEquals(ProfileGraph.NotificationsSheetRoute(NotificationLevel.NONE), nav.current)
+
+        nav.notificationsSheet().back()
+
+        assertEquals(NavResult.Canceled, resultDeferred.await())
     }
 }

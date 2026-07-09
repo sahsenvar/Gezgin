@@ -7,13 +7,20 @@ package dev.gezgin.core
  * implement etmezse adapter varsayılan [androidx.compose.ui.window.DialogProperties] kullanır
  * (`DialogContract`'ın default'larıyla birebir aynı).
  *
- * `ResultRoute<T>` gibi bir **marker** DEĞİL: PROPERTY taşır. İki besleme yolu:
- * - **SABİT** (route'a özgü, argsız): `override val dismissOnClickOutside = false` — interface
+ * `ResultRoute<T>` gibi bir **marker** DEĞİL: PROPERTY taşır. İki besleme yolu — **HER İKİSİNDE DE
+ * `get() =` biçimini kullan** (aşağıdaki m5 uyarısı):
+ * - **SABİT** (route'a özgü, argsız): `override val dismissOnClickOutside get() = false` — interface
  *   property override'ı (default'lu → yalnız değiştirmek istediğini yaz).
  * - **KOŞULLU** (çağrı-anına bağlı): route ctor param'ından besle —
  *   `data class Confirm(val cancelable: Boolean) : ..., DialogContract {
  *        override val dismissOnClickOutside get() = cancelable }`. Route zaten `@Serializable` →
  *   ekstra iş yok, param serialize edilir (PD-güvenli).
+ *
+ * **m5 — `get() =` ZORUNLU (initializer'lı `val` YAZMA):** `override val dismissOnClickOutside = false`
+ * (backing-field'lı initializer) yazılırsa kotlinx.serialization bu property'yi `@Serializable` route'un
+ * SERİLEŞEN ŞEMASINA dahil eder → sunum-prop'u saved-state (PD) formatına sızar. `encodeDefaults=false`
+ * ile pratik veri zararsız olabilir ama şema kirlenir ve gereksizdir; `get() =` biçimi backing field
+ * üretmez (getter-only), şemaya HİÇ girmez. Bu yüzden SABİT durumda bile getter-form kullan.
  *
  * Alanlar [androidx.compose.ui.window.DialogProperties]'in gerçek alanlarına **birebir** maplenir
  * (adapter'da, [dev.gezgin.core.compose.toNavEntry]):
@@ -38,7 +45,8 @@ interface DialogContract {
  * ama `usePlatformDefaultWidth` YOK: tam-ekran modal TANIMI gereği içerik genişliğini kendi belirler
  * (`DialogProperties(usePlatformDefaultWidth = false)` — adapter'da SABİT). Bir `@FullscreenModal`
  * route'u yalnız dismiss davranışını taşır. Route implement etmezse adapter default dismiss'lerle
- * (ikisi de `true`) tam-ekran `DialogProperties` kurar.
+ * (ikisi de `true`) tam-ekran `DialogProperties` kurar. **Override'lar `get() =` biçiminde yazılmalı**
+ * ([DialogContract]'ın m5 uyarısı — initializer'lı `val` serileşen şemaya sızar).
  *
  * NOT: §7 tam-ekran modal render'ının uçtan-uca on-device doğrulaması (scrim, predictive) Task 4.3'te.
  * 4.1 contract okumayı + metadata wiring'i + guard'ı kurar; DialogSceneStrategy tam-ekran dialog
@@ -53,7 +61,8 @@ interface FullscreenModalContract {
  * BottomSheet sunum property'lerinin **opsiyonel** tipli evi (§7) — bir `@BottomSheet` route'u bu
  * interface'i implement ederek modal sheet'in davranışını route-instance'ından **runtime değer** olarak
  * taşır ([DialogContract] ile aynı desen; adapter `route as? BottomSheetContract` ile okur). Route
- * implement etmezse adapter tip-varsayılanları kullanır (aşağıdaki default'larla birebir).
+ * implement etmezse adapter tip-varsayılanları kullanır (aşağıdaki default'larla birebir). Override'lar
+ * `get() =` biçiminde yazılmalı ([DialogContract]'ın m5 uyarısı — initializer'lı `val` serileşen şemaya sızar).
  *
  * **Prop seti — material3 `ModalBottomSheet`'in GERÇEK knob'larına maplenen üç alan** ([DialogContract]
  * ile simetrik dismiss ikilisi + sheet'e özgü layout knob'u):

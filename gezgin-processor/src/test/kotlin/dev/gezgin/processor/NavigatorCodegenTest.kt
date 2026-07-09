@@ -166,6 +166,14 @@ class NavigatorCodegenTest {
             "\"dev.gezgin.shop.HomeGraph.Catalog→dev.gezgin.shop.HomeGraph.AddressPicker#pickAddress\"" in text,
             text,
         )
+
+        // M3 — üretilen tipli backWithResult sahibi entry'yi PİNLER: `raw.backWithResult(entryId, result)`
+        // (call-time-top `raw.backWithResult(result)` DEĞİL). AddressPicker = @GoForResult hedefi (ResultRoute).
+        val pickerSource = result.generatedSourceFor("AddressPickerNavigator.kt")
+        assertNotNull(pickerSource, "AddressPicker is a ResultRoute target — navigator with backWithResult expected")
+        val pickerText = pickerSource.readText()
+        assertTrue("raw.backWithResult(entryId, result)" in pickerText, pickerText)
+        assertFalse("raw.backWithResult(result)" in pickerText, pickerText)
     }
 
     @Test

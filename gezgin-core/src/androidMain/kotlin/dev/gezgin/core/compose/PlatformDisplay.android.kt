@@ -2,6 +2,7 @@ package dev.gezgin.core.compose
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
@@ -39,14 +40,19 @@ internal actual fun GezginNavDisplay(
     modifier: Modifier,
     onBack: () -> Unit,
 ) {
-    NavDisplay(
-        entries = entries,
-        modifier = modifier,
-        sceneStrategies = listOf(
+    // m3 — strateji instance'ları/list'i stateless ama HER recomposition'da yeniden kurulmasın
+    // (GezginDisplay'in decorator/onBack için uyguladığı kimlik-stabilizasyonuyla tutarlı): `remember`.
+    val sceneStrategies = remember {
+        listOf(
             DialogSceneStrategy<Route>(),
             GezginBottomSheetSceneStrategy(),
             SinglePaneSceneStrategy(),
-        ),
+        )
+    }
+    NavDisplay(
+        entries = entries,
+        modifier = modifier,
+        sceneStrategies = sceneStrategies,
         onBack = onBack,
     )
 }
