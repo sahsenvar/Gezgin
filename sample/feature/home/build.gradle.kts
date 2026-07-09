@@ -29,4 +29,10 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
+
+    // Faz 6.4 — `@FragmentScreen HelpFragment` + üretilen `provideHelpEntry()`'nin `AndroidFragment<..>`
+    // çağrısı için. gezgin-core fragment-compose'u `implementation` tuttuğundan TÜKETİCİYE SIZMAZ →
+    // @FragmentScreen barındıran bu feature modülü kendi fragment-compose'unu AÇIKÇA getirir (hem
+    // `AndroidFragment` composable'ı hem transitively `androidx.fragment.app.Fragment`).
+    implementation(libs.androidx.fragment.compose)
 }

@@ -8,4 +8,8 @@ fun GezginEntryScope.homeGraphEntries() {
     provideItemDetailEntry()
     provideFilterBottomSheetEntry()
     provideWelcomeEntry()
+    // Faz 6.4 — `@FragmentScreen HelpFragment` için üretilen entry. `provideHelpEntry()` elle YAZILMAZ;
+    // `FragmentEntryCodegen` onu `GezginFragmentEntries.kt`'ye (core-mode `GezginEntries.kt`'den ayrı
+    // dosya) üretir; içi `AndroidFragment<HelpFragment>(arguments = route.toBundle(raw), onUpdate = ...)`.
+    provideHelpEntry()
 }
