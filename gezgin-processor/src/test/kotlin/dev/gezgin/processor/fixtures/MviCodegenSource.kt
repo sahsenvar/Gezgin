@@ -8,9 +8,9 @@ package dev.gezgin.processor.fixtures
  * Koin (their annotations are read as string FQNs). So the Hilt/Koin fixtures declare MINIMAL local
  * `annotation class` stubs under the EXACT real FQN packages ([HILT_STUBS], [DAGGER_ASSISTED_STUBS],
  * [KOIN_STUBS]) — the same string-FQN-reading contract the processor uses in production, exercised
- * against a compile-time-present stub. The stub `@HiltViewModel.assistedFactory` defaults to
- * `Unit::class`; the reader's sentinel guard treats both that and real Hilt's `HiltViewModel::class`
- * self-default as "no assisted factory" (plain Hilt).
+ * against a compile-time-present stub. The stub `@HiltViewModel.assistedFactory` defaults to the
+ * self-referential `HiltViewModel::class` (matching real Hilt exactly), which the reader's sentinel
+ * guard treats as "no assisted factory" (plain Hilt) — the same disjunct that fires in production.
  *
  * The generated Koin/Hilt entries reference `koinViewModel`/`hiltViewModel` etc. which are NOT on the
  * kctfork classpath, so those compilations don't reach a clean exit — but the KSP round still emits
@@ -25,7 +25,10 @@ val HILT_STUBS = """
 
     import kotlin.reflect.KClass
 
-    annotation class HiltViewModel(val assistedFactory: KClass<*> = Unit::class)
+    // Self-referential `HiltViewModel::class` default — matches REAL Hilt exactly, so the plain-Hilt
+    // test exercises the production-relevant `factoryFq == HILT_VIEW_MODEL_FQ` sentinel disjunct (not a
+    // synthetic `Unit::class` that never fires in production). See ViewModelModelReader.detectDi.
+    annotation class HiltViewModel(val assistedFactory: KClass<*> = HiltViewModel::class)
 """.trimIndent()
 
 val DAGGER_ASSISTED_STUBS = """
@@ -268,5 +271,130 @@ val SHEET_MVI_SOURCE = """
         sheetState: SheetState,
         imageLoader: ImageLoader,
     ) {
+    }
+""".trimIndent()
+
+/**
+ * `@ScreenEffect`-with-`nav` path (Important 2): `Home` earns a `HomeNavigator` (via `@GoTo(Other)`),
+ * the VM ctor takes ONLY `route` (no nav), and the `@ScreenEffect` binder takes `nav: HomeNavigator`.
+ * Pins the branch where nav is wired SOLELY because the effect wants it: `val nav = …` IS emitted and
+ * the binder is called `HomeEffects(vm.effects, nav)`, yet the resolver signature carries NO `nav` param
+ * and the `viewModel(route)` call site (androidx, route-only ctor) passes only `route`.
+ */
+val EFFECT_NAV_MVI_SOURCE = """
+    package dev.gezgin.effnav
+
+    import androidx.compose.runtime.Composable
+    import dev.gezgin.core.Route
+    import dev.gezgin.core.annotation.GoTo
+    import dev.gezgin.core.annotation.NavGraph
+    import dev.gezgin.core.annotation.Screen
+    import dev.gezgin.mvi.GezginMvi
+    import dev.gezgin.mvi.annotation.ScreenEffect
+    import dev.gezgin.mvi.annotation.ViewModel
+    import kotlinx.coroutines.flow.Flow
+    import kotlinx.coroutines.flow.MutableStateFlow
+    import kotlinx.coroutines.flow.StateFlow
+
+    @NavGraph
+    interface F : Route {
+        // `Home` earns a `HomeNavigator` via its forward edge; `Other` is bare.
+        @GoTo(Other::class)
+        data class Home(val id: String) : F
+
+        data object Other : F
+    }
+
+    data class HomeState(val n: Int)
+    sealed interface HomeIntent { data object Go : HomeIntent }
+    data class HomeEffect(val m: String)
+
+    // VM ctor takes ONLY route — nav is wired SOLELY because the @ScreenEffect below wants it.
+    @ViewModel(F.Home::class)
+    class HomeViewModel(route: F.Home) : GezginMvi<HomeState, HomeIntent, HomeEffect> {
+        override val uiState: StateFlow<HomeState> = MutableStateFlow(HomeState(route.id.length))
+        override fun onIntent(intent: HomeIntent) {}
+    }
+
+    @Screen(F.Home::class)
+    @Composable
+    fun HomeContent(state: HomeState, onIntent: (HomeIntent) -> Unit) {
+    }
+
+    // Effect binder wants nav — its Flow<E> E matches HomeViewModel's effect type (MV6-clean).
+    @ScreenEffect
+    @Composable
+    fun HomeEffects(effects: Flow<HomeEffect>, nav: HomeNavigator) {
+    }
+""".trimIndent()
+
+/**
+ * Dup-role guard (Minor 4): an androidx VM whose ctor has TWO route-typed params. Neither can be
+ * positionally disambiguated by a default resolver, so `emitDefault` must fall back to false (the
+ * `viewModel` param becomes REQUIRED) rather than silently emit `DupVm(args, args)`.
+ */
+val DUP_ROUTE_MVI_SOURCE = """
+    package dev.gezgin.duproute
+
+    import androidx.compose.runtime.Composable
+    import dev.gezgin.core.Route
+    import dev.gezgin.core.annotation.Screen
+    import dev.gezgin.mvi.GezginMvi
+    import dev.gezgin.mvi.annotation.ViewModel
+    import kotlinx.coroutines.flow.MutableStateFlow
+    import kotlinx.coroutines.flow.StateFlow
+
+    data class DupRoute(val id: String = "x") : Route
+    data class DupState(val n: Int)
+    sealed interface DupIntent { data object Go : DupIntent }
+    data class DupEffect(val m: String)
+
+    @ViewModel(DupRoute::class)
+    class DupVm(route: DupRoute, other: DupRoute) : GezginMvi<DupState, DupIntent, DupEffect> {
+        override val uiState: StateFlow<DupState> = MutableStateFlow(DupState(route.id.length + other.id.length))
+        override fun onIntent(intent: DupIntent) {}
+    }
+
+    @Screen(DupRoute::class)
+    @Composable
+    fun DupContent(state: DupState, onIntent: (DupIntent) -> Unit) {
+    }
+""".trimIndent()
+
+/**
+ * MV7 (Important 1) — MVI-mode SC2 parity. Mirrors the core-mode `SC2` test: reuse [SHOP_SOURCE]'s bare
+ * `HomeGraph.About` (a @NavGraph member that IS in the model but earns NO navigator — no edges/back-
+ * edges/result-contract). The `@ViewModel`'s ctor wants a `nav` (by name convention), so codegen would
+ * otherwise emit an unresolved `aboutNavigator()` factory call. Must be rejected with `[MV7]` instead.
+ * Compile alongside `SHOP_SOURCE` (like the SC2 test).
+ */
+val MV7_NO_NAV_SOURCE = """
+    package dev.gezgin.mv7
+
+    import androidx.compose.runtime.Composable
+    import dev.gezgin.core.annotation.Screen
+    import dev.gezgin.mvi.GezginMvi
+    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.shop.AboutNavigator
+    import dev.gezgin.shop.HomeGraph.About
+    import kotlinx.coroutines.flow.MutableStateFlow
+    import kotlinx.coroutines.flow.StateFlow
+
+    data class AboutState(val n: Int)
+    sealed interface AboutIntent { data object Go : AboutIntent }
+    data class AboutEffect(val m: String)
+
+    // `About` is a bare @NavGraph member — no navigator is generated for it. The VM ctor wants a `nav`
+    // (matched by name), so MV7 must fire (else an unresolved `aboutNavigator()` call is emitted).
+    @ViewModel(About::class)
+    class AboutViewModel(route: About, nav: AboutNavigator) :
+        GezginMvi<AboutState, AboutIntent, AboutEffect> {
+        override val uiState: StateFlow<AboutState> = MutableStateFlow(AboutState(0))
+        override fun onIntent(intent: AboutIntent) {}
+    }
+
+    @Screen(About::class)
+    @Composable
+    fun AboutMviContent(state: AboutState, onIntent: (AboutIntent) -> Unit) {
     }
 """.trimIndent()

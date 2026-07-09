@@ -16,6 +16,7 @@ import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
 import dev.gezgin.processor.mvi.SCREEN_EFFECT_FQ
 import dev.gezgin.processor.mvi.ViewModelModel
+import dev.gezgin.processor.mvi.VmDiClassifier
 
 private const val SCREEN_FQ = "dev.gezgin.core.annotation.Screen"
 private const val DIALOG_FQ = "dev.gezgin.core.annotation.Dialog"
@@ -84,6 +85,9 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  * - `MV5` — a matched content's `state`/`onIntent` types don't satisfy the VM's `GezginMvi<S,I,E>`
  *   contract: `state` ≠ `S`, or `onIntent` is not a `(I) -> Unit` function type.
  * - `MV6` — a `@ScreenEffect`'s `Flow<E>` `E` matches no `@ViewModel`'s effect type (`E`).
+ * - `MV7` — MVI-mode `SC2` parity: nav is wired (the matched VM's ctor wants `nav`, or the matched
+ *   `@ScreenEffect` takes a `nav` param) but the route earns no navigator ([NavigatorCodegen.hasNavigator]
+ *   false) — otherwise codegen would emit an unresolved `<x>Navigator()` factory call.
  *
  * (`MV1`/`MV4` — `@ViewModel` must implement `GezginMvi`, and no two `@ViewModel`s per route — live in
  * [dev.gezgin.processor.mvi.ViewModelModelReader], whose output [vmModels] this reader consumes.)
@@ -378,6 +382,28 @@ class EntryModelReader(
 
         val packageName = fn.packageName.asString()
         val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
+
+        // MV7 — MVI-mode SC2 parity. Nav is wired into the generated `provideXEntry` when the VM ctor
+        // declares a `nav` (DI-relevant, via the SHARED classifier MviEntryCodegen also uses) OR the
+        // matched @ScreenEffect takes a `nav` param. Either way, wiring emits a `<x>Navigator()` factory
+        // call — but NavigatorCodegen only generates that factory when the route actually earns a
+        // navigator ([NavigatorCodegen.hasNavigator]). Without this check a nav-wanting VM/effect on a
+        // navigator-less route would sail through validation and emit an unresolved-reference call in
+        // generated code (mirrors core-mode's SC2 at the top of [buildCoreEntry]).
+        val navigatorTypeFq = VmDiClassifier.navigatorTypeFq(routeDecl!!.packageName.asString(), x)
+        val vmWantsNav = VmDiClassifier.classify(vm, routeFq, navigatorTypeFq).vmHasNav
+        val effectWantsNav = effect != null && effect.hasNavParam
+        if (vmWantsNav || effectWantsNav) {
+            val hasNavigator = routeModel?.let { NavigatorCodegen.hasNavigator(it, graphsByFq) } ?: true
+            if (!hasNavigator) {
+                error(
+                    "MV7",
+                    "$fnName: nav bağlanıyor (VM ctor'u ya da @ScreenEffect nav istiyor) ama hedef route'un " +
+                        "(${routeFq.substringAfterLast('.')}) navigator'ı yok (hiç edge/back-edge/result-contract'ı yok)",
+                )
+                return null
+            }
+        }
 
         // SC6 — shared with core-mode: two entries → same provideXEntry name in one package.
         val provideKey = packageName to x

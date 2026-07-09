@@ -5,7 +5,9 @@ import com.tschuchort.compiletesting.SourceFile
 import dev.gezgin.processor.CompileHarness.compileGezgin
 import dev.gezgin.processor.CompileHarness.findGeneratedResource
 import dev.gezgin.processor.CompileHarness.generatedSourceFor
+import dev.gezgin.processor.fixtures.MV7_NO_NAV_SOURCE
 import dev.gezgin.processor.fixtures.MVI_SOURCE
+import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -17,7 +19,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 /**
  * Faz 5.1 gate for [dev.gezgin.processor.mvi.ViewModelModelReader] + [dev.gezgin.processor.entry.EntryModelReader]'s
  * MVI-mode extension (spec §10/§10.1). Positive cases assert the exact `GezginMviDump.txt` produced
- * under `gezgin.dumpMvi=true`; guardrail cases (`MV1`-`MV6`) assert a `[<code>]`-prefixed KSP error.
+ * under `gezgin.dumpMvi=true`; guardrail cases (`MV1`-`MV7`) assert a `[<code>]`-prefixed KSP error.
  *
  * Route-linking mechanism (design decision — see task-5.1 report): MVI-mode content links to its VM by
  * the EXPLICIT `@Screen(Route::class)` it carries (matched to the VM's `@ViewModel(Route::class)`), NOT
@@ -188,7 +190,7 @@ class MviModelReaderTest {
 
     // endregion
 
-    // region Guardrails MV1-MV6
+    // region Guardrails MV1-MV7
 
     @Test
     fun `MV1 — @ViewModel that does not implement GezginMvi is rejected`() {
@@ -374,6 +376,14 @@ class MviModelReaderTest {
             }
             """.trimIndent(),
         )
+    }
+
+    @Test
+    fun `MV7 — nav wired (VM ctor wants nav) but target route has no navigator`() {
+        // MVI-mode SC2 parity: the VM ctor declares `nav: AboutNavigator` but `HomeGraph.About` is a
+        // bare @NavGraph member (in the model, earns no navigator) — codegen would otherwise emit an
+        // unresolved `aboutNavigator()` call. Compiled with SHOP_SOURCE exactly like the SC2 test.
+        assertViolates("MV7", MV7_NO_NAV_SOURCE, SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE))
     }
 
     // endregion

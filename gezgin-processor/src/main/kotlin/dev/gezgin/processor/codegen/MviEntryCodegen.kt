@@ -13,6 +13,7 @@ import dev.gezgin.processor.entry.MviEntryModel
 import dev.gezgin.processor.entry.MviExtraParam
 import dev.gezgin.processor.mvi.ViewModelModel
 import dev.gezgin.processor.mvi.VmCtorParam
+import dev.gezgin.processor.mvi.VmDiClassifier
 import dev.gezgin.processor.mvi.VmDiKind
 
 private const val COMPOSE_PKG = "dev.gezgin.core.compose"
@@ -70,9 +71,12 @@ private const val SHEET_STATE_FQ = "androidx.compose.material3.SheetState"
  * ```
  *
  * **DI default resolver (§10.1 rule 1):** a default is emitted ONLY when every DI-relevant ctor param
- * is `route`- or `nav`-typed (relevant = `@Assisted`/`@InjectedParam` for Hilt/Koin; ALL for androidx;
- * NONE for plain Hilt). Any other relevant param (e.g. `@Assisted userId: String`) → no default, the
- * `viewModel` param becomes REQUIRED. Always override-able either way.
+ * is `route`- or `nav`-typed AND neither role is duplicated (relevant = `@Assisted`/`@InjectedParam` for
+ * Hilt/Koin; ALL for androidx; NONE for plain Hilt). Any other relevant param (e.g. `@Assisted userId:
+ * String`), or two route- / two nav-typed relevant params (which the resolver couldn't positionally
+ * disambiguate) → no default, the `viewModel` param becomes REQUIRED. Always override-able either way.
+ * (The route/nav/`emitDefault` classification is shared with [dev.gezgin.processor.entry.EntryModelReader]
+ * via [VmDiClassifier] so its `MV7` nav-presence guardrail and this codegen never disagree.)
  *
  * **`nav` wiring (§10.1 open question, resolved: conditional):** unlike the spec's literal always-`nav`
  * example, `nav` is wired only when the VM ctor actually declares a `nav` param OR the matched
@@ -98,34 +102,22 @@ object MviEntryCodegen {
                     .build()
             }
 
-    private enum class Role { ROUTE, NAV, OTHER }
-
     private fun provideMviEntryFun(entry: EntryFunctionModel): FunSpec {
         val mvi = entry.mvi!!
         val vm = mvi.vm
         val vmClass = ClassName.bestGuess(vm.vmFq)
         val routeClass = ClassName.bestGuess(entry.routeFq)
         val navigatorClass = ClassName(entry.routePackageName, "${entry.x}Navigator")
-        val navigatorTypeFq = "${entry.routePackageName}.${entry.x}Navigator"
+        val navigatorTypeFq = VmDiClassifier.navigatorTypeFq(entry.routePackageName, entry.x)
 
-        fun roleOf(p: VmCtorParam): Role = when {
-            p.typeFq == entry.routeFq -> Role.ROUTE
-            // A same-module nav type is unresolved in this KSP round (best-effort typeFq), so match by
-            // the `nav` name convention too (mirrors core-mode's `nav:` param naming).
-            p.name == "nav" || p.typeFq == navigatorTypeFq -> Role.NAV
-            else -> Role.OTHER
-        }
-
-        // DI-relevant params: what the resolver default must supply itself.
-        val relevantParams = when (vm.di) {
-            VmDiKind.ANDROIDX -> vm.ctorParams
-            VmDiKind.HILT_ASSISTED, VmDiKind.KOIN -> vm.ctorParams.filter { it.diAnnotated }
-            VmDiKind.HILT_PLAIN -> emptyList() // Hilt injects everything; Gezgin supplies nothing.
-        }
-        val vmHasNav = relevantParams.any { roleOf(it) == Role.NAV }
-        val vmHasRoute = relevantParams.any { roleOf(it) == Role.ROUTE }
-        // A default is possible only when every relevant param is route/nav (else the user must resolve).
-        val emitDefault = relevantParams.none { roleOf(it) == Role.OTHER }
+        // Shared route/nav/other classification (also used by EntryModelReader's MV7 guardrail so the two
+        // never drift). `emitDefault` already folds in Problem-1 (an OTHER param) AND the dup-role guard
+        // (two route- or two nav-typed relevant params → no default, never a silent `VM(args, args)`).
+        fun roleOf(p: VmCtorParam) = VmDiClassifier.roleOf(p, entry.routeFq, navigatorTypeFq)
+        val classification = VmDiClassifier.classify(vm, entry.routeFq, navigatorTypeFq)
+        val vmHasNav = classification.vmHasNav
+        val vmHasRoute = classification.vmHasRoute
+        val emitDefault = classification.emitDefault
 
         val effectWantsNav = mvi.effectFunSimpleName != null && mvi.effectHasNavParam
         val navWired = vmHasNav || effectWantsNav
@@ -166,11 +158,16 @@ object MviEntryCodegen {
         vmClass: ClassName,
         vmHasNav: Boolean,
         vmHasRoute: Boolean,
-        roleOf: (VmCtorParam) -> Role,
+        roleOf: (VmCtorParam) -> VmDiClassifier.Role,
     ): CodeBlock {
         val header = if (vmHasNav) "nav, args" else "args"
-        // Values Gezgin supplies, in the documented (args, nav) order — matches the AssistedFactory
-        // `create(route, nav)` / `parametersOf(args, nav)` conventions (Faz-5.0 spike).
+        // Values Gezgin supplies. The fixed (args, nav) order here is SAFE regardless of the user's
+        // declared param order — NOT because the user must match a convention:
+        //  • Koin's parametersOf/@InjectedParam resolves injected params by TYPE, not position (route and
+        //    nav are always distinct types), so this list's order is irrelevant to the Koin lookup.
+        //  • Hilt's `factory.create(args, nav)` is a plain, compiler-type-checked call against the user's
+        //    own @AssistedFactory method — a wrong-order factory declaration fails to COMPILE, it never
+        //    silently miswires. (androidx uses `ctorArgs` below, which follows the VM's declared order.)
         val suppliedArgs = buildList {
             if (vmHasRoute) add("args")
             if (vmHasNav) add("nav")
@@ -179,7 +176,7 @@ object MviEntryCodegen {
         return when (vm.di) {
             VmDiKind.ANDROIDX -> {
                 // Positional constructor call — args in the VM's DECLARED ctor order (all route/nav here).
-                val ctorArgs = vm.ctorParams.joinToString(", ") { if (roleOf(it) == Role.NAV) "nav" else "args" }
+                val ctorArgs = vm.ctorParams.joinToString(", ") { if (roleOf(it) == VmDiClassifier.Role.NAV) "nav" else "args" }
                 CodeBlock.of(
                     "{ %L -> %M(factory = %M { %M { %T(%L) } }) }",
                     header, ANDROIDX_VIEW_MODEL, VIEW_MODEL_FACTORY, INITIALIZER, vmClass, ctorArgs,

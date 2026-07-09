@@ -134,8 +134,9 @@ class ViewModelModelReader(
      * The VM's DI framework + (for Hilt-assisted) its factory FQ, by inspecting the class's own
      * annotations (§10.1). `@HiltViewModel` with a non-sentinel `assistedFactory` → [VmDiKind.HILT_ASSISTED];
      * a bare `@HiltViewModel` → [VmDiKind.HILT_PLAIN]; `@KoinViewModel` → [VmDiKind.KOIN]; none →
-     * [VmDiKind.ANDROIDX]. The sentinel guard accepts BOTH the fixture stub's `Unit::class` default and
-     * real Hilt's `HiltViewModel::class` self-referential default, so neither is mistaken for a factory.
+     * [VmDiKind.ANDROIDX]. The sentinel guard accepts real Hilt's `HiltViewModel::class` self-referential
+     * default (which the fixture stub now mirrors exactly) — and, defensively, a bare `Unit::class` — so
+     * neither is mistaken for a real assisted factory.
      */
     private fun detectDi(decl: KSClassDeclaration): Pair<VmDiKind, String?> {
         val hilt = decl.annotations.firstOrNull { it.fqName() == HILT_VIEW_MODEL_FQ }

@@ -5,6 +5,8 @@ import com.tschuchort.compiletesting.SourceFile
 import dev.gezgin.processor.CompileHarness.compileGezgin
 import dev.gezgin.processor.CompileHarness.generatedSourceFor
 import dev.gezgin.processor.fixtures.DAGGER_ASSISTED_STUBS
+import dev.gezgin.processor.fixtures.DUP_ROUTE_MVI_SOURCE
+import dev.gezgin.processor.fixtures.EFFECT_NAV_MVI_SOURCE
 import dev.gezgin.processor.fixtures.HILT_ASSISTED_MVI_SOURCE
 import dev.gezgin.processor.fixtures.HILT_PLAIN_MVI_SOURCE
 import dev.gezgin.processor.fixtures.HILT_STUBS
@@ -167,6 +169,41 @@ class MviEntryCodegenTest {
             "SheetContent(state, vm::onIntent, sheetState = LocalGezginSheetState.current, " +
                 "imageLoader = imageLoader())",
         )
+    }
+
+    @Test
+    fun `Important 2 — @ScreenEffect with nav wires navigator solely for the effect (VM ctor has no nav)`() {
+        val text = generateMvi(SourceFile.kotlin("EffNav.kt", EFFECT_NAV_MVI_SOURCE))
+
+        // (a) The effect binder is invoked WITH nav.
+        assertContains(text, "HomeEffects(vm.effects, nav)")
+        // The navigator IS wired (the effect needs it) even though the VM ctor takes no nav.
+        assertContains(
+            text,
+            "val nav = LocalGezginRawNavigator.current.homeNavigator(LocalGezginEntryId.current)",
+        )
+        // (b) nav wired SOLELY by the effect: the resolver lambda signature has NO `nav` param, and the
+        // androidx default + call site pass only `route` (the VM ctor is route-only).
+        assertContains(
+            text,
+            "provideHomeEntry(viewModel: @Composable (args: F.Home) -> HomeViewModel = " +
+                "{ args -> viewModel(factory = viewModelFactory { initializer { HomeViewModel(args) } }) })",
+        )
+        assertContains(text, "val vm = viewModel(route)")
+        assertFalse(
+            text.contains("viewModel(nav, route)"),
+            "VM ctor takes no nav — resolver must be invoked with route only: $text",
+        )
+    }
+
+    @Test
+    fun `Minor 4 — VM with two route-typed ctor params gets NO default (no silent VM(args, args))`() {
+        val text = generateMvi(SourceFile.kotlin("DupRoute.kt", DUP_ROUTE_MVI_SOURCE))
+
+        // Two route-typed params can't be positionally disambiguated → `viewModel` becomes REQUIRED.
+        assertContains(text, "provideDupEntry(viewModel: @Composable (args: DupRoute) -> DupVm) {")
+        assertFalse(text.contains("DupVm(args, args)"), "must not silently emit VM(args, args): $text")
+        assertFalse(text.contains("viewModelFactory"), "no default resolver should be emitted: $text")
     }
 
     @Test
