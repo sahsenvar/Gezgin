@@ -29,56 +29,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-/**
- * S2/Faz 5.3 — `SettingsScreenRoute`'un **MVI-mode** kanıtı (§10.1). Faz 5.1/5.2 codegen'i yalnız
- * kctfork'un plugin'siz golden-text derlemesiyle kanıtlanmıştı (gerçek Compose runtime'ını çalıştıramaz);
- * bu dosya kütüphanenin ilk GERÇEK uçtan-uca (assembleDebug + on-device) MVI kanıtıdır.
- *
- * Neden `SettingsScreen`: kendi kendine yeten tek ekran (yerel `darkTheme` toggle + tek `nav.logout()`),
- * result-flow/stream-collection taşıması gerektirmez (o desenler zaten `ProfileScreen`'de kanıtlı). MVI-mode
- * içeriğe dokunur ama `SettingsScreenRoute`'un route-seviyesi transition override'ına (slideIn/Out —
- * `ProfileGraph.kt`) dokunmaz; ekran o özelliği korurken YENİ olarak MVI-mode'u da sergiler.
- *
- * Üçlü (aynı modülde, aynı route'a eşlenir):
- *  - `@ViewModel(SettingsScreenRoute)` VM — S/I/E'yi `GezginMvi<S,I,E>` supertype'ından okur.
- *  - stateless `@Screen(SettingsScreenRoute)` `SettingsContent(state, onIntent)`.
- *  - `@ScreenEffect SettingsEffects(Flow<E>)` — `ObserveAsEvents` ile tek-seferlik efekt (Toast + Log).
- *
- * DI: `SettingsViewModel`'in tek ctor param'ı `nav: SettingsNavigator` (nav-tipli) ve Hilt/Koin
- * annotation'ı yok → codegen ANDROIDX-fallback default resolver'ı üretir
- * (`viewModel(factory = viewModelFactory { initializer { SettingsViewModel(nav) } })`). Bu sample'a
- * GERÇEK bir Hilt/Koin bağımlılığı EKLENMEZ — override yalnız örnek olarak aşağıda gösterilir.
- *
- * // Hilt override (gerçek Hilt bağımlılığı BU sample'a EKLENMEZ — yalnızca örnek/README):
- * //   provideSettingsEntry(viewModel = { nav, args ->
- * //       hiltViewModel<SettingsViewModel, SettingsViewModel.Factory>(
- * //           creationCallback = { factory -> factory.create(nav) })
- * //   })
- * // Koin override (yine yalnız örnek):
- * //   provideSettingsEntry(viewModel = { nav, args -> koinViewModel { parametersOf(nav) } })
- * // (Her iki durumda da `provideSettingsEntry`'yi ELLE yazmaya gerek yok — codegen default'u üretir,
- * //  yalnız `viewModel = { ... }` argümanı override edilir; bkz. `sample/README.md` "Faz 5 — MVI-mode".)
- */
-
-/** UI state — yalnız gözlenen `darkTheme` toggle'ı (VM'de tutulur → config-change'te korunur). */
 data class SettingsState(val darkTheme: Boolean = false)
 
-/**
- * Faz 7.2 (GAP-2) — §10.1 "Problem 2" kanıtı için basit bir bağımlılık tipi. Bir ayarlar ekranı
- * gerçekçi olarak sürüm bilgisi gösterir; `BuildInfo` MVI-mode `@Screen` content'ine rol-DIŞI
- * (state/onIntent/sheetState değil) bir param olarak girer → codegen onu `provideSettingsEntry`'nin
- * EK, kullanıcı-sağlamalı `@Composable () -> BuildInfo` resolver param'ına dönüştürür (bkz.
- * `SettingsContent` + `ProfileGraphEntries.kt` çağrı-yeri).
- */
 data class BuildInfo(val version: String)
 
-/** Kullanıcı niyetleri — content `onIntent(...)` ile tetikler, VM `onIntent`'te işler. */
 sealed interface SettingsIntent {
     data object ToggleTheme : SettingsIntent
     data object Logout : SettingsIntent
 }
 
-/** Tek-seferlik efekt (nav-olmayan yan etki) — `@ScreenEffect` `ObserveAsEvents` ile tüketir. */
 sealed interface SettingsEffect {
     data class ShowMessage(val text: String) : SettingsEffect
 }
@@ -98,23 +57,13 @@ class SettingsViewModel(private val nav: SettingsNavigator) :
         when (intent) {
             SettingsIntent.ToggleTheme -> {
                 _uiState.update { it.copy(darkTheme = !it.darkTheme) }
-                // Loss-free tek-seferlik efekt: gözlemci örtülü/STOPPED olsa da kuyruğa alınır (GezginEffects).
                 _effects.send(SettingsEffect.ShowMessage("Tema tercihi kaydedildi"))
             }
-            // §10 A deseni ("VM-driven, önerilen"): nav VM'e enjekte, üretilen nav metodu doğrudan çağrılır.
-            // `logout()` = `replaceTo(LoginScreenRoute, clearUpTo = DashboardScreenRoute, inclusive = true)`.
             SettingsIntent.Logout -> nav.logout()
         }
     }
 }
 
-/**
- * MVI-mode stateless content. `state`/`onIntent` = ROL-bazlı paramlar (codegen VM'den besler).
- * `buildInfo: BuildInfo` = ROL-DIŞI param (§10.1 "Problem 2"): codegen bunu üretilen
- * `provideSettingsEntry`'ye EK bir `buildInfo: @Composable () -> BuildInfo` resolver param'ı olarak
- * ekler (default'suz → ZORUNLU); kurulumda `ProfileGraphEntries.kt` bunu açıkça sağlar. Content saf
- * kalır — param'ı yalnız okuyup gösterir (sürüm satırı).
- */
 @Screen(SettingsScreenRoute::class)
 @Composable
 fun SettingsContent(state: SettingsState, onIntent: (SettingsIntent) -> Unit, buildInfo: BuildInfo) {
@@ -123,7 +72,6 @@ fun SettingsContent(state: SettingsState, onIntent: (SettingsIntent) -> Unit, bu
             Text("Ayarlar")
             ThemeToggle(state.darkTheme) { onIntent(SettingsIntent.ToggleTheme) }
             Button(onClick = { onIntent(SettingsIntent.Logout) }) { Text("Çıkış yap") }
-            // Problem-2 resolver param'ının salt-okunur tüketimi (gerçekçi bir ayarlar satırı).
             Text("Sürüm ${buildInfo.version}")
         }
     }
@@ -143,7 +91,6 @@ fun SettingsEffects(effects: Flow<SettingsEffect>) {
     val context = LocalContext.current
     ObserveAsEvents(effects) { effect ->
         when (effect) {
-            // Gerçek Android yan etki — kctfork'un yapamadığı: canlı Compose/Android runtime'da bir kez çalışır.
             is SettingsEffect.ShowMessage -> {
                 Log.d("SettingsMvi", "effect: ${effect.text}")
                 Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()

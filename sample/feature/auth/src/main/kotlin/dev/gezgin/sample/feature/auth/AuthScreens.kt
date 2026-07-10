@@ -38,12 +38,6 @@ import dev.gezgin.sample.navigation.ProfileInfoNavigator
 import dev.gezgin.sample.navigation.TermsNavigator
 import kotlinx.coroutines.launch
 
-/**
- * S2 — `:feature:auth` gerçek ekranları. Üretilen [LoginNavigator] API'si plandaki varsayılan adlardan
- * ikisinde farklı çıktı (processor keşfi, bkz. `.superpowers/sdd/sample-s2-report.md`):
- * `goToForgotPasswordDialogForResult` (plan: `goToForgotPasswordForResult`) ve `goToSignUp` (plan:
- * `goToSignUpFlow`) — isimler EdgeSpec/route simple-name'inden türetiliyor, üretilen koda uyulmuştur.
- */
 @Screen
 @Composable
 fun LoginScreen(route: LoginScreenRoute, nav: LoginNavigator) {
@@ -74,7 +68,6 @@ fun LoginScreen(route: LoginScreenRoute, nav: LoginNavigator) {
                 Button(onClick = { nav.loginSuccess() }) { Text("Giriş") }
                 TextButton(
                     onClick = {
-                        // suspend @GoForResult tüketimi: caller sonucu doğrudan await eder (VM'siz).
                         scope.launch {
                             val result = nav.goToForgotPasswordDialogForResult(email.ifBlank { null })
                             val message = when (result) {
@@ -95,25 +88,13 @@ fun LoginScreen(route: LoginScreenRoute, nav: LoginNavigator) {
     }
 }
 
-/**
- * `@Dialog` kind — processor `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`'ı BİRBİRİNİN
- * ALTERNATİFİ olarak okur (her biri ayrı `getSymbolsWithAnnotation` sorgusu; ikisini aynı fonksiyona
- * koymak aynı route'u iki kez kaydeder → SC4 derleme hatası) — bu yüzden yalnız `@Dialog`.
- *
- * Faz 4: bu artık GERÇEK bir `DialogSceneStrategy` overlay'i — arkadaki `LoginScreenRoute` görünür
- * kalır, bu composable `androidx.compose.ui.window.Dialog` içinde çizilir. `ForgotPasswordDialogRoute`
- * (bkz. `AuthGraph.kt`) `DialogContract.dismissOnClickOutside = false` deklare eder — dışarı tık
- * KAPATMAZ; `dismissOnBackPress` varsayılan `true` — geri tuşu/Esc HÂLÂ kapatır. Her iki dismiss yolu
- * da (izin verilenler) `onDismissRequest = onBack` → `navigator.back()` → bu route `ResultRoute`
- * olduğu için caller `NavResult.Canceled` alır (aşağıdaki `goToForgotPasswordDialogForResult` çağrısı).
- */
+// @Screen/@Dialog/@BottomSheet/@FullscreenModal birbirinin alternatifi — ikisini aynı fonksiyona
+// koymak route'u iki kez kaydeder (SC4 derleme hatası).
 @Dialog
 @Composable
 fun ForgotPasswordDialogScreen(route: ForgotPasswordDialogRoute, nav: ForgotPasswordDialogNavigator) {
     var email by remember { mutableStateOf(route.email.orEmpty()) }
-    // Gerçek Dialog overlay — içerik KOMPAKT bir kart; `fillMaxSize` DEĞİL (dialog tüm ekranı
-    // kaplamamalı, scrim üstünde ortalanmış/wrap-content/gölgeli görünmeli — bkz. on-device checklist
-    // madde 9). Dialog penceresi `usePlatformDefaultWidth=true` ile zaten genişliği sınırlar.
+    // Dialog içeriği fillMaxSize DEĞİL — scrim üstünde wrap-content/ortalanmış görünmeli.
     Surface(
         shape = MaterialTheme.shapes.large,
         tonalElevation = 6.dp,
@@ -176,7 +157,6 @@ fun TermsScreen(route: TermsScreenRoute, nav: TermsNavigator) {
                 label = { Text("Adınız (Welcome ekranı için)") },
                 modifier = Modifier.fillMaxWidth(),
             )
-            // Üç farklı çıkış türü — aynı ekranda: @BackToStart / @Quit / @QuitAndGoTo.
             Button(onClick = { nav.backToStart() }) { Text("Başa dön") }
             TextButton(onClick = { nav.quit() }) { Text("Vazgeç") }
             Button(onClick = { nav.quitAndGoToWelcome(name.ifBlank { null }) }) { Text("Kaydı tamamla") }

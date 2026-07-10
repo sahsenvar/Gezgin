@@ -26,11 +26,6 @@ import dev.gezgin.sample.shopr.nav.OrderId
 import dev.gezgin.sample.shopr.nav.OrderPlacedNavigator
 import dev.gezgin.sample.shopr.nav.PaymentNavigator
 
-/**
- * Task 3.6 — bir `@Screen` composable'ı per route, sade Text+Button chrome (görsel değil, canlı-derleme
- * kanıtı için). Codegen'in `provideXEntry`'si (EntryCodegen) bu dosyanın `@Screen` fonksiyonlarını okuyup
- * aynı pakette `GezginEntries.kt` üretir (docs/gezgin-by-example.md §2/§4 core-mode deseni).
- */
 @Screen
 @Composable
 fun FeedScreen(route: Feed, nav: FeedNavigator) {
@@ -42,9 +37,6 @@ fun FeedScreen(route: Feed, nav: FeedNavigator) {
 @Screen
 @Composable
 fun CatalogScreen(route: Catalog, nav: CatalogNavigator) {
-    // Core-mode result-collection (ViewModel'siz, docs/gezgin-by-example.md §4): launch tetiği ve
-    // re-attach edilebilir Flow ayrı ayrı üretilir — CheckoutFlow'un sonucu (RealOrderId) burada
-    // PD-safe biçimde toplanır ve alınınca replaceToOrderPlaced ile terminal ekrana geçilir.
     LaunchedEffect(Unit) {
         nav.checkoutResults.collect { result ->
             when (result) {

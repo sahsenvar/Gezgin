@@ -13,23 +13,8 @@ import dev.gezgin.core.fragment.gezginNav
 import dev.gezgin.sample.navigation.HelpNavigator
 import dev.gezgin.sample.navigation.HomeGraph.HelpScreenRoute
 
-/**
- * Faz 6.4 — brownfield Fragment interop örneği (§11.1). "Henüz Compose'a taşınmamış" legacy bir yardım
- * ekranı: içerik bir `@Screen` composable DEĞİL, gerçek bir View hiyerarşisi (XML `fragment_help.xml`
- * inflate edilir, `findViewById` ile bağlanır — Compose YOK). Bu, Fragment interop'un GERÇEK senaryosudur:
- * elde zaten var olan bir View-tabanlı Fragment'ı, yeniden yazmadan Gezgin'in Nav3 back-stack'ine leaf
- * olarak sokmak.
- *
- * Fragment hiçbir Gezgin arayüzü implement ETMEZ (`class HelpFragment : Fragment()` — ekstra supertype yok);
- * parametreli ctor YOK (framework no-arg ctor + Bundle ile yeniden yaratır). Route ve navigator iki delege
- * ile teslim edilir:
- * - `gezginArgs<HelpScreenRoute>()` → route'u Fragment'ın kendi `arguments` Bundle'ından decode eder (§11.1,
- *   "route Bundle'dan → PD-safe"). `arguments` örnekleme anında kurulduğundan `onViewCreated`'da güvenle
- *   okunur (`onUpdate` zamanlamasından bağımsız).
- * - `gezginNav<HelpNavigator>()` → bind sonrası (`AndroidFragment.onUpdate`) instance-anahtarlı registry'den
- *   canlı navigator'ı okur. Bu yüzden `nav` yalnız kullanıcı ETKİLEŞİMİNDE (buton tık'ı) okunur — o an
- *   bind kesinlikle tamamlanmıştır; delege lazy olduğundan `onViewCreated`'da erken okunmaz.
- */
+// Brownfield Fragment interop: Fragment hiçbir Gezgin arayüzü implement etmez ve parametreli ctor'u YOK
+// (framework no-arg ctor + Bundle ile yeniden yaratır). Route/navigator gezginArgs/gezginNav ile enjekte edilir.
 @FragmentScreen(HelpScreenRoute::class)
 class HelpFragment : Fragment() {
 
@@ -44,10 +29,8 @@ class HelpFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // gezginArgs — route verisini gerçek bir TextView'a yansıt (log satırı değil, görünür içerik).
         view.findViewById<TextView>(R.id.help_topic).text = "Konu: ${args.topic}"
-        // gezginNav — canlı navigator'ın üretilen `backToDashboard()` kenarı (HelpScreenRoute'un
-        // @BackTo(DashboardScreenRoute) declarasyonundan). `nav` erişimi tık lambdasına ertelenir (bind-safe).
+        // nav erişimi tık lambdasına ertelenir — bind (onUpdate) tamamlanmadan okunmamalı.
         view.findViewById<Button>(R.id.help_back).setOnClickListener { nav.backToDashboard() }
     }
 }

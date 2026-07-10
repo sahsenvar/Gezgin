@@ -33,14 +33,13 @@ sealed interface ProfileGraph : Route {
     override val transition: GezginTransition?
         get() = transition { forward { fadeIn() togetherWith fadeOut() } }
 
-    @GoForResult(EditNameDialogRoute::class)                            // screen-mode (String)
+    @GoForResult(EditNameDialogRoute::class)
     @GoTo(SettingsScreenRoute::class)
-    @GoForResult(AvatarFlow::class, name = "pickAvatar")                // FLOW-mode result (AvatarChoice)
-    @GoForResult(NotificationsSheetRoute::class, name = "pickNotifications")  // MVI @BottomSheet result
+    @GoForResult(AvatarFlow::class, name = "pickAvatar")
+    @GoForResult(NotificationsSheetRoute::class, name = "pickNotifications")
     @Serializable
     data object ProfileScreenRoute : ProfileGraph
 
-    /** Route-level transition override (getter) — cascade level 3 vs. the graph default above. */
     @ReplaceTo(
         AuthGraph.LoginScreenRoute::class,
         clearUpTo = HomeGraph.DashboardScreenRoute::class,
@@ -53,28 +52,18 @@ sealed interface ProfileGraph : Route {
             get() = transition { forward { slideInHorizontally() togetherWith slideOutHorizontally() } }
     }
 
-    /**
-     * Screen-mode result producer — real `@Dialog` overlay (Faz 4). `DialogContract`'ın KOŞULLU
-     * desenini gösterir (§7/Contracts.kt, `ForgotPasswordDialogRoute`'daki SABİT desenin karşıtı):
-     * `dismissOnClickOutside` route ctor param'ından (`current`) hesaplanır — mevcut isim BOŞSA (ilk
-     * kayıt akışı varsayımı) dışarı-tık kapatmaz, kullanıcı bir isim girmeden çıkamaz; mevcut ismi
-     * DÜZENLERKEN dışarı tık ile rahatça vazgeçilebilir. `dismissOnBackPress` varsayılan (`true`) her
-     * durumda çalışır.
-     */
     @Serializable
     data class EditNameDialogRoute(val current: String) : ProfileGraph, ResultRoute<String>, DialogContract {
         override val dismissOnClickOutside: Boolean get() = current.isNotBlank()
     }
 
-    // MVI-mode @BottomSheet result producer (Integ M3) — @ViewModel/@BottomSheet-content/@ScreenEffect
-    // triple lives in :feature:profile (per-module KSP matching, §10.1).
+    // @ViewModel/@BottomSheet-content/@ScreenEffect üçlüsü :feature:profile'da olmalı (per-module KSP, §10.1).
     @Serializable
     data class NotificationsSheetRoute(val current: NotificationLevel) :
         ProfileGraph, ResultRoute<NotificationLevel>, BottomSheetContract {
         override val skipPartiallyExpanded: Boolean get() = true
     }
 
-    /** Flow that RETURNS a result (ResultFlow<AvatarChoice>) — members get quitWith(AvatarChoice). */
     @FlowGraph
     @Serializable
     sealed interface AvatarFlow : ProfileGraph, ResultFlow<AvatarChoice> {
@@ -84,20 +73,12 @@ sealed interface ProfileGraph : Route {
         @Serializable
         data object PickSourceScreenRoute : AvatarFlow
 
-        @GoTo(ZoomFlow::class)                                          // @GoTo into a result-less nested flow
+        @GoTo(ZoomFlow::class)
         @Serializable
         data class CropScreenRoute(val source: String) : AvatarFlow
 
-        /**
-         * NESTED @FlowGraph — chain [AvatarFlow, ZoomFlow]. Çıkış: flow-entry'de plain `back()` =
-         * `quit()` semantiği (§8.1) — yalnız ZoomFlow'un kendi segmentini kapatır, AvatarFlow (ve
-         * CropScreenRoute) açık kalır. `quitWith` ise SÖZLEŞME SAHİPLİĞİ üzerinden çözülür (spec §6):
-         * ZoomFlow, `ResultFlow<T>`'u yalnız TRANSİTİF taşır (AvatarFlow'dan miras), kendi
-         * sözleşmesini deklare etmez — bu yüzden nested içinden `quitWith(AvatarChoice(...))`
-         * çağırmak en yakın DOĞRUDAN-deklare-eden atayı (AvatarFlow) bitirir: HEM ZoomFlow HEM
-         * AvatarFlow segmenti yıkılır, Value doğrudan Profile'ın `pickAvatarResults`'ına teslim
-         * edilir. ZoomScreenRoute'un kendi `quit()`u YOK (üyeler arasında `@Quit` annotasyonu yok).
-         */
+        // quitWith, sözleşmeyi DOĞRUDAN deklare eden en yakın atayı (AvatarFlow) bitirir — ZoomFlow onu
+        // yalnız transitif taşır (spec §6); nested içinden çağrı hem ZoomFlow hem AvatarFlow segmentini yıkar.
         @FlowGraph
         @Serializable
         sealed interface ZoomFlow : AvatarFlow {
