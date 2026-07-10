@@ -54,6 +54,26 @@ publishing {
                     "GezginMvi<S,I,E> sözleşmesi + codegen binder + ObserveAsEvents + DI-detection " +
                     "(Hilt/Koin, androidx fallback).",
             )
+            // Faz 9.1 — Maven Central'ın zorunlu kıldığı POM metadata'sı (url/licenses/developers/scm).
+            // repository{}/signing HÂLÂ YOK: bu blok iskelet kalır, `publish` çalıştırılmaz (yukarıdaki nota bkz.).
+            url.set("https://github.com/sahsenvar/Gezgin")
+            licenses {
+                license {
+                    name.set("The Apache License, Version 2.0")
+                    url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                }
+            }
+            developers {
+                developer {
+                    id.set("sahsenvar")
+                    name.set("Şahan Şenvar")
+                }
+            }
+            scm {
+                url.set("https://github.com/sahsenvar/Gezgin")
+                connection.set("scm:git:https://github.com/sahsenvar/Gezgin.git")
+                developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/Gezgin.git")
+            }
         }
     }
 }
