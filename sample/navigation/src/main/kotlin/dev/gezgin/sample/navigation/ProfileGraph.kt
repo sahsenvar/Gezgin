@@ -7,15 +7,12 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import dev.gezgin.core.BottomSheetContract
 import dev.gezgin.core.DialogContract
-import dev.gezgin.core.ResultFlow
 import dev.gezgin.core.ResultRoute
 import dev.gezgin.core.Route
-import dev.gezgin.core.annotation.FlowGraph
 import dev.gezgin.core.annotation.GoForResult
 import dev.gezgin.core.annotation.GoTo
 import dev.gezgin.core.annotation.NavGraph
 import dev.gezgin.core.annotation.ReplaceTo
-import dev.gezgin.core.annotation.StartDestination
 import dev.gezgin.core.compose.GezginTransition
 import dev.gezgin.core.compose.transition
 import kotlinx.serialization.Serializable
@@ -62,30 +59,5 @@ sealed interface ProfileGraph : Route {
     data class NotificationsSheetRoute(val current: NotificationLevel) :
         ProfileGraph, ResultRoute<NotificationLevel>, BottomSheetContract {
         override val skipPartiallyExpanded: Boolean get() = true
-    }
-
-    @FlowGraph
-    @Serializable
-    sealed interface AvatarFlow : ProfileGraph, ResultFlow<AvatarChoice> {
-
-        @StartDestination
-        @GoTo(CropScreenRoute::class)
-        @Serializable
-        data object PickSourceScreenRoute : AvatarFlow
-
-        @GoTo(ZoomFlow::class)
-        @Serializable
-        data class CropScreenRoute(val source: String) : AvatarFlow
-
-        // quitWith, sözleşmeyi DOĞRUDAN deklare eden en yakın atayı (AvatarFlow) bitirir — ZoomFlow onu
-        // yalnız transitif taşır (spec §6); nested içinden çağrı hem ZoomFlow hem AvatarFlow segmentini yıkar.
-        @FlowGraph
-        @Serializable
-        sealed interface ZoomFlow : AvatarFlow {
-
-            @StartDestination
-            @Serializable
-            data object ZoomScreenRoute : ZoomFlow
-        }
     }
 }

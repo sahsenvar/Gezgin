@@ -28,13 +28,13 @@ import dev.gezgin.core.annotation.Dialog
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.sample.navigation.AuthGraph.ForgotPasswordDialogRoute
 import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
-import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.CredentialsScreenRoute
-import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.ProfileInfoScreenRoute
-import dev.gezgin.sample.navigation.AuthGraph.SignUpFlow.TermsScreenRoute
 import dev.gezgin.sample.navigation.CredentialsNavigator
 import dev.gezgin.sample.navigation.ForgotPasswordDialogNavigator
 import dev.gezgin.sample.navigation.LoginNavigator
 import dev.gezgin.sample.navigation.ProfileInfoNavigator
+import dev.gezgin.sample.navigation.SignUpFlow.CredentialsScreenRoute
+import dev.gezgin.sample.navigation.SignUpFlow.ProfileInfoScreenRoute
+import dev.gezgin.sample.navigation.SignUpFlow.TermsScreenRoute
 import dev.gezgin.sample.navigation.TermsNavigator
 import kotlinx.coroutines.launch
 
