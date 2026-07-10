@@ -779,7 +779,7 @@ class MviModelReaderTest {
             import kotlinx.coroutines.flow.StateFlow
 
             @NavGraph
-            interface G : Route {
+            sealed interface G : Route {
                 @GoTo(Other::class)
                 data class Home(val id: String) : G
                 data object Other : G

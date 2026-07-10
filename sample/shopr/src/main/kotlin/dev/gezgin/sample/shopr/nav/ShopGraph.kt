@@ -16,7 +16,7 @@ import kotlinx.serialization.Serializable
 data class OrderId(val value: String)
 
 @NavGraph
-interface HomeGraph : Route {
+sealed interface HomeGraph : Route {
 
     @GoTo(Catalog::class)
     @Serializable
@@ -38,7 +38,7 @@ interface HomeGraph : Route {
 }
 
 @FlowGraph
-interface CheckoutFlow : Route, ResultFlow<OrderId> {
+sealed interface CheckoutFlow : Route, ResultFlow<OrderId> {
 
     @StartDestination
     @GoTo(Payment::class)

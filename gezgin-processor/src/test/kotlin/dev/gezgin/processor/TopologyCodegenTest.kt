@@ -147,12 +147,12 @@ class TopologyCodegenTest {
             }
 
             @NavGraph
-            interface ProfileGraph : Route {
+            sealed interface ProfileGraph : Route {
                 @GoForResult(AvatarFlow::class, name = "pickAvatar")
                 data object Profile : ProfileGraph
 
                 @FlowGraph
-                interface AvatarFlow : ProfileGraph, ResultFlow<AvatarChoice> {
+                sealed interface AvatarFlow : ProfileGraph, ResultFlow<AvatarChoice> {
                     @StartDestination
                     @GoTo(Crop::class)
                     data object PickSource : AvatarFlow
@@ -161,7 +161,7 @@ class TopologyCodegenTest {
                     data object Crop : AvatarFlow
 
                     @FlowGraph
-                    interface ZoomFlow : AvatarFlow {
+                    sealed interface ZoomFlow : AvatarFlow {
                         @StartDestination
                         data object Zoom : ZoomFlow
                     }
@@ -218,7 +218,7 @@ class TopologyCodegenTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface AuthGraph : Route {
+            sealed interface AuthGraph : Route {
                 @GoForResult(ForgotPasswordDialog::class)
                 data object LoginRoute : AuthGraph
 

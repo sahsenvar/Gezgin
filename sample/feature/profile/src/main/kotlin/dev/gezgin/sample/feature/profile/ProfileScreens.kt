@@ -25,13 +25,13 @@ import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.Dialog
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.sample.navigation.AvatarChoice
+import dev.gezgin.sample.navigation.AvatarFlow.CropScreenRoute
+import dev.gezgin.sample.navigation.AvatarFlow.PickSourceScreenRoute
+import dev.gezgin.sample.navigation.AvatarFlow.ZoomFlow.ZoomScreenRoute
 import dev.gezgin.sample.navigation.CropNavigator
 import dev.gezgin.sample.navigation.EditNameDialogNavigator
 import dev.gezgin.sample.navigation.NotificationLevel
 import dev.gezgin.sample.navigation.PickSourceNavigator
-import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.CropScreenRoute
-import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.PickSourceScreenRoute
-import dev.gezgin.sample.navigation.ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute
 import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialogRoute
 import dev.gezgin.sample.navigation.ProfileGraph.ProfileScreenRoute
 import dev.gezgin.sample.navigation.ProfileNavigator

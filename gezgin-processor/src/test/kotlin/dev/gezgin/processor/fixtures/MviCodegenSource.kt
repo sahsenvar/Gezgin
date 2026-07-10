@@ -69,7 +69,7 @@ val MVI_NAV_SOURCE = """
     import kotlinx.coroutines.flow.StateFlow
 
     @NavGraph
-    interface G : Route {
+    sealed interface G : Route {
         // `Detail` earns a `DetailNavigator` via its forward edge; `Other` is bare (no navigator).
         @GoTo(Other::class)
         data class Detail(val id: String) : G
@@ -301,7 +301,7 @@ val EFFECT_NAV_MVI_SOURCE = """
     import kotlinx.coroutines.flow.StateFlow
 
     @NavGraph
-    interface F : Route {
+    sealed interface F : Route {
         // `Home` earns a `HomeNavigator` via its forward edge; `Other` is bare.
         @GoTo(Other::class)
         data class Home(val id: String) : F

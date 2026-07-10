@@ -26,15 +26,15 @@ class AppNavBehaviorTest {
         factory(raw, entryIdOf(route))
 
     private fun GezginTestNavigator.login() = on(AuthGraph.LoginScreenRoute::class, RawNavigator::loginNavigator)
-    private fun GezginTestNavigator.credentials() = on(AuthGraph.SignUpFlow.CredentialsScreenRoute::class, RawNavigator::credentialsNavigator)
-    private fun GezginTestNavigator.profileInfo() = on(AuthGraph.SignUpFlow.ProfileInfoScreenRoute::class, RawNavigator::profileInfoNavigator)
-    private fun GezginTestNavigator.terms() = on(AuthGraph.SignUpFlow.TermsScreenRoute::class, RawNavigator::termsNavigator)
+    private fun GezginTestNavigator.credentials() = on(SignUpFlow.CredentialsScreenRoute::class, RawNavigator::credentialsNavigator)
+    private fun GezginTestNavigator.profileInfo() = on(SignUpFlow.ProfileInfoScreenRoute::class, RawNavigator::profileInfoNavigator)
+    private fun GezginTestNavigator.terms() = on(SignUpFlow.TermsScreenRoute::class, RawNavigator::termsNavigator)
     private fun GezginTestNavigator.welcome() = on(HomeGraph.WelcomeScreenRoute::class, RawNavigator::welcomeNavigator)
     private fun GezginTestNavigator.settings() = on(ProfileGraph.SettingsScreenRoute::class, RawNavigator::settingsNavigator)
     private fun GezginTestNavigator.profile() = on(ProfileGraph.ProfileScreenRoute::class, RawNavigator::profileNavigator)
-    private fun GezginTestNavigator.pickSource() = on(ProfileGraph.AvatarFlow.PickSourceScreenRoute::class, RawNavigator::pickSourceNavigator)
-    private fun GezginTestNavigator.crop() = on(ProfileGraph.AvatarFlow.CropScreenRoute::class, RawNavigator::cropNavigator)
-    private fun GezginTestNavigator.zoom() = on(ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute::class, RawNavigator::zoomNavigator)
+    private fun GezginTestNavigator.pickSource() = on(AvatarFlow.PickSourceScreenRoute::class, RawNavigator::pickSourceNavigator)
+    private fun GezginTestNavigator.crop() = on(AvatarFlow.CropScreenRoute::class, RawNavigator::cropNavigator)
+    private fun GezginTestNavigator.zoom() = on(AvatarFlow.ZoomFlow.ZoomScreenRoute::class, RawNavigator::zoomNavigator)
     private fun GezginTestNavigator.dashboard() = on(HomeGraph.DashboardScreenRoute::class, RawNavigator::dashboardNavigator)
     private fun GezginTestNavigator.itemDetail() = on(HomeGraph.ItemDetailScreenRoute::class, RawNavigator::itemDetailNavigator)
     private fun GezginTestNavigator.itemImageViewer() = on(HomeGraph.ItemImageViewerRoute::class, RawNavigator::itemImageViewerNavigator)
@@ -106,13 +106,13 @@ class AppNavBehaviorTest {
         nav.profile().launchPickAvatar()
         nav.pickSource().goToCrop("camera")
         nav.crop().goToZoom()
-        assertEquals(ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute, nav.current)
+        assertEquals(AvatarFlow.ZoomFlow.ZoomScreenRoute, nav.current)
 
         nav.zoom().back()
 
-        assertEquals(ProfileGraph.AvatarFlow.CropScreenRoute("camera"), nav.current)
+        assertEquals(AvatarFlow.CropScreenRoute("camera"), nav.current)
         assertEquals(
-            listOf(ProfileGraph.ProfileScreenRoute, ProfileGraph.AvatarFlow.PickSourceScreenRoute, ProfileGraph.AvatarFlow.CropScreenRoute("camera")),
+            listOf(ProfileGraph.ProfileScreenRoute, AvatarFlow.PickSourceScreenRoute, AvatarFlow.CropScreenRoute("camera")),
             nav.backStack,
         )
     }
@@ -124,7 +124,7 @@ class AppNavBehaviorTest {
         profile.launchPickAvatar()
         nav.pickSource().goToCrop("gallery")
         nav.crop().goToZoom()
-        assertEquals(ProfileGraph.AvatarFlow.ZoomFlow.ZoomScreenRoute, nav.current)
+        assertEquals(AvatarFlow.ZoomFlow.ZoomScreenRoute, nav.current)
 
         nav.zoom().quitWith(AvatarChoice("zoomed://frame"))
 
@@ -192,7 +192,7 @@ class AppNavBehaviorTest {
         nav.terms().backToStart()
 
         assertEquals(
-            listOf(AuthGraph.LoginScreenRoute, AuthGraph.SignUpFlow.CredentialsScreenRoute),
+            listOf(AuthGraph.LoginScreenRoute, SignUpFlow.CredentialsScreenRoute),
             nav.backStack,
         )
     }

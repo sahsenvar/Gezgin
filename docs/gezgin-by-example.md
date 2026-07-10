@@ -39,6 +39,27 @@ sealed interface HomeGraph : ShopGraph {
 
 > **Guardrail 1 (derleme-zamanı):** app-start route'u (host'a verilen) ve `@FlowGraph` `@StartDestination`'ı codegen'in **argümansız** kurabileceği bir şey olmalı (`data object` ya da tüm parametreleri default/nullable). Aksi halde **build patlar** — "start ekranını kuramıyorum" hatasını runtime'da değil derlemede alırsın.
 
+**Büyük graph'ı böl — flat-file yerleşim.** Üyelik `sealed interface` içine nesting'den değil, **deklare edilen supertype**'tan gelir → bir flow'u kapsayan graph'ın gövdesine gömmek **zorunda değilsin**; aynı pakette ayrı bir dosyada top-level durabilir. Sample'daki gerçek `SignUpFlow`, `AuthGraph.kt`'den `SignUpFlow.kt`'ye çıkarılmış hâliyle:
+
+```kotlin
+// SignUpFlow.kt — AuthGraph.kt'den AYRI dosya, AYNI paket (dev.gezgin.sample.navigation)
+@FlowGraph
+@Serializable
+sealed interface SignUpFlow : AuthGraph {                       // supertype = üyelik; nesting'e gerek yok
+
+    @StartDestination @GoTo(ProfileInfoScreenRoute::class)
+    @Serializable data object CredentialsScreenRoute : SignUpFlow
+
+    @GoTo(TermsScreenRoute::class)
+    @Serializable data class ProfileInfoScreenRoute(val email: String) : SignUpFlow
+
+    @BackToStart @Quit @QuitAndGoTo(HomeGraph.WelcomeScreenRoute::class)
+    @Serializable data object TermsScreenRoute : SignUpFlow
+}
+```
+
+Nested ve flat-file **denk** okunur (Kotlin sealed: alt-tip aynı paket+modülde). 500-1000 satırlık graph dosyalarını flow başına bölmek için önerilen desen. **Dikkat:** flow'u nested↔top-level taşımak FQ'sunu değiştirir → önceki sürümden serialize edilmiş back-stack restore edilemez (bir kez konumlandır, sonra sabit tut).
+
 ---
 
 ## 2. ⭐ Tanımlamadığın yere gidiş _derlenmez_
