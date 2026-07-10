@@ -42,7 +42,8 @@ data class BackEdgeModel(
     val inclusive: Boolean = false,
 )
 
-/** A single navigable destination: a class/object nested directly inside a graph interface. */
+/** A single navigable destination: a class/object that is a member of a graph — a direct subtype
+ *  (`: Graph`), whether declared inside the graph interface or in a separate file (Task 8.1). */
 data class RouteModel(
     val fqName: String,
     val simpleName: String,
@@ -58,8 +59,8 @@ data class RouteModel(
      * Every `@NavGraph`/`@FlowGraph`-annotated interface this route implements DIRECTLY (declared
      * supertypes only — deliberately non-transitive so `OrderGraph : AppGraph`-style graph
      * inheritance doesn't leak into routes), including [graphFq] itself. Task 2.3 (E5) needs this
-     * beyond the nesting relationship captured by [graphFq]: a route may additionally implement a
-     * *second*, non-enclosing graph interface, which is itself the violation.
+     * beyond the single membership relationship captured by [graphFq]: a route may additionally
+     * implement a *second*, non-membership graph interface, which is itself the violation.
      */
     val implementedGraphFqs: List<String>,
 )
@@ -88,6 +89,23 @@ data class GraphModelNode(
     val startFq: String?,
     val memberFq: List<String>,
     val parentFlowFq: String?,
+    /**
+     * Every `@NavGraph`/`@FlowGraph`-annotated interface this graph implements DIRECTLY (declared
+     * supertypes only, non-transitive). The graph-level parallel of [RouteModel.implementedGraphFqs]:
+     * a well-formed graph has AT MOST one (its parent, `OrderGraph : AppGraph` spec §3.1); two or more
+     * is the ambiguous-parent violation (N11) — the membership walk needs a single parent.
+     */
+    val directParentFqs: List<String>,
+    /**
+     * The single graph/flow this graph is a member of (Task 8.1): the annotated supertype it declares
+     * (`subtyping = nesting`, design-notes §3), falling back to a lexically-enclosing annotated graph.
+     * `null` = no parent by either mechanism — a top-level root graph/flow (legitimate; reached by an
+     * edge) OR, when [isNested], an orphan (N12). Distinct from [parentFlowFq], which skips
+     * intervening `@NavGraph`s to name the nearest enclosing FLOW.
+     */
+    val membershipParentFq: String?,
+    /** Lexically nested inside another type declaration (vs a top-level file member) — feeds N12. */
+    val isNested: Boolean,
 )
 
 /** The full semantic model read from `@NavGraph`/`@FlowGraph`-annotated sources. */

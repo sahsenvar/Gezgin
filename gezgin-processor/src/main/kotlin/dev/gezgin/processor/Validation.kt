@@ -12,7 +12,8 @@ import dev.gezgin.processor.model.RouteModel
 /**
  * Compile-time strictness gate for Task 2.3: walks the [GraphModel] produced by
  * [dev.gezgin.processor.model.ModelReader] and reports every violation of the Global Constraints
- * rule list (`E1`-`E5`, `G1`, `N9`, `R1`, `NB1`, `SD1`, `FX1`, `FX2`) as a KSP error. Each message is
+ * rule list (`E1`-`E6`, `G1`, `N9`, `N10`, `N11`, `N12`, `R1`, `NB1`, `SD1`, `FX1`, `FX2`) as a KSP
+ * error. Each message is
  * prefixed with its bracketed rule code (`"[E1] ..."`) so tests and IDE tooling can key off it; KSP
  * errors fail the enclosing compilation, which is the enforcement mechanism.
  *
@@ -50,6 +51,8 @@ class GezginValidator(
             checkG1(graph)
             checkR1(graph)
             checkSD1(graph)
+            checkN11(graph)
+            checkN12(graph)
         }
         checkN10ClassNames()
         return ok
@@ -219,6 +222,43 @@ class GezginValidator(
                 "${route.simpleName}, nested olduğu ${simple(route.graphFq)} dışında ikinci bir " +
                     "graph-arayüzü (${simple(second)}) implement ediyor — bir route yalnız kendi " +
                     "graph'ını implement edebilir",
+            )
+        }
+    }
+
+    // endregion
+
+    // region N11/N12 — graph/flow parent structure (Task 8.1 flat-file membership)
+
+    /**
+     * A graph/flow may declare AT MOST ONE annotated graph/flow supertype — the membership walk
+     * (which derives `graphFq`/`flowChainFq`/`parentFlow`) needs a single unambiguous parent.
+     * `OrderGraph : AppGraph` (one parent, spec §3.1) is fine; declaring two annotated parents is not.
+     * The graph-level parallel of the route-level E5.
+     */
+    private fun checkN11(graph: GraphModelNode) {
+        if (graph.directParentFqs.size >= 2) {
+            error(
+                "N11",
+                "${simple(graph.fqName)} birden çok annotated graph/flow'u doğrudan implement ediyor " +
+                    "(${graph.directParentFqs.joinToString { simple(it) }}) — bir graph/flow'un ebeveyni tek olmalı",
+            )
+        }
+    }
+
+    /**
+     * An öksüz (orphan) `@FlowGraph`: lexically NESTED inside a non-graph declaration yet declaring no
+     * annotated graph/flow supertype, so neither subtyping (`: ParentGraph`) nor nesting connects it
+     * to a graph and its members float free. A TOP-LEVEL `@FlowGraph` is a legitimate root/independent
+     * flow (entered by an edge, e.g. `@GoForResult`) — [GraphModelNode.isNested] is false there, so it
+     * is exempt.
+     */
+    private fun checkN12(graph: GraphModelNode) {
+        if (graph.isFlow && graph.membershipParentFq == null && graph.isNested) {
+            error(
+                "N12",
+                "${simple(graph.fqName)} bir @FlowGraph ama hiçbir annotated graph/flow'a bağlı değil — " +
+                    "ne supertype (`: ParentGraph`) ne de kapsayan bir graph var (öksüz); bir graph'a bağla",
             )
         }
     }
