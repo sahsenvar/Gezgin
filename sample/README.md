@@ -42,17 +42,20 @@ olmasa bile (`model.graphs.isEmpty()`) `@Screen`/`@Dialog`/`@BottomSheet` kayıt
 
 ## Navigasyon grafiği
 
-Tam grafik `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/{AuthGraph,HomeGraph,ProfileGraph}.kt` dosyalarında;
-üç `@NavGraph` (`AuthGraph`, `HomeGraph`, `ProfileGraph`) doğrudan `Route` altında,
-artı iç içe `AvatarFlow` → `ZoomFlow` (`@FlowGraph` içinde `@FlowGraph`).
+Tam grafik `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/` altında;
+üç `@NavGraph` (`AuthGraph`, `HomeGraph`, `ProfileGraph`) doğrudan `Route` altında.
+**Flat-file kanıtı (Faz 8.2):** `SignUpFlow` ve `AvatarFlow` kendi dosyalarında (`SignUpFlow.kt`,
+`AvatarFlow.kt`) top-level `@FlowGraph` olarak durur — üyelik nesting'den değil deklare edilen
+supertype'tan gelir (`: AuthGraph` / `: ProfileGraph`, aynı paket). `AvatarFlow` içinde nested
+`ZoomFlow` kalır (`@FlowGraph` içinde `@FlowGraph`) → hibrit: top-level flow + nested alt-flow.
 
 ## Kapsama tablosu
 
 | Özellik | Route(lar) | Ekran / dosya |
 |---|---|---|
 | `@NavGraph` ×3 | `AuthGraph`, `HomeGraph`, `ProfileGraph` | `AuthGraph.kt`, `HomeGraph.kt`, `ProfileGraph.kt` |
-| result'suz `@FlowGraph` | `AuthGraph.SignUpFlow` | `AuthGraph.kt` |
-| `ResultFlow<T>` + nested `@FlowGraph` | `ProfileGraph.AvatarFlow` → `AvatarFlow.ZoomFlow` | `ProfileGraph.kt` |
+| result'suz `@FlowGraph` (flat-file, top-level `: AuthGraph`) | `SignUpFlow` | `SignUpFlow.kt` |
+| `ResultFlow<T>` + nested `@FlowGraph` (flat-file, top-level `: ProfileGraph`) | `AvatarFlow` → `AvatarFlow.ZoomFlow` | `AvatarFlow.kt` |
 | `@StartDestination` / G1 (app start) | `SignUpFlow.CredentialsScreenRoute`, `AvatarFlow.PickSourceScreenRoute`, `ZoomFlow.ZoomScreenRoute`; gerçek app start = `LoginScreenRoute` | graph dosyaları, `MainActivity.kt` |
 | `@GoTo` (+ `singleTop=false` + `name=`) | `DashboardScreenRoute→ItemDetailScreenRoute`; `ItemDetailScreenRoute→ItemDetailScreenRoute` (`goToRelated`, R2 dup) | `HomeScreens.kt` |
 | `@ReplaceTo` (Self-default) | `LoginScreenRoute→DashboardScreenRoute` (`loginSuccess`), `WelcomeScreenRoute→DashboardScreenRoute` (`continueToDashboard`) | `AuthScreens.kt`, `HomeScreens.kt` |

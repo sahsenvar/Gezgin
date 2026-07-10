@@ -47,12 +47,12 @@ Gezgin hiçbir DI'a bağlı değil. Codegen parça üretir (entry'ler, navigator
 **Kural:** navigasyon grafiği & davranışı → **sealed route ağacı**; pikseller & sunum → **composable**.
 
 ### 3.1 Route & Graph
-- Route = `@Serializable` data class/object, ait olduğu graph'ın `sealed interface`'i **içinde** nested (namespaced).
-- Graph = `sealed interface`; alt-graph subtyping ile bağlanır (`OrderGraph : AppGraph`) — nesting = subtyping.
+- Route = `@Serializable` data class/object; ait olduğu graph'ı **doğrudan supertype** olarak deklare eder (`: OrderGraph`). Namespace için graph'ın `sealed interface`'i **içine** nested yazılır **ya da** (büyük graph'larda) aynı pakette **ayrı dosyada top-level** durur — üyelik dosya konumundan değil supertype'tan gelir.
+- Graph = `sealed interface`; alt-graph subtyping ile bağlanır (`OrderGraph : AppGraph`) — bağ **deklare edilen supertype**, nesting görsel kolaylık.
 - **Her route bir graph içinde** sarılı; graph iki türden biri (V1):
   - **`@NavGraph`** → **şeffaf** grup: üyeleri sırasız, **istenen üyesinden** girilir (container'a `@GoTo` **yasak** → yalnız üyeye); `@StartDestination` **yok**; stand-alone olabilir (birden çok yerden erişilir). Graph'ların çoğu bu.
   - **`@FlowGraph`** → **opak** transactional flow (§8.1): kara kutu, dışarıdan yalnız **container'a** girilir, `@StartDestination` **var**, `ResultFlow<T>` **yalnız** buna takılır.
-- **Üyelik = lexical nesting (E5):** route, nested olduğu graph'ın üyesidir; onun dışında **ikinci bir graph interface'i DOĞRUDAN implement edemez** (derleme hatası; kontrol direct supertype'ta — `OrderGraph : AppGraph` alt-graph deseni transitive miras yüzünden E5 tetiklemez) — flow opaklığı bu teklik kuralına dayanır.
+- **Üyelik = doğrudan (declared) supertype:** route/alt-graph, **doğrudan implement ettiği** graph/flow interface'inin üyesidir (`X : SignUpFlow` → `SignUpFlow`'un). Bir üye **ikinci bir graph/flow'u DOĞRUDAN implement edemez** (derleme hatası) — route'ta **E5**, graph/flow'da **N11** (tek ebeveyn; `OrderGraph : AppGraph` alt-graph deseni transitive miras yüzünden tetiklemez) — flow opaklığı bu teklik kuralına dayanır. Nesting **görsel**: bir üyeyi kapsayan graph'ın gövdesine yazmak üyeliği vermez, `: Parent` verir; iyi biçimli nested kodda ikisi çakışır (nested, `: Parent` yazmakla birebir aynı okunur — model bit-bit korunur). **Hibrit fallback:** yalnız kapsayan flow'u supertype olarak deklare **etmeyen** (`: Route`-tek) nested üyede en yakın kapsayan graph üye sayılır (ör. `ResultFlow` mirasından kaçınmak için bilinçle `: Route` bırakılan iç flow).
 - `@StartDestination` (**yalnız `@FlowGraph`**) flow'un giriş üyesini işaretler. **Guardrail 1:** start, codegen'in argümansız kurabileceği bir şey olmalı (`data object`, ya da tüm param default/nullable — codegen default'suz nullable param'lara `null` geçer) — aksi halde **derlenmez**.
 - **V1 tek-stack** (Nav3'ün tek listesi). Paralel per-tab stack, tab switcher (`@TabGraph`), deep-link → **V2** (§17). Bottom-nav = uygulama-yönetimli (Gezgin `goTo`/`replaceTo` verir).
 
@@ -69,6 +69,10 @@ sealed interface OrderGraph : AppGraph {
     @Serializable data class OrderInvoiceRoute(val orderId: String) : OrderGraph
 }
 ```
+
+**Flat-file yerleşim (büyük graph'lar için önerilen):** üyelik supertype'tan geldiği için bir alt-graph/flow, kapsayan graph'ın `sealed interface`'i içine nested yazılmak **zorunda değil** — aynı pakette **ayrı bir dosyada** top-level durabilir (`@FlowGraph @Serializable sealed interface SignUpFlow : AuthGraph { … }`; Kotlin sealed kuralı alt-tipi aynı paket+modülde tutar). Nested ve flat-file **denk** okunur; tek-dosya-graph'lar 500-1000 satıra şiştiğinde flow'ları kendi dosyalarına bölmek okunurluğu korur. Canlı kanıt: `sample/navigation` (`SignUpFlow.kt`, `AvatarFlow.kt` — `AvatarFlow` içinde `ZoomFlow` nested kalır).
+
+> **⚠️ Sürüm/PD uyarısı:** bir flow'u nested ↔ top-level arası taşımak **FQ'sunu değiştirir** (`AuthGraph.SignUpFlow` → `SignUpFlow`). `flowPath` ve polimorfik serializer adları FQ-tabanlı olduğundan, **önceki app sürümünden** serialize edilmiş bir back-stack yeni yerleşimle restore **edilemez** (bilinmeyen tip → decode hatası/kayıp entry). Yerleşim değişimi bir migration'dır: canlı kurulu tabanı olan app'te bir flow'u bir kez konumlandır, sonra FQ'sunu sabit tut.
 
 ### 3.2 Kind (composable'da)
 Kind annotation composable'da durur ve üç iş yapar: destination = binding, sunum kind'ı, `route:` param tipinden route'a bağ.
@@ -185,7 +189,7 @@ Transactional sub-journey (checkout, sign-up, KYC, walkthrough). Kara kutu:
 | `ResultFlow` container | ❌ **E1** | ❌ **E1** | ✅ | ❌ **E1** |
 | Herhangi bir flow'un **iç üyesi** | ❌ **E3** | ❌ **E3** | ❌ **E3** | ❌ **E3** |
 
-> **E1:** `ResultFlow`'a giriş yalnız `@GoForResult` (bekleyen caller şart) · **E2:** `@GoForResult` hedefi `ResultRoute`/`ResultFlow` olmalı · **E3:** flow kara kutu — iç üyeye dışarıdan edge yok · **E4:** flow üyesinde `clearUpTo` flow sınırını aşamaz (üyelik **transitive** — flow içindeki nested `@NavGraph` üyeleri flow-içi sayılır) · **E5:** route ikinci bir graph interface'i implement edemez (§3.1). Ayrıca: `@NoBack`+flow-start · `ResultFlow` non-`@FlowGraph`'ta · isimsiz edge çakışması (N9).
+> **E1:** `ResultFlow`'a giriş yalnız `@GoForResult` (bekleyen caller şart) · **E2:** `@GoForResult` hedefi `ResultRoute`/`ResultFlow` olmalı · **E3:** flow kara kutu — iç üyeye dışarıdan edge yok · **E4:** flow üyesinde `clearUpTo` flow sınırını aşamaz (üyelik **transitive** — flow içindeki nested `@NavGraph` üyeleri flow-içi sayılır) · **E5:** route ikinci bir graph interface'i implement edemez (§3.1). Ayrıca: `@NoBack`+flow-start · `ResultFlow` non-`@FlowGraph`'ta · isimsiz edge çakışması (N9) · **N11:** graph/flow 2+ annotated graph/flow'u doğrudan implement edemez (E5'in graph-seviyesi karşılığı; tek ebeveyn) · **N12:** öksüz nested `@FlowGraph` (non-graph deklarasyona gömülü, hiçbir annotated graph'a bağlı değil) reddedilir — **top-level `@FlowGraph` muaf** (meşru root/bağımsız flow).
 
 **Çıkışlar:**
 
