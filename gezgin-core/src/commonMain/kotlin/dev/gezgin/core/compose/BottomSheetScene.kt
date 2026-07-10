@@ -10,6 +10,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.OverlayScene
@@ -19,29 +20,50 @@ import androidx.navigation3.scene.SceneStrategyScope
 import dev.gezgin.core.Route
 
 /**
- * `@BottomSheet` content'ine Gezgin'in enjekte ettiği [SheetState] (§7) — **register imzası
- * DEĞİŞMEDEN** sheet durumunu content'e taşıyan rol-param'ı. [LocalGezginEntryId]/
- * [LocalGezginRawNavigator] deseniyle simetrik: [GezginBottomSheetScene] `ModalBottomSheet`'i kurarken
- * `sheetState`'i bu Local ile sarar; `@BottomSheet` content'i `LocalGezginSheetState.current` ile okur.
+ * Gezgin-owned handle a `@BottomSheet` content uses to dismiss its sheet (§7) — read from
+ * [LocalGezginSheetController]. It replaces the raw material3 `SheetState` on the public surface, so no
+ * experimental third-party type is locked into Gezgin's ABI; the material `SheetState` stays an internal
+ * implementation detail of [GezginBottomSheetScene].
  *
- * **DİKKAT — ÇIPLAK `hide()` state-desync üretir (m1):** bir buton'dan sheet'i kapatmak için
- * `scope.launch { sheetState.hide() }` TEK BAŞINA YETMEZ — `hide()` yalnız sheet'i GÖRSEL olarak
- * Hidden'a animasyonlar; `onDismissRequest`'i TETİKLEMEZ, dolayısıyla entry stack'in top'unda KALIR
- * (geri tuşu artık "görünmez bir sheet"i kapatır). Doğru desen: gizle, SONRA navigator'la pop et —
- * `scope.launch { sheetState.hide(); nav.back() }` (ya da `ResultRoute` sheet'inde
- * `sheetState.hide(); nav.backWithResult(value)`). Bu, `@NoBack`×sheet yasağının [EntryAdapter]'daki
- * gerekçesiyle (aynı desync) simetriktir — kütüphane kendi KDoc'unda o tuzağı önermemeli.
- *
- * **sheetState enjeksiyon kararı = CompositionLocal (register imzası sabit):** alternatif (register'a
- * `@BottomSheet` özel overload) imzayı çoğaltırdı. Local ile `register<R> { ... }` tek imza kalır; Faz 3.4
- * codegen'i İLERİDE BOTTOM_SHEET content'inin `sheetState` param'ını bu Local'dan besleyecek şekilde
- * genişletilebilir (bu görevde core-mode register + Local yeterli — 4.4/gelecek notu).
- *
- * `staticCompositionLocalOf` — değer sheet-entry başına stabil (entry recompose olduğunda `SheetState`
- * instance'ı `remember`'lı kalır); dynamic read-tracking maliyeti gereksiz.
+ * A bare visual [hide] on its own leaves the entry on the stack (the back button would then dismiss an
+ * invisible sheet) — pair it with a navigator pop, or use [hideAndBack]. For a `ResultRoute` sheet,
+ * deliver the result via the typed navigator's `backWithResult(value)` right after [hide].
  */
-public val LocalGezginSheetState: ProvidableCompositionLocal<SheetState> = staticCompositionLocalOf<SheetState> {
-    error("LocalGezginSheetState yalnız GezginDisplay'in kurduğu @BottomSheet content'i içinde okunabilir.")
+public interface GezginSheetController {
+    /** Animate the sheet to fully hidden WITHOUT popping the entry. Pair with a navigator pop. */
+    public suspend fun hide()
+
+    /** Animate the sheet hidden, then pop this sheet entry via the navigator (Canceled for a ResultRoute sheet). */
+    public suspend fun hideAndBack()
+}
+
+/**
+ * The [GezginSheetController] Gezgin injects into `@BottomSheet` content. Symmetric to
+ * [LocalGezginEntryId]/[LocalGezginRawNavigator]: [GezginBottomSheetScene] provides it around
+ * `entry.Content()`. Gated behind [dev.gezgin.core.GezginInternalApi] is unnecessary here — the controller
+ * is Gezgin-owned and safe to read; only reading it OUTSIDE a `@BottomSheet` content is an error.
+ *
+ * `staticCompositionLocalOf` — the value is stable per sheet entry (the controller is `remember`ed), so the
+ * read-tracking cost of a dynamic local is unnecessary.
+ */
+public val LocalGezginSheetController: ProvidableCompositionLocal<GezginSheetController> =
+    staticCompositionLocalOf {
+        error("LocalGezginSheetController yalnız GezginDisplay'in kurduğu @BottomSheet content'i içinde okunabilir.")
+    }
+
+/** [GezginSheetController] backed by the material3 [SheetState] + the scene's back callback (internal impl). */
+private class MaterialSheetController(
+    private val sheetState: SheetState,
+    private val onBack: () -> Unit,
+) : GezginSheetController {
+    override suspend fun hide() {
+        sheetState.hide()
+    }
+
+    override suspend fun hideAndBack() {
+        sheetState.hide()
+        onBack()
+    }
 }
 
 /** [GezginBottomSheetScene]'in `NavEntry.metadata`'da taşındığı anahtar (Gezgin-tanımlı, iki platformda
@@ -65,7 +87,7 @@ internal data class GezginBottomSheetProps(
  * El-yazımı BottomSheet [OverlayScene] (§7) — Nav3'te hazır `BottomSheetSceneStrategy` YOK (4.0 raporu §3)
  * → material3 `ModalBottomSheet` ile [androidx.navigation3.scene.DialogScene] şablonundan yazıldı.
  * `overlaidEntries` = alttaki entry'ler (arka SCREEN görünür kalır); `content` sheet'i overlay olarak
- * çizer ve `entry.Content()`'i [LocalGezginSheetState] ile sararak sheetState'i content'e enjekte eder.
+ * çizer ve `entry.Content()`'i [LocalGezginSheetController] ile sararak controller'ı content'e enjekte eder.
  *
  * **swipe-dismiss→Canceled:** `onDismissRequest = onBack` (= `SceneStrategyScope.onBack` =
  * `NavDisplay.onBack` = Gezgin [gezginOnBack]). material3'te swipe-down / scrim-tap / geri-tuşu ÜÇÜ de
@@ -104,6 +126,7 @@ internal class GezginBottomSheetScene(
 
     override val content: @Composable () -> Unit = {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = props.skipPartiallyExpanded)
+        val controller = remember(sheetState) { MaterialSheetController(sheetState, onBack) }
         ModalBottomSheet(
             onDismissRequest = onBack,
             sheetState = sheetState,
@@ -112,7 +135,7 @@ internal class GezginBottomSheetScene(
                 shouldDismissOnClickOutside = props.dismissOnClickOutside,
             ),
         ) {
-            CompositionLocalProvider(LocalGezginSheetState provides sheetState) {
+            CompositionLocalProvider(LocalGezginSheetController provides controller) {
                 entry.Content()
             }
         }

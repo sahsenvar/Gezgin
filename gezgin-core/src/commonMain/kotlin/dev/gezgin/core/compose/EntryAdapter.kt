@@ -1,3 +1,5 @@
+@file:OptIn(GezginInternalApi::class)
+
 package dev.gezgin.core.compose
 
 import androidx.compose.runtime.CompositionLocalProvider
@@ -7,6 +9,7 @@ import androidx.navigation3.scene.DialogSceneStrategy
 import dev.gezgin.core.BottomSheetContract
 import dev.gezgin.core.DialogContract
 import dev.gezgin.core.FullscreenModalContract
+import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route

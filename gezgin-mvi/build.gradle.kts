@@ -1,9 +1,17 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
     `maven-publish`
+}
+
+// Faz 9.3 (M7) — JVM/Android derlemelerinde `-Xjvm-default=all` (bkz. gezgin-core gerekçesi):
+// `GezginMvi$DefaultImpls` ABI'ye girmez, default'lu interface'lere üye eklemek ileride kolaylaşır.
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions.freeCompilerArgs.add("-Xjvm-default=all")
 }
 
 // Faz 7.4 — versiyonlama: proje ilk sürümü (bkz. gezgin-core/build.gradle.kts gerekçesi — modül-başına

@@ -16,6 +16,9 @@ plugins {
 // Faz 9.1 — ABI doğrulaması YALNIZ yayınlanan 3 modül için (core/mvi/processor). Yayınlanmayan her şey
 // (gezgin-test + tüm sample/* modülleri) hariç tutulur → onlar için .api dosyası tutulmaz/kontrol edilmez.
 apiValidation {
+    // Faz 9.3 (K4) — @GezginInternalApi ile işaretli forced-public semboller (codegen/gezgin-test kancaları)
+    // kilitli ABI yüzeyinden düşürülür → alpha01 sonrası deprecation döngüsü olmadan evrilebilirler.
+    nonPublicMarkers += "dev.gezgin.core.GezginInternalApi"
     ignoredProjects += listOf(
         "gezgin-test",
         "shopr", "navigation", "app",

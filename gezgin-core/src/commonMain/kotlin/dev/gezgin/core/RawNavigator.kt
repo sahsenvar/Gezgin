@@ -1,3 +1,5 @@
+@file:OptIn(GezginInternalApi::class)
+
 package dev.gezgin.core
 
 import kotlin.reflect.KClass
@@ -35,13 +37,25 @@ import kotlinx.serialization.json.Json
  * yardımcısı bu AYNI app-Json'ı (polimorfik Route modülüyle) `arguments` Bundle encode'unda yeniden
  * kullanır (ikinci Json ÜRETMEZ → backstack PD'siyle simetri). Yalnız modül-içi görünür, public'e sızmaz.
  */
-public class RawNavigator(
+public class RawNavigator internal constructor(
     start: Route,
     private val topology: GezginTopology,
-    internal val onRootBack: () -> Unit = {},
-    internal val json: Json = Json,
+    internal val onRootBack: () -> Unit,
+    internal val json: Json,
     restored: SavedState? = null,
 ) {
+    /**
+     * Public construction for tests and integration (`GezginTestNavigator`, custom hosts). Deliberately
+     * omits the [json]/[restored] process-death parameters — those belong to the same-module
+     * `rememberNavigator` restore path (the app's stable [kotlinx.serialization.json.Json] is supplied
+     * there), so [SavedState] and its slot schema stay off the public surface.
+     */
+    public constructor(
+        start: Route,
+        topology: GezginTopology,
+        onRootBack: () -> Unit = {},
+    ) : this(start, topology, onRootBack, Json, restored = null)
+
     // `var` (C1): identity-stabil facade — config-change'te [adoptRestored] AYNI instance'ın `state`'ini
     // re-point eder (yeni RawNavigator KURMAZ). VM ctor'unda yakalanan navigator referansı böylece
     // rotasyondan sonra da display'in gözlemlediği aynı akışları sürer (spec §225 "stable RawNavigator").
@@ -256,6 +270,7 @@ public class RawNavigator(
      * yanlışlıkla pop edilmez (kirli-teslim/çifte-back yarışı önlenir). Faz 2 codegen'in ürettiği tipli
      * `backWithResult(result)` ctor'daki `entryId`'yi bu overload'a bağlar.
      */
+    @GezginInternalApi
     public fun backWithResult(entryId: Long, result: Any?) {
         val top = state.stack.last()
         if (top.id != entryId) return            // sahip entry artık top değil → teslim etme, pop etme
@@ -264,10 +279,11 @@ public class RawNavigator(
         popTopAndEmit()
     }
 
-    /** Kolaylık: sahip = ÇAĞRI ANINDAKİ top (call-time-top). Tipli katman entry'ye bağlayan overload'ı kullanır. */
+    /** Convenience: owner = the call-time top entry. The typed layer pins the entry via the id overload. */
     public fun backWithResult(result: Any?): Unit = backWithResult(currentEntryId, result)
 
-    /** Çağrı anındaki top entry id — açık-caller overload'larına Faz 2 codegen'in bağlayacağı kanca. */
+    /** The call-time top entry id — the hook generated navigators bind to the explicit-caller overloads. */
+    @GezginInternalApi
     public val currentEntryId: Long get() = state.stack.last().id
 
     /**
@@ -282,6 +298,7 @@ public class RawNavigator(
      * Açık-caller (Faz 2 kancası): idempotent (§6) — aynı (caller, edge) için slot varken (in-flight
      * VEYA teslim edilmiş-tüketilmemiş) push YAPMA. Aksi halde result isteği DAİMA yeni entry yaratır.
      */
+    @GezginInternalApi
     public fun launchForResult(callerEntryId: Long, edgeId: String, route: Route) {
         // Pre-guard, bus.launch'un predicate'iyle birebir aynı (HERHANGİ bir slot — result durumu fark etmez):
         // teslim edilmiş ama tüketilmemiş slot varken re-launch, slotsuz öksüz bir entry push'lardı.
@@ -301,6 +318,7 @@ public class RawNavigator(
     public fun launchForResult(edgeId: String, route: Route): Unit = launchForResult(currentEntryId, edgeId, route)
 
     /** Açık-caller (Faz 2 kancası): (caller, edge) slotunun sonuç akışı. */
+    @GezginInternalApi
     public fun <T> results(callerEntryId: Long, edgeId: String): Flow<NavResult<T>> = bus.results(callerEntryId, edgeId)
 
     /**
@@ -311,6 +329,7 @@ public class RawNavigator(
     public fun <T> results(edgeId: String): Flow<NavResult<T>> = results(currentEntryId, edgeId)
 
     /** Açık-caller sugar = launch + results.first() (Faz 2 kancası). */
+    @GezginInternalApi
     public suspend fun <T> navigateForResult(callerEntryId: Long, edgeId: String, route: Route): NavResult<T> {
         launchForResult(callerEntryId, edgeId, route)
         return bus.results<T>(callerEntryId, edgeId).first()

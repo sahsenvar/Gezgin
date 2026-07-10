@@ -1,6 +1,9 @@
+@file:JvmName("FragmentBinding")
+
 package dev.gezgin.core.fragment
 
 import androidx.fragment.app.Fragment
+import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.Route
 import java.util.WeakHashMap
 import kotlin.properties.ReadOnlyProperty
@@ -59,6 +62,7 @@ private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
  * (fragment, route, nav) }` şekliyle bire bir olsun ve gelecekteki registry-tabanlı arg erişimine kapı açık
  * kalsın diye imzada TUTULUR.
  */
+@GezginInternalApi
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
     boundRegistry[fragment] = BoundGezgin(nav)
@@ -77,6 +81,7 @@ public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
  * **KOŞULSUZ put** — nav'lı aşırı-yükleme ile aynı idempotency sözleşmesi (bind-once guard YOK): config-
  * change/PD sonrası yeni instance yeniden bağlanmalı. `public`: üretilen kod tüketici modülünde.
  */
+@GezginInternalApi
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route) {
     boundRegistry[fragment] = BoundGezgin(nav = null)

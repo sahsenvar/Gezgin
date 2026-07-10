@@ -1,21 +1,23 @@
 package dev.gezgin.core.annotation
 
+import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.Route
 import kotlin.reflect.KClass
 
 /**
- * İÇ CODEGEN SÖZLEŞMESİ (elle KULLANMA). `NavigatorCodegen`, ürettiği her `XNavigator` sınıfını KÖKEN
- * route'unun [KClass]'ıyla damgalar — sınıf ADI değil, KİMLİĞİ taşınsın diye.
+ * INTERNAL CODEGEN CONTRACT (do not use by hand). `NavigatorCodegen` stamps every generated `XNavigator`
+ * class with its origin route's [KClass] — carrying the route IDENTITY, not just the class NAME.
  *
- * Neden: cross-module nav-wiring PROBE'u (`NavigatorProbe`) bir route'un navigator'ı olup olmadığını
- * classpath'te `getClassDeclarationByName("${routePkg}.${x}Navigator")` ile arar. `x` türetimi (`stripSuffix`)
- * çakışabilir — `HelpRoute` ve `HelpScreenRoute` ikisi de `x=Help` → `HelpNavigator` ADIYLA eşleşir. Ada
- * bakan bir probe, display-only bir route'a YABANCI bir route'un navigator'ını sessizce bağlardı (derlenir,
- * cast tutar, yanlış edge'lerle gezinilir). Probe sınıfı bulduğunda [route]'u entry'nin routeFq'siyle
- * karşılaştırır → yalnız KİMLİK eşleşince nav bağlanır.
+ * Why: the cross-module nav-wiring PROBE (`NavigatorProbe`) looks a route's navigator up on the classpath
+ * via `getClassDeclarationByName("${routePkg}.${x}Navigator")`. The `x` derivation (`stripSuffix`) can clash
+ * — `HelpRoute` and `HelpScreenRoute` both derive `x=Help` → both match the NAME `HelpNavigator`. A
+ * name-only probe would silently bind a foreign route's navigator to a display-only route (it compiles, the
+ * cast holds, and navigation follows the wrong edges). Once the probe finds a class it compares [route]
+ * against the entry's routeFq → nav is bound only on an IDENTITY match.
  *
- * Retention açıkça belirtilmez (kardeş anotasyonlar gibi varsayılan) → cross-module KSP okuması için
- * damganın derlenmiş classpath declaration'ında görünür kalması şart.
+ * Gated behind [GezginInternalApi] (K4): only generated code applies it; it stays a BINARY-retained
+ * classpath stamp for the cross-module KSP read.
  */
+@GezginInternalApi
 @Target(AnnotationTarget.CLASS)
 public annotation class GezginNavigatorFor(val route: KClass<out Route>)

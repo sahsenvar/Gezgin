@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -5,6 +7,14 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
     `maven-publish`
+}
+
+// Faz 9.3 (M7) — JVM/Android derlemelerinde `-Xjvm-default=all`: default'lu interface üyeleri gerçek JVM
+// default method'una çevrilir → `$DefaultImpls` sınıfları ABI'ye girmez (yayın sonrası `all`'a geçiş
+// binary-breaking olurdu; ilk yayında temiz başlanır). `KotlinCompile` yalnız JVM+Android compile
+// task'lerini yakalar (metadata `KotlinCompileCommon` hariç → JVM-only flag orada uyarı vermez).
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions.freeCompilerArgs.add("-Xjvm-default=all")
 }
 
 // Faz 7.4 — versiyonlama: proje ilk sürümü. Convention-plugin bilinçle kullanılmıyor (sample netliği

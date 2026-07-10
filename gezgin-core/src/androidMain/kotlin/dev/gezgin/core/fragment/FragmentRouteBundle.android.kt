@@ -1,6 +1,9 @@
+@file:JvmName("FragmentRouteBundle")
+
 package dev.gezgin.core.fragment
 
 import android.os.Bundle
+import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
 import kotlin.jvm.Volatile
@@ -41,6 +44,7 @@ internal var gezginFragmentJson: Json? = null
  * gibi diğer codegen-çağrılı sembollerle aynı (public ama codegen-yönelimli). Yan etki: `gezginArgs`'ın
  * kapsamsız decode yolu için [gezginFragmentJson]'ı yakalar.
  */
+@GezginInternalApi
 public fun Route.toBundle(nav: RawNavigator): Bundle {
     gezginFragmentJson = nav.json
     val encoded = nav.json.encodeToString(PolymorphicSerializer(Route::class), this)

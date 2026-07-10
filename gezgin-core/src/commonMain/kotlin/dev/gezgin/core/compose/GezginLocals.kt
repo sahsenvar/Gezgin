@@ -1,23 +1,38 @@
 package dev.gezgin.core.compose
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
+import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.RawNavigator
 
 /**
- * Top-entry-drive sözleşmesi (Faz 2 final-review devri (b), §10.1/§12): bir entry'nin content'i
- * YALNIZ KENDİ `entryId`'siyle kurulmuş bir navigator görür — [GezginDisplay] her entry content'ini
- * [toNavEntry] içinde bu iki local ile sarar. Faz 3.4'ün üreteceği `provideXEntry` bunlardan tipli
- * (codegen'in `xNavigator()` uzantısı) navigator kuracak.
+ * Top-entry-drive contract (§10.1/§12): an entry's content only ever sees a navigator built with its OWN
+ * `entryId` — [GezginDisplay] wraps every entry content with these two locals inside `toNavEntry`, and the
+ * generated `provideXEntry` reads them to build the typed navigator (`xNavigator()`).
  *
- * `staticCompositionLocalOf` — değer entry başına stabil (entry recompose olduğunda değişmez,
- * yalnız entry değiştiğinde farklı bir Content() ağacı kurulur); dynamic'in read-tracking maliyetine
- * gerek yok.
+ * Both locals are gated behind [GezginInternalApi] (K4): only generated code installs and reads them.
+ * Application code that needs read access to the active navigator (core-mode) uses [currentGezginNavigator]
+ * instead — a read-only accessor that can't rewrite the display's provider contract.
+ *
+ * `staticCompositionLocalOf` — the value is stable per entry (unchanged on recomposition; a different
+ * entry installs a fresh `Content()` tree), so the read-tracking cost of a dynamic local is unnecessary.
  */
+@GezginInternalApi
 public val LocalGezginEntryId: ProvidableCompositionLocal<Long> = staticCompositionLocalOf<Long> {
     error("LocalGezginEntryId yalnız GezginDisplay'in kurduğu entry content'leri içinde okunabilir.")
 }
 
+@GezginInternalApi
 public val LocalGezginRawNavigator: ProvidableCompositionLocal<RawNavigator> = staticCompositionLocalOf<RawNavigator> {
     error("LocalGezginRawNavigator yalnız GezginDisplay'in kurduğu entry content'leri içinde okunabilir.")
 }
+
+/**
+ * Read-only access to the [RawNavigator] driving the current entry — the sanctioned way for core-mode
+ * (`register<R> { … }`) content to reach the raw navigator without the writable [LocalGezginRawNavigator]
+ * provider (which is [GezginInternalApi]). Valid only inside entry content installed by [GezginDisplay].
+ */
+@OptIn(GezginInternalApi::class)
+@Composable
+public fun currentGezginNavigator(): RawNavigator = LocalGezginRawNavigator.current
