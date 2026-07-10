@@ -37,12 +37,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * MVI-mode `@BottomSheet` (Integ M3) — the only sample route combining an MVI triple with a modal kind.
- * Drives the full kind'd chain live: `register(kind=BOTTOM_SHEET)` → sheet scene → generated
- * `viewModel(nav, route)` → `LocalGezginSheetState` role param (MV8). Loss-free effects via [GezginEffects].
- */
-
 data class NotificationsState(val selected: NotificationLevel)
 
 sealed interface NotificationsIntent {
@@ -77,7 +71,6 @@ class NotificationsViewModel(
     }
 }
 
-/** `sheetState` = MV8 role param (`LocalGezginSheetState.current`) — hide-then-pop for a clean close. */
 @BottomSheet(NotificationsSheetRoute::class)
 @Composable
 fun NotificationsSheetContent(

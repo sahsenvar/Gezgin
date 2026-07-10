@@ -6,12 +6,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Task 3.6 bonus — no Robolectric/Activity, plain JVM unit test proving KSP's generated
- * `gezginTopology` (dev.gezgin.sample.shopr.nav.GezginGenerated.kt) loads at runtime and reports a
- * sane [dev.gezgin.core.GezginTopology.flowChain] for a route nested inside the `CheckoutFlow`
- * `@FlowGraph`/`ResultFlow<OrderId>`.
- */
 class ShopGraphTopologyTest {
 
     @Test
