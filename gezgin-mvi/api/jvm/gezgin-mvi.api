@@ -11,18 +11,14 @@ public abstract interface class dev/gezgin/mvi/GezginMvi {
 	public abstract fun onIntent (Ljava/lang/Object;)V
 }
 
-public final class dev/gezgin/mvi/GezginMvi$DefaultImpls {
-	public static fun getEffects (Ldev/gezgin/mvi/GezginMvi;)Lkotlinx/coroutines/flow/Flow;
+public final class dev/gezgin/mvi/ObserveEffectsKt {
+	public static final fun ObserveEffects (Lkotlinx/coroutines/flow/Flow;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
 }
 
-public final class dev/gezgin/mvi/ObserveAsEventsKt {
-	public static final fun ObserveAsEvents (Lkotlinx/coroutines/flow/Flow;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
+public abstract interface annotation class dev/gezgin/mvi/annotation/MviViewModel : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
 }
 
 public abstract interface annotation class dev/gezgin/mvi/annotation/ScreenEffect : java/lang/annotation/Annotation {
-}
-
-public abstract interface annotation class dev/gezgin/mvi/annotation/ViewModel : java/lang/annotation/Annotation {
-	public abstract fun route ()Ljava/lang/Class;
 }
 
