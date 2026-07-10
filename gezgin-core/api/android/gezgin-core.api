@@ -1,0 +1,491 @@
+public abstract interface class dev/gezgin/core/BottomSheetContract {
+	public fun getDismissOnBackPress ()Z
+	public fun getDismissOnClickOutside ()Z
+	public fun getSkipPartiallyExpanded ()Z
+}
+
+public final class dev/gezgin/core/BottomSheetContract$DefaultImpls {
+	public static fun getDismissOnBackPress (Ldev/gezgin/core/BottomSheetContract;)Z
+	public static fun getDismissOnClickOutside (Ldev/gezgin/core/BottomSheetContract;)Z
+	public static fun getSkipPartiallyExpanded (Ldev/gezgin/core/BottomSheetContract;)Z
+}
+
+public abstract interface class dev/gezgin/core/DialogContract {
+	public fun getDismissOnBackPress ()Z
+	public fun getDismissOnClickOutside ()Z
+	public fun getUsePlatformDefaultWidth ()Z
+}
+
+public final class dev/gezgin/core/DialogContract$DefaultImpls {
+	public static fun getDismissOnBackPress (Ldev/gezgin/core/DialogContract;)Z
+	public static fun getDismissOnClickOutside (Ldev/gezgin/core/DialogContract;)Z
+	public static fun getUsePlatformDefaultWidth (Ldev/gezgin/core/DialogContract;)Z
+}
+
+public final class dev/gezgin/core/EdgeSpec {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Lkotlinx/serialization/KSerializer;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkotlinx/serialization/KSerializer;
+	public final fun copy (Ljava/lang/String;Lkotlinx/serialization/KSerializer;)Ldev/gezgin/core/EdgeSpec;
+	public static synthetic fun copy$default (Ldev/gezgin/core/EdgeSpec;Ljava/lang/String;Lkotlinx/serialization/KSerializer;ILjava/lang/Object;)Ldev/gezgin/core/EdgeSpec;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId ()Ljava/lang/String;
+	public final fun getResultSerializer ()Lkotlinx/serialization/KSerializer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/FlowType {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Z)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun copy (Ljava/lang/String;Z)Ldev/gezgin/core/FlowType;
+	public static synthetic fun copy$default (Ldev/gezgin/core/FlowType;Ljava/lang/String;ZILjava/lang/Object;)Ldev/gezgin/core/FlowType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isResultFlow ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/gezgin/core/FullscreenModalContract {
+	public fun getDismissOnBackPress ()Z
+	public fun getDismissOnClickOutside ()Z
+}
+
+public final class dev/gezgin/core/FullscreenModalContract$DefaultImpls {
+	public static fun getDismissOnBackPress (Ldev/gezgin/core/FullscreenModalContract;)Z
+	public static fun getDismissOnClickOutside (Ldev/gezgin/core/FullscreenModalContract;)Z
+}
+
+public abstract interface annotation class dev/gezgin/core/GezginInternalApi : java/lang/annotation/Annotation {
+}
+
+public final class dev/gezgin/core/GezginKey {
+	public static final field $stable I
+	public static final field Companion Ldev/gezgin/core/GezginKey$Companion;
+	public fun <init> (Ldev/gezgin/core/Route;JLjava/util/List;)V
+	public synthetic fun <init> (Ldev/gezgin/core/Route;JLjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ldev/gezgin/core/Route;
+	public final fun component2 ()J
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ldev/gezgin/core/Route;JLjava/util/List;)Ldev/gezgin/core/GezginKey;
+	public static synthetic fun copy$default (Ldev/gezgin/core/GezginKey;Ldev/gezgin/core/Route;JLjava/util/List;ILjava/lang/Object;)Ldev/gezgin/core/GezginKey;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFlowPath ()Ljava/util/List;
+	public final fun getId ()J
+	public final fun getRoute ()Ldev/gezgin/core/Route;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/gezgin/core/GezginKey$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/gezgin/core/GezginKey$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/gezgin/core/GezginKey;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/gezgin/core/GezginKey;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/gezgin/core/GezginKey$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/gezgin/core/GezginTopology {
+	public static final field $stable I
+	public fun <init> (Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;)V
+	public final fun flowChain (Lkotlin/reflect/KClass;)Ljava/util/List;
+	public final fun getEdges ()Ljava/util/Map;
+	public final fun startOf (Ljava/lang/String;)Lkotlin/reflect/KClass;
+}
+
+public abstract interface class dev/gezgin/core/NavEvent {
+}
+
+public final class dev/gezgin/core/NavEvent$BackToTargetMissing : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/gezgin/core/NavEvent$BackToTargetMissing;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavEvent$BackToTargetMissing;Ljava/lang/String;ILjava/lang/Object;)Ldev/gezgin/core/NavEvent$BackToTargetMissing;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTarget ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/NavEvent$FlowQuit : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public fun <init> (JZ)V
+	public final fun component1 ()J
+	public final fun component2 ()Z
+	public final fun copy (JZ)Ldev/gezgin/core/NavEvent$FlowQuit;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavEvent$FlowQuit;JZILjava/lang/Object;)Ldev/gezgin/core/NavEvent$FlowQuit;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCanceled ()Z
+	public final fun getFlowInstanceId ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/NavEvent$Popped : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public fun <init> (Ldev/gezgin/core/Route;)V
+	public final fun component1 ()Ldev/gezgin/core/Route;
+	public final fun copy (Ldev/gezgin/core/Route;)Ldev/gezgin/core/NavEvent$Popped;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavEvent$Popped;Ldev/gezgin/core/Route;ILjava/lang/Object;)Ldev/gezgin/core/NavEvent$Popped;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRoute ()Ldev/gezgin/core/Route;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/NavEvent$PoppedTo : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Ldev/gezgin/core/NavEvent$PoppedTo;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavEvent$PoppedTo;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/gezgin/core/NavEvent$PoppedTo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRemoved ()Ljava/util/List;
+	public final fun getTarget ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/NavEvent$Pushed : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public fun <init> (Ldev/gezgin/core/Route;)V
+	public final fun component1 ()Ldev/gezgin/core/Route;
+	public final fun copy (Ldev/gezgin/core/Route;)Ldev/gezgin/core/NavEvent$Pushed;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavEvent$Pushed;Ldev/gezgin/core/Route;ILjava/lang/Object;)Ldev/gezgin/core/NavEvent$Pushed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRoute ()Ldev/gezgin/core/Route;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/NavEvent$Replaced : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public fun <init> (Ljava/util/List;Ldev/gezgin/core/Route;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ldev/gezgin/core/Route;
+	public final fun copy (Ljava/util/List;Ldev/gezgin/core/Route;)Ldev/gezgin/core/NavEvent$Replaced;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavEvent$Replaced;Ljava/util/List;Ldev/gezgin/core/Route;ILjava/lang/Object;)Ldev/gezgin/core/NavEvent$Replaced;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPushed ()Ldev/gezgin/core/Route;
+	public final fun getRemoved ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/NavEvent$ResultDropped : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/gezgin/core/NavEvent$ResultDropped;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavEvent$ResultDropped;Ljava/lang/String;ILjava/lang/Object;)Ldev/gezgin/core/NavEvent$ResultDropped;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEdgeId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/NavEvent$RootBack : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/gezgin/core/NavEvent$RootBack;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/gezgin/core/NavResult {
+}
+
+public final class dev/gezgin/core/NavResult$Canceled : dev/gezgin/core/NavResult {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/gezgin/core/NavResult$Canceled;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/NavResult$Value : dev/gezgin/core/NavResult {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;)Ldev/gezgin/core/NavResult$Value;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavResult$Value;Ljava/lang/Object;ILjava/lang/Object;)Ldev/gezgin/core/NavResult$Value;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/gezgin/core/RawNavigator {
+	public static final field $stable I
+	public fun <init> (Ldev/gezgin/core/Route;Ldev/gezgin/core/GezginTopology;Lkotlin/jvm/functions/Function0;Lkotlinx/serialization/json/Json;Ldev/gezgin/core/SavedState;)V
+	public synthetic fun <init> (Ldev/gezgin/core/Route;Ldev/gezgin/core/GezginTopology;Lkotlin/jvm/functions/Function0;Lkotlinx/serialization/json/Json;Ldev/gezgin/core/SavedState;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun back ()V
+	public final fun backTo (Lkotlin/reflect/KClass;Z)V
+	public static synthetic fun backTo$default (Ldev/gezgin/core/RawNavigator;Lkotlin/reflect/KClass;ZILjava/lang/Object;)V
+	public final fun backWithResult (JLjava/lang/Object;)V
+	public final fun backWithResult (Ljava/lang/Object;)V
+	public final fun entryIdOf (Lkotlin/reflect/KClass;)Ljava/lang/Long;
+	public final fun getBackStack ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun getCurrent ()Ldev/gezgin/core/Route;
+	public final fun getCurrentEntryId ()J
+	public final fun getEvents ()Lkotlinx/coroutines/flow/Flow;
+	public final fun launchForResult (JLjava/lang/String;Ldev/gezgin/core/Route;)V
+	public final fun launchForResult (Ljava/lang/String;Ldev/gezgin/core/Route;)V
+	public final fun navigate (Ldev/gezgin/core/Route;Z)V
+	public static synthetic fun navigate$default (Ldev/gezgin/core/RawNavigator;Ldev/gezgin/core/Route;ZILjava/lang/Object;)V
+	public final fun navigateForResult (JLjava/lang/String;Ldev/gezgin/core/Route;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun navigateForResult (Ljava/lang/String;Ldev/gezgin/core/Route;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun quit ()V
+	public final fun quitAndGoTo (Ldev/gezgin/core/Route;)V
+	public final fun quitWith (Ljava/lang/Object;)V
+	public final fun replaceTo (Ldev/gezgin/core/Route;Lkotlin/reflect/KClass;Z)V
+	public static synthetic fun replaceTo$default (Ldev/gezgin/core/RawNavigator;Ldev/gezgin/core/Route;Lkotlin/reflect/KClass;ZILjava/lang/Object;)V
+	public final fun results (JLjava/lang/String;)Lkotlinx/coroutines/flow/Flow;
+	public final fun results (Ljava/lang/String;)Lkotlinx/coroutines/flow/Flow;
+}
+
+public abstract interface class dev/gezgin/core/ResultFlow {
+}
+
+public abstract interface class dev/gezgin/core/ResultRoute {
+}
+
+public abstract interface class dev/gezgin/core/Route {
+	public fun getTransition ()Ldev/gezgin/core/compose/GezginTransition;
+}
+
+public final class dev/gezgin/core/Route$DefaultImpls {
+	public static fun getTransition (Ldev/gezgin/core/Route;)Ldev/gezgin/core/compose/GezginTransition;
+}
+
+public final class dev/gezgin/core/SavedSlot {
+	public static final field $stable I
+	public static final field Companion Ldev/gezgin/core/SavedSlot$Companion;
+	public fun <init> (JLjava/lang/String;JLjava/lang/String;Z)V
+	public final fun getCallerEntryId ()J
+	public final fun getCanceled ()Z
+	public final fun getEdgeId ()Ljava/lang/String;
+	public final fun getPayloadJson ()Ljava/lang/String;
+	public final fun getTargetEntryId ()J
+}
+
+public final synthetic class dev/gezgin/core/SavedSlot$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/gezgin/core/SavedSlot$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/gezgin/core/SavedSlot;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/gezgin/core/SavedSlot;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/gezgin/core/SavedSlot$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/gezgin/core/SavedState {
+	public static final field $stable I
+	public static final field Companion Ldev/gezgin/core/SavedState$Companion;
+	public fun <init> (Ljava/util/List;JLjava/util/List;)V
+	public final fun getKeys ()Ljava/util/List;
+	public final fun getNextId ()J
+	public final fun getPendingSlots ()Ljava/util/List;
+}
+
+public final synthetic class dev/gezgin/core/SavedState$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/gezgin/core/SavedState$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/gezgin/core/SavedState;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/gezgin/core/SavedState;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public fun typeParametersSerializers ()[Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/gezgin/core/SavedState$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/gezgin/core/Self : dev/gezgin/core/Route {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/gezgin/core/Self;
+	public fun getTransition ()Ldev/gezgin/core/compose/GezginTransition;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/BackTo : java/lang/annotation/Annotation {
+	public abstract fun inclusive ()Z
+	public abstract fun target ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/BackTo$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/BackTo;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/BackToStart : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/BottomSheet : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/Dialog : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/FlowGraph : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/FragmentScreen : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/FullscreenModal : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/GezginNavigatorFor : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/GoForResult : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+	public abstract fun target ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/GoForResult$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/GoForResult;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/GoTo : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+	public abstract fun singleTop ()Z
+	public abstract fun target ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/GoTo$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/GoTo;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/NavGraph : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/NoBack : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/Quit : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/QuitAndGoTo : java/lang/annotation/Annotation {
+	public abstract fun target ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/ReplaceTo : java/lang/annotation/Annotation {
+	public abstract fun clearUpTo ()Ljava/lang/Class;
+	public abstract fun inclusive ()Z
+	public abstract fun name ()Ljava/lang/String;
+	public abstract fun target ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/ReplaceTo$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/ReplaceTo;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/Screen : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/StartDestination : java/lang/annotation/Annotation {
+}
+
+public final class dev/gezgin/core/compose/BottomSheetSceneKt {
+	public static final fun getLocalGezginSheetState ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public final class dev/gezgin/core/compose/EntryKind : java/lang/Enum {
+	public static final field BOTTOM_SHEET Ldev/gezgin/core/compose/EntryKind;
+	public static final field DIALOG Ldev/gezgin/core/compose/EntryKind;
+	public static final field FULLSCREEN_MODAL Ldev/gezgin/core/compose/EntryKind;
+	public static final field SCREEN Ldev/gezgin/core/compose/EntryKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/gezgin/core/compose/EntryKind;
+	public static fun values ()[Ldev/gezgin/core/compose/EntryKind;
+}
+
+public final class dev/gezgin/core/compose/GezginDisplayKt {
+	public static final fun GezginDisplay (Ldev/gezgin/core/RawNavigator;Landroidx/compose/ui/Modifier;Ldev/gezgin/core/compose/GezginTransition;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/gezgin/core/compose/GezginEntryScope {
+	public static final field $stable I
+	public final fun getRegistry ()Ljava/util/Map;
+}
+
+public final class dev/gezgin/core/compose/GezginLocalsKt {
+	public static final fun getLocalGezginEntryId ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+	public static final fun getLocalGezginRawNavigator ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public final class dev/gezgin/core/compose/GezginTransition {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;)V
+	public synthetic fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getBackward ()Lkotlin/jvm/functions/Function1;
+	public final fun getForward ()Lkotlin/jvm/functions/Function1;
+	public final fun getPredictive ()Lkotlin/jvm/functions/Function2;
+}
+
+public final class dev/gezgin/core/compose/GezginTransitionBuilder {
+	public static final field $stable I
+	public fun <init> ()V
+	public final fun backward (Lkotlin/jvm/functions/Function1;)V
+	public final fun forward (Lkotlin/jvm/functions/Function1;)V
+	public final fun predictive (Lkotlin/jvm/functions/Function2;)V
+}
+
+public final class dev/gezgin/core/compose/GezginTransitionKt {
+	public static final fun navTransitions (Lkotlin/jvm/functions/Function1;)Ldev/gezgin/core/compose/GezginTransition;
+	public static final fun transition (Lkotlin/jvm/functions/Function1;)Ldev/gezgin/core/compose/GezginTransition;
+}
+
+public final class dev/gezgin/core/compose/RegisteredEntry {
+	public static final field $stable I
+	public fun <init> (Ldev/gezgin/core/compose/EntryKind;ZLkotlin/jvm/functions/Function3;)V
+	public final fun getContent ()Lkotlin/jvm/functions/Function3;
+	public final fun getKind ()Ldev/gezgin/core/compose/EntryKind;
+	public final fun getNoBack ()Z
+}
+
+public final class dev/gezgin/core/compose/RememberNavigatorKt {
+	public static final fun rememberNavigator (Ldev/gezgin/core/Route;Ldev/gezgin/core/GezginTopology;Lkotlinx/serialization/json/Json;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)Ldev/gezgin/core/RawNavigator;
+}
+
+public final class dev/gezgin/core/fragment/FragmentBinding_androidKt {
+	public static final fun bindGezgin (Landroidx/fragment/app/Fragment;Ldev/gezgin/core/Route;)V
+	public static final fun bindGezgin (Landroidx/fragment/app/Fragment;Ldev/gezgin/core/Route;Ljava/lang/Object;)V
+	public static final fun gezginBoundNav (Landroidx/fragment/app/Fragment;)Ljava/lang/Object;
+	public static final fun gezginBoundRoute (Landroidx/fragment/app/Fragment;)Ldev/gezgin/core/Route;
+}
+
+public final class dev/gezgin/core/fragment/FragmentRouteBundle_androidKt {
+	public static final fun toBundle (Ldev/gezgin/core/Route;Ldev/gezgin/core/RawNavigator;)Landroid/os/Bundle;
+}
+

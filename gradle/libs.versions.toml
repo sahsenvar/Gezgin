@@ -41,6 +41,9 @@ hilt = "2.60.1"         # com.google.dagger:hilt-android — latest stable (Mave
 androidx-hilt = "1.4.0" # androidx.hilt:hilt-navigation-compose — latest stable (dl.google.com, 2026-07-08).
 #   NOT: 1.4.0'da androidx.hilt.navigation.compose.hiltViewModel @Deprecated → androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 #   (yeni artefakt: androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0). Codegen 5.2'de hedef paketi seçer.
+# Faz 9.1 — kotlinx binary-compatibility-validator: yayınlanan 3 modülün ABI'sini .api dosyalarıyla kilitler
+# (apiCheck `check`'e otomatik bağlanır). Latest stable (Maven Central, 2026-07-10).
+binary-compatibility-validator = "0.18.1"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -94,3 +97,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+binary-compatibility-validator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compatibility-validator" }
