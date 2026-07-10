@@ -1,3 +1,5 @@
+@file:OptIn(dev.gezgin.core.GezginInternalApi::class)
+
 package dev.gezgin.test.fixtures
 
 import dev.gezgin.core.EdgeSpec
