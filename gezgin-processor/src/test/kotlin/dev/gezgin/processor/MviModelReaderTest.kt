@@ -23,7 +23,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
  * under `gezgin.dumpMvi=true`; guardrail cases (`MV1`-`MV7`) assert a `[<code>]`-prefixed KSP error.
  *
  * Route-linking mechanism (design decision — see task-5.1 report): MVI-mode content links to its VM by
- * the EXPLICIT `@Screen(Route::class)` it carries (matched to the VM's `@ViewModel(Route::class)`), NOT
+ * the EXPLICIT `@Screen(Route::class)` it carries (matched to the VM's `@MviViewModel(Route::class)`), NOT
  * by inferring the route from the `state`/`onIntent` types. This is spec-§10.1-aligned (its example and
  * the Faz-5.0 `CounterMvi` fixture both put the route on the content) and strictly more robust than
  * S/I type-matching (never ambiguous — two VMs can't share a route, `MV4`).
@@ -111,7 +111,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -122,7 +122,7 @@ class MviModelReaderTest {
 
             abstract class BaseMviVm<S, I, E> : GezginMvi<S, I, E>
 
-            @ViewModel(GenRoute::class)
+            @MviViewModel(GenRoute::class)
             class GenViewModel : BaseMviVm<Wrapper<String>, GenIntent, GenEffect>() {
                 override val uiState: StateFlow<Wrapper<String>> = MutableStateFlow(Wrapper("x"))
                 override fun onIntent(intent: GenIntent) {}
@@ -146,16 +146,14 @@ class MviModelReaderTest {
     @Test
     fun `positive — Problem 2 extras split sheetState (role) from an arbitrary param (resolver)`() {
         val source = """
-            @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-
             package dev.gezgin.sheetmvi
 
-            import androidx.compose.material3.SheetState
             import androidx.compose.runtime.Composable
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.BottomSheet
+            import dev.gezgin.core.compose.GezginSheetController
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -165,7 +163,7 @@ class MviModelReaderTest {
             data class SheetEffect(val m: String)
             class ImageLoader
 
-            @ViewModel(SheetRoute::class)
+            @MviViewModel(SheetRoute::class)
             class SheetVm : GezginMvi<SheetStateData, SheetIntent, SheetEffect> {
                 override val uiState: StateFlow<SheetStateData> = MutableStateFlow(SheetStateData(0))
                 override fun onIntent(intent: SheetIntent) {}
@@ -176,7 +174,7 @@ class MviModelReaderTest {
             fun SheetContent(
                 state: SheetStateData,
                 onIntent: (SheetIntent) -> Unit,
-                sheetState: SheetState,
+                controller: GezginSheetController,
                 imageLoader: ImageLoader,
             ) {
             }
@@ -185,7 +183,7 @@ class MviModelReaderTest {
         val dump = dumpOf(SourceFile.kotlin("Sheet.kt", source))
         val entryLine = dump.first { it.startsWith("mvientry SheetContent") }
         assertContains(entryLine, "kind=BOTTOM_SHEET", message = entryLine)
-        assertContains(entryLine, "role=sheetState:androidx.compose.material3.SheetState", message = entryLine)
+        assertContains(entryLine, "role=controller:dev.gezgin.core.compose.GezginSheetController", message = entryLine)
         assertContains(entryLine, "resolver=imageLoader:dev.gezgin.sheetmvi.ImageLoader", message = entryLine)
     }
 
@@ -194,25 +192,25 @@ class MviModelReaderTest {
     // region Guardrails MV1-MV7
 
     @Test
-    fun `MV1 — @ViewModel that does not implement GezginMvi is rejected`() {
+    fun `MV1 — @MviViewModel that does not implement GezginMvi is rejected`() {
         assertViolates(
             "MV1",
             """
             package dev.gezgin.mv1
 
             import dev.gezgin.core.Route
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
 
             data class R(val x: Int = 0) : Route
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class BadVm
             """.trimIndent(),
         )
     }
 
     @Test
-    fun `MV2 — MVI-mode content with no matching @ViewModel is rejected`() {
+    fun `MV2 — MVI-mode content with no matching @MviViewModel is rejected`() {
         assertViolates(
             "MV2",
             """
@@ -235,7 +233,7 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `MV3 — @ViewModel with no matching content is rejected`() {
+    fun `MV3 — @MviViewModel with no matching content is rejected`() {
         assertViolates(
             "MV3",
             """
@@ -243,7 +241,7 @@ class MviModelReaderTest {
 
             import dev.gezgin.core.Route
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -252,7 +250,7 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -262,7 +260,7 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `MV4 — two @ViewModel classes on the same route are rejected`() {
+    fun `MV4 — two @MviViewModel classes on the same route are rejected`() {
         assertViolates(
             "MV4",
             """
@@ -272,7 +270,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -281,13 +279,13 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class VmA : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
             }
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class VmB : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -312,7 +310,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -321,7 +319,7 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -337,7 +335,7 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `MV6 — @ScreenEffect whose Flow E matches no @ViewModel effect type is rejected`() {
+    fun `MV6 — @ScreenEffect whose Flow E matches no @MviViewModel effect type is rejected`() {
         assertViolates(
             "MV6",
             """
@@ -348,7 +346,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
             import dev.gezgin.mvi.annotation.ScreenEffect
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
@@ -359,7 +357,7 @@ class MviModelReaderTest {
             data class E(val m: String)
             data class OtherE(val z: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -370,7 +368,7 @@ class MviModelReaderTest {
             fun Content(state: S, onIntent: (I) -> Unit) {
             }
 
-            // Flow<OtherE> — E of no @ViewModel.
+            // Flow<OtherE> — E of no @MviViewModel.
             @ScreenEffect
             @Composable
             fun BadEffects(effects: Flow<OtherE>) {
@@ -393,22 +391,20 @@ class MviModelReaderTest {
 
     @Test
     fun `MV8 — sheetState param on a non-BottomSheet (Screen) MVI content is rejected`() {
-        // A @BottomSheet-kind content with sheetState PASSES (see the positive Problem-2 split test). On a
-        // @Screen kind, codegen would emit `sheetState = LocalGezginSheetState.current`, which compiles
-        // clean and crashes at first render (the Local `error()`s outside a @BottomSheet). MV8 rejects it.
+        // A @BottomSheet-kind content with a GezginSheetController PASSES (see the positive Problem-2 split
+        // test). On a @Screen kind, codegen would emit `controller = LocalGezginSheetController.current`,
+        // which compiles clean and crashes at first render (the Local `error()`s outside a @BottomSheet).
         assertViolates(
             "MV8",
             """
-            @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-
             package dev.gezgin.mv8
 
-            import androidx.compose.material3.SheetState
             import androidx.compose.runtime.Composable
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.core.compose.GezginSheetController
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -417,16 +413,16 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
             }
 
-            // sheetState on a @Screen (not @BottomSheet) — MV8.
+            // controller on a @Screen (not @BottomSheet) — MV8.
             @Screen(R::class)
             @Composable
-            fun Content(state: S, onIntent: (I) -> Unit, sheetState: SheetState) {
+            fun Content(state: S, onIntent: (I) -> Unit, controller: GezginSheetController) {
             }
             """.trimIndent(),
         )
@@ -446,7 +442,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
             import dev.gezgin.mvi.annotation.ScreenEffect
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
@@ -456,7 +452,7 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -491,7 +487,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -501,7 +497,7 @@ class MviModelReaderTest {
             data class E(val m: String)
             class Foo
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -527,7 +523,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -537,7 +533,7 @@ class MviModelReaderTest {
             data class E(val m: String)
             class Foo
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -566,7 +562,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -575,7 +571,7 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<Wrapper<String>, I, E> {
                 override val uiState: StateFlow<Wrapper<String>> = MutableStateFlow(Wrapper("x"))
                 override fun onIntent(intent: I) {}
@@ -603,7 +599,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
             import dev.gezgin.mvi.annotation.ScreenEffect
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
@@ -613,7 +609,7 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class Wrapper<T>(val value: T)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, Wrapper<String>> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -649,7 +645,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.annotation.BottomSheet
             import dev.gezgin.core.annotation.NoBack
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -659,7 +655,7 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -687,7 +683,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -696,7 +692,7 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(OrderRoute::class)
+            @MviViewModel(OrderRoute::class)
             @HiltViewModel
             class OrderVm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
@@ -726,7 +722,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
             import dev.gezgin.mvi.annotation.ScreenEffect
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
@@ -737,7 +733,7 @@ class MviModelReaderTest {
             data class E(val m: String)
             class SomeState
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}
@@ -773,7 +769,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
             import dev.gezgin.mvi.annotation.ScreenEffect
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
@@ -790,7 +786,7 @@ class MviModelReaderTest {
             data class HEffect(val m: String)
             class SomethingElse
 
-            @ViewModel(G.Home::class)
+            @MviViewModel(G.Home::class)
             class HVm(route: G.Home) : GezginMvi<HState, HIntent, HEffect> {
                 override val uiState: StateFlow<HState> = MutableStateFlow(HState(0))
                 override fun onIntent(intent: HIntent) {}
@@ -823,7 +819,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -836,7 +832,7 @@ class MviModelReaderTest {
             // GezginMvi's S is Wrapped<S'> where S' is Base's own type param — NESTED forwarding.
             abstract class Base<S, I0, E0> : GezginMvi<Wrapped<S>, I0, E0>
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : Base<SData, I, E>() {
                 override val uiState: StateFlow<Wrapped<SData>> = MutableStateFlow(Wrapped(SData(0)))
                 override fun onIntent(intent: I) {}
@@ -862,7 +858,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.FullscreenModal
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -873,7 +869,7 @@ class MviModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(0))
                 override fun onIntent(intent: I) {}

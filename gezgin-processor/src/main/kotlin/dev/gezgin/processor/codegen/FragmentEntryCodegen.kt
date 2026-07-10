@@ -83,6 +83,9 @@ internal object FragmentEntryCodegen {
     ): List<FileSpec> =
         entries.groupBy { it.packageName }.map { (packageName, group) ->
             FileSpec.builder(packageName, "GezginFragmentEntries")
+                // K4 — every fragment register body reads LocalGezginRawNavigator and calls route.toBundle,
+                // all gated behind @GezginInternalApi.
+                .optInGezginInternalApi()
                 .apply { group.forEach { addFunction(provideFragmentEntryFun(it, hasNavigator(it))) } }
                 .build()
         }

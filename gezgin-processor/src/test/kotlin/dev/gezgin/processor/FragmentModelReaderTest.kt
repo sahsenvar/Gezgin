@@ -178,7 +178,7 @@ class FragmentModelReaderTest {
     @Test
     fun `FS3 — a @FragmentScreen and an MVI-mode @Screen(state,onIntent) on the same route are rejected`() {
         // Coverage nicety (task-6.1 review Minor): FS3 vs the OTHER cross-kind — an MVI-mode content
-        // @Screen (paired with a @ViewModel by route) registers R, and a @FragmentScreen(R) would be a
+        // @Screen (paired with a @MviViewModel by route) registers R, and a @FragmentScreen(R) would be a
         // second register<R>. Structurally identical to the core-@Screen case; the built `entries` list
         // FragmentModelReader cross-checks already carries MVI-mode content (EntryModelReader shares one
         // seenRouteFqs across core + MVI), so FS3 fires here too.
@@ -193,7 +193,7 @@ class FragmentModelReaderTest {
             import dev.gezgin.core.annotation.FragmentScreen
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -202,7 +202,7 @@ class FragmentModelReaderTest {
             sealed interface I { data object Go : I }
             data class E(val m: String)
 
-            @ViewModel(R::class)
+            @MviViewModel(R::class)
             class Vm(route: R) : GezginMvi<S, I, E> {
                 override val uiState: StateFlow<S> = MutableStateFlow(S(route.x))
                 override fun onIntent(intent: I) {}

@@ -19,13 +19,13 @@ internal data class MviExtraParam(val name: String, val typeFq: String, val type
  * MVI-mode entries; a core-mode entry carries `mvi = null` and is emitted by [dev.gezgin.processor.codegen.EntryCodegen]
  * exactly as before (zero behavior change). Faz 5.2's MVI codegen branches on this being non-null.
  *
- * [vm] is the matched `@ViewModel` (linked by shared route — see [EntryModelReader]); its `S/I/E`
+ * [vm] is the matched `@MviViewModel` (linked by shared route — see [EntryModelReader]); its `S/I/E`
  * types drove the content/effect validation (`MV5`/`MV6`) that produced this descriptor.
  *
  * **Problem 2 extras split (5.2 needs the distinction):** [roleExtraParams] are Gezgin-role-provided
- * (currently only `sheetState: androidx.compose.material3.SheetState`, Local-injected via Faz-4's
- * `LocalGezginSheetState`); [resolverExtraParams] are truly-unknown content params that 5.2 turns into
- * `@Composable () -> T` resolver params on `provideXEntry`.
+ * (currently only a `dev.gezgin.core.compose.GezginSheetController`, Local-injected via
+ * `LocalGezginSheetController`); [resolverExtraParams] are truly-unknown content params that 5.2 turns
+ * into `@Composable () -> T` resolver params on `provideXEntry`.
  */
 internal data class MviEntryModel(
     val vm: ViewModelModel,

@@ -64,7 +64,7 @@ val MVI_NAV_SOURCE = """
     import dev.gezgin.core.annotation.NavGraph
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
 
@@ -81,7 +81,7 @@ val MVI_NAV_SOURCE = """
     sealed interface DetailIntent { data object Go : DetailIntent }
     data class DetailEffect(val m: String)
 
-    @ViewModel(G.Detail::class)
+    @MviViewModel(G.Detail::class)
     class DetailViewModel(route: G.Detail, nav: DetailNavigator) :
         GezginMvi<DetailState, DetailIntent, DetailEffect> {
         override val uiState: StateFlow<DetailState> = MutableStateFlow(DetailState(route.id.length))
@@ -102,7 +102,7 @@ val KOIN_MVI_SOURCE = """
     import dev.gezgin.core.Route
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
     import org.koin.core.annotation.InjectedParam
@@ -113,7 +113,7 @@ val KOIN_MVI_SOURCE = """
     sealed interface KoinIntent { data object Go : KoinIntent }
     data class KoinEffect(val m: String)
 
-    @ViewModel(KoinRoute::class)
+    @MviViewModel(KoinRoute::class)
     @KoinViewModel
     class KoinVm(@InjectedParam route: KoinRoute) : GezginMvi<KoinState, KoinIntent, KoinEffect> {
         override val uiState: StateFlow<KoinState> = MutableStateFlow(KoinState(route.id.length))
@@ -137,7 +137,7 @@ val KOIN_PROBLEM1_MVI_SOURCE = """
     import dev.gezgin.core.Route
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
     import org.koin.core.annotation.InjectedParam
@@ -148,7 +148,7 @@ val KOIN_PROBLEM1_MVI_SOURCE = """
     sealed interface P1Intent { data object Go : P1Intent }
     data class P1Effect(val m: String)
 
-    @ViewModel(P1Route::class)
+    @MviViewModel(P1Route::class)
     @KoinViewModel
     class P1Vm(@InjectedParam route: P1Route, @InjectedParam userId: String) :
         GezginMvi<P1State, P1Intent, P1Effect> {
@@ -174,7 +174,7 @@ val HILT_ASSISTED_MVI_SOURCE = """
     import dev.gezgin.core.Route
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
 
@@ -183,7 +183,7 @@ val HILT_ASSISTED_MVI_SOURCE = """
     sealed interface HiltIntent { data object Go : HiltIntent }
     data class HiltEffect(val m: String)
 
-    @ViewModel(HiltRoute::class)
+    @MviViewModel(HiltRoute::class)
     @HiltViewModel(assistedFactory = HiltVm.Factory::class)
     class HiltVm @AssistedInject constructor(@Assisted route: HiltRoute) :
         GezginMvi<HiltState, HiltIntent, HiltEffect> {
@@ -213,7 +213,7 @@ val HILT_PLAIN_MVI_SOURCE = """
     import dev.gezgin.core.Route
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
 
@@ -222,7 +222,7 @@ val HILT_PLAIN_MVI_SOURCE = """
     sealed interface PlainIntent { data object Go : PlainIntent }
     data class PlainEffect(val m: String)
 
-    @ViewModel(PlainRoute::class)
+    @MviViewModel(PlainRoute::class)
     @HiltViewModel
     class PlainVm : GezginMvi<PlainState, PlainIntent, PlainEffect> {
         override val uiState: StateFlow<PlainState> = MutableStateFlow(PlainState(0))
@@ -236,22 +236,20 @@ val HILT_PLAIN_MVI_SOURCE = """
 """.trimIndent()
 
 /**
- * `@BottomSheet` MVI content with a role extra (`sheetState`) and a Problem-2 resolver extra
+ * `@BottomSheet` MVI content with a role extra (a `GezginSheetController`) and a Problem-2 resolver extra
  * (`imageLoader`). Pins: `EntryKind.BOTTOM_SHEET`, the required `imageLoader: @Composable () ->
- * ImageLoader` param, `LocalGezginSheetState.current` for the role, and `imageLoader()` for the
+ * ImageLoader` param, `LocalGezginSheetController.current` for the role, and `imageLoader()` for the
  * resolver — all passed as NAMED content args.
  */
 val SHEET_MVI_SOURCE = """
-    @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-
     package dev.gezgin.sheetmvi2
 
-    import androidx.compose.material3.SheetState
     import androidx.compose.runtime.Composable
     import dev.gezgin.core.Route
     import dev.gezgin.core.annotation.BottomSheet
+    import dev.gezgin.core.compose.GezginSheetController
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
 
@@ -261,7 +259,7 @@ val SHEET_MVI_SOURCE = """
     data class SheetEffect(val m: String)
     class ImageLoader
 
-    @ViewModel(SheetRoute::class)
+    @MviViewModel(SheetRoute::class)
     class SheetVm(route: SheetRoute) : GezginMvi<SheetStateData, SheetIntent, SheetEffect> {
         override val uiState: StateFlow<SheetStateData> = MutableStateFlow(SheetStateData(route.x))
         override fun onIntent(intent: SheetIntent) {}
@@ -272,7 +270,7 @@ val SHEET_MVI_SOURCE = """
     fun SheetContent(
         state: SheetStateData,
         onIntent: (SheetIntent) -> Unit,
-        sheetState: SheetState,
+        controller: GezginSheetController,
         imageLoader: ImageLoader,
     ) {
     }
@@ -295,7 +293,7 @@ val EFFECT_NAV_MVI_SOURCE = """
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
     import dev.gezgin.mvi.annotation.ScreenEffect
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.Flow
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
@@ -314,7 +312,7 @@ val EFFECT_NAV_MVI_SOURCE = """
     data class HomeEffect(val m: String)
 
     // VM ctor takes ONLY route — nav is wired SOLELY because the @ScreenEffect below wants it.
-    @ViewModel(F.Home::class)
+    @MviViewModel(F.Home::class)
     class HomeViewModel(route: F.Home) : GezginMvi<HomeState, HomeIntent, HomeEffect> {
         override val uiState: StateFlow<HomeState> = MutableStateFlow(HomeState(route.id.length))
         override fun onIntent(intent: HomeIntent) {}
@@ -344,7 +342,7 @@ val DUP_ROUTE_MVI_SOURCE = """
     import dev.gezgin.core.Route
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
 
@@ -353,7 +351,7 @@ val DUP_ROUTE_MVI_SOURCE = """
     sealed interface DupIntent { data object Go : DupIntent }
     data class DupEffect(val m: String)
 
-    @ViewModel(DupRoute::class)
+    @MviViewModel(DupRoute::class)
     class DupVm(route: DupRoute, other: DupRoute) : GezginMvi<DupState, DupIntent, DupEffect> {
         override val uiState: StateFlow<DupState> = MutableStateFlow(DupState(route.id.length + other.id.length))
         override fun onIntent(intent: DupIntent) {}
@@ -368,7 +366,7 @@ val DUP_ROUTE_MVI_SOURCE = """
 /**
  * MV7 (Important 1) — MVI-mode SC2 parity. Mirrors the core-mode `SC2` test: reuse [SHOP_SOURCE]'s bare
  * `HomeGraph.About` (a @NavGraph member that IS in the model but earns NO navigator — no edges/back-
- * edges/result-contract). The `@ViewModel`'s ctor wants a `nav` (by name convention), so codegen would
+ * edges/result-contract). The `@MviViewModel`'s ctor wants a `nav` (by name convention), so codegen would
  * otherwise emit an unresolved `aboutNavigator()` factory call. Must be rejected with `[MV7]` instead.
  * Compile alongside `SHOP_SOURCE` (like the SC2 test).
  */
@@ -378,7 +376,7 @@ val MV7_NO_NAV_SOURCE = """
     import androidx.compose.runtime.Composable
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import dev.gezgin.shop.AboutNavigator
     import dev.gezgin.shop.HomeGraph.About
     import kotlinx.coroutines.flow.MutableStateFlow
@@ -390,7 +388,7 @@ val MV7_NO_NAV_SOURCE = """
 
     // `About` is a bare @NavGraph member — no navigator is generated for it. The VM ctor wants a `nav`
     // (matched by name), so MV7 must fire (else an unresolved `aboutNavigator()` call is emitted).
-    @ViewModel(About::class)
+    @MviViewModel(About::class)
     class AboutViewModel(route: About, nav: AboutNavigator) :
         GezginMvi<AboutState, AboutIntent, AboutEffect> {
         override val uiState: StateFlow<AboutState> = MutableStateFlow(AboutState(0))

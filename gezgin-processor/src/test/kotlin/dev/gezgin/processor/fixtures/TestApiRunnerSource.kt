@@ -8,6 +8,8 @@ package dev.gezgin.processor.fixtures
  * underlying `RawNavigator` they resolve to.
  */
 val TEST_API_RUNNER_SOURCE = """
+    @file:OptIn(dev.gezgin.core.GezginInternalApi::class)
+
     package dev.gezgin.shop
 
     import dev.gezgin.core.NavResult

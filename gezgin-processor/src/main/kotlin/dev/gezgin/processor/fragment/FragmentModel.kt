@@ -7,7 +7,7 @@ package dev.gezgin.processor.fragment
  * `androidx.fragment.compose.AndroidFragment` (Task 6.0 report §"Binding decision for 6.1 / 6.2").
  *
  * This is a THIRD kind of entry model — distinct from core-mode's `EntryFunctionModel` (a
- * `(route, nav)`/`(state, onIntent)` composable FUNCTION) and Faz-5's `ViewModelModel` (a `@ViewModel`
+ * `(route, nav)`/`(state, onIntent)` composable FUNCTION) and Faz-5's `ViewModelModel` (a `@MviViewModel`
  * VM class). A `@FragmentScreen` binds a Fragment CLASS to a route with no composable content at all;
  * the route/navigator reach it through the `gezginArgs`/`gezginNav` delegates (Task 6.2), not a ctor.
  *

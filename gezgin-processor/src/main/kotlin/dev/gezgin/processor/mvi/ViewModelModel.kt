@@ -3,7 +3,7 @@ package dev.gezgin.processor.mvi
 import com.squareup.kotlinpoet.TypeName
 
 /**
- * The dependency-injection framework a `@ViewModel` class opts into (§10.1 DI-detection, Faz-5.0 spike),
+ * The dependency-injection framework a `@MviViewModel` class opts into (§10.1 DI-detection, Faz-5.0 spike),
  * detected by [ViewModelModelReader] from the VM class's own annotations — read as **string FQNs**, so
  * `gezgin-processor` gains NO compile dependency on Hilt or Koin (mirrors the `dev.gezgin.mvi.*` reads).
  * Faz 5.2's `MviEntryCodegen` branches on this to emit the correct default `viewModel` resolver:
@@ -23,7 +23,7 @@ import com.squareup.kotlinpoet.TypeName
 internal enum class VmDiKind { HILT_ASSISTED, HILT_PLAIN, KOIN, ANDROIDX }
 
 /**
- * One primary-constructor parameter of a `@ViewModel` class, captured by [ViewModelModelReader] for
+ * One primary-constructor parameter of a `@MviViewModel` class, captured by [ViewModelModelReader] for
  * Faz-5.2 DI-detection (§10.1). [MviEntryCodegen][dev.gezgin.processor.codegen.MviEntryCodegen]
  * classifies each into `route`/`nav`/other by [name] and [typeFq] to decide whether a default resolver
  * can be emitted (only when every DI-relevant param is `route`- or `nav`-typed).
@@ -57,11 +57,11 @@ internal data class VmCtorParam(
 )
 
 /**
- * One `@ViewModel(Route::class)`-annotated class that additionally implements
+ * One `@MviViewModel(Route::class)`-annotated class that additionally implements
  * `dev.gezgin.mvi.GezginMvi<S, I, E>` (Faz 5.1, spec §10/§10.1), resolved and validated by
  * [ViewModelModelReader] into everything Faz 5.2's MVI-mode `provideXEntry` codegen needs.
  *
- * **Route linking (§10.1):** the VM binds itself to a route via `@ViewModel(Route::class)`; the
+ * **Route linking (§10.1):** the VM binds itself to a route via `@MviViewModel(Route::class)`; the
  * matching stateless `@Screen(Route::class)` content binds to the SAME route explicitly. [routeFq]
  * is the join key between this model and an [dev.gezgin.processor.entry.EntryFunctionModel] whose
  * `mvi` descriptor points back here (see the route-linking note on [ViewModelModelReader]).
@@ -76,9 +76,9 @@ internal data class VmCtorParam(
 internal data class ViewModelModel(
     val vmFq: String,
     val vmSimpleName: String,
-    /** The VM class's own package — used for the same-module `@ViewModel`/`@Screen` cross-check. */
+    /** The VM class's own package — used for the same-module `@MviViewModel`/`@Screen` cross-check. */
     val packageName: String,
-    /** `@ViewModel(route = …)` — the route this VM (and its matching `@Screen` content) binds to. */
+    /** `@MviViewModel(route = …)` — the route this VM (and its matching `@Screen` content) binds to. */
     val routeFq: String,
     val stateTypeFq: String,
     val stateTypeName: TypeName,

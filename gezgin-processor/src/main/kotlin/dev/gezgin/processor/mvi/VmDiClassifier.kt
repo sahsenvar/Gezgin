@@ -16,7 +16,7 @@ internal data class VmDiClassification(
 )
 
 /**
- * Shared DI-param classification for a `@ViewModel`'s primary constructor (§10.1, Faz 5.2). Both
+ * Shared DI-param classification for a `@MviViewModel`'s primary constructor (§10.1, Faz 5.2). Both
  * [dev.gezgin.processor.entry.EntryModelReader] (for the `MV7` nav-presence guardrail) and
  * [dev.gezgin.processor.codegen.MviEntryCodegen] (for the default `viewModel` resolver) must agree on
  * whether a VM's ctor needs `nav`/`route` and whether a default resolver is even emittable — so that

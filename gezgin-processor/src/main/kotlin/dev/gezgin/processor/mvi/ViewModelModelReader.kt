@@ -10,7 +10,7 @@ import com.google.devtools.ksp.symbol.KSValueArgument
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.ksp.toTypeName
 
-internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.ViewModel"
+internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.MviViewModel"
 internal const val SCREEN_EFFECT_FQ = "dev.gezgin.mvi.annotation.ScreenEffect"
 internal const val GEZGIN_MVI_FQ = "dev.gezgin.mvi.GezginMvi"
 
@@ -22,7 +22,7 @@ private const val INJECTED_PARAM_FQ = "org.koin.core.annotation.InjectedParam"
 private const val UNIT_FQ = "kotlin.Unit"
 
 /**
- * Faz 5.1 — reads every `@ViewModel(Route::class)`-annotated CLASS (spec §10/§10.1 MVI add-on) into a
+ * Faz 5.1 — reads every `@MviViewModel(Route::class)`-annotated CLASS (spec §10/§10.1 MVI add-on) into a
  * validated [ViewModelModel] list, mirroring [dev.gezgin.processor.entry.EntryModelReader]'s
  * constructor shape and its collect-all-then-fail, bracketed-code error idiom (`MV1`/`MV4`) via
  * [logger]. [read] never throws — it reports every violation in one pass and returns whether the read
@@ -32,17 +32,17 @@ private const val UNIT_FQ = "kotlin.Unit"
  * dependency on `gezgin-mvi` (only its test sourceset does, for fixtures), exactly like the existing
  * `dev.gezgin.core.*` reads.
  *
- * **`MV1` (guardrail, §10.1):** a `@ViewModel` class MUST implement `GezginMvi<S,I,E>` (transitively,
- * via [getAllSuperTypes] — same pattern as `ModelReader.resultTypeArgOf`). A `@ViewModel` that doesn't
+ * **`MV1` (guardrail, §10.1):** a `@MviViewModel` class MUST implement `GezginMvi<S,I,E>` (transitively,
+ * via [getAllSuperTypes] — same pattern as `ModelReader.resultTypeArgOf`). A `@MviViewModel` that doesn't
  * → error, no model emitted for it (S/I/E are unreadable, so it would be useless to 5.2 anyway).
  *
- * **`MV4` (duplicate):** two `@ViewModel` classes resolving to the same route → error (mirrors
+ * **`MV4` (duplicate):** two `@MviViewModel` classes resolving to the same route → error (mirrors
  * [dev.gezgin.processor.entry.EntryModelReader]'s `SC4` duplicate-route pattern).
  *
  * **Same-module (§10.1):** KSP only sees one module's symbols per run, so a cross-module VM/content
- * pairing simply won't match — the `@ViewModel`/`@Screen`/`@ScreenEffect` triple being in the SAME
+ * pairing simply won't match — the `@MviViewModel`/`@Screen`/`@ScreenEffect` triple being in the SAME
  * module is naturally enforced by `resolver.getSymbolsWithAnnotation` returning only THIS module's
- * `@ViewModel`s. `EntryModelReader` closes the loop symmetrically (`MV2`/`MV3`).
+ * `@MviViewModel`s. `EntryModelReader` closes the loop symmetrically (`MV2`/`MV3`).
  */
 internal class ViewModelModelReader(
     private val resolver: Resolver,
@@ -65,12 +65,12 @@ internal class ViewModelModelReader(
         val vmSimpleName = decl.simpleName.asString()
         val annotation = decl.annotations.first { it.fqName() == VIEW_MODEL_FQ }
 
-        // `@ViewModel(route)` is a mandatory KClass arg (no sentinel, §10.1) — but stay defensive if it
+        // `@MviViewModel(route)` is a mandatory KClass arg (no sentinel, §10.1) — but stay defensive if it
         // somehow fails to resolve to a class type.
         val routeType = annotation.classArg("route")
         val routeFq = routeType?.declaration?.qualifiedName?.asString()
         if (routeFq == null) {
-            error("MV1", "$vmSimpleName: @ViewModel(route=…) türü çözülemedi")
+            error("MV1", "$vmSimpleName: @MviViewModel(route=…) türü çözülemedi")
             return null
         }
 
@@ -81,8 +81,8 @@ internal class ViewModelModelReader(
         if (mviArgs == null) {
             error(
                 "MV1",
-                "$vmSimpleName (@ViewModel(${routeFq.substringAfterLast('.')})) " +
-                    "$GEZGIN_MVI_FQ<S,I,E> implement etmiyor — @ViewModel + GezginMvi İKİSİ DE zorunlu (§10.1)",
+                "$vmSimpleName (@MviViewModel(${routeFq.substringAfterLast('.')})) " +
+                    "$GEZGIN_MVI_FQ<S,I,E> implement etmiyor — @MviViewModel + GezginMvi İKİSİ DE zorunlu (§10.1)",
             )
             return null
         }
@@ -112,12 +112,12 @@ internal class ViewModelModelReader(
         }
         val (stateTypeName, intentTypeName, effectTypeName) = sie
 
-        // MV4 — two @ViewModel classes on the same route would both try to register the same MVI entry.
+        // MV4 — two @MviViewModel classes on the same route would both try to register the same MVI entry.
         val previousOwner = seenRouteFqs[routeFq]
         if (previousOwner != null) {
             error(
                 "MV4",
-                "route ${routeFq.substringAfterLast('.')} birden çok @ViewModel tarafından işaretleniyor: " +
+                "route ${routeFq.substringAfterLast('.')} birden çok @MviViewModel tarafından işaretleniyor: " +
                     "$previousOwner, $vmSimpleName",
             )
             return null

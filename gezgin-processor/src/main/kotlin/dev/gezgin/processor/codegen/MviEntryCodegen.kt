@@ -23,7 +23,7 @@ private val ENTRY_SCOPE = ClassName(COMPOSE_PKG, "GezginEntryScope")
 private val ENTRY_KIND = ClassName(COMPOSE_PKG, "EntryKind")
 private val LOCAL_ENTRY_ID = MemberName(COMPOSE_PKG, "LocalGezginEntryId")
 private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigator")
-private val LOCAL_SHEET_STATE = MemberName(COMPOSE_PKG, "LocalGezginSheetState")
+private val LOCAL_SHEET_CONTROLLER = MemberName(COMPOSE_PKG, "LocalGezginSheetController")
 private val COMPOSABLE = ClassName(COMPOSE_RUNTIME_PKG, "Composable")
 
 // State/effect observation — the JB `androidx.lifecycle.*` coordinates pinned in gezgin-mvi (Faz-5.0);
@@ -44,15 +44,10 @@ private val PARAMETERS_OF = MemberName("org.koin.core.parameter", "parametersOf"
 // which the user silences/migrates in their own module (never here — gezgin-processor emits a string).
 private val HILT_VIEW_MODEL = MemberName("androidx.hilt.navigation.compose", "hiltViewModel")
 
-private const val SHEET_STATE_FQ = "androidx.compose.material3.SheetState"
-
-// A @BottomSheet MVI content's `sheetState` role param is fed `LocalGezginSheetState.current` (a
-// material3 `SheetState`) FROM the generated register — so the generated file, not the user's content,
-// is the opt-in site for the ERROR-level `@ExperimentalMaterial3Api`. Emitted on the `provideXEntry`
-// only when a sheetState role extra is present (core-mode content reads the Local in its OWN file, so
-// this never applies there).
-private val OPT_IN = ClassName("kotlin", "OptIn")
-private val EXPERIMENTAL_MATERIAL3_API = ClassName("androidx.compose.material3", "ExperimentalMaterial3Api")
+// M3 — the @BottomSheet role extra is now Gezgin's own `GezginSheetController` (fed from
+// `LocalGezginSheetController.current`), not the experimental material3 `SheetState`, so no
+// `@ExperimentalMaterial3Api` opt-in leaks into generated code.
+private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetController"
 
 /**
  * Faz 5.2 — emits `fun GezginEntryScope.provideXEntry(...)` for every MVI-mode [EntryFunctionModel]
@@ -93,8 +88,8 @@ private val EXPERIMENTAL_MATERIAL3_API = ClassName("androidx.compose.material3",
  * qualified against the ROUTE's package (`entry.routePackageName`), exactly like [EntryCodegen].
  *
  * **Problem 2 (§10.1 rule 2):** each `resolverExtraParam` becomes a REQUIRED `@Composable () -> T`
- * param, threaded as `<name>()` into the content call. Role extras (`sheetState`) read from
- * `LocalGezginSheetState`. All content extras are passed as NAMED args so the split role/resolver
+ * param, threaded as `<name>()` into the content call. Role extras (`controller`) read from
+ * `LocalGezginSheetController`. All content extras are passed as NAMED args so the split role/resolver
  * lists need not reconstruct the composable's original parameter order.
  */
 internal object MviEntryCodegen {
@@ -106,9 +101,21 @@ internal object MviEntryCodegen {
                 FileSpec.builder(packageName, "GezginMviEntries")
                     // `val state by … collectAsStateWithLifecycle()` needs the State delegate operator.
                     .addImport(COMPOSE_RUNTIME_PKG, "getValue")
+                    // K4 — a nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator/
+                    // LocalGezginEntryId; opt in the file only when at least one entry wires nav.
+                    .apply { if (group.any { navWiredOf(it) }) optInGezginInternalApi() }
                     .apply { group.forEach { addFunction(provideMviEntryFun(it)) } }
                     .build()
             }
+
+    /** Whether an MVI entry's register body reads the gated navigator locals (VM or effect wants nav). */
+    private fun navWiredOf(entry: EntryFunctionModel): Boolean {
+        val mvi = entry.mvi!!
+        val navigatorTypeFq = VmDiClassifier.navigatorTypeFq(entry.routePackageName, entry.x)
+        val vmHasNav = VmDiClassifier.classify(mvi.vm, entry.routeFq, navigatorTypeFq).vmHasNav
+        val effectWantsNav = mvi.effectFunSimpleName != null && mvi.effectHasNavParam
+        return vmHasNav || effectWantsNav
+    }
 
     private fun provideMviEntryFun(entry: EntryFunctionModel): FunSpec {
         val mvi = entry.mvi!!
@@ -145,11 +152,6 @@ internal object MviEntryCodegen {
         val funBuilder = FunSpec.builder("provide${entry.x}Entry")
             .receiver(ENTRY_SCOPE)
             .addParameter(viewModelParam)
-        if (mvi.roleExtraParams.any { it.typeFq == SHEET_STATE_FQ }) {
-            funBuilder.addAnnotation(
-                AnnotationSpec.builder(OPT_IN).addMember("%T::class", EXPERIMENTAL_MATERIAL3_API).build(),
-            )
-        }
         // Problem-2 resolver params — required (no sensible default), threaded as `name()` into content.
         mvi.resolverExtraParams.forEach { extra ->
             funBuilder.addParameter(
@@ -266,13 +268,14 @@ internal object MviEntryCodegen {
         return args.build()
     }
 
-    /** Role extras are Gezgin-provided; the only role type is `sheetState`, read from its Local. */
+    /** Role extras are Gezgin-provided; the only role type is a `GezginSheetController`, read from its Local. */
     private fun roleExtraArg(role: MviExtraParam): CodeBlock =
-        if (role.typeFq == SHEET_STATE_FQ) {
-            CodeBlock.of(", %L = %M.current", role.name, LOCAL_SHEET_STATE)
+        if (role.typeFq == SHEET_CONTROLLER_FQ) {
+            CodeBlock.of(", %L = %M.current", role.name, LOCAL_SHEET_CONTROLLER)
         } else {
-            // Defensive: no other role type exists today (EntryModelReader classifies only sheetState
-            // as a role extra). If one is ever added, fail loudly rather than emit a bad reference.
+            // Defensive: no other role type exists today (EntryModelReader classifies only a
+            // GezginSheetController as a role extra). If one is ever added, fail loudly rather than emit
+            // a bad reference.
             error("Unknown MVI role extra type: ${role.typeFq} (${role.name})")
         }
 }

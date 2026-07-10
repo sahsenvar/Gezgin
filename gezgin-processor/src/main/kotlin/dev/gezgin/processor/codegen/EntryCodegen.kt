@@ -41,6 +41,9 @@ internal object EntryCodegen {
     fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
         entries.groupBy { it.packageName }.map { (packageName, group) ->
             FileSpec.builder(packageName, "GezginEntries")
+                // K4 — a nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator/
+                // LocalGezginEntryId; opt in the file only when at least one entry wires nav.
+                .apply { if (group.any { it.hasNavParam }) optInGezginInternalApi() }
                 .apply { group.forEach { addFunction(provideEntryFun(it)) } }
                 .build()
         }

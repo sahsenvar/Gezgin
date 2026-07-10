@@ -165,6 +165,9 @@ internal object NavigatorCodegen {
             .build()
 
         return FileSpec.builder(packageName, navigatorClassName)
+            // K4 — every generated navigator applies @GezginNavigatorFor and may call the entry-id
+            // RawNavigator overloads, all gated behind @GezginInternalApi.
+            .optInGezginInternalApi()
             .addType(classSpec)
             .addFunction(extensionFun)
             .build()

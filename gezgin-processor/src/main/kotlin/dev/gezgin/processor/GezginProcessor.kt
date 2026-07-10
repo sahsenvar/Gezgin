@@ -96,6 +96,10 @@ internal class GezginProcessor(
                     if (emitSerializers) {
                         TopologyCodegen.generateSerializers(model, packageName)
                             .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+                        // M1 — convenience rememberGezginNavigator/rememberGezginJson; references
+                        // gezginSerializersModule, so it shares the emitSerializers gate.
+                        TopologyCodegen.generateRememberNavigator(packageName)
+                            .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
                     }
 
                     // Typed per-source navigators — undeclared edges simply have no method (unresolved reference).
@@ -112,7 +116,7 @@ internal class GezginProcessor(
                     }
                 }
 
-                // @ViewModel classes read first so MVI-mode `@Screen(state,onIntent)` content can pair with
+                // @MviViewModel classes read first so MVI-mode `@Screen(state,onIntent)` content can pair with
                 // its same-module VM by route. Reading (validate + dump) runs UNCONDITIONALLY — only WRITING
                 // entries is gated by `gezgin.emitEntries` below.
                 val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
