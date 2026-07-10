@@ -117,8 +117,8 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  *   false) — otherwise codegen would emit an unresolved `<x>Navigator()` factory call.
  *
  * **MVI guardrails (Faz 5 final review):**
- * - `MV8` — a `sheetState: SheetState` extra on a non-`BOTTOM_SHEET`-kind MVI content: role-injected
- *   `LocalGezginSheetState.current` `error()`s outside a `@BottomSheet`, so codegen would emit
+ * - `MV8` — a `controller: GezginSheetController` extra on a non-`BOTTOM_SHEET`-kind MVI content: role-injected
+ *   `LocalGezginSheetController.current` `error()`s outside a `@BottomSheet`, so codegen would emit
  *   compile-clean code that crashes at first render. Classified as a role extra ONLY on `BOTTOM_SHEET`.
  * - `MV9` — two `@ScreenEffect` binders resolving to the same effect type `E` (symmetric to `MV4`):
  *   only one wires to any VM, the other silently dangles.

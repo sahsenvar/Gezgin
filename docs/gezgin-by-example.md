@@ -215,14 +215,14 @@ fun ConfirmOrderDialogScreen(route: ConfirmOrderDialog, nav: ConfirmOrderNavigat
 }
 ```
 
-Bottom-sheet'te `sheetState` composable'a enjekte edilir (önce hide animasyonu, sonra sonuç):
+Bottom-sheet'te `controller` composable'a enjekte edilir (önce hide animasyonu, sonra sonuç):
 
 ```kotlin
 @BottomSheet
 @Composable
-fun SortSheetScreen(nav: SortSheetNavigator, sheetState: SheetState) {
+fun SortSheetScreen(nav: SortSheetNavigator, controller: GezginSheetController) {
     SortOptions(onPick = { option ->
-        scope.launch { sheetState.hide(); nav.backWithResult(option) }
+        scope.launch { controller.hide(); nav.backWithResult(option) }
     })
 }
 ```

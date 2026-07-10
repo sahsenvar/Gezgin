@@ -32,11 +32,11 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             // gezgin-core: Route/annotation'lar (@Screen) + GezginEntryScope.register + navigator seam'i.
-            // `api` çünkü @ViewModel(Route::class) ve provideXEntry public yüzeyde gezgin-core tiplerine dokunur.
+            // `api` çünkü @MviViewModel(Route::class) ve provideXEntry public yüzeyde gezgin-core tiplerine dokunur.
             api(project(":gezgin-core"))
             // compose.runtime (@Composable/LaunchedEffect/remember) gezgin-core'dan transitively `api` gelir;
             // yine de compose plugin'in compile classpath'i için gezgin-core api yeterli.
-            // JB lifecycle-compose — codegen'li provideXEntry + ObserveAsEvents bunları KULLANIR → `api`.
+            // JB lifecycle-compose — codegen'li provideXEntry + ObserveEffects bunları KULLANIR → `api`.
             api(libs.jb.lifecycle.viewmodel.compose)   // viewModel()/viewModelFactory{} (androidx-fallback resolver)
             api(libs.jb.lifecycle.runtime.compose)     // collectAsStateWithLifecycle()/LocalLifecycleOwner (state/effect gözleme)
         }
@@ -58,8 +58,8 @@ publishing {
         pom {
             name.set("gezgin-mvi")
             description.set(
-                "Opsiyonel MVI binder add-on'u (gezgin-core'a bağımlı): @ViewModel/@ScreenEffect + " +
-                    "GezginMvi<S,I,E> sözleşmesi + codegen binder + ObserveAsEvents + DI-detection " +
+                "Opsiyonel MVI binder add-on'u (gezgin-core'a bağımlı): @MviViewModel/@ScreenEffect + " +
+                    "GezginMvi<S,I,E> sözleşmesi + codegen binder + ObserveEffects + DI-detection " +
                     "(Hilt/Koin, androidx fallback).",
             )
             // Faz 9.1 — Maven Central'ın zorunlu kıldığı POM metadata'sı (url/licenses/developers/scm).

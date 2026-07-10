@@ -136,7 +136,7 @@ Yöntem: **tümden gelim** — önce developer-facing yüzey ("nasıl görünür
 - **Properties = route'ta `DialogContract`/`BottomSheetContract` (opsiyonel)**: DRY defaults; SABİT = body override, KOŞULLU = constructor param (→ generated navigate metodunun param'ı; serialize → PD-safe). Annotation'da prop YOK (transition dersiyle aynı ilke). `GezginDialog` wrapper'ı İPTAL.
 - **Composable = sadece içerik** (Surface/Column); pencere + dismiss→pop Gezgin scene'inden, route contract'ından okunur. Codegen entry metadata'sını route'tan **per-entry** türetir.
 - **Result**: dialog/sheet doğal sonuç-üreticisi → `ResultRoute<T>` + `backWithResult(T)` + caller `@GoForResult`. Dismiss (tap-outside/swipe) = `Canceled`.
-- **BottomSheet'e özgü**: `BottomSheetSceneStrategy` Gezgin bundle eder (core'da yok); swipe-dismiss animasyonlu pop; `sheetState: SheetState` opsiyonel param ile composable'a enjekte (scene'in state'i, contract'tan kurulu) — hide-then-result / expand için.
+- **BottomSheet'e özgü**: `BottomSheetSceneStrategy` Gezgin bundle eder (core'da yok); swipe-dismiss animasyonlu pop; `controller: GezginSheetController` opsiyonel param ile composable'a enjekte (`LocalGezginSheetController`'dan, scene'in sheet controller'ı) — hide-then-result / expand için.
 - **Entry-scoped VM**: dialog/sheet de ekran gibi `koinViewModel` ile entry-scoped; async/backend içerik (loading→content) birebir aynı.
 
 ## Parkedilenler (sonra dönülecek)
@@ -286,9 +286,9 @@ Tüm kilitli kararlar tek, temiz, self-contained `gezgin-design.md`'ye toplandı
 ## MVI artifact split + `GezginEntry` kaldırma + DI-detection (2026-07-02, review sonrası)
 
 Review düzeltmeleri sırasında çıkan refinement'lar (kullanıcı):
-- **MVI'ı core'dan ayır:** `@ViewModel`/`GezginMvi`/`@ScreenEffect`/binder-codegen/DI-detection → **`gezgin-mvi`** (opt-in). `gezgin-core` DI/VM/MVI bilmez (`@Screen(route,nav)` + navigator'lar + routes/deeplink/topology + `GezginDisplay` + `GezginEntryScope`). Bağlantı seam'i: core'un `GezginEntryScope` + navigator'ları; mvi = entry-producer add-on. `gezgin-mvi → gezgin-core` bağımlı.
+- **MVI'ı core'dan ayır:** `@MviViewModel`/`GezginMvi`/`@ScreenEffect`/binder-codegen/DI-detection → **`gezgin-mvi`** (opt-in). `gezgin-core` DI/VM/MVI bilmez (`@Screen(route,nav)` + navigator'lar + routes/deeplink/topology + `GezginDisplay` + `GezginEntryScope`). Bağlantı seam'i: core'un `GezginEntryScope` + navigator'ları; mvi = entry-producer add-on. `gezgin-mvi → gezgin-core` bağımlı.
 - **`GezginEntry` kaldırıldı** (over-engineering'di): `provideXEntry` = `GezginEntryScope` extension, Nav3'ün `entry<Route>{}`'sini **doğrudan** register eder (Zad `registerAll(scope)` deseni). Bundle (`xFeatureEntries()`) = **kullanıcı-yazımı** (codegen üretirse resolver override noktası kapanır); codegen yalnız bireysel `provideXEntry`'leri üretir. `GezginDisplay { … }` trailing lambda = `GezginEntryScope`.
-- **DI-detection (B2 tersine):** `@ViewModel` VM class'ını KSP-görünür kıldığı için codegen VM'in `@HiltViewModel`/`@KoinViewModel` + ctor `@Assisted`/`@InjectedParam`'ını okur → default resolver üretir (Hilt+Koin, androidx fallback). Ayrı gezgin-koin/hilt add-on'una gerek yok. B2 "düşür"den "feasible"ye döndü (infeasibility "VM tipi lambda gövdesinde"ydi; `@ViewModel` KSP-görünür pozisyona taşıdı).
+- **DI-detection (B2 tersine):** `@MviViewModel` VM class'ını KSP-görünür kıldığı için codegen VM'in `@HiltViewModel`/`@KoinViewModel` + ctor `@Assisted`/`@InjectedParam`'ını okur → default resolver üretir (Hilt+Koin, androidx fallback). Ayrı gezgin-koin/hilt add-on'una gerek yok. B2 "düşür"den "feasible"ye döndü (infeasibility "VM tipi lambda gövdesinde"ydi; `@MviViewModel` KSP-görünür pozisyona taşıdı).
 İşlendi: spec §2.4/§3.3/§10.1/§12/§14/§15 + findings B2.
 
 ## Fragment dialog bridge iptal — sadece `@FragmentScreen` (2026-07-04, M5)

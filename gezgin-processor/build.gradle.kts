@@ -23,7 +23,7 @@ dependencies {
 
     testImplementation(project(":gezgin-core"))
     testImplementation(project(":gezgin-test"))
-    // Faz 5.1 — MVI-mode fixtures (`@ViewModel`/`@ScreenEffect`/`GezginMvi`) compiled by kctfork.
+    // Faz 5.1 — MVI-mode fixtures (`@MviViewModel`/`@ScreenEffect`/`GezginMvi`) compiled by kctfork.
     // Mirrors the `:gezgin-core` test dep; the processor itself has NO compile dep on gezgin-mvi
     // (all its annotations are read as string FQNs), only this test sourceset does.
     testImplementation(project(":gezgin-mvi"))
