@@ -1,5 +1,6 @@
 package dev.gezgin.core.compose
 
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import dev.gezgin.core.RawNavigator
 
@@ -13,10 +14,10 @@ import dev.gezgin.core.RawNavigator
  * yalnız entry değiştiğinde farklı bir Content() ağacı kurulur); dynamic'in read-tracking maliyetine
  * gerek yok.
  */
-val LocalGezginEntryId = staticCompositionLocalOf<Long> {
+public val LocalGezginEntryId: ProvidableCompositionLocal<Long> = staticCompositionLocalOf<Long> {
     error("LocalGezginEntryId yalnız GezginDisplay'in kurduğu entry content'leri içinde okunabilir.")
 }
 
-val LocalGezginRawNavigator = staticCompositionLocalOf<RawNavigator> {
+public val LocalGezginRawNavigator: ProvidableCompositionLocal<RawNavigator> = staticCompositionLocalOf<RawNavigator> {
     error("LocalGezginRawNavigator yalnız GezginDisplay'in kurduğu entry content'leri içinde okunabilir.")
 }

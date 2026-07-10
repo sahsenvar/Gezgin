@@ -34,10 +34,10 @@ package dev.gezgin.core
  * dismiss (tap-outside/Esc/geri-izin-varken) → dialog scene `onDismissRequest = onBack` →
  * `navigator.back()` → pop; route `ResultRoute` ise caller `Canceled` alır (mevcut `back()` yolu).
  */
-interface DialogContract {
-    val dismissOnClickOutside: Boolean get() = true
-    val dismissOnBackPress: Boolean get() = true
-    val usePlatformDefaultWidth: Boolean get() = true
+public interface DialogContract {
+    public val dismissOnClickOutside: Boolean get() = true
+    public val dismissOnBackPress: Boolean get() = true
+    public val usePlatformDefaultWidth: Boolean get() = true
 }
 
 /**
@@ -52,9 +52,9 @@ interface DialogContract {
  * 4.1 contract okumayı + metadata wiring'i + guard'ı kurar; DialogSceneStrategy tam-ekran dialog
  * olarak render eder (usePlatformDefaultWidth=false; 4.0 raporu §6).
  */
-interface FullscreenModalContract {
-    val dismissOnClickOutside: Boolean get() = true
-    val dismissOnBackPress: Boolean get() = true
+public interface FullscreenModalContract {
+    public val dismissOnClickOutside: Boolean get() = true
+    public val dismissOnBackPress: Boolean get() = true
 }
 
 /**
@@ -79,8 +79,8 @@ interface FullscreenModalContract {
  * `navigator.back()` → pop; route `ResultRoute` ise caller `Canceled` alır (mevcut `back()` yolu —
  * material3'te swipe+scrim+back ÜÇÜ de tek `onDismissRequest`'e düşer, jar-doğrulandı).
  */
-interface BottomSheetContract {
-    val skipPartiallyExpanded: Boolean get() = false
-    val dismissOnBackPress: Boolean get() = true
-    val dismissOnClickOutside: Boolean get() = true
+public interface BottomSheetContract {
+    public val skipPartiallyExpanded: Boolean get() = false
+    public val dismissOnBackPress: Boolean get() = true
+    public val dismissOnClickOutside: Boolean get() = true
 }

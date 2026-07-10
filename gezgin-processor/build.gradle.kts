@@ -9,6 +9,10 @@ group = "dev.gezgin"
 version = "0.1.0-alpha01"
 
 kotlin {
+    // Faz 9.1 — açık API yüzeyi. Processor'ın yayınlanan tek public tipi KSP giriş noktası
+    // `GezginProcessorProvider`'dır (ServiceLoader); geri kalan tüm codegen/model/reader tipleri
+    // `internal` (yalnız bu modül + kendi testleri kullanır → API yüzeyi minimuma iner).
+    explicitApi()
     jvmToolchain(17)
 }
 

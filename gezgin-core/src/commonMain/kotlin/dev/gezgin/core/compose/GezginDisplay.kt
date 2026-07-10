@@ -64,7 +64,7 @@ import dev.gezgin.core.Route
  * donar, sonradan değişmez).
  */
 @Composable
-fun GezginDisplay(
+public fun GezginDisplay(
     navigator: RawNavigator,
     modifier: Modifier = Modifier,
     transitions: GezginTransition? = null,

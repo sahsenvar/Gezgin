@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
  * `org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose`(+`-runtime`) commonMain'de (KMP, jvm+android).
  */
 @Composable
-fun <E> ObserveAsEvents(effects: Flow<E>, onEvent: (E) -> Unit) {
+public fun <E> ObserveAsEvents(effects: Flow<E>, onEvent: (E) -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(effects, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {

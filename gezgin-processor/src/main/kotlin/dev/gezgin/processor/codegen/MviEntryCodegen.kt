@@ -97,7 +97,7 @@ private val EXPERIMENTAL_MATERIAL3_API = ClassName("androidx.compose.material3",
  * `LocalGezginSheetState`. All content extras are passed as NAMED args so the split role/resolver
  * lists need not reconstruct the composable's original parameter order.
  */
-object MviEntryCodegen {
+internal object MviEntryCodegen {
 
     fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
         entries.filter { it.mvi != null }

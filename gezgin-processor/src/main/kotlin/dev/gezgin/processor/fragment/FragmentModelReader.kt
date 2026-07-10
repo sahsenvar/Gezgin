@@ -97,7 +97,7 @@ private val MODAL_CONTRACT_FQS = setOf(
  * `EntryModelReader` UNTOUCHED (zero change to core-mode / MVI-mode behavior) and lets `FS3` uniformly
  * own every Fragment duplicate (same-kind AND cross-kind) under one code. See the task-6.1 report.
  */
-class FragmentModelReader(
+internal class FragmentModelReader(
     private val resolver: Resolver,
     private val logger: KSPLogger,
     /** The core-mode + MVI-mode entries already resolved by `EntryModelReader` — the FS3 cross-check set. */

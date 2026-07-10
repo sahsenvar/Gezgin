@@ -29,7 +29,7 @@ import dev.gezgin.processor.mvi.dumpMviText
  * (+ `GezginSerializers.kt` unless `gezgin.emitSerializers=false`). Test-only `gezgin.dumpModel=true`
  * writes the model as a deterministic text file instead.
  */
-class GezginProcessor(
+internal class GezginProcessor(
     private val environment: SymbolProcessorEnvironment,
 ) : SymbolProcessor {
 

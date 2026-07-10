@@ -136,7 +136,7 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  * (`MV1`/`MV4` — `@ViewModel` must implement `GezginMvi`, and no two `@ViewModel`s per route — live in
  * [dev.gezgin.processor.mvi.ViewModelModelReader], whose output [vmModels] this reader consumes.)
  */
-class EntryModelReader(
+internal class EntryModelReader(
     private val resolver: Resolver,
     private val logger: KSPLogger,
     private val model: GraphModel,

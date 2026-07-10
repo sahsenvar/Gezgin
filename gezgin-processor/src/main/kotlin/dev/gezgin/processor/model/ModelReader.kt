@@ -40,7 +40,7 @@ private const val RESULT_FLOW_FQ = "dev.gezgin.core.ResultFlow"
  *
  * Flow-chain and result-type rules are documented on the individual model types in `GraphModel.kt`.
  */
-class ModelReader(
+internal class ModelReader(
     private val resolver: Resolver,
     private val logger: KSPLogger,
 ) {

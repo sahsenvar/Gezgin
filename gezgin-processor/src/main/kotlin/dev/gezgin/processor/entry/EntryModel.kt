@@ -4,14 +4,14 @@ import com.squareup.kotlinpoet.TypeName
 import dev.gezgin.processor.mvi.ViewModelModel
 
 /** Core-mode kind (§3.2/§10.1) — mirrors `dev.gezgin.core.compose.EntryKind` 1:1. */
-enum class EntryKindModel { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
+internal enum class EntryKindModel { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
 
 /**
  * One content-composable parameter that is NEITHER `state` NOR `onIntent` in an MVI-mode `@Screen`
  * (Problem 2 groundwork, §10.1). Carries both the flattened [typeFq] (for classification/dump) and
  * the KotlinPoet [typeName] (for 5.2 codegen), same FQ+TypeName rationale as [ViewModelModel]'s S/I/E.
  */
-data class MviExtraParam(val name: String, val typeFq: String, val typeName: TypeName)
+internal data class MviExtraParam(val name: String, val typeFq: String, val typeName: TypeName)
 
 /**
  * The MVI-mode (§10.1) descriptor attached to an [EntryFunctionModel] whose content composable is
@@ -27,7 +27,7 @@ data class MviExtraParam(val name: String, val typeFq: String, val typeName: Typ
  * `LocalGezginSheetState`); [resolverExtraParams] are truly-unknown content params that 5.2 turns into
  * `@Composable () -> T` resolver params on `provideXEntry`.
  */
-data class MviEntryModel(
+internal data class MviEntryModel(
     val vm: ViewModelModel,
     /** Matched `@ScreenEffect` composable's simple name (linked by effect type), or null if none. */
     val effectFunSimpleName: String?,
@@ -50,7 +50,7 @@ data class MviEntryModel(
  * and validated (Task 3.4, spec §10.1/§12/§14 core-mode slice) into everything [EntryCodegen] needs
  * to emit a `provideXEntry()` — no further KSP lookups happen at codegen time.
  */
-data class EntryFunctionModel(
+internal data class EntryFunctionModel(
     /** The composable function's own package — `provideXEntry` is emitted INTO this same package. */
     val packageName: String,
     /** The composable function's simple name (e.g. `OrderChainScreen`). */

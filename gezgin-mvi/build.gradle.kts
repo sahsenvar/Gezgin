@@ -12,6 +12,9 @@ group = "dev.gezgin"
 version = "0.1.0-alpha01"
 
 kotlin {
+    // Faz 9.1 — yayınlanan modüller için açık API yüzeyi (her public bildirim explicit visibility +
+    // dönüş tipi ister; kasıtlı-olmayan yüzey `internal`'a çekilir). BCV .api dump'ıyla birlikte çalışır.
+    explicitApi()
     jvmToolchain(17)
     // gezgin-core ile aynı hedef seti: jvm() = desktop Compose, androidTarget() = Android.
     // Hilt Android-only olduğundan Hilt default resolver'ı yalnız androidTarget'ta anlamlı (spike task-5.0);

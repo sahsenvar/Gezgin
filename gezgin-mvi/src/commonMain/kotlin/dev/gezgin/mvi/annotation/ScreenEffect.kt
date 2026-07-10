@@ -11,4 +11,4 @@ package dev.gezgin.mvi.annotation
  * annotation'ın kendisi parametresizdir.
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class ScreenEffect
+public annotation class ScreenEffect

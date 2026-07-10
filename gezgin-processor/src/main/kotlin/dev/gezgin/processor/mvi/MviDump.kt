@@ -16,7 +16,7 @@ import dev.gezgin.processor.entry.EntryFunctionModel
  *
  * Lines are sorted by owning FQ so the output never depends on KSP traversal order.
  */
-fun dumpMviText(vmModels: List<ViewModelModel>, entries: List<EntryFunctionModel>): String {
+internal fun dumpMviText(vmModels: List<ViewModelModel>, entries: List<EntryFunctionModel>): String {
     val lines = mutableListOf<String>()
 
     vmModels.sortedBy { it.vmFq }.forEach { vm ->

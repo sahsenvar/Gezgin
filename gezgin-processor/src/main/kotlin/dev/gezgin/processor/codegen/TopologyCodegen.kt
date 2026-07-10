@@ -48,7 +48,7 @@ private val SERIALIZER = MemberName("kotlinx.serialization", "serializer")
  * uppercase = simple-name segment" convention (the same convention this codebase's fully-qualified
  * names already follow).
  */
-object TopologyCodegen {
+internal object TopologyCodegen {
 
     private const val GENERATED_TOPOLOGY_FILE = "GezginGenerated"
     private const val GENERATED_SERIALIZERS_FILE = "GezginSerializers"

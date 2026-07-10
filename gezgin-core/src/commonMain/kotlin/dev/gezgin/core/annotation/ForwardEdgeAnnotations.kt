@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class GoTo(val target: KClass<out Route>, val singleTop: Boolean = true, val name: String = "")
+public annotation class GoTo(val target: KClass<out Route>, val singleTop: Boolean = true, val name: String = "")
 
 /**
  * Replace kenarı (§4.1): mevcut hedefi `target` ile değiştirir — `clearUpTo` (varsayılan `Self`) + `inclusive`
@@ -21,7 +21,7 @@ annotation class GoTo(val target: KClass<out Route>, val singleTop: Boolean = tr
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class ReplaceTo(val target: KClass<out Route>, val clearUpTo: KClass<out Route> = Self::class, val inclusive: Boolean = true, val name: String = "")
+public annotation class ReplaceTo(val target: KClass<out Route>, val clearUpTo: KClass<out Route> = Self::class, val inclusive: Boolean = true, val name: String = "")
 
 /**
  * Sonuç-döndüren ileri kenar (§6): `target` bir `ResultRoute<T>` ya da `ResultFlow<T>` olmalı. Codegen
@@ -29,11 +29,11 @@ annotation class ReplaceTo(val target: KClass<out Route>, val clearUpTo: KClass<
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class GoForResult(val target: KClass<out Route>, val name: String = "")
+public annotation class GoForResult(val target: KClass<out Route>, val name: String = "")
 
 /**
  * Flow-çıkış + ileri kenar (§8.1): mevcut flow'u Canceled ile kapatıp `target`'a gider. Codegen tipli
  * `quitAndGoToX()` üretir.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class QuitAndGoTo(val target: KClass<out Route>)
+public annotation class QuitAndGoTo(val target: KClass<out Route>)

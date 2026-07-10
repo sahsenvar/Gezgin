@@ -11,7 +11,7 @@ import com.squareup.kotlinpoet.TypeName
  * so a generic param compiles instead of degrading to its raw erasure. Carrying a KotlinPoet type
  * makes this model processor-internal (no longer pure data) — an accepted trade for correctness.
  */
-data class ParamModel(
+internal data class ParamModel(
     val name: String,
     val typeFq: String,
     val typeName: TypeName,
@@ -20,13 +20,13 @@ data class ParamModel(
 )
 
 /** The kind of a forward navigation edge declared on a route. */
-enum class EdgeKind { GO_TO, REPLACE_TO, GO_FOR_RESULT, QUIT_AND_GO_TO }
+internal enum class EdgeKind { GO_TO, REPLACE_TO, GO_FOR_RESULT, QUIT_AND_GO_TO }
 
 /** The kind of a backward navigation edge declared on a route. */
-enum class BackEdgeKind { BACK_TO, BACK_TO_START, QUIT }
+internal enum class BackEdgeKind { BACK_TO, BACK_TO_START, QUIT }
 
 /** A forward navigation edge (`@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo`) declared on a route. */
-data class EdgeModel(
+internal data class EdgeModel(
     val kind: EdgeKind,
     val targetFq: String,
     val singleTop: Boolean,
@@ -36,7 +36,7 @@ data class EdgeModel(
 )
 
 /** A backward navigation edge (`@BackTo`/`@BackToStart`/`@Quit`) declared on a route. */
-data class BackEdgeModel(
+internal data class BackEdgeModel(
     val kind: BackEdgeKind,
     val targetFq: String?,
     val inclusive: Boolean = false,
@@ -44,7 +44,7 @@ data class BackEdgeModel(
 
 /** A single navigable destination: a class/object that is a member of a graph — a direct subtype
  *  (`: Graph`), whether declared inside the graph interface or in a separate file (Task 8.1). */
-data class RouteModel(
+internal data class RouteModel(
     val fqName: String,
     val simpleName: String,
     val graphFq: String,
@@ -66,7 +66,7 @@ data class RouteModel(
 )
 
 /** A `@NavGraph`/`@FlowGraph`-annotated interface that groups routes (and possibly nested graphs). */
-data class GraphModelNode(
+internal data class GraphModelNode(
     val fqName: String,
     val isFlow: Boolean,
     /**
@@ -117,7 +117,7 @@ data class GraphModelNode(
 )
 
 /** The full semantic model read from `@NavGraph`/`@FlowGraph`-annotated sources. */
-data class GraphModel(
+internal data class GraphModel(
     val graphs: List<GraphModelNode>,
     val routes: List<RouteModel>,
 )

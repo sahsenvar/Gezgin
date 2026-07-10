@@ -13,13 +13,13 @@ import dev.gezgin.core.Route
  * yüzden receiver'sız bir `ContentTransform` değeri OLARAK saklanamaz — lambda saklanır, NavDisplay'e
  * verildiği anda receiver'la çağrılır). `T = Route` sabitlenmiş: Gezgin tek `Route` tipiyle çalışıyor.
  */
-typealias GezginTransitionSpec = AnimatedContentTransitionScope<Scene<Route>>.() -> ContentTransform
+public typealias GezginTransitionSpec = AnimatedContentTransitionScope<Scene<Route>>.() -> ContentTransform
 
 /**
  * `predictivePopTransitionSpec` ile aynı imza — ek `Int` parametresi Nav3'te sürükleme kenarını
  * (`@NavigationEvent.SwipeEdge`) taşır; Gezgin'de opak geçirilir (adaptasyon gerekmiyor).
  */
-typealias GezginPredictiveTransitionSpec = AnimatedContentTransitionScope<Scene<Route>>.(Int) -> ContentTransform
+public typealias GezginPredictiveTransitionSpec = AnimatedContentTransitionScope<Scene<Route>>.(Int) -> ContentTransform
 
 /**
  * Bir route'un (veya app/graph seviyesinin) runtime transition değeri (§9). Üç alan da opsiyonel:
@@ -27,27 +27,27 @@ typealias GezginPredictiveTransitionSpec = AnimatedContentTransitionScope<Scene<
  * default'u) düşer ([resolveTransition]). `predictive` yazılmazsa NavDisplay wiring'i (`GezginDisplay`)
  * onu `backward` ile doldurur (§9 "predictive yazılmazsa = backward").
  */
-class GezginTransition(
-    val forward: GezginTransitionSpec? = null,
-    val backward: GezginTransitionSpec? = null,
-    val predictive: GezginPredictiveTransitionSpec? = null,
+public class GezginTransition(
+    public val forward: GezginTransitionSpec? = null,
+    public val backward: GezginTransitionSpec? = null,
+    public val predictive: GezginPredictiveTransitionSpec? = null,
 )
 
 /** [transition] builder'ı — `forward { }` / `backward { }` / `predictive { }` çağrıları [GezginTransition] alanlarını doldurur. */
-class GezginTransitionBuilder {
+public class GezginTransitionBuilder {
     private var forward: GezginTransitionSpec? = null
     private var backward: GezginTransitionSpec? = null
     private var predictive: GezginPredictiveTransitionSpec? = null
 
-    fun forward(spec: GezginTransitionSpec) {
+    public fun forward(spec: GezginTransitionSpec) {
         forward = spec
     }
 
-    fun backward(spec: GezginTransitionSpec) {
+    public fun backward(spec: GezginTransitionSpec) {
         backward = spec
     }
 
-    fun predictive(spec: GezginPredictiveTransitionSpec) {
+    public fun predictive(spec: GezginPredictiveTransitionSpec) {
         predictive = spec
     }
 
@@ -60,7 +60,7 @@ class GezginTransitionBuilder {
  * transition { .. }`) route'un `@Serializable` data class'ının kotlinx.serialization codegen'iyle
  * çakışır (non-serializable bir alan constructor'a/equals'a sızar) — bu yüzden §9 "getter zorunlu" diyor.
  */
-fun transition(block: GezginTransitionBuilder.() -> Unit): GezginTransition =
+public fun transition(block: GezginTransitionBuilder.() -> Unit): GezginTransition =
     GezginTransitionBuilder().apply(block).build()
 
 /**
@@ -69,7 +69,7 @@ fun transition(block: GezginTransitionBuilder.() -> Unit): GezginTransition =
  * son çare. Route-seviyesi [transition] ile AYNI şekle ([GezginTransition]) sahip — ayrı bir sarmalayıcı
  * tip yok (V1'de app-seviyesi tek bir default'tan ibaret).
  */
-fun navTransitions(block: GezginTransitionBuilder.() -> Unit): GezginTransition = transition(block)
+public fun navTransitions(block: GezginTransitionBuilder.() -> Unit): GezginTransition = transition(block)
 
 /**
  * Cascade çözümü (§9: "en içteki (screen) > graph > app"). [Route.transition] screen>graph zincirini

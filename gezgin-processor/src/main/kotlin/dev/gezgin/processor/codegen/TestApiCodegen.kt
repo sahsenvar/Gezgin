@@ -24,7 +24,7 @@ private val TEST_NAVIGATOR = ClassName(TEST_PKG, "GezginTestNavigator")
  * opt-OUT precedent) — production modules never depend on `:gezgin-test`; only a test source set's
  * KSP configuration turns this on.
  */
-object TestApiCodegen {
+internal object TestApiCodegen {
 
     fun generate(model: GraphModel, packageName: String): FileSpec? {
         val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)

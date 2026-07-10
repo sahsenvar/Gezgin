@@ -35,7 +35,7 @@ import kotlinx.serialization.json.Json
  * yardımcısı bu AYNI app-Json'ı (polimorfik Route modülüyle) `arguments` Bundle encode'unda yeniden
  * kullanır (ikinci Json ÜRETMEZ → backstack PD'siyle simetri). Yalnız modül-içi görünür, public'e sızmaz.
  */
-class RawNavigator(
+public class RawNavigator(
     start: Route,
     private val topology: GezginTopology,
     internal val onRootBack: () -> Unit = {},
@@ -65,7 +65,7 @@ class RawNavigator(
      * Public, gözlemlenebilir back stack (§10) — devtools / "şu an neredeyiz" göstergesi. Yalnız `Route`
      * taşır (id'siz); display'in ihtiyaç duyduğu id-duyarlı akış [keysState]'tir (internal).
      */
-    val backStack: StateFlow<List<Route>> = _backStack.asStateFlow()
+    public val backStack: StateFlow<List<Route>> = _backStack.asStateFlow()
 
     private val _keysState = MutableStateFlow<List<GezginKey>>(emptyList())
     /**
@@ -84,13 +84,13 @@ class RawNavigator(
      * abonesizken ya da yavaş bir collector'da buffer dolarsa event SESSİZCE DÜŞER (drop). Kaynak-
      * doğruluk [backStack]/[keys]'tedir; bu akış onların yerine değil, yanında bir sinyal kanalıdır.
      */
-    val events: Flow<NavEvent> = _events
+    public val events: Flow<NavEvent> = _events
 
     /** GezginDisplay adapter'ı için raw entry görünümü. */
     internal val keys: List<GezginKey> get() = state.stack
 
     /** Stack'in tepesindeki (şu an aktif) route. */
-    val current: Route get() = state.stack.last().route
+    public val current: Route get() = state.stack.last().route
 
     init {
         if (restored != null) {
@@ -105,7 +105,7 @@ class RawNavigator(
     /** slot payload'ı topology.edges[edgeId].resultSerializer ile encode → PD-güvenli anlık görüntü.
      *  ctor'daki [json] kullanılır (encode/decode simetrisi için tek kaynak). */
     @Suppress("UNCHECKED_CAST")
-    fun save(): SavedState {
+    internal fun save(): SavedState {
         val pendingSlots = bus.slots.map { slot ->
             when (val result = slot.result) {
                 null -> SavedSlot(slot.callerEntryId, slot.edgeId, slot.targetEntryId, payloadJson = null, canceled = false)
@@ -157,7 +157,7 @@ class RawNavigator(
     // ---- public ops ----
 
     /** @GoTo — enterFlow'u topology'den çözer (hedef flow-start container-entry'si mi). */
-    fun navigate(route: Route, singleTop: Boolean = true) {
+    public fun navigate(route: Route, singleTop: Boolean = true) {
         val enterFlow = resolveEnterFlow(route)
         val pushed = state.push(route, enterFlow = enterFlow, singleTop = singleTop) ?: return
         refreshBackStack()
@@ -170,7 +170,7 @@ class RawNavigator(
      * (2) düz pop + `Popped` — top pending-target ise Canceled'ı settleRemoved teslim eder (tek kapı).
      * Dipte → onRootBack.
      */
-    fun back() {
+    public fun back() {
         val top = state.stack.last()
         if (isFlowEntry(top)) {          // (1) flow entry → quit() (settleRemoved Canceled'ı teslim eder)
             quit()
@@ -180,7 +180,7 @@ class RawNavigator(
     }
 
     /** `@ReplaceTo` runtime'ı: `clearUpTo`'ya kadar (null = yalnız top) temizleyip `route`'u iter; çıkarılan pending-target'lara Canceled teslim eder. */
-    fun replaceTo(route: Route, clearUpTo: KClass<out Route>? = null, inclusive: Boolean = true) {
+    public fun replaceTo(route: Route, clearUpTo: KClass<out Route>? = null, inclusive: Boolean = true) {
         // M4 — modal-kind-at-root reddi MUTASYONDAN ÖNCE: replaceTo kökü temizleyip yerine bir modal
         // koyacaksa (sonuçtaki stack'in dibi = bir modal route) state hiç değiştirilmeden fırlat.
         // Aksi halde eski davranış (state önce `[modal]`'a döner, guard SONRAKİ composition'da patlar)
@@ -202,7 +202,7 @@ class RawNavigator(
     }
 
     /** `@BackTo` runtime'ı: stack'te `target`'a kadar pop (`inclusive` ise target da). Target yoksa `BackToTargetMissing` event'i, pop YOK. */
-    fun backTo(target: KClass<out Route>, inclusive: Boolean = false) {
+    public fun backTo(target: KClass<out Route>, inclusive: Boolean = false) {
         val removed = state.backTo(target, inclusive)
         if (removed == null) {
             _events.tryEmit(NavEvent.BackToTargetMissing(target.simpleName ?: "?"))
@@ -214,7 +214,7 @@ class RawNavigator(
     }
 
     /** Canceled ile flow kapat (root'ta onRootBack). */
-    fun quit() {
+    public fun quit() {
         val flowId = state.currentFlowId() ?: return
         val removed = state.quitFlow(flowId)
         if (removed == null) {
@@ -229,7 +229,7 @@ class RawNavigator(
 
     /** Value ile atomik kapat + caller'a teslim. Flow içinde değilken sessiz no-op (quit() ile simetrik).
      *  Nested ResultFlow'da hedef = EN-YAKIN-KAPSAYAN ResultFlow (spec §6); quit() ise innermost kalır. */
-    fun quitWith(result: Any?) {
+    public fun quitWith(result: Any?) {
         // quitWith hedef seçimi: en içteki KAPSAYAN ResultFlow (spec §6);
         // hiç ResultFlow yoksa fallback = en içteki flow (typed katman quitWith'i zaten yalnız ResultFlow'da üretir).
         val top = state.stack.last()
@@ -256,7 +256,7 @@ class RawNavigator(
      * yanlışlıkla pop edilmez (kirli-teslim/çifte-back yarışı önlenir). Faz 2 codegen'in ürettiği tipli
      * `backWithResult(result)` ctor'daki `entryId`'yi bu overload'a bağlar.
      */
-    fun backWithResult(entryId: Long, result: Any?) {
+    public fun backWithResult(entryId: Long, result: Any?) {
         val top = state.stack.last()
         if (top.id != entryId) return            // sahip entry artık top değil → teslim etme, pop etme
         if (!isPendingTarget(top.id)) return
@@ -265,10 +265,10 @@ class RawNavigator(
     }
 
     /** Kolaylık: sahip = ÇAĞRI ANINDAKİ top (call-time-top). Tipli katman entry'ye bağlayan overload'ı kullanır. */
-    fun backWithResult(result: Any?) = backWithResult(currentEntryId, result)
+    public fun backWithResult(result: Any?): Unit = backWithResult(currentEntryId, result)
 
     /** Çağrı anındaki top entry id — açık-caller overload'larına Faz 2 codegen'in bağlayacağı kanca. */
-    val currentEntryId: Long get() = state.stack.last().id
+    public val currentEntryId: Long get() = state.stack.last().id
 
     /**
      * Task 2.6 — `:gezgin-test`'in tipli `fromX()` erişimi için minimal public kapı: [route]'u
@@ -276,13 +276,13 @@ class RawNavigator(
      * kalır; bu, üstüne kurulan tek [GezginInternalApi] opt-in üye.
      */
     @GezginInternalApi
-    fun entryIdOf(route: KClass<out Route>): Long? = keys.lastOrNull { route.isInstance(it.route) }?.id
+    public fun entryIdOf(route: KClass<out Route>): Long? = keys.lastOrNull { route.isInstance(it.route) }?.id
 
     /**
      * Açık-caller (Faz 2 kancası): idempotent (§6) — aynı (caller, edge) için slot varken (in-flight
      * VEYA teslim edilmiş-tüketilmemiş) push YAPMA. Aksi halde result isteği DAİMA yeni entry yaratır.
      */
-    fun launchForResult(callerEntryId: Long, edgeId: String, route: Route) {
+    public fun launchForResult(callerEntryId: Long, edgeId: String, route: Route) {
         // Pre-guard, bus.launch'un predicate'iyle birebir aynı (HERHANGİ bir slot — result durumu fark etmez):
         // teslim edilmiş ama tüketilmemiş slot varken re-launch, slotsuz öksüz bir entry push'lardı.
         if (bus.slots.any { it.callerEntryId == callerEntryId && it.edgeId == edgeId }) return
@@ -298,26 +298,26 @@ class RawNavigator(
     /** Kolaylık: caller = ÇAĞRI ANINDAKİ top. Faz 2 codegen (caller top değilken) açık overload'ı kullanmalı.
      *  İki hızlı top-based çağrı farklı caller görür (ilk push top'u değiştirir) → dedupe istiyorsan
      *  explicit-caller overload'ını kullan; typed katman caller'ı entry'ye bağlar. */
-    fun launchForResult(edgeId: String, route: Route) = launchForResult(currentEntryId, edgeId, route)
+    public fun launchForResult(edgeId: String, route: Route): Unit = launchForResult(currentEntryId, edgeId, route)
 
     /** Açık-caller (Faz 2 kancası): (caller, edge) slotunun sonuç akışı. */
-    fun <T> results(callerEntryId: Long, edgeId: String): Flow<NavResult<T>> = bus.results(callerEntryId, edgeId)
+    public fun <T> results(callerEntryId: Long, edgeId: String): Flow<NavResult<T>> = bus.results(callerEntryId, edgeId)
 
     /**
      * Kolaylık: caller = ÇAĞRI ANINDAKİ top entry id. Restore sonrası geç re-attach bu yüzden ancak
      * orijinal caller entry mevcut top iken çalışır (call-time-top sözleşmesi); caller top DEĞİLKEN
      * (PD re-attach, Faz 2 codegen) açık [results]`(callerEntryId, edgeId)` overload'ı KULLANILMALI.
      */
-    fun <T> results(edgeId: String): Flow<NavResult<T>> = results(currentEntryId, edgeId)
+    public fun <T> results(edgeId: String): Flow<NavResult<T>> = results(currentEntryId, edgeId)
 
     /** Açık-caller sugar = launch + results.first() (Faz 2 kancası). */
-    suspend fun <T> navigateForResult(callerEntryId: Long, edgeId: String, route: Route): NavResult<T> {
+    public suspend fun <T> navigateForResult(callerEntryId: Long, edgeId: String, route: Route): NavResult<T> {
         launchForResult(callerEntryId, edgeId, route)
         return bus.results<T>(callerEntryId, edgeId).first()
     }
 
     /** Kolaylık sugar; caller çağrı anındaki top'tan (push'tan ÖNCE) yakalanır. */
-    suspend fun <T> navigateForResult(edgeId: String, route: Route): NavResult<T> =
+    public suspend fun <T> navigateForResult(edgeId: String, route: Route): NavResult<T> =
         navigateForResult(currentEntryId, edgeId, route)
 
     /**
@@ -327,7 +327,7 @@ class RawNavigator(
      * yoktur — düz `navigate` ile eşdeğerdir. Kök flow'da (quitFlow → null) quit()/quitWith ile aynı
      * kural: onRootBack()'e düş + `RootBack` yay, navigate ETME (teardown'un kendisi başarısız).
      */
-    fun quitAndGoTo(route: Route) {
+    public fun quitAndGoTo(route: Route) {
         val flowId = state.currentFlowId()
         if (flowId != null) {
             val removed = state.quitFlow(flowId)

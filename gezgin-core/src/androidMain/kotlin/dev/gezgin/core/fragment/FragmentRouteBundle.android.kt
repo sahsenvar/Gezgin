@@ -41,7 +41,7 @@ internal var gezginFragmentJson: Json? = null
  * gibi diğer codegen-çağrılı sembollerle aynı (public ama codegen-yönelimli). Yan etki: `gezginArgs`'ın
  * kapsamsız decode yolu için [gezginFragmentJson]'ı yakalar.
  */
-fun Route.toBundle(nav: RawNavigator): Bundle {
+public fun Route.toBundle(nav: RawNavigator): Bundle {
     gezginFragmentJson = nav.json
     val encoded = nav.json.encodeToString(PolymorphicSerializer(Route::class), this)
     return Bundle().apply { putString(GEZGIN_FRAGMENT_ROUTE_KEY, encoded) }

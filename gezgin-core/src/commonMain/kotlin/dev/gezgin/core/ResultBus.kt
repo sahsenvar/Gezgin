@@ -2,7 +2,7 @@ package dev.gezgin.core
 
 import kotlinx.coroutines.flow.*
 
-class ResultBus {
+internal class ResultBus {
     data class Slot(val callerEntryId: Long, val edgeId: String, val targetEntryId: Long, val result: NavResult<Any?>? = null)
     private val state = MutableStateFlow<List<Slot>>(emptyList())
     val slots: List<Slot> get() = state.value

@@ -20,7 +20,7 @@ import com.squareup.kotlinpoet.TypeName
  *   (the shape proven to compile in `gezgin-mvi`'s `CounterMvi` fixture); every ctor param is
  *   Gezgin-supplied, so the default is emitted only when they are all `route`/`nav`-typed.
  */
-enum class VmDiKind { HILT_ASSISTED, HILT_PLAIN, KOIN, ANDROIDX }
+internal enum class VmDiKind { HILT_ASSISTED, HILT_PLAIN, KOIN, ANDROIDX }
 
 /**
  * One primary-constructor parameter of a `@ViewModel` class, captured by [ViewModelModelReader] for
@@ -35,7 +35,7 @@ enum class VmDiKind { HILT_ASSISTED, HILT_PLAIN, KOIN, ANDROIDX }
  * generated navigator type is not yet resolvable in the KSP round that reads it (nav is matched by
  * [name] `"nav"` in that case — see `MviEntryCodegen`'s classification).
  */
-data class VmCtorParam(
+internal data class VmCtorParam(
     val name: String,
     /** Best-effort flattened FQ of the param type; may be unresolved (an as-yet-ungenerated navigator). */
     val typeFq: String,
@@ -73,7 +73,7 @@ data class VmCtorParam(
  * preserves the full parameterization. Capturing both avoids re-introducing the "generic-flattening"
  * bug the Sample Showcase phase fixed for ctor params (mirrors [dev.gezgin.processor.model.ParamModel]).
  */
-data class ViewModelModel(
+internal data class ViewModelModel(
     val vmFq: String,
     val vmSimpleName: String,
     /** The VM class's own package — used for the same-module `@ViewModel`/`@Screen` cross-check. */

@@ -17,9 +17,9 @@ import kotlinx.coroutines.flow.emptyFlow
  * kolaylaştırır, artık yük taşımaz — S/I/E doğrudan supertype arg'larından okunduğu için codegen'e
  * ekstra kısıt getirmez.
  */
-interface GezginMvi<out S, in I, out E> {
+public interface GezginMvi<out S, in I, out E> {
     /** UI state akışı — codegen `collectAsStateWithLifecycle()` ile gözler, stateless content'e `state` verir. */
-    val uiState: StateFlow<S>
+    public val uiState: StateFlow<S>
 
     /**
      * Opsiyonel tek-seferlik efekt akışı (nav-olmayan yan etkiler; snackbar/toast/haptic). Yoksa
@@ -33,8 +33,8 @@ interface GezginMvi<out S, in I, out E> {
      * olmalı (tek `val` — her erişimde `receiveAsFlow()` çağıran `get()` DEĞİL), aksi halde
      * [ObserveAsEvents]'in `LaunchedEffect` key'i her recomposition'da değişip collector'ı restart eder.
      */
-    val effects: Flow<E> get() = emptyFlow()
+    public val effects: Flow<E> get() = emptyFlow()
 
     /** Intent girişi — stateless content `onIntent(...)` ile çağırır. */
-    fun onIntent(intent: I)
+    public fun onIntent(intent: I)
 }

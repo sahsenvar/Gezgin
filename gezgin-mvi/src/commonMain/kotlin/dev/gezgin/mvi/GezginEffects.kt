@@ -37,20 +37,20 @@ import kotlinx.coroutines.flow.receiveAsFlow
  * _effects.send(CounterEffect.Toast("kaydedildi"))
  * ```
  */
-class GezginEffects<E> {
+public class GezginEffects<E> {
     private val channel = Channel<E>(Channel.UNLIMITED)
 
     /**
      * Kayıpsız efekt akışı — [GezginMvi.effects]'e doğrudan atanır. Stabil (`val`) instance; **tek**
      * collector içindir (efekt = kesin-tek-teslim, fan-out yok).
      */
-    val flow: Flow<E> = channel.receiveAsFlow()
+    public val flow: Flow<E> = channel.receiveAsFlow()
 
     /**
      * Bir efekt gönder. `UNLIMITED` buffer → asla suspend etmez, asla düşürmez: gözlemci yokken bile
      * kuyruğa alınır ve re-observe'de teslim edilir. Herhangi bir thread'den çağrılabilir.
      */
-    fun send(effect: E) {
+    public fun send(effect: E) {
         channel.trySend(effect)
     }
 }

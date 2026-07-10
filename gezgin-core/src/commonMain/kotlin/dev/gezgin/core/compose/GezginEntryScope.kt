@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
  * `BOTTOM_SHEET` (Faz 4.2) GezginBottomSheetSceneStrategy metadata'sı alır → `ModalBottomSheet` overlay
  * (el-yazımı OverlayScene, sheetState Local ile enjekte); `SCREEN` tek-pane.
  */
-enum class EntryKind { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
+public enum class EntryKind { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
 
 /**
  * Gezgin registry kaydı — [kind] Faz 4 modal scene wiring'i için metadata, [content] `Route`'a
@@ -37,7 +37,7 @@ internal class RegisteredEntry(
  * `provideXEntry`) burada [register] çağırarak route'u içeriğe bağlar. Kullanıcıya wrapper tip
  * sızmaz: registry `internal`, yalnız [dev.gezgin.core.compose] paketi (GezginDisplay/adapter) okur.
  */
-class GezginEntryScope internal constructor() {
+public class GezginEntryScope internal constructor() {
 
     // Thread-safety notu: senkronize DEĞİL (`mutableMapOf`, plain) — bilinçli, çünkü yalnız
     // `GezginDisplay`'in `remember { GezginEntryScope().apply(entries) }` kuruluş bloğunda,
@@ -50,7 +50,7 @@ class GezginEntryScope internal constructor() {
      * `R` için içerik kaydeder. Aynı `R` iki kez kaydedilirse açıklayıcı hata fırlatır (kayıt anında,
      * ilk render'a kadar beklemeden — yanlış kurulum erken patlar).
      */
-    inline fun <reified R : Route> register(
+    public inline fun <reified R : Route> register(
         kind: EntryKind = EntryKind.SCREEN,
         noBack: Boolean = false,
         noinline content: @Composable (R) -> Unit,

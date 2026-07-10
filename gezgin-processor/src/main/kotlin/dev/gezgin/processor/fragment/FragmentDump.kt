@@ -9,7 +9,7 @@ package dev.gezgin.processor.fragment
  * asserts against. Lines are sorted by owning Fragment FQ so the output never depends on KSP traversal
  * order.
  */
-fun dumpFragmentText(models: List<FragmentEntryModel>): String =
+internal fun dumpFragmentText(models: List<FragmentEntryModel>): String =
     models.sortedBy { it.fragmentFq }.joinToString("\n") { m ->
         "fragment ${m.fragmentFq} route=${m.routeFq} pkg=${m.packageName} " +
             "routePkg=${m.routePackageName} x=${m.x} noBack=${m.noBack}"

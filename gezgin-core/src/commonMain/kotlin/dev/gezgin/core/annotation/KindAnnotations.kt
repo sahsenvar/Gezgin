@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
  * Processor okuması Faz 3.4'te; bu görevde yalnız tanım.
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class Screen(val route: KClass<out Route> = Route::class)
+public annotation class Screen(val route: KClass<out Route> = Route::class)
 
 /**
  * Kind: route'u modal bir **dialog** overlay'i olarak render eder (§3.2/§7) — sunum property'leri için
@@ -23,7 +23,7 @@ annotation class Screen(val route: KClass<out Route> = Route::class)
  * hatası verir ya da (import sırasına göre) yanlış olan sessizce çözülebilir.
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class Dialog(val route: KClass<out Route> = Route::class)
+public annotation class Dialog(val route: KClass<out Route> = Route::class)
 
 /**
  * Kind: route'u alttan açılan modal bir **bottom sheet** olarak render eder (§3.2/§7) — sunum property'leri
@@ -31,7 +31,7 @@ annotation class Dialog(val route: KClass<out Route> = Route::class)
  * `LocalGezginSheetState` ile sheet'i programatik kapatabilir.
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class BottomSheet(val route: KClass<out Route> = Route::class)
+public annotation class BottomSheet(val route: KClass<out Route> = Route::class)
 
 /**
  * Kind: route'u **tam-ekran** modal overlay olarak render eder (§3.2/§7; scrim'siz, `usePlatformDefaultWidth`
@@ -39,4 +39,4 @@ annotation class BottomSheet(val route: KClass<out Route> = Route::class)
  * implement edebilir.
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class FullscreenModal(val route: KClass<out Route> = Route::class)
+public annotation class FullscreenModal(val route: KClass<out Route> = Route::class)

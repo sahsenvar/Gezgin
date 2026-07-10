@@ -45,4 +45,4 @@ import kotlin.reflect.KClass
  * declaration level — the annotation simply never resolves a target on non-Android sources.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class FragmentScreen(val route: KClass<out Route>)
+public annotation class FragmentScreen(val route: KClass<out Route>)

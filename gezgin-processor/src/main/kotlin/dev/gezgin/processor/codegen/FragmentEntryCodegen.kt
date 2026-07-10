@@ -70,7 +70,7 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * call, when wired, is qualified against [FragmentEntryModel.routePackageName] — cross-module-safe, exactly
  * like [EntryCodegen].
  */
-object FragmentEntryCodegen {
+internal object FragmentEntryCodegen {
 
     /**
      * @param hasNavigator per-entry predicate — `true` iff the entry's route earns a `NavigatorCodegen`

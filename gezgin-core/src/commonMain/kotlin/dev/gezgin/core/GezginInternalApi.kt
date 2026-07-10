@@ -11,4 +11,4 @@ package dev.gezgin.core
     level = RequiresOptIn.Level.ERROR,
 )
 @Retention(AnnotationRetention.BINARY)
-annotation class GezginInternalApi
+public annotation class GezginInternalApi

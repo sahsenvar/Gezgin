@@ -14,6 +14,6 @@ import dev.gezgin.core.compose.GezginTransition
  * zinciriyle graph'ın değerini miras alır (screen>graph cascade BEDAVA gelir — ek kod gerekmez). Kalan
  * app-seviyesi basamak ([dev.gezgin.core.compose.navTransitions]) [dev.gezgin.core.compose.resolveTransition]'da.
  */
-interface Route {
-    val transition: GezginTransition? get() = null
+public interface Route {
+    public val transition: GezginTransition? get() = null
 }

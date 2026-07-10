@@ -4,6 +4,9 @@ plugins {
     alias(libs.plugins.android.library)
 }
 kotlin {
+    // Faz 9.1 — gezgin-test yayınlanmıyor (maven-publish YOK) ama diğer modüllerin testlerince project-dep
+    // olarak tüketiliyor → tutarlılık için açık API yüzeyi. BCV/POM YOK (yalnız yayınlanan 3 modül).
+    explicitApi()
     jvmToolchain(17)
     jvm()
     androidTarget()

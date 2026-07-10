@@ -15,6 +15,11 @@ group = "dev.gezgin"
 version = "0.1.0-alpha01"
 
 kotlin {
+    // Faz 9.1 — açık API yüzeyi (her public bildirim explicit visibility + dönüş tipi ister). Codegen'in
+    // ürettiği kodun dokunduğu tipler (RawNavigator/GezginEntryScope/Local*/topology tipleri/fragment
+    // interop) public KALIR; salt-iç durum makinesi (GezginState/ResultBus) ve PD save()/platform kökü
+    // `internal`'a çekildi. BCV .api dump'ı bu yüzeyi kilitler.
+    explicitApi()
     jvmToolchain(17)
     // jvm() = desktop Compose hedefi (Faz 3 GezginDisplay); compose.desktop.currentOs çalıştırma zamanı
     // yalnız desktop uiTest'te gerekebilir (Faz 3.2+), burada eklenmedi.

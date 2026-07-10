@@ -14,7 +14,7 @@ package dev.gezgin.processor.fragment
  * All `androidx.fragment.*` symbols are read as **string FQNs** — `gezgin-processor` has (and per §11.2
  * will keep) NO compile dependency on `androidx.fragment`, exactly like the `dev.gezgin.mvi.*` reads.
  */
-data class FragmentEntryModel(
+internal data class FragmentEntryModel(
     /** The annotated Fragment class's fully-qualified name (e.g. `com.app.OrderChainFragment`). */
     val fragmentFq: String,
     /** The annotated Fragment class's simple name (e.g. `OrderChainFragment`). */

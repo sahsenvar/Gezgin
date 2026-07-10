@@ -44,7 +44,7 @@ private const val UNIT_FQ = "kotlin.Unit"
  * module is naturally enforced by `resolver.getSymbolsWithAnnotation` returning only THIS module's
  * `@ViewModel`s. `EntryModelReader` closes the loop symmetrically (`MV2`/`MV3`).
  */
-class ViewModelModelReader(
+internal class ViewModelModelReader(
     private val resolver: Resolver,
     private val logger: KSPLogger,
 ) {

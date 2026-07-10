@@ -8,4 +8,4 @@ package dev.gezgin.core.compose
  * hiçbir şey yapmadan yutulur (N5, §8.1 empty-stack invariant'ı ihlal edilmez — yalnız dışa sinyal
  * verilmez).
  */
-expect fun platformDefaultRootBack(): () -> Unit
+internal expect fun platformDefaultRootBack(): () -> Unit

@@ -18,4 +18,4 @@ import kotlin.reflect.KClass
  * damganın derlenmiş classpath declaration'ında görünür kalması şart.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class GezginNavigatorFor(val route: KClass<out Route>)
+public annotation class GezginNavigatorFor(val route: KClass<out Route>)

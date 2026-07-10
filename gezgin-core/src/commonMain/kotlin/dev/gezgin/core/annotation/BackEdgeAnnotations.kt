@@ -10,19 +10,19 @@ import kotlin.reflect.KClass
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class BackTo(val target: KClass<out Route>, val inclusive: Boolean = false)
+public annotation class BackTo(val target: KClass<out Route>, val inclusive: Boolean = false)
 
 /** Geri kenarı (§4.2): stack'i start destination'a kadar boşaltır. Codegen tipli `backToStart()` üretir. */
 @Target(AnnotationTarget.CLASS)
-annotation class BackToStart
+public annotation class BackToStart
 
 /** Flow-çıkış kenarı (§8.1): mevcut flow'u Canceled ile kapatır (root'ta `onRootBack`). Codegen tipli `quit()` üretir. */
 @Target(AnnotationTarget.CLASS)
-annotation class Quit
+public annotation class Quit
 
 /**
  * Terminal işaret (§4.2, M5′): bu route top iken geri (sistem-back/predictive dahil) YUTULUR — Gezgin-sahipli
  * handler dispatcher LIFO'sunda kazanır. Kök muaftır (dipteyken back = `onRootBack`; kullanıcı app'e hapsolmaz).
  */
 @Target(AnnotationTarget.CLASS)
-annotation class NoBack
+public annotation class NoBack

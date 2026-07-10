@@ -9,6 +9,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.scene.OverlayScene
@@ -39,7 +40,7 @@ import dev.gezgin.core.Route
  * `staticCompositionLocalOf` — değer sheet-entry başına stabil (entry recompose olduğunda `SheetState`
  * instance'ı `remember`'lı kalır); dynamic read-tracking maliyeti gereksiz.
  */
-val LocalGezginSheetState = staticCompositionLocalOf<SheetState> {
+public val LocalGezginSheetState: ProvidableCompositionLocal<SheetState> = staticCompositionLocalOf<SheetState> {
     error("LocalGezginSheetState yalnız GezginDisplay'in kurduğu @BottomSheet content'i içinde okunabilir.")
 }
 

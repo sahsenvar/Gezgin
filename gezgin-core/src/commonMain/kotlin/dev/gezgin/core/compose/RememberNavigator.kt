@@ -36,7 +36,7 @@ import kotlinx.serialization.json.Json
  * geçilir, ama o sarmalayıcı HER ÇAĞRISINDA en GÜNCEL `onRootBack`'i çağırır ([rememberUpdatedState]).
  */
 @Composable
-fun rememberNavigator(
+public fun rememberNavigator(
     start: Route,
     topology: GezginTopology,
     json: Json,

@@ -60,7 +60,7 @@ private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
  * kalsın diye imzada TUTULUR.
  */
 @Suppress("UNUSED_PARAMETER")
-fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
+public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
     boundRegistry[fragment] = BoundGezgin(nav)
 }
 
@@ -78,7 +78,7 @@ fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
  * change/PD sonrası yeni instance yeniden bağlanmalı. `public`: üretilen kod tüketici modülünde.
  */
 @Suppress("UNUSED_PARAMETER")
-fun bindGezgin(fragment: Fragment, route: Route) {
+public fun bindGezgin(fragment: Fragment, route: Route) {
     boundRegistry[fragment] = BoundGezgin(nav = null)
 }
 
@@ -113,7 +113,7 @@ internal fun gezginBoundNav(fragment: Fragment): Any {
  * `[FS5]` "navigator YOK". (Genelde ikincisi zaten derleme-zamanı yakalanır: navigator'ı olmayan bir route'un
  * `XNavigator` tipi hiç ÜRETİLMEZ → `gezginNav<XNavigator>()` çözümlenemez; FS5 kalıntı bir runtime ağıdır.)
  */
-inline fun <reified N> gezginNav(): ReadOnlyProperty<Fragment, N> =
+public inline fun <reified N> gezginNav(): ReadOnlyProperty<Fragment, N> =
     ReadOnlyProperty { fragment, _ -> gezginBoundNav(fragment) as N }
 
 /**
@@ -146,5 +146,5 @@ internal fun gezginBoundRoute(fragment: Fragment): Route {
  * branch'inde DEĞİL (o an [gezginFragmentJson] henüz `null` — bkz. dosya başı KDoc + [gezginBoundRoute]
  * hatası). Route'u `onCreateView`/`onViewCreated`'da oku (§B4).
  */
-inline fun <reified R : Route> gezginArgs(): ReadOnlyProperty<Fragment, R> =
+public inline fun <reified R : Route> gezginArgs(): ReadOnlyProperty<Fragment, R> =
     ReadOnlyProperty { fragment, _ -> gezginBoundRoute(fragment) as R }

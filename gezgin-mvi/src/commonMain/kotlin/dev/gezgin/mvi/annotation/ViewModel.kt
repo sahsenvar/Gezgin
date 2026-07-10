@@ -28,4 +28,4 @@ import kotlin.reflect.KClass
  * kısıtı yoktur.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class ViewModel(val route: KClass<out Route>)
+public annotation class ViewModel(val route: KClass<out Route>)

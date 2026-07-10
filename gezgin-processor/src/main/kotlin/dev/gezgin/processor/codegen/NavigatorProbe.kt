@@ -36,7 +36,7 @@ import dev.gezgin.processor.model.RouteModel
  * bağlıdır. Aralıklı KSP izolasyonunda bu tetiklenmeyebilir → nav modülünde edge topolojisi değişince feature
  * modüllerinde TEMİZ yeniden-derleme (clean build) gerekir. Bkz. `docs/gezgin-on-device-checklist.md`.
  */
-object NavigatorProbe {
+internal object NavigatorProbe {
 
     const val MARKER_FQ = "dev.gezgin.core.annotation.GezginNavigatorFor"
 
