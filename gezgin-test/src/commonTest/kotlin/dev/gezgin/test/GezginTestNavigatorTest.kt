@@ -67,4 +67,32 @@ class GezginTestNavigatorTest {
         val ex = assertFailsWith<IllegalStateException> { nav.entryIdOf(Payment::class) }
         assertTrue(ex.message.orEmpty().contains("Payment"))
     }
+
+    // Faz 8.1 — the fixture's `CheckoutFlow` is FLAT-FILE-shaped: a top-level flow FQ ("CheckoutFlow")
+    // with members declared `: CheckoutFlow` (not lexically nested). Runtime flow-unit behaviour keys
+    // only on the flowChain/flowPath, so entering it mints a flow instance and `quit()` unwinds the
+    // whole flow atomically back to the caller — identical to a nested flow.
+    @Test fun flatFileFlowQuitUnwindsWholeFlow() {
+        val nav = GezginTestNavigator(start = Catalog, topology = testTopology)
+        nav.navigate(Cart)       // enter the flat-file flow → fresh flowPath minted
+        nav.navigate(Payment)    // deeper in the same flow instance (inherits the flowId)
+        assertEquals(listOf(Catalog, Cart, Payment), nav.backStack)
+        nav.raw.quit()           // quitFlow: atomic pop of the entire CheckoutFlow block
+        assertEquals(listOf(Catalog), nav.backStack)
+        assertEquals(Catalog, nav.current)
+    }
+
+    // Faz 8.1 — `quitWith` on the flat-file ResultFlow atomically unwinds the whole flow AND delivers
+    // Value to the awaiting caller, proving the flowPath round-trip holds for a top-level flow FQ.
+    @Test fun flatFileResultFlowQuitWithDeliversValueAndUnwinds() = runTest {
+        val nav = GezginTestNavigator(start = Catalog, topology = testTopology)
+        val r = async { nav.raw.navigateForResult<OrderId>("Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        nav.navigate(Payment)                 // move deeper inside the flow before quitting
+        assertEquals(listOf(Catalog, Cart, Payment), nav.backStack)
+        nav.raw.quitWith(OrderId("done"))     // quitFlow with result → atomic pop + Value to caller
+        assertEquals(NavResult.Value(OrderId("done")), r.await())
+        assertEquals(listOf(Catalog), nav.backStack)
+        assertEquals(Catalog, nav.current)
+    }
 }
