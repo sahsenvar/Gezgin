@@ -1,31 +1,31 @@
 package dev.gezgin.core
 
 /**
- * Gözlem-amaçlı (observe-only) navigasyon olayı (§10). `navigator.events: Flow<NavEvent>` bu tipleri
- * yayar — log/analytics/devtools içindir; akışı ETKİLEMEZ (yalnız gözler).
+ * Observe-only navigation event (§10). `navigator.events: Flow<NavEvent>` emits these types — intended for
+ * logging/analytics/devtools; it does NOT affect the flow (it only observes).
  */
 public sealed interface NavEvent {
-    /** Yeni bir hedef stack'e itildi. */
+    /** A new target was pushed onto the stack. */
     public data class Pushed(val route: Route) : NavEvent
 
-    /** Tepedeki hedef pop edildi. */
+    /** The top target was popped. */
     public data class Popped(val route: Route) : NavEvent
 
-    /** `replaceTo`: `removed` hedefler `pushed` ile değiştirildi. */
+    /** `replaceTo`: the `removed` targets were replaced by `pushed`. */
     public data class Replaced(val removed: List<Route>, val pushed: Route) : NavEvent
 
-    /** `backTo`/`backToStart`: `target`'a kadar pop edildi, `removed` çıkarılanlar. */
+    /** `backTo`/`backToStart`: popped up to `target`; `removed` are the entries taken off. */
     public data class PoppedTo(val target: String, val removed: List<Route>) : NavEvent
 
-    /** Bir flow-unit kapandı (`flowInstanceId`); `canceled` = sonuçsuz (quit) mı. */
+    /** A flow unit closed (`flowInstanceId`); `canceled` = whether it ended without a result (quit). */
     public data class FlowQuit(val flowInstanceId: Long, val canceled: Boolean) : NavEvent
 
-    /** Bir result kenarının (`edgeId`) sonucu, bekleyen caller olmadığı için düştü. */
+    /** A result edge's (`edgeId`) result was dropped because there was no pending caller. */
     public data class ResultDropped(val edgeId: String) : NavEvent
 
-    /** `@BackTo`/`backTo` hedefi (`target`) stack'te bulunamadı — pop yapılmadı. */
+    /** A `@BackTo`/`backTo` target (`target`) was not found in the stack — no pop happened. */
     public data class BackToTargetMissing(val target: String) : NavEvent
 
-    /** Kök stack'te geri denendi → `onRootBack` tetiklendi (uygulamadan çıkış noktası). */
+    /** Back was attempted at the root stack → `onRootBack` fired (the app-exit point). */
     public data object RootBack : NavEvent
 }

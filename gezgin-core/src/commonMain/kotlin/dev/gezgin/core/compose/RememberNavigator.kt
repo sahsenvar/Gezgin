@@ -13,27 +13,28 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * `RawNavigator`'ı platform-uygun, KİMLİK-STABİL bir holder'da kurar — PD (process death) simülasyonu
- * §1.10/§12: kaydedilen tip `String` (json-encoded [SavedState], [navigatorSaver]/[decodeSavedStateOrNull]).
+ * Sets up `RawNavigator` in a platform-appropriate, IDENTITY-STABLE holder — the PD (process death)
+ * simulation of §1.10/§12: the saved type is `String` (json-encoded [SavedState], [navigatorSaver]/
+ * [decodeSavedStateOrNull]).
  *
- * **C1 — config-change'te stable RawNavigator (spec §225):** instance edinimi [rememberRawNavigatorInstance]
- * expect/actual'ına devredilir. Android actual'ı navigator'ı host `ViewModelStoreOwner` (Activity)
- * scope'lu bir holder'da tutar → rotasyon (Activity recreation) AYNI instance'ı korur; VM ctor'unda
- * yakalanan navigator referansı rotasyondan sonra da display'in gözlemlediği state'i sürer. Process
- * death'te holder da ölür → taze instance kurulur ve `rememberSaveable`'daki serileştirilmiş snapshot
- * [RawNavigator.adoptRestored] ile BİR KEZ benimsenir. Desktop actual'ı `rememberSaveable(navigatorSaver)`
- * kullanır (CMP desktop'ta config-change YOK → kimlik composition ömrü boyunca zaten stabil; Faz-3
- * davranışı değişmedi).
+ * **C1 — stable RawNavigator across config-change (spec §225):** instance acquisition is delegated to the
+ * [rememberRawNavigatorInstance] expect/actual. The Android actual keeps the navigator in a holder scoped to
+ * the host `ViewModelStoreOwner` (Activity) → a rotation (Activity recreation) preserves the SAME instance;
+ * the navigator reference captured in the VM ctor keeps driving the state the display observes after rotation
+ * too. On process death the holder dies too → a fresh instance is set up and the serialized snapshot in
+ * `rememberSaveable` is adopted ONCE via [RawNavigator.adoptRestored]. The desktop actual uses
+ * `rememberSaveable(navigatorSaver)` (on CMP desktop there is NO config-change → the identity is already
+ * stable for the lifetime of the composition; Faz-3 behavior unchanged).
  *
- * **Kuruluş guard'ı (§12):** `start`'ın flow-chain'i `isResultFlow == true` bir üye İÇEREMEZ —
- * bir ResultFlow üyesi tek başına (bekleyen bir caller'ı olmadan) kökte/ilk entry olarak açılamaz
- * (§8.1). Modal-kind guard'ı BURADA DEĞİL — kind bilgisi entry-scope'ta (registry) yaşar, bu yüzden
- * [GezginDisplay] içinde (register lookup'tan SONRA) uygulanır.
+ * **Setup guard (§12):** `start`'s flow-chain may NOT contain a member with `isResultFlow == true` — a
+ * ResultFlow member cannot be opened alone (without a pending caller) as the root/first entry (§8.1). The
+ * modal-kind guard is NOT here — the kind info lives in the entry-scope (registry), so it is applied inside
+ * [GezginDisplay] (AFTER the register lookup).
  *
- * **Stale-lambda fix (deferred, final-review):** `stableOnRootBack` yalnız İLK composition'da kurulur
- * (`remember` init-lambda'sı) — çağıranın `onRootBack`'i bir state'e kapanan (closure) yeni bir lambda
- * instance'ıysa (örn. `{ someState.value }`), holder'a SABİT (bir kez kurulan) bir sarmalayıcı lambda
- * geçilir, ama o sarmalayıcı HER ÇAĞRISINDA en GÜNCEL `onRootBack`'i çağırır ([rememberUpdatedState]).
+ * **Stale-lambda fix (deferred, final-review):** `stableOnRootBack` is set up only on the FIRST composition
+ * (the `remember` init-lambda) — if the caller's `onRootBack` is a new lambda instance that closes over some
+ * state (e.g. `{ someState.value }`), a STABLE (set-up-once) wrapper lambda is handed to the holder, but that
+ * wrapper calls the MOST RECENT `onRootBack` on EVERY invocation ([rememberUpdatedState]).
  */
 @Composable
 public fun rememberNavigator(
@@ -52,10 +53,11 @@ public fun rememberNavigator(
 }
 
 /**
- * C1 — [RawNavigator] instance edinimi, platform-özel kimlik-stabilitesiyle. Android actual'ı host
- * ViewModel-scope'lu bir holder'a sarar (config-change'te AYNI instance korunur) + `rememberSaveable`
- * PD snapshot'ı [RawNavigator.adoptRestored] ile benimser. Desktop actual'ı `rememberSaveable`
- * ([navigatorSaver]) kullanır (config-change yok → kimlik zaten stabil). Detay için [rememberNavigator] KDoc'u.
+ * C1 — [RawNavigator] instance acquisition, with platform-specific identity stability. The Android actual
+ * wraps it in a holder scoped to the host ViewModel (the SAME instance is preserved across config-change) +
+ * adopts the `rememberSaveable` PD snapshot via [RawNavigator.adoptRestored]. The desktop actual uses
+ * `rememberSaveable` ([navigatorSaver]) (no config-change → identity is already stable). For details see the
+ * [rememberNavigator] KDoc.
  */
 @Composable
 internal expect fun rememberRawNavigatorInstance(
@@ -66,13 +68,13 @@ internal expect fun rememberRawNavigatorInstance(
 ): RawNavigator
 
 /**
- * [RawNavigator] <-> `String` `Saver`'ı — [navigatorSaver] altında [encodeNavigatorState]/
- * [decodeNavigatorState]'e delege eder (encode/decode simetrisi için TEK `json` kaynağı, bkz.
- * `RawNavigator` KDoc'u). `@Composable` DEĞİL — bilinçli: Compose runtime kurulumu olmadan doğrudan
- * birim testiyle pinlenebilir (Task 3.2 deliverable e, uiTest'siz fallback). Asıl encode/decode
- * mantığı bilinçli olarak `Saver`'ın `SaverScope`-alıcılı `save` üyesinin DIŞINA, düz fonksiyonlara
- * çıkarıldı — testler böylece Compose'un extension-member `Saver.save`'ini (Kotlin/JVM'de foreign
- * (androidx) binary metadata üzerinden çağırmanın kırılgan olduğu görüldü) hiç çağırmaz.
+ * The [RawNavigator] <-> `String` `Saver` — under [navigatorSaver] it delegates to [encodeNavigatorState]/
+ * [decodeNavigatorState] (a SINGLE `json` source for encode/decode symmetry, see the `RawNavigator` KDoc).
+ * NOT `@Composable` — deliberate: it can be pinned directly by a unit test without a Compose runtime setup
+ * (Task 3.2 deliverable e, the fallback without uiTest). The actual encode/decode logic is deliberately
+ * lifted OUT of the `Saver`'s `SaverScope`-receiver `save` member into plain functions — so tests never call
+ * Compose's extension-member `Saver.save` (calling it over foreign (androidx) binary metadata on Kotlin/JVM
+ * proved fragile).
  */
 internal fun navigatorSaver(
     start: Route,
@@ -84,11 +86,11 @@ internal fun navigatorSaver(
     restore = { encoded -> decodeNavigatorStateOrNull(encoded, start, topology, json, onRootBack) },
 )
 
-/** `nav.save(): SavedState` → json-encoded `String` (encode yarısı, [navigatorSaver] KDoc'u). */
+/** `nav.save(): SavedState` → json-encoded `String` (the encode half, see the [navigatorSaver] KDoc). */
 internal fun encodeNavigatorState(nav: RawNavigator, json: Json): String =
     json.encodeToString(SavedState.serializer(), nav.save())
 
-/** json-encoded `String` → yeni `RawNavigator` (`restored=` ile, decode yarısı, [navigatorSaver] KDoc'u). */
+/** json-encoded `String` → a new `RawNavigator` (via `restored=`, the decode half, see the [navigatorSaver] KDoc). */
 internal fun decodeNavigatorState(
     encoded: String,
     start: Route,
@@ -101,20 +103,20 @@ internal fun decodeNavigatorState(
 }
 
 /**
- * PD-restore fault-tolerance (Important 1, final-review) — [navigatorSaver]'ın `restore`'unun ASIL
- * çağırdığı sarmalayıcı. Kaydedilen `String` (eski uygulama versiyonundan kalmış bozuk/uyumsuz-şema
- * bir PD state'i, örn. bir migration sonrası alan adı/serializer değişmişse) [decodeNavigatorState]'i
- * ATABİLİR — `SerializationException` (malformed/şema-uyumsuz json) veya `IllegalArgumentException`
- * (kotlinx.serialization'ın bazı decode-hatalarını bu tiple sardığı biliniyor, örn. polymorphic/enum
- * çözümü) fırlatabilir. Compose `Saver` sözleşmesi `restore`'un `null` dönmesine izin verir — `null`
- * dönünce Compose [rememberSaveable]'ın init-lambda'sına (yani `start`'tan fresh kuruluşa) düşer; bu
- * yüzden burada YAKALANAN her iki istisna da null'a eşlenir (crash-loop yerine sessiz fresh-start).
+ * PD-restore fault-tolerance (Important 1, final-review) — the wrapper that [navigatorSaver]'s `restore`
+ * ACTUALLY calls. The saved `String` (a corrupted/schema-incompatible PD state left over from an old app
+ * version, e.g. if a field name/serializer changed after a migration) MAY make [decodeNavigatorState] throw —
+ * either `SerializationException` (malformed/schema-incompatible json) or `IllegalArgumentException`
+ * (kotlinx.serialization is known to wrap some decode errors in this type, e.g. polymorphic/enum resolution).
+ * The Compose `Saver` contract allows `restore` to return `null` — on `null` Compose falls to
+ * [rememberSaveable]'s init-lambda (i.e. a fresh setup from `start`); so both exceptions CAUGHT here are
+ * mapped to null (a silent fresh-start instead of a crash-loop).
  *
- * **Loglama notu:** bu katmanda bir logging altyapısı YOK (ne bir `Logger` interface'i ne de bir
- * platform hook) — sessizce yutuluyor. Gerçek bir uygulamada bu sessizliğin bir telemetri/crash-
- * reporting hook'una bağlanması ÖNERİLİR (kullanıcı sessiz veri kaybını fark etmeyebilir); Faz 3
- * kapsamında bu altyapı yok, bu yüzden bilinçli olarak `println` de EKLENMEDİ (üretim log gürültüsü
- * yaratır) — bkz. final-review raporu, izlenecek TODO.
+ * **Logging note:** there is NO logging infrastructure at this layer (neither a `Logger` interface nor a
+ * platform hook) — it is swallowed silently. In a real app it is RECOMMENDED to wire this silence to a
+ * telemetry/crash-reporting hook (the user may not notice the silent data loss); that infrastructure is out
+ * of Faz 3 scope, so a `println` was deliberately NOT added either (it would create production log noise) —
+ * see the final-review report, a TODO to track.
  */
 internal fun decodeNavigatorStateOrNull(
     encoded: String,
@@ -132,11 +134,11 @@ internal fun decodeNavigatorStateOrNull(
 }
 
 /**
- * C1 (Android PD-adopt yolu) — PD snapshot `String`'i doğrudan [SavedState]'e decode eder (navigator
- * KURMADAN; [RawNavigator.adoptRestored]'a beslenir). [decodeNavigatorStateOrNull] ile AYNI fault-
- * tolerance: bozuk/şema-uyumsuz json (eski uygulama versiyonu) `SerializationException`/
- * `IllegalArgumentException` atarsa → `null` (adopt YOK, navigator `start`'ta kalır, crash-loop yok);
- * şema-geçerli ama BOŞ stack de → `null` (composition'da `keys.first()` patlamasını önler).
+ * C1 (the Android PD-adopt path) — decodes the PD snapshot `String` directly into [SavedState] (WITHOUT
+ * building a navigator; fed to [RawNavigator.adoptRestored]). The SAME fault-tolerance as
+ * [decodeNavigatorStateOrNull]: if corrupted/schema-incompatible json (an old app version) throws
+ * `SerializationException`/`IllegalArgumentException` → `null` (NO adopt, the navigator stays at `start`, no
+ * crash-loop); a schema-valid but EMPTY stack → `null` too (prevents the `keys.first()` blow-up in composition).
  */
 internal fun decodeSavedStateOrNull(encoded: String, json: Json): SavedState? = try {
     json.decodeFromString(SavedState.serializer(), encoded).takeIf { it.keys.isNotEmpty() }

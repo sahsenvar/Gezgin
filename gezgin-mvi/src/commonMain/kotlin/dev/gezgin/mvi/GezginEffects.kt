@@ -5,50 +5,50 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
- * Kayıpsız tek-seferlik efekt primitifi (§10.1, Faz 5 recheck / MJ2) — [GezginMvi.effects] için
- * ÖNERİLEN backing.
+ * A lossless one-shot effect primitive (§10.1, Faz 5 recheck / MJ2) — the RECOMMENDED backing for
+ * [GezginMvi.effects].
  *
- * **Neden `MutableSharedFlow` + `tryEmit` DEĞİL:** `MutableSharedFlow(replay = 0, extraBufferCapacity = n)`
- * SICAK bir yayındır ve `replay = 0` olduğundan **abone yokken** emit edilen değeri hiçbir yerde tutmaz.
- * Nav3'te örtülen (covered) entry composition'dan TAMAMEN çıkar → collector yok; ya da uygulama arka
- * plana gidince (`STOPPED`) [ObserveEffects]'in `repeatOnLifecycle` collect'i kesilir. Bu pencerede VM
- * `_effects.tryEmit(...)` derse: (a) buffer boşsa değer yok olur (abone yok, replay yok); (b) buffer
- * doluysa (`extraBufferCapacity` aşımı — bir frame'de art arda efekt) `tryEmit` `false` döner ve efekt
- * yine düşer — ki yaygın fixture'lar dönüş değerini yok sayar. Sonuç: kullanıcı geri döndüğünde
- * snackbar/toast OYNATILMAZ. [ObserveEffects]'in "STARTED'a dönünce kaybolan toast yok" vaadi YALNIZ
- * buffer'lı bir `Channel` backing'iyle doğrudur.
+ * **Why NOT `MutableSharedFlow` + `tryEmit`:** `MutableSharedFlow(replay = 0, extraBufferCapacity = n)` is a
+ * HOT stream and, because `replay = 0`, it keeps a value emitted **while there is no subscriber** nowhere. In
+ * Nav3 a covered entry leaves the composition ENTIRELY → no collector; or when the app goes to the background
+ * (`STOPPED`), [ObserveEffects]'s `repeatOnLifecycle` collect is cut. If the VM calls `_effects.tryEmit(...)`
+ * in this window: (a) if the buffer is empty the value is lost (no subscriber, no replay); (b) if the buffer
+ * is full (`extraBufferCapacity` overflow — back-to-back effects in one frame) `tryEmit` returns `false` and
+ * the effect is dropped anyway — and common fixtures ignore the return value. Result: when the user comes
+ * back the snackbar/toast is NOT PLAYED. [ObserveEffects]'s "no toast lost when returning to STARTED" promise
+ * holds ONLY with a buffered `Channel` backing.
  *
- * **Neden `Channel(UNLIMITED)`:** `Channel` SICAK'tır ama tüketilene kadar değeri TUTAR. Abone olmasa
- * bile [send] edilen efektler kuyrukta bekler (`UNLIMITED` → [send] asla suspend/blok etmez, asla düşmez)
- * ve [flow] ([receiveAsFlow]) ile tek collector yeniden bağlanınca (STARTED'a dönüş / entry re-compose)
- * SIRAYLA teslim edilir. Efekt = kesin-bir-kez teslim; bu yüzden [flow] **tek** collector içindir
- * (`receiveAsFlow` fan-out yapmaz — ikinci bir gözlemci değeri paylaşır, çoğaltmaz).
+ * **Why `Channel(UNLIMITED)`:** a `Channel` is HOT but HOLDS the value until it is consumed. Even without a
+ * subscriber, [send]-ed effects wait in the queue (`UNLIMITED` → [send] never suspends/blocks, never drops)
+ * and are delivered IN ORDER when the single collector reconnects via [flow] ([receiveAsFlow]) (return to
+ * STARTED / entry re-compose). An effect = exactly-once delivery; that is why [flow] is for a **single**
+ * collector (`receiveAsFlow` does not fan out — a second observer shares the value, it does not duplicate it).
  *
- * **Stabil instance:** [flow] tek seferlik kurulur (`val`) → her erişimde AYNI `Flow`. `@ScreenEffect`
- * içindeki `ObserveEffects(vm.effects) { ... }` çağrısında `LaunchedEffect(effects, ...)` key'i
- * recomposition'da değişmez, collector gereksiz yere restart olmaz. (Her erişimde `receiveAsFlow()`
- * çağıran bir `get()` property'si bu yüzden YANLIŞTIR — key her recomposition'da değişir.)
+ * **Stable instance:** [flow] is set up once (`val`) → the SAME `Flow` on every access. In the
+ * `ObserveEffects(vm.effects) { ... }` call inside `@ScreenEffect`, the `LaunchedEffect(effects, ...)` key
+ * does not change on recomposition, so the collector is not restarted needlessly. (A `get()` property that
+ * calls `receiveAsFlow()` on every access is therefore WRONG — the key would change on every recomposition.)
  *
- * Kullanım:
+ * Usage:
  * ```
  * private val _effects = GezginEffects<CounterEffect>()
  * override val effects: Flow<CounterEffect> = _effects.flow
  * // ...
- * _effects.send(CounterEffect.Toast("kaydedildi"))
+ * _effects.send(CounterEffect.Toast("saved"))
  * ```
  */
 public class GezginEffects<E> {
     private val channel = Channel<E>(Channel.UNLIMITED)
 
     /**
-     * Kayıpsız efekt akışı — [GezginMvi.effects]'e doğrudan atanır. Stabil (`val`) instance; **tek**
-     * collector içindir (efekt = kesin-tek-teslim, fan-out yok).
+     * The lossless effect stream — assigned directly to [GezginMvi.effects]. A stable (`val`) instance; for a
+     * **single** collector (an effect = exactly-once delivery, no fan-out).
      */
     public val flow: Flow<E> = channel.receiveAsFlow()
 
     /**
-     * Bir efekt gönder. `UNLIMITED` buffer → asla suspend etmez, asla düşürmez: gözlemci yokken bile
-     * kuyruğa alınır ve re-observe'de teslim edilir. Herhangi bir thread'den çağrılabilir.
+     * Send an effect. The `UNLIMITED` buffer → never suspends, never drops: even without an observer it is
+     * queued and delivered on re-observe. Callable from any thread.
      */
     public fun send(effect: E) {
         channel.trySend(effect)

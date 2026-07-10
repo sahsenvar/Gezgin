@@ -11,38 +11,38 @@ import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * Task 6.2 — `@FragmentScreen` interop'un route↔Bundle serileştirme yarısı (spec §11.1, Task 6.0 §3).
+ * Task 6.2 — the route↔Bundle serialization half of `@FragmentScreen` interop (spec §11.1, Task 6.0 §3).
  *
- * Bir [Route], `arguments` Bundle'ına **polimorfik** olarak (`PolymorphicSerializer(Route::class)`)
- * kodlanır — bu, `GezginKey.route`'un ve backstack PD'sinin (`RawNavigator.save`/restore) route için ZATEN
- * kullandığı MEKANİZMANIN AYNISI; polimorfizm app'in `SerializersModule`'ünden gelir (Gezgin'in kendisinden
- * değil). Böylece Gezgin PD'sini atlatan HER route bunu da yapı-gereği atlatır (§3b). Yeni Json/modül YOK:
- * [nav]'ın (`internal val json`, artık modül-içi görünür) TAŞIDIĞI app-Json yeniden kullanılır.
+ * A [Route] is encoded into the `arguments` Bundle **polymorphically** (`PolymorphicSerializer(Route::class)`)
+ * — this is the SAME MECHANISM that `GezginKey.route` and backstack PD (`RawNavigator.save`/restore) ALREADY
+ * use for a route; the polymorphism comes from the app's `SerializersModule` (not from Gezgin itself). So
+ * EVERY route that survives Gezgin PD survives this too by construction (§3b). NO new Json/module: the
+ * app-Json CARRIED by [nav] (`internal val json`, now module-visible) is reused.
  */
 
-/** `@FragmentScreen` route'unun `arguments` Bundle'ında tek `String` extra olarak taşındığı sabit anahtar. */
+/** The constant key under which a `@FragmentScreen` route is carried as a single `String` extra in the `arguments` Bundle. */
 private const val GEZGIN_FRAGMENT_ROUTE_KEY = "dev.gezgin.fragment.route"
 
 /**
- * App'in polimorfik [Json]'ı (backstack PD'sini besleyen AYNI instance), `gezginArgs`'ın decode'u için
- * yakalanır. **Neden bir process-geneli tutucu (§B4 kararı):** `gezginArgs<Route>()` KULLANICININ çıplak
- * `Fragment` alt sınıfı içinde, kapsamda hiç `RawNavigator`/composition/DI OLMADAN çağrılır — dolayısıyla
- * `route.toBundle(nav)`'ın (ÜRETİLEN kod, `nav` kapsamda) yaptığı gibi `nav.json`'ı doğrudan okuyamaz.
- * [toBundle] bunu, `arguments =` değeri olarak `AndroidFragment`'ın Fragment'ı örneklemesinden KESİNLİKLE
- * ÖNCE değerlendiği için, tutucu her (taze-process dahil) kompozisyonda Fragment args'ını okumadan ÖNCE
- * dolar. App başına tek `gezginSerializersModule` (§3.3) → tek etkin Json; çok-NavDisplay'de bile route
- * polimorfizmi için eşdeğer. `@Volatile`: thread görünürlük sigortası (pratikte hep ana thread).
+ * The app's polymorphic [Json] (the SAME instance that feeds backstack PD), captured for `gezginArgs`'s
+ * decode. **Why a process-wide holder (§B4 decision):** `gezginArgs<Route>()` is called inside the USER's
+ * bare `Fragment` subclass, with NO `RawNavigator`/composition/DI in scope — so it cannot read `nav.json`
+ * directly the way `route.toBundle(nav)` (GENERATED code, `nav` in scope) does. Because [toBundle] is
+ * evaluated (as the `arguments =` value) STRICTLY BEFORE `AndroidFragment` instantiates the Fragment, the
+ * holder is populated before Fragment args are read on every composition (fresh-process included). One
+ * `gezginSerializersModule` per app (§3.3) → one effective Json; equivalent for route polymorphism even with
+ * multiple NavDisplays. `@Volatile`: a thread-visibility safeguard (in practice always the main thread).
  */
 @Volatile
 internal var gezginFragmentJson: Json? = null
 
 /**
- * [this] route'u [nav]'ın app-Json'ıyla polimorfik olarak tek `String` extra'ya kodlayıp Bundle döndürür.
- * ÜRETİLEN `provideXEntry` içinden (`arguments = route.toBundle(raw)`) çağrılır — kullanıcıya yönelik
- * doğrudan bir API DEĞİL. **`public` (dispatch'in `internal` önerisinin AKSİNE — zorunlu sapma, §B4/deviations):**
- * üretilen kod TÜKETİCİ modülünde yaşar, modüller-arası `internal` GÖRÜNMEZ; `register`/navigator-factory
- * gibi diğer codegen-çağrılı sembollerle aynı (public ama codegen-yönelimli). Yan etki: `gezginArgs`'ın
- * kapsamsız decode yolu için [gezginFragmentJson]'ı yakalar.
+ * Encodes [this] route polymorphically into a single `String` extra with [nav]'s app-Json and returns a
+ * Bundle. Called from the GENERATED `provideXEntry` (`arguments = route.toBundle(raw)`) — NOT a direct
+ * user-facing API. **`public` (CONTRARY to dispatch's `internal` recommendation — a required deviation,
+ * §B4/deviations):** the generated code lives in the CONSUMER module, where cross-module `internal` is NOT
+ * VISIBLE; same as other codegen-called symbols like `register`/navigator-factory (public but
+ * codegen-oriented). Side effect: it captures [gezginFragmentJson] for `gezginArgs`'s scope-less decode path.
  */
 @GezginInternalApi
 public fun Route.toBundle(nav: RawNavigator): Bundle {
@@ -52,12 +52,12 @@ public fun Route.toBundle(nav: RawNavigator): Bundle {
 }
 
 /**
- * [toBundle]'ın tersi — Bundle'daki polimorfik route'u [json] ile decode eder. `gezginArgs`'ın kapsamsız
- * decode yolu (`gezginBoundRoute` → yakalanan [gezginFragmentJson]) BUNU doğrudan çağırır; ayrı bir
- * `Bundle.toRoute(nav)` simetrik-inverse sarmalayıcısı YOKTUR — o yalnız `nav.json`'ı bu fonksiyona iletirdi,
- * hiçbir yerden çağrılmıyordu ve `Bundle` (Android) olduğu için Robolectric'siz test edilemezdi (Task 6.0'ın
- * "Robolectric yok" kararı). Serileştirme mekanizması yine `FragmentRouteSerializationTest`'te (commonTest,
- * `Bundle`'sız) polimorfik round-trip ile kanıtlanır.
+ * The inverse of [toBundle] — decodes the polymorphic route in the Bundle with [json]. `gezginArgs`'s
+ * scope-less decode path (`gezginBoundRoute` → the captured [gezginFragmentJson]) calls THIS directly; there
+ * is NO separate `Bundle.toRoute(nav)` symmetric-inverse wrapper — it would only forward `nav.json` to this
+ * function, was called from nowhere, and (being `Bundle`, Android) could not be tested without Robolectric
+ * (Task 6.0's "no Robolectric" decision). The serialization mechanism is still proven in
+ * `FragmentRouteSerializationTest` (commonTest, without `Bundle`) via a polymorphic round-trip.
  */
 internal fun decodeGezginRoute(json: Json, bundle: Bundle): Route {
     val encoded = requireNotNull(bundle.getString(GEZGIN_FRAGMENT_ROUTE_KEY)) {

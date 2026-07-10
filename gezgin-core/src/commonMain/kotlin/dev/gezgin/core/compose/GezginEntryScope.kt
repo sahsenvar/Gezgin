@@ -5,25 +5,25 @@ import dev.gezgin.core.Route
 import kotlin.reflect.KClass
 
 /**
- * Sunum kind'ı (§3.2) — `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal` annotation'larının
- * runtime karşılığı. Faz 4 scene wiring: `DIALOG`/`FULLSCREEN_MODAL` [toNavEntry]'de DialogSceneStrategy
- * metadata'sı alır (properties opsiyonel DialogContract/FullscreenModalContract'tan) → `Dialog` overlay
- * render (bkz. EntryAdapter.kt); FULLSCREEN_MODAL `usePlatformDefaultWidth=false` (tam-ekran). `BOTTOM_SHEET`
- * `BOTTOM_SHEET` (Faz 4.2) GezginBottomSheetSceneStrategy metadata'sı alır → `ModalBottomSheet` overlay
- * (el-yazımı OverlayScene, sheetState Local ile enjekte); `SCREEN` tek-pane.
+ * The presentation kind (§3.2) — the runtime counterpart of the `@Screen`/`@Dialog`/`@BottomSheet`/
+ * `@FullscreenModal` annotations. Faz 4 scene wiring: `DIALOG`/`FULLSCREEN_MODAL` get DialogSceneStrategy
+ * metadata in [toNavEntry] (properties from the optional DialogContract/FullscreenModalContract) → `Dialog`
+ * overlay render (see EntryAdapter.kt); FULLSCREEN_MODAL uses `usePlatformDefaultWidth=false` (fullscreen).
+ * `BOTTOM_SHEET` (Faz 4.2) gets GezginBottomSheetSceneStrategy metadata → `ModalBottomSheet` overlay (a
+ * hand-written OverlayScene, the sheet controller injected via a Local); `SCREEN` is single-pane.
  */
 public enum class EntryKind { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
 
 /**
- * Gezgin registry kaydı — [kind] Faz 4 modal scene wiring'i için metadata, [content] `Route`'a
- * daraltılmış (register<R>'daki güvenli cast) composable içerik.
+ * A Gezgin registry record — [kind] is metadata for Faz 4 modal scene wiring, [content] is the composable
+ * content narrowed to `Route` (the safe cast in register<R>).
  *
- * [noBack] (M5′, §4.2): `@NoBack` annotation'ının runtime karşılığı. `true` iken bu entry TERMINAL'dir
- * — Gezgin-sahipli bir geri-yutucu kurulur: (1) [gezginOnBack] guard'ı top bu entry iken `back()`'i
- * no-op'a çevirir (pop yok; kök-muafiyeti hariç), (2) [toNavEntry] content'i entry-scoped bir
- * geri-handler ([GezginNoBackHandler]) ile OUTER (ekran içeriğinden ÖNCE — dispatcher LIFO'sunda
- * ekranın kendi `BackHandler`'ı daha İÇ/sonra kaydolup kazanır) sarar. Faz 3.4 codegen'i `@NoBack`
- * okuyup bu flag'i doldurur; bu fazda register-zamanı parametresi olarak plumbing + test edilir.
+ * [noBack] (M5′, §4.2): the runtime counterpart of the `@NoBack` annotation. When `true` this entry is
+ * TERMINAL — a Gezgin-owned back-swallower is set up: (1) the [gezginOnBack] guard turns `back()` into a
+ * no-op while this entry is the top (no pop; except the root exemption), (2) [toNavEntry] wraps the content
+ * with an entry-scoped back handler ([GezginNoBackHandler]) OUTER (BEFORE the screen content — in the
+ * dispatcher LIFO the screen's own `BackHandler` registers more INNER/later and wins). Faz 3.4 codegen reads
+ * `@NoBack` and fills this flag; in this phase it is plumbed + tested as a register-time parameter.
  */
 @PublishedApi
 internal class RegisteredEntry(
@@ -33,22 +33,22 @@ internal class RegisteredEntry(
 )
 
 /**
- * `GezginDisplay`'in trailing lambda receiver'ı (§10.1/§12) — kullanıcı (veya codegen ürettiği
- * `provideXEntry`) burada [register] çağırarak route'u içeriğe bağlar. Kullanıcıya wrapper tip
- * sızmaz: registry `internal`, yalnız [dev.gezgin.core.compose] paketi (GezginDisplay/adapter) okur.
+ * The trailing-lambda receiver of `GezginDisplay` (§10.1/§12) — the user (or codegen's generated
+ * `provideXEntry`) calls [register] here to bind a route to its content. No wrapper type leaks to the user:
+ * the registry is `internal`, read only by the [dev.gezgin.core.compose] package (GezginDisplay/adapter).
  */
 public class GezginEntryScope internal constructor() {
 
-    // Thread-safety notu: senkronize DEĞİL (`mutableMapOf`, plain) — bilinçli, çünkü yalnız
-    // `GezginDisplay`'in `remember { GezginEntryScope().apply(entries) }` kuruluş bloğunda,
-    // ana/Compose thread'inde, TEK SEFER doldurulur; kuruluştan sonra yalnız okunur (register çağrıları
-    // yok). Kuruluş sonrası çoklu-thread yazımı desteklenmiyor/beklenmiyor.
+    // Thread-safety note: NOT synchronized (`mutableMapOf`, plain) — deliberate, because it is populated
+    // ONLY ONCE, on the main/Compose thread, inside `GezginDisplay`'s `remember { GezginEntryScope().apply
+    // (entries) }` setup block; after setup it is read-only (no register calls). Multi-threaded writes after
+    // setup are neither supported nor expected.
     @PublishedApi
     internal val registry: MutableMap<KClass<out Route>, RegisteredEntry> = mutableMapOf()
 
     /**
-     * `R` için içerik kaydeder. Aynı `R` iki kez kaydedilirse açıklayıcı hata fırlatır (kayıt anında,
-     * ilk render'a kadar beklemeden — yanlış kurulum erken patlar).
+     * Registers content for `R`. If the same `R` is registered twice it throws a descriptive error (at
+     * register time, without waiting for the first render — a wrong setup blows up early).
      */
     public inline fun <reified R : Route> register(
         kind: EntryKind = EntryKind.SCREEN,

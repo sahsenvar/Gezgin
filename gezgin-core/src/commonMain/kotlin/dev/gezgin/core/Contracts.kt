@@ -1,38 +1,40 @@
 package dev.gezgin.core
 
 /**
- * Modal sunum property'lerinin **opsiyonel** tipli evi (§7) — bir `@Dialog` route'u bu interface'i
- * implement ederek dialog penceresinin dismiss/layout davranışını route-instance'ından **runtime
- * değer** olarak taşır (KSP'den DEĞİL — §2.4; adapter `route as? DialogContract` ile okur). Route
- * implement etmezse adapter varsayılan [androidx.compose.ui.window.DialogProperties] kullanır
- * (`DialogContract`'ın default'larıyla birebir aynı).
+ * The **optional** typed home for modal presentation properties (§7) — a `@Dialog` route implements this
+ * interface to carry the dialog window's dismiss/layout behavior as a **runtime value** off the route
+ * instance (NOT from KSP — §2.4; the adapter reads it via `route as? DialogContract`). If the route does
+ * not implement it, the adapter uses the default [androidx.compose.ui.window.DialogProperties] (identical
+ * to `DialogContract`'s defaults).
  *
- * `ResultRoute<T>` gibi bir **marker** DEĞİL: PROPERTY taşır. İki besleme yolu — **HER İKİSİNDE DE
- * `get() =` biçimini kullan** (aşağıdaki m5 uyarısı):
- * - **SABİT** (route'a özgü, argsız): `override val dismissOnClickOutside get() = false` — interface
- *   property override'ı (default'lu → yalnız değiştirmek istediğini yaz).
- * - **KOŞULLU** (çağrı-anına bağlı): route ctor param'ından besle —
+ * This is NOT a **marker** like `ResultRoute<T>`: it carries PROPERTIES. Two ways to supply them — **use
+ * the `get() =` form in BOTH** (see the m5 warning below):
+ * - **CONSTANT** (route-specific, no args): `override val dismissOnClickOutside get() = false` — an
+ *   interface property override (defaulted → write only what you want to change).
+ * - **CONDITIONAL** (depends on the call site): supply from a route ctor param —
  *   `data class Confirm(val cancelable: Boolean) : ..., DialogContract {
- *        override val dismissOnClickOutside get() = cancelable }`. Route zaten `@Serializable` →
- *   ekstra iş yok, param serialize edilir (PD-güvenli).
+ *        override val dismissOnClickOutside get() = cancelable }`. The route is already `@Serializable` →
+ *   no extra work, the param is serialized (PD-safe).
  *
- * **m5 — `get() =` ZORUNLU (initializer'lı `val` YAZMA):** `override val dismissOnClickOutside = false`
- * (backing-field'lı initializer) yazılırsa kotlinx.serialization bu property'yi `@Serializable` route'un
- * SERİLEŞEN ŞEMASINA dahil eder → sunum-prop'u saved-state (PD) formatına sızar. `encodeDefaults=false`
- * ile pratik veri zararsız olabilir ama şema kirlenir ve gereksizdir; `get() =` biçimi backing field
- * üretmez (getter-only), şemaya HİÇ girmez. Bu yüzden SABİT durumda bile getter-form kullan.
+ * **m5 — `get() =` is REQUIRED (do NOT write an initializer `val`):** writing
+ * `override val dismissOnClickOutside = false` (a backing-field initializer) makes kotlinx.serialization
+ * include this property in the `@Serializable` route's SERIALIZED SCHEMA → the presentation prop leaks into
+ * the saved-state (PD) format. With `encodeDefaults=false` the actual data may be harmless, but the schema
+ * is polluted and it is unnecessary; the `get() =` form produces no backing field (getter-only) and never
+ * enters the schema. So use the getter form even in the CONSTANT case.
  *
- * Alanlar [androidx.compose.ui.window.DialogProperties]'in gerçek alanlarına **birebir** maplenir
- * (adapter'da, [dev.gezgin.core.compose.toNavEntry]):
- * - [dismissOnBackPress] → `DialogProperties.dismissOnBackPress` (geri tuşu/Esc dialog'u kapatır).
- * - [dismissOnClickOutside] → `DialogProperties.dismissOnClickOutside` (dışarı tık kapatır).
- * - [usePlatformDefaultWidth] → `DialogProperties.usePlatformDefaultWidth`. Spec §7'nin soyut
- *   `layout` property'sinin somut karşılığı: `true` = platform-varsayılan dialog genişliği (sarmalı),
- *   `false` = içerik kendi genişliğini belirler (geniş/tam-ekrana yakın). `layout` yerine bu adı
- *   kullanmak, hangi `DialogProperties` alanına indiğini saklamamak içindir (minimal magic).
+ * The fields map **one-to-one** to the real fields of [androidx.compose.ui.window.DialogProperties] (in the
+ * adapter, [dev.gezgin.core.compose.toNavEntry]):
+ * - [dismissOnBackPress] → `DialogProperties.dismissOnBackPress` (back button/Esc dismisses the dialog).
+ * - [dismissOnClickOutside] → `DialogProperties.dismissOnClickOutside` (tapping outside dismisses).
+ * - [usePlatformDefaultWidth] → `DialogProperties.usePlatformDefaultWidth`. The concrete counterpart of
+ *   §7's abstract `layout` property: `true` = platform-default dialog width (wrapped), `false` = the content
+ *   decides its own width (wide/near-fullscreen). Using this name instead of `layout` avoids hiding which
+ *   `DialogProperties` field it maps down to (minimal magic).
  *
- * dismiss (tap-outside/Esc/geri-izin-varken) → dialog scene `onDismissRequest = onBack` →
- * `navigator.back()` → pop; route `ResultRoute` ise caller `Canceled` alır (mevcut `back()` yolu).
+ * dismiss (tap-outside/Esc/when back is allowed) → the dialog scene's `onDismissRequest = onBack` →
+ * `navigator.back()` → pop; if the route is a `ResultRoute`, the caller receives `Canceled` (the existing
+ * `back()` path).
  */
 public interface DialogContract {
     public val dismissOnClickOutside: Boolean get() = true
@@ -41,16 +43,16 @@ public interface DialogContract {
 }
 
 /**
- * Tam-ekran modal sunum property'lerinin opsiyonel tipli evi (§7) — [DialogContract]'ın paraleli,
- * ama `usePlatformDefaultWidth` YOK: tam-ekran modal TANIMI gereği içerik genişliğini kendi belirler
- * (`DialogProperties(usePlatformDefaultWidth = false)` — adapter'da SABİT). Bir `@FullscreenModal`
- * route'u yalnız dismiss davranışını taşır. Route implement etmezse adapter default dismiss'lerle
- * (ikisi de `true`) tam-ekran `DialogProperties` kurar. **Override'lar `get() =` biçiminde yazılmalı**
- * ([DialogContract]'ın m5 uyarısı — initializer'lı `val` serileşen şemaya sızar).
+ * The optional typed home for fullscreen-modal presentation properties (§7) — the parallel of
+ * [DialogContract], but with NO `usePlatformDefaultWidth`: a fullscreen modal BY DEFINITION decides its own
+ * content width (`DialogProperties(usePlatformDefaultWidth = false)` — FIXED in the adapter). A
+ * `@FullscreenModal` route carries only dismiss behavior. If the route does not implement it, the adapter
+ * builds a fullscreen `DialogProperties` with the default dismisses (both `true`). **Overrides must use the
+ * `get() =` form** ([DialogContract]'s m5 warning — an initializer `val` leaks into the serialized schema).
  *
- * NOT: §7 tam-ekran modal render'ının uçtan-uca on-device doğrulaması (scrim, predictive) Task 4.3'te.
- * 4.1 contract okumayı + metadata wiring'i + guard'ı kurar; DialogSceneStrategy tam-ekran dialog
- * olarak render eder (usePlatformDefaultWidth=false; 4.0 raporu §6).
+ * NOTE: end-to-end on-device verification of §7 fullscreen-modal render (scrim, predictive) is in Task 4.3.
+ * 4.1 sets up contract reading + metadata wiring + the guard; DialogSceneStrategy renders it as a fullscreen
+ * dialog (usePlatformDefaultWidth=false; 4.0 report §6).
  */
 public interface FullscreenModalContract {
     public val dismissOnClickOutside: Boolean get() = true
@@ -58,26 +60,30 @@ public interface FullscreenModalContract {
 }
 
 /**
- * BottomSheet sunum property'lerinin **opsiyonel** tipli evi (§7) — bir `@BottomSheet` route'u bu
- * interface'i implement ederek modal sheet'in davranışını route-instance'ından **runtime değer** olarak
- * taşır ([DialogContract] ile aynı desen; adapter `route as? BottomSheetContract` ile okur). Route
- * implement etmezse adapter tip-varsayılanları kullanır (aşağıdaki default'larla birebir). Override'lar
- * `get() =` biçiminde yazılmalı ([DialogContract]'ın m5 uyarısı — initializer'lı `val` serileşen şemaya sızar).
+ * The **optional** typed home for BottomSheet presentation properties (§7) — a `@BottomSheet` route
+ * implements this interface to carry the modal sheet's behavior as a **runtime value** off the route
+ * instance (same pattern as [DialogContract]; the adapter reads it via `route as? BottomSheetContract`). If
+ * the route does not implement it, the adapter uses the type defaults (identical to the defaults below).
+ * Overrides must use the `get() =` form ([DialogContract]'s m5 warning — an initializer `val` leaks into the
+ * serialized schema).
  *
- * **Prop seti — material3 `ModalBottomSheet`'in GERÇEK knob'larına maplenen üç alan** ([DialogContract]
- * ile simetrik dismiss ikilisi + sheet'e özgü layout knob'u):
- * - [skipPartiallyExpanded] → `rememberModalBottomSheetState(skipPartiallyExpanded = ...)`. `true` iken
- *   sheet ara (yarı-açık) durağı atlar; doğrudan tam-açık ya da gizli olur (kısa içerik sheet'leri için).
- * - [dismissOnBackPress] → `ModalBottomSheetProperties(shouldDismissOnBackPress = ...)`. `false` iken
- *   geri tuşu sheet'i kapatmaz. [DialogContract.dismissOnBackPress] paraleli; **aynı `@NoBack` guard'ına**
- *   tabidir (adapter'da `require(!(noBack && dismissOnBackPress))` — kuruluş-zamanı runtime, §7).
- * - [dismissOnClickOutside] → `ModalBottomSheetProperties(shouldDismissOnClickOutside = ...)`. scrim-tap
- *   (dışarı tık) sheet'i kapatır mı; default `true`. `false` → tap-outside kapatmaz, ama swipe-down ve
- *   geri-tuşu (izin varsa) HÂLÂ çalışır. [DialogContract.dismissOnClickOutside] paraleli.
+ * **Prop set — three fields mapping to the REAL knobs of material3 `ModalBottomSheet`** (the dismiss pair
+ * symmetric with [DialogContract] + a sheet-specific layout knob):
+ * - [skipPartiallyExpanded] → `rememberModalBottomSheetState(skipPartiallyExpanded = ...)`. When `true` the
+ *   sheet skips the intermediate (half-expanded) stop; it goes straight to fully expanded or hidden (for
+ *   short-content sheets).
+ * - [dismissOnBackPress] → `ModalBottomSheetProperties(shouldDismissOnBackPress = ...)`. When `false` the
+ *   back button does not dismiss the sheet. Parallel to [DialogContract.dismissOnBackPress]; it is subject
+ *   to the **same `@NoBack` guard** (`require(!(noBack && dismissOnBackPress))` in the adapter — a
+ *   setup-time runtime check, §7).
+ * - [dismissOnClickOutside] → `ModalBottomSheetProperties(shouldDismissOnClickOutside = ...)`. Whether a
+ *   scrim-tap (outside tap) dismisses the sheet; default `true`. `false` → tap-outside does not dismiss, but
+ *   swipe-down and the back button (if allowed) STILL work. Parallel to [DialogContract.dismissOnClickOutside].
  *
- * dismiss (swipe-down / scrim-tap / geri-izin-varken) → sheet `onDismissRequest = onBack` →
- * `navigator.back()` → pop; route `ResultRoute` ise caller `Canceled` alır (mevcut `back()` yolu —
- * material3'te swipe+scrim+back ÜÇÜ de tek `onDismissRequest`'e düşer, jar-doğrulandı).
+ * dismiss (swipe-down / scrim-tap / when back is allowed) → the sheet's `onDismissRequest = onBack` →
+ * `navigator.back()` → pop; if the route is a `ResultRoute`, the caller receives `Canceled` (the existing
+ * `back()` path — in material3 swipe+scrim+back ALL THREE funnel into a single `onDismissRequest`,
+ * jar-verified).
  */
 public interface BottomSheetContract {
     public val skipPartiallyExpanded: Boolean get() = false

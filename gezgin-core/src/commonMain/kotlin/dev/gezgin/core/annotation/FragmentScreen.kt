@@ -13,18 +13,18 @@ import kotlin.reflect.KClass
  * @FragmentScreen(OrderChainRoute::class)
  * class OrderChainFragment : Fragment() {
  *     private val args by gezginArgs<OrderChainRoute>()    // tipli; route Bundle'dan → PD-safe
- *     private val nav  by gezginNav<OrderChainNavigator>() // @Screen'in 'nav' param'ının karşılığı
+ *     private val nav  by gezginNav<OrderChainNavigator>() // the counterpart of @Screen's 'nav' param
  * }
  * ```
  *
- * **[route] is MANDATORY — no sentinel (mirrors gezgin-mvi's `@ViewModel(route)`).** A `@Screen`
+ * **[route] is MANDATORY — no sentinel (mirrors gezgin-mvi's `@MviViewModel(route)`).** A `@Screen`
  * sentinel (`route = Route::class` default) means "derive the route from the composable's `route:`
  * parameter type"; a `@FragmentScreen` class has **no constructor params at all** (see below), so there
  * is no parameter to derive from — the route MUST be given explicitly here. The processor reads it into
  * the fragment entry model (`FragmentModelReader`, Task 6.1) that Task 6.2's `AndroidFragment` codegen
  * consumes.
  *
- * **Parametreli Fragment ctor YASAK (§11.1).** A `@FragmentScreen`-annotated Fragment MUST have a no-arg
+ * **Parameterized Fragment ctor FORBIDDEN (§11.1).** A `@FragmentScreen`-annotated Fragment MUST have a no-arg
  * primary constructor: Android's own instantiation contract recreates Fragments via reflection on a
  * no-arg ctor after process-death / config-change, so a parameterized ctor would silently lose its args
  * or crash on recreation. The route and navigator are delivered NOT through the ctor but through the
