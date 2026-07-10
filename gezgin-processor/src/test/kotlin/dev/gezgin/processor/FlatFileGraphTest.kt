@@ -13,6 +13,7 @@ import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -289,10 +290,101 @@ class FlatFileGraphTest {
         )
     }
 
+    @Test
+    fun `cross-file sealed or abstract intermediate types under a graph are not routes`() {
+        // getSealedSubclasses(HomeGraph) also surfaces the separate-file intermediate subtypes; the
+        // isRouteDeclaration filter must exclude them (SEALED/ABSTRACT = not instantiable) exactly as
+        // for a lexically-nested intermediate — otherwise a shared base would leak into the route list
+        // and the polymorphic serializer set.
+        val graph = SourceFile.kotlin(
+            "HomeGraph.kt",
+            """
+            package dev.gezgin.intermediate
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            sealed interface HomeGraph : Route
+            """.trimIndent(),
+        )
+        val members = SourceFile.kotlin(
+            "Members.kt",
+            """
+            package dev.gezgin.intermediate
+
+            // Two separate-file intermediate layers, both direct subtypes of the graph — surfaced by
+            // getSealedSubclasses, neither a navigable destination.
+            sealed interface SharedMid : HomeGraph
+            abstract class SharedBase : HomeGraph
+
+            data object Feed : HomeGraph
+            """.trimIndent(),
+        )
+        val result = compileGezgin(
+            graph, members,
+            kspArgs = mapOf("gezgin.dumpModel" to "true", "gezgin.emitSerializers" to "true"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val routeLines = findGeneratedResource("GezginModelDump.txt")!!.readText().lines()
+            .filter { it.startsWith("route ") }
+        assertFalse(
+            routeLines.any { "SharedMid" in it || "SharedBase" in it },
+            "cross-file intermediate types must not be read as routes: $routeLines",
+        )
+        assertTrue(
+            routeLines.any { "route dev.gezgin.intermediate.Feed " in it },
+            "the concrete cross-file Feed route must still be present: $routeLines",
+        )
+
+        val serializers = result.generatedSourceFor("GezginSerializers.kt")!!.readText()
+        assertFalse("SharedMid" in serializers || "SharedBase" in serializers, serializers)
+        assertTrue("subclass(Feed::class)" in serializers, serializers)
+    }
+
+    @Test
+    fun `N13 - a non-sealed graph with a separate-file member is rejected`() {
+        // MAJOR-1 regression: a non-sealed @NavGraph makes getSealedSubclasses return EMPTY, so the
+        // separate-file `data object Home : AppGraph` would silently drop out of the model (no route,
+        // no navigator) surfacing only as a misleading downstream symptom. N13 rejects the non-sealed
+        // graph up front — the member MUST live in a separate file, since a nested one would survive
+        // via the lexical fallback and hide the gap.
+        assertViolates(
+            "N13",
+            SourceFile.kotlin(
+                "AppGraph.kt",
+                """
+                package dev.gezgin.n13
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                interface AppGraph : Route
+                """.trimIndent(),
+            ),
+            SourceFile.kotlin(
+                "Home.kt",
+                """
+                package dev.gezgin.n13
+
+                data object Home : AppGraph
+                """.trimIndent(),
+            ),
+        )
+    }
+
     // region helpers (mirrors ValidationTest / TopologyCodegenTest — kept local to this feature)
 
     private fun assertViolates(code: String, source: String) {
         val result = compileGezgin(SourceFile.kotlin("Source.kt", source))
+        assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        assertContains(result.messages, "[$code]", message = result.messages)
+    }
+
+    private fun assertViolates(code: String, vararg sources: SourceFile) {
+        val result = compileGezgin(*sources)
         assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
         assertContains(result.messages, "[$code]", message = result.messages)
     }
