@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package dev.gezgin.sample.feature.profile
 
 import android.widget.Toast
@@ -8,8 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,13 +16,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel as AndroidxViewModel
+import androidx.lifecycle.ViewModel
 import dev.gezgin.core.annotation.BottomSheet
+import dev.gezgin.core.compose.GezginSheetController
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.ObserveAsEvents
+import dev.gezgin.mvi.ObserveEffects
+import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.mvi.annotation.ScreenEffect
-import dev.gezgin.mvi.annotation.ViewModel
 import dev.gezgin.sample.navigation.NotificationLevel
 import dev.gezgin.sample.navigation.NotificationsSheetNavigator
 import dev.gezgin.sample.navigation.ProfileGraph.NotificationsSheetRoute
@@ -48,11 +45,11 @@ sealed interface NotificationsEffect {
     data class Announce(val text: String) : NotificationsEffect
 }
 
-@ViewModel(NotificationsSheetRoute::class)
+@MviViewModel(NotificationsSheetRoute::class)
 class NotificationsViewModel(
     route: NotificationsSheetRoute,
     private val nav: NotificationsSheetNavigator,
-) : AndroidxViewModel(), GezginMvi<NotificationsState, NotificationsIntent, NotificationsEffect> {
+) : ViewModel(), GezginMvi<NotificationsState, NotificationsIntent, NotificationsEffect> {
 
     private val _uiState = MutableStateFlow(NotificationsState(route.current))
     override val uiState: StateFlow<NotificationsState> = _uiState.asStateFlow()
@@ -76,7 +73,7 @@ class NotificationsViewModel(
 fun NotificationsSheetContent(
     state: NotificationsState,
     onIntent: (NotificationsIntent) -> Unit,
-    sheetState: SheetState,
+    controller: GezginSheetController,
 ) {
     val scope = rememberCoroutineScope()
     var dispatched by remember { mutableStateOf(false) }
@@ -93,7 +90,7 @@ fun NotificationsSheetContent(
                 if (dispatched) return@onClick
                 dispatched = true
                 scope.launch {
-                    sheetState.hide()
+                    controller.hide()
                     onIntent(NotificationsIntent.Confirm)
                 }
             },
@@ -106,7 +103,7 @@ fun NotificationsSheetContent(
 @Composable
 fun NotificationsEffects(effects: Flow<NotificationsEffect>) {
     val context = LocalContext.current
-    ObserveAsEvents(effects) { effect ->
+    ObserveEffects(effects) { effect ->
         when (effect) {
             is NotificationsEffect.Announce -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
         }

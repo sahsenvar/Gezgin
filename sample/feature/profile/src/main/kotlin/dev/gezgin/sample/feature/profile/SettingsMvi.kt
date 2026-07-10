@@ -14,13 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel as AndroidxViewModel
+import androidx.lifecycle.ViewModel
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.ObserveAsEvents
+import dev.gezgin.mvi.ObserveEffects
+import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.mvi.annotation.ScreenEffect
-import dev.gezgin.mvi.annotation.ViewModel
 import dev.gezgin.sample.navigation.ProfileGraph.SettingsScreenRoute
 import dev.gezgin.sample.navigation.SettingsNavigator
 import kotlinx.coroutines.flow.Flow
@@ -42,9 +42,9 @@ sealed interface SettingsEffect {
     data class ShowMessage(val text: String) : SettingsEffect
 }
 
-@ViewModel(SettingsScreenRoute::class)
+@MviViewModel(SettingsScreenRoute::class)
 class SettingsViewModel(private val nav: SettingsNavigator) :
-    AndroidxViewModel(),
+    ViewModel(),
     GezginMvi<SettingsState, SettingsIntent, SettingsEffect> {
 
     private val _uiState = MutableStateFlow(SettingsState())
@@ -89,7 +89,7 @@ private fun ThemeToggle(checked: Boolean, onToggle: () -> Unit) {
 @Composable
 fun SettingsEffects(effects: Flow<SettingsEffect>) {
     val context = LocalContext.current
-    ObserveAsEvents(effects) { effect ->
+    ObserveEffects(effects) { effect ->
         when (effect) {
             is SettingsEffect.ShowMessage -> {
                 Log.d("SettingsMvi", "effect: ${effect.text}")
