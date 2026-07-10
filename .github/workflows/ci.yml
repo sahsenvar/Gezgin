@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Faz 9.1 — yalnız derleme + test + ABI (apiCheck). Yayın (publish) işi YOK, secret YOK.
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Android SDK önyüklü
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'  # jvmToolchain(17) ile eşleşir
+
+      - name: Set up Gradle (cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build, test ve apiCheck
+        run: >-
+          ./gradlew
+          :gezgin-core:test :gezgin-core:jvmTest
+          :gezgin-processor:test :gezgin-mvi:jvmTest :gezgin-test:jvmTest
+          :sample:navigation:test :sample:shopr:test :sample:app:assembleDebug
+          apiCheck --console=plain
