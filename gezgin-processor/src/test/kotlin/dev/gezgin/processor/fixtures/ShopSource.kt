@@ -67,7 +67,7 @@ val SHOP_SOURCE = """
     abstract class BasePicker : ResultRoute<OrderId>
 
     @NavGraph
-    interface HomeGraph : Route {
+    sealed interface HomeGraph : Route {
 
         @GoTo(Product::class)
         @GoForResult(CheckoutFlow::class)
@@ -104,7 +104,7 @@ val SHOP_SOURCE = """
     }
 
     @FlowGraph
-    interface CheckoutFlow : Route, ResultFlow<OrderId> {
+    sealed interface CheckoutFlow : Route, ResultFlow<OrderId> {
 
         @StartDestination
         @GoTo(Payment::class)
@@ -115,7 +115,7 @@ val SHOP_SOURCE = """
         data object Payment : CheckoutFlow
 
         @FlowGraph
-        interface PayAuthFlow : Route {
+        sealed interface PayAuthFlow : Route {
 
             @StartDestination
             data object Otp : PayAuthFlow
@@ -125,10 +125,10 @@ val SHOP_SOURCE = """
         // NOTE: extends Route, NOT CheckoutFlow — extending the enclosing flow would transitively
         // inherit its ResultFlow<OrderId> supertype and (correctly) mark this graph resultFlow=true.
         @NavGraph
-        interface CheckoutPages : Route {
+        sealed interface CheckoutPages : Route {
 
             @FlowGraph
-            interface GiftFlow : Route {
+            sealed interface GiftFlow : Route {
 
                 @StartDestination
                 data object GiftPick : GiftFlow

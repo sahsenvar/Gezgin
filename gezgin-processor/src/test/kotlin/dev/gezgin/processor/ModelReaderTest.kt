@@ -231,7 +231,7 @@ class ModelReaderTest {
                 import dev.gezgin.core.annotation.NavGraph
 
                 @NavGraph
-                interface HomeGraph : Route {
+                sealed interface HomeGraph : Route {
                     // Intermediate abstract base nested in the graph — NOT a navigable destination,
                     // so it must not become a route nor a polymorphic `subclass()` registration.
                     abstract class SharedBase : HomeGraph

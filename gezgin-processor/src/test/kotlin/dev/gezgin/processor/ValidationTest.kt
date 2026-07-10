@@ -56,14 +56,14 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(OnboardingFlow::class)
                 @ReplaceTo(OnboardingFlow::class)
                 data object Feed : HomeGraph
             }
 
             @FlowGraph
-            interface OnboardingFlow : Route {
+            sealed interface OnboardingFlow : Route {
                 @StartDestination
                 data object Welcome : OnboardingFlow
             }
@@ -106,12 +106,12 @@ class ValidationTest {
             }
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 data object Picker : HomeGraph, ResultRoute<Picked>
             }
 
             @FlowGraph
-            interface CheckoutFlow : Route {
+            sealed interface CheckoutFlow : Route {
                 @StartDestination
                 @GoForResult(HomeGraph.Picker::class)
                 data object Cart : CheckoutFlow
@@ -133,12 +133,12 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 data object Landing : HomeGraph
             }
 
             @FlowGraph
-            interface OnboardingFlow : Route {
+            sealed interface OnboardingFlow : Route {
                 @StartDestination
                 data object Welcome : OnboardingFlow
 
@@ -164,7 +164,7 @@ class ValidationTest {
             data class Res(val v: String)
 
             @FlowGraph
-            interface CheckoutFlow : Route, ResultFlow<Res> {
+            sealed interface CheckoutFlow : Route, ResultFlow<Res> {
                 @StartDestination
                 data object Cart : CheckoutFlow
 
@@ -195,7 +195,7 @@ class ValidationTest {
             data class Res(val v: String)
 
             @FlowGraph
-            interface AvatarFlow : Route, ResultFlow<Res> {
+            sealed interface AvatarFlow : Route, ResultFlow<Res> {
                 @StartDestination
                 @GoTo(Crop::class)
                 data object PickSource : AvatarFlow
@@ -204,7 +204,7 @@ class ValidationTest {
                 data class Crop(val source: String) : AvatarFlow
 
                 @FlowGraph
-                interface ZoomFlow : AvatarFlow {
+                sealed interface ZoomFlow : AvatarFlow {
                     @StartDestination
                     data object Zoom : ZoomFlow
                 }
@@ -223,10 +223,10 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface AppGraph : Route
+            sealed interface AppGraph : Route
 
             @NavGraph
-            interface OrderGraph : AppGraph {
+            sealed interface OrderGraph : AppGraph {
                 data object Orders : OrderGraph
             }
             """.trimIndent(),
@@ -244,7 +244,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @FlowGraph
-            interface CheckoutFlow : Route {
+            sealed interface CheckoutFlow : Route {
                 @StartDestination
                 data class Cart(val promoCode: String?) : CheckoutFlow
             }
@@ -273,13 +273,13 @@ class ValidationTest {
             data class Res(val v: String)
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(CheckoutFlow::class)
                 data object Feed : HomeGraph
             }
 
             @FlowGraph
-            interface CheckoutFlow : Route, ResultFlow<Res> {
+            sealed interface CheckoutFlow : Route, ResultFlow<Res> {
                 @StartDestination
                 data object Cart : CheckoutFlow
             }
@@ -303,7 +303,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoForResult(Catalog::class)
                 data object Feed : HomeGraph
 
@@ -331,13 +331,13 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(CheckoutFlow.Payment::class)
                 data object Feed : HomeGraph
             }
 
             @FlowGraph
-            interface CheckoutFlow : Route {
+            sealed interface CheckoutFlow : Route {
                 @StartDestination
                 data object Cart : CheckoutFlow
 
@@ -367,18 +367,18 @@ class ValidationTest {
             data class Res(val v: String)
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(AvatarFlow.ZoomFlow::class)
                 data object Feed : HomeGraph
             }
 
             @FlowGraph
-            interface AvatarFlow : Route, ResultFlow<Res> {
+            sealed interface AvatarFlow : Route, ResultFlow<Res> {
                 @StartDestination
                 data object PickSource : AvatarFlow
 
                 @FlowGraph
-                interface ZoomFlow : AvatarFlow {
+                sealed interface ZoomFlow : AvatarFlow {
                     @StartDestination
                     data object Zoom : ZoomFlow
                 }
@@ -410,18 +410,18 @@ class ValidationTest {
             data class Res(val v: String)
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(AvatarFlow.ZoomFlow.Zoom::class)
                 data object Feed : HomeGraph
             }
 
             @FlowGraph
-            interface AvatarFlow : Route, ResultFlow<Res> {
+            sealed interface AvatarFlow : Route, ResultFlow<Res> {
                 @StartDestination
                 data object PickSource : AvatarFlow
 
                 @FlowGraph
-                interface ZoomFlow : AvatarFlow {
+                sealed interface ZoomFlow : AvatarFlow {
                     @StartDestination
                     data object Zoom : ZoomFlow
                 }
@@ -448,12 +448,12 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 data object Outside : HomeGraph
             }
 
             @FlowGraph
-            interface CheckoutFlow : Route {
+            sealed interface CheckoutFlow : Route {
                 @StartDestination
                 data object Cart : CheckoutFlow
 
@@ -479,10 +479,10 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface OtherGraph : Route
+            sealed interface OtherGraph : Route
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 data object Feed : HomeGraph, OtherGraph
             }
             """.trimIndent(),
@@ -505,7 +505,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @FlowGraph
-            interface CheckoutFlow : Route {
+            sealed interface CheckoutFlow : Route {
                 @StartDestination
                 data class Cart(val id: String) : CheckoutFlow
             }
@@ -529,7 +529,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(Catalog::class)
                 @GoTo(Catalog::class)
                 data object Feed : HomeGraph
@@ -558,7 +558,7 @@ class ValidationTest {
             data class Res(val v: String)
 
             @NavGraph
-            interface HomeGraph : Route, ResultFlow<Res> {
+            sealed interface HomeGraph : Route, ResultFlow<Res> {
                 data object Feed : HomeGraph
             }
             """.trimIndent(),
@@ -581,7 +581,7 @@ class ValidationTest {
             data class Res(val v: String)
 
             @FlowGraph
-            interface CheckoutFlow : Route, ResultFlow<Res> {
+            sealed interface CheckoutFlow : Route, ResultFlow<Res> {
 
                 @StartDestination
                 data object Cart : CheckoutFlow
@@ -589,7 +589,7 @@ class ValidationTest {
                 // Nested @NavGraph extending its own enclosing @FlowGraph — transitively inherits
                 // ResultFlow<Res>, which R1 forbids for anything that isn't itself a @FlowGraph.
                 @NavGraph
-                interface CheckoutPages : CheckoutFlow
+                sealed interface CheckoutPages : CheckoutFlow
             }
             """.trimIndent(),
         )
@@ -612,7 +612,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @FlowGraph
-            interface CheckoutFlow : Route {
+            sealed interface CheckoutFlow : Route {
                 @NoBack
                 @StartDestination
                 data object Cart : CheckoutFlow
@@ -637,7 +637,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @FlowGraph
-            interface CheckoutFlow : Route {
+            sealed interface CheckoutFlow : Route {
                 @StartDestination
                 data object Cart : CheckoutFlow
 
@@ -659,7 +659,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.FlowGraph
 
             @FlowGraph
-            interface CheckoutFlow : Route {
+            sealed interface CheckoutFlow : Route {
                 data object Cart : CheckoutFlow
             }
             """.trimIndent(),
@@ -678,7 +678,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @StartDestination
                 data object Feed : HomeGraph
             }
@@ -702,7 +702,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.Quit
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @Quit
                 data object Feed : HomeGraph
             }
@@ -731,12 +731,12 @@ class ValidationTest {
             data class Res(val v: String)
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 data object Landing : HomeGraph
             }
 
             @FlowGraph
-            interface CheckoutFlow : Route, ResultFlow<Res> {
+            sealed interface CheckoutFlow : Route, ResultFlow<Res> {
 
                 @StartDestination
                 data object Cart : CheckoutFlow
@@ -764,13 +764,13 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(OtherGraph::class)
                 data object Feed : HomeGraph
             }
 
             @NavGraph
-            interface OtherGraph : Route {
+            sealed interface OtherGraph : Route {
                 data object Landing : OtherGraph
             }
             """.trimIndent(),
@@ -793,7 +793,7 @@ class ValidationTest {
             data object Orphan : Route
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(Orphan::class)
                 data object Feed : HomeGraph
             }
@@ -813,13 +813,13 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @BackTo(OtherGraph::class)
                 data object Feed : HomeGraph
             }
 
             @NavGraph
-            interface OtherGraph : Route {
+            sealed interface OtherGraph : Route {
                 data object Landing : OtherGraph
             }
             """.trimIndent(),
@@ -842,7 +842,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface AGraph : Route {
+            sealed interface AGraph : Route {
                 @GoTo(AFoo::class)
                 data object Detail : AGraph
 
@@ -850,7 +850,7 @@ class ValidationTest {
             }
 
             @NavGraph
-            interface BGraph : Route {
+            sealed interface BGraph : Route {
                 @GoTo(BFoo::class)
                 data object Detail : BGraph
 
@@ -872,7 +872,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 // goToDetail (from Detail) and goToDetail (from DetailRoute, 'Route' stripped) clash.
                 @GoTo(Detail::class)
                 @GoTo(DetailRoute::class)
@@ -900,7 +900,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoTo(Detail::class, name = "back")
                 data object Feed : HomeGraph
 
@@ -926,7 +926,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.StartDestination
 
             @FlowGraph
-            interface CheckoutFlow : Route, ResultFlow<String> {
+            sealed interface CheckoutFlow : Route, ResultFlow<String> {
                 @StartDestination
                 @GoTo(Payment::class, name = "quitWith")
                 data object Cart : CheckoutFlow
@@ -953,7 +953,7 @@ class ValidationTest {
             import dev.gezgin.core.annotation.NavGraph
 
             @NavGraph
-            interface HomeGraph : Route {
+            sealed interface HomeGraph : Route {
                 @GoForResult(Picker::class, name = "pick")
                 @GoTo(Detail::class, name = "goToPickForResult")
                 data object Feed : HomeGraph
@@ -982,7 +982,7 @@ class ValidationTest {
                 import dev.gezgin.core.annotation.NavGraph
 
                 @NavGraph
-                interface AGraph : Route {
+                sealed interface AGraph : Route {
                     data object A : AGraph
                 }
                 """.trimIndent(),
@@ -996,7 +996,7 @@ class ValidationTest {
                 import dev.gezgin.core.annotation.NavGraph
 
                 @NavGraph
-                interface BGraph : Route {
+                sealed interface BGraph : Route {
                     data object B : BGraph
                 }
                 """.trimIndent(),
@@ -1023,7 +1023,7 @@ class ValidationTest {
                 import dev.gezgin.core.annotation.NavGraph
 
                 @NavGraph
-                interface HomeGraph : Route {
+                sealed interface HomeGraph : Route {
                     data object H : HomeGraph
                 }
                 """.trimIndent(),
@@ -1037,7 +1037,7 @@ class ValidationTest {
                 import dev.gezgin.core.annotation.NavGraph
 
                 @NavGraph
-                interface AuthGraph : Route {
+                sealed interface AuthGraph : Route {
                     data object A : AuthGraph
                 }
                 """.trimIndent(),
@@ -1061,12 +1061,12 @@ class ValidationTest {
                 import dev.gezgin.core.annotation.NavGraph
 
                 @NavGraph
-                interface HomeGraph : Route {
+                sealed interface HomeGraph : Route {
                     data object H : HomeGraph
                 }
 
                 @NavGraph
-                interface AuthGraph : Route {
+                sealed interface AuthGraph : Route {
                     data object A : AuthGraph
                 }
                 """.trimIndent(),

@@ -179,6 +179,8 @@ class ModelReader(
             directParentFqs = implementedGraphFqsOf(graphDecl),
             membershipParentFq = membershipParent(graphDecl)?.qualifiedName?.asString(),
             isNested = graphDecl.parentDeclaration is KSClassDeclaration,
+            isSealedInterface = graphDecl.classKind == ClassKind.INTERFACE &&
+                Modifier.SEALED in graphDecl.modifiers,
         )
     }
 

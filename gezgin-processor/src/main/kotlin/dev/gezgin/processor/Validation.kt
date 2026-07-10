@@ -12,8 +12,8 @@ import dev.gezgin.processor.model.RouteModel
 /**
  * Compile-time strictness gate for Task 2.3: walks the [GraphModel] produced by
  * [dev.gezgin.processor.model.ModelReader] and reports every violation of the Global Constraints
- * rule list (`E1`-`E6`, `G1`, `N9`, `N10`, `N11`, `N12`, `R1`, `NB1`, `SD1`, `FX1`, `FX2`) as a KSP
- * error. Each message is
+ * rule list (`E1`-`E6`, `G1`, `N9`, `N10`, `N11`, `N12`, `N13`, `R1`, `NB1`, `SD1`, `FX1`, `FX2`) as a
+ * KSP error. Each message is
  * prefixed with its bracketed rule code (`"[E1] ..."`) so tests and IDE tooling can key off it; KSP
  * errors fail the enclosing compilation, which is the enforcement mechanism.
  *
@@ -53,6 +53,7 @@ class GezginValidator(
             checkSD1(graph)
             checkN11(graph)
             checkN12(graph)
+            checkN13(graph)
         }
         checkN10ClassNames()
         return ok
@@ -257,8 +258,31 @@ class GezginValidator(
         if (graph.isFlow && graph.membershipParentFq == null && graph.isNested) {
             error(
                 "N12",
-                "${simple(graph.fqName)} bir @FlowGraph ama hiçbir annotated graph/flow'a bağlı değil — " +
-                    "ne supertype (`: ParentGraph`) ne de kapsayan bir graph var (öksüz); bir graph'a bağla",
+                "${simple(graph.fqName)} bir @FlowGraph ama hiçbir annotated graph/flow'a bağlı değil " +
+                    "(öksüz): ne supertype (`: ParentGraph`) deklare ediyor ne de kapsayanı annotated bir " +
+                    "graph. Ya EN ÜST SEVİYEYE taşı (edge ile girilen bağımsız root flow olur) ya da " +
+                    "bir annotated parent ver (`: ParentGraph`) / annotated bir graph içine koy",
+            )
+        }
+    }
+
+    /**
+     * Every `@NavGraph`/`@FlowGraph` must be a `sealed interface` (design.md §3.1). Cross-file member
+     * discovery ([dev.gezgin.processor.model.ModelReader]) uses `getSealedSubclasses`, which per the KSP
+     * contract returns EMPTY for a non-sealed declaration — so a route/flow declaring `: G` in ANOTHER
+     * file silently drops out of the model (no navigator/serializer), surfacing later as a misleading
+     * SD1/E6 or pure silence. A lexically-nested member survives via the fallback, hiding the gap;
+     * enforcing `sealed interface` universally makes the derivation sound. A non-interface graph is
+     * rejected too (an `object`/`class` can't be the `: G` supertype its routes need) — not covered by
+     * any E-rule.
+     */
+    private fun checkN13(graph: GraphModelNode) {
+        if (!graph.isSealedInterface) {
+            val kind = if (graph.isFlow) "@FlowGraph" else "@NavGraph"
+            error(
+                "N13",
+                "${simple(graph.fqName)} bir $kind ama `sealed interface` değil — ayrı dosyadaki üyeler " +
+                    "sessizce düşer (getSealedSubclasses yalnız sealed tipte üye bulur); `sealed interface` yap",
             )
         }
     }

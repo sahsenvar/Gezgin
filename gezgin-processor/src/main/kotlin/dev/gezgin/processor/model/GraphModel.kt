@@ -106,6 +106,14 @@ data class GraphModelNode(
     val membershipParentFq: String?,
     /** Lexically nested inside another type declaration (vs a top-level file member) — feeds N12. */
     val isNested: Boolean,
+    /**
+     * Whether this graph is declared as a `sealed interface`. Cross-file member discovery
+     * ([dev.gezgin.processor.model.ModelReader]) relies on `getSealedSubclasses`, which per the KSP
+     * contract returns EMPTY for a non-sealed declaration — so a route/flow declaring `: G` in another
+     * file would silently drop out of every graph. N13 enforces this so the derivation is sound; the
+     * field never enters the model dump (golden output unaffected).
+     */
+    val isSealedInterface: Boolean,
 )
 
 /** The full semantic model read from `@NavGraph`/`@FlowGraph`-annotated sources. */
