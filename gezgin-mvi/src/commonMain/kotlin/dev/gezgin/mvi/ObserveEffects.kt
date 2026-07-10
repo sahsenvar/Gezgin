@@ -10,31 +10,28 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 /**
- * Efekt akışını **yalnız STARTED iken** güvenle toplayan standart yardımcı (§10.1). `@ScreenEffect`
- * composable'ı bunu çağırır: `ObserveAsEvents(vm.effects) { event -> ... }`.
+ * Standard helper that collects an effect flow SAFELY, only while STARTED (§10.1). A `@ScreenEffect`
+ * composable calls it: `ObserveEffects(vm.effects) { effect -> ... }`.
  *
- * **Toplama penceresi (dürüst sözleşme, Faz 5 recheck / MJ2):** [repeatOnLifecycle]`(STARTED)` collect'i
- * YALNIZ STARTED iken açıktır — entry örtülünce (Nav3 covered entry'yi composition'dan tamamen çıkarır)
- * ya da uygulama arka plana gidince (STOPPED) collector KAPANIR. Bu pencerede emit edilen efektlerin
- * kaybolmaması TAMAMEN `effects`'in **backing'ine** bağlıdır; bu fonksiyon tek başına garanti veremez:
- * buffer'lı bir kaynak (ÖNERİLEN [GezginEffects] = `Channel(UNLIMITED).receiveAsFlow()`) değerleri tutar
- * ve STARTED'a dönünce SIRAYLA teslim eder; `MutableSharedFlow(replay = 0) + tryEmit` ise gözlemci yokken
- * efekti SESSİZCE DÜŞÜRÜR (bu yardımcı onu geri getiremez). Yani "kaybolan toast yok" garantisi bu
- * fonksiyonun değil, [GezginEffects]-backed bir `effects`'in özelliğidir.
+ * **Collection window (honest contract):** the [repeatOnLifecycle]`(STARTED)` collect is open ONLY while
+ * STARTED — when the entry is covered (Nav3 removes a covered entry from composition entirely) or the app
+ * goes to the background (STOPPED), the collector is CLOSED. Whether an effect emitted in that window
+ * survives depends ENTIRELY on the `effects` BACKING; this function alone can't guarantee it: a buffered
+ * source (RECOMMENDED [GezginEffects] = `Channel(UNLIMITED).receiveAsFlow()`) holds values and delivers
+ * them IN ORDER once STARTED again, whereas `MutableSharedFlow(replay = 0) + tryEmit` SILENTLY DROPS an
+ * effect when there is no observer (this helper cannot bring it back). So the "no lost toast" guarantee is
+ * a property of a [GezginEffects]-backed `effects`, not of this function.
  *
- * `Main.immediate` = re-compose/collect resume anında (STARTED'a dönüş) buffer'daki efekt bir sonraki
- * frame'e ertelenmeden, atlanmadan işlenir.
- *
- * Kaynak artefaktlar (spike task-5.0, 2026-07-08): `LocalLifecycleOwner`/[repeatOnLifecycle]
- * `org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose`(+`-runtime`) commonMain'de (KMP, jvm+android).
+ * `Main.immediate` = on recompose/collect resume (returning to STARTED) the buffered effect is processed
+ * without being deferred to the next frame or skipped.
  */
 @Composable
-public fun <E> ObserveAsEvents(effects: Flow<E>, onEvent: (E) -> Unit) {
+public fun <E> ObserveEffects(effects: Flow<E>, onEffect: (E) -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(effects, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             withContext(Dispatchers.Main.immediate) {
-                effects.collect(onEvent)
+                effects.collect(onEffect)
             }
         }
     }

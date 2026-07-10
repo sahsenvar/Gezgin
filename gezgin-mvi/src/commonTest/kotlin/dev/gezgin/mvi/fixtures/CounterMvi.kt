@@ -2,7 +2,7 @@ package dev.gezgin.mvi.fixtures
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.ViewModel as AndroidxViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -12,9 +12,9 @@ import dev.gezgin.core.annotation.Screen
 import dev.gezgin.core.compose.GezginEntryScope
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.ObserveAsEvents
+import dev.gezgin.mvi.ObserveEffects
+import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.mvi.annotation.ScreenEffect
-import dev.gezgin.mvi.annotation.ViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,12 +23,12 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Task-5.0 derleme kanıtı (full codegen 5.1/5.2). Kanıtladığı üçlü + shape:
- *  - `@ViewModel(Route::class)` bir VM class'ında (CLASS target) + VM `GezginMvi<S,I,E>` implement eder
+ *  - `@MviViewModel(Route::class)` bir VM class'ında (CLASS target) + VM `GezginMvi<S,I,E>` implement eder
  *    (İKİSİ DE — guardrail'in doğrulayacağı biçim) → S/I/E generic şekli kullanılabilir.
  *  - stateless `@Screen(Route)` content `(state, onIntent)` + `@ScreenEffect` effects `(Flow<E>)`.
  *  - `provideXEntry` = codegen'in üreteceği ANDROIDX-FALLBACK resolver shape'i, gezgin-core entry-scoping'e
  *    (`GezginEntryScope.register<Route>`) karşı derlenir: `viewModel(factory = viewModelFactory{ initializer{} })`
- *    + `collectAsStateWithLifecycle()` + `ObserveAsEvents(...)` + stateless content çağrısı.
+ *    + `collectAsStateWithLifecycle()` + `ObserveEffects(...)` + stateless content çağrısı.
  * Bu bir SMOKE derleme kanıtıdır (render/back döngüsü değil — o 5.2/5.3 sample'ında).
  */
 
@@ -43,9 +43,9 @@ sealed interface CounterEffect {
     data class Toast(val text: String) : CounterEffect
 }
 
-@ViewModel(CounterRoute::class)
+@MviViewModel(CounterRoute::class)
 class CounterViewModel(route: CounterRoute) :
-    AndroidxViewModel(),
+    ViewModel(),
     GezginMvi<CounterState, CounterIntent, CounterEffect> {
 
     private val _uiState = MutableStateFlow(CounterState(route.start))
@@ -75,7 +75,7 @@ fun CounterContent(state: CounterState, onIntent: (CounterIntent) -> Unit) {
 @ScreenEffect
 @Composable
 fun CounterEffects(effects: Flow<CounterEffect>) {
-    ObserveAsEvents(effects) { /* CounterEffect.Toast -> show */ }
+    ObserveEffects(effects) { /* CounterEffect.Toast -> show */ }
 }
 
 /**

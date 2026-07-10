@@ -4,28 +4,31 @@ import dev.gezgin.core.Route
 import kotlin.reflect.KClass
 
 /**
- * MVI-mode bağlama (§10.1) — **VM class'ının kendisi** üzerinde durur (CLASS target), route'a bağlar:
- * `@ViewModel(OrderChainRoute::class) class OrderChainViewModel(...) : GezginMvi<S,I,E>`.
+ * MVI-mode binding (§10.1) — placed on the VM class itself (CLASS target), binding it to a route:
+ * `@MviViewModel(OrderChainRoute::class) class OrderChainViewModel(...) : GezginMvi<S,I,E>`.
  *
- * `@Screen(Route::class)`'in aksine burada [route] sentinel'i YOK (argsız türetme yok) — VM'in
- * hangi route'a ait olduğu doğrudan verilir; codegen üçlüyü (`@ViewModel`/`@Screen`/`@ScreenEffect`)
- * route'a göre eşler ve üçünün **aynı modülde** olmasını ister (per-module KSP eşleşmesi, §10.1).
+ * Named `MviViewModel` (not `ViewModel`) because every MVI VM extends `androidx.lifecycle.ViewModel` in the
+ * same file — a bare `@ViewModel` would collide with that supertype's simple name and force an import alias
+ * on every usage.
  *
- * Guardrail (5.1): `@ViewModel` işaretli sınıf [dev.gezgin.mvi.GezginMvi] implement ETMELİDİR; etmezse
- * derleme hatası. Codegen ayrıca eşleşen `@Screen(Route)` content'inin `(state, onIntent)` + varsa
- * `@ScreenEffect`'in `Flow<E>` tiplerini VM'in `GezginMvi<S,I,E>` supertype arg'larına karşı doğrular.
+ * Unlike `@Screen(Route::class)`, [route] has NO sentinel (no arg-less derivation) — the VM's route is given
+ * directly; codegen matches the triple (`@MviViewModel`/`@Screen`/`@ScreenEffect`) by route and requires all
+ * three to be in the SAME module (per-module KSP matching, §10.1).
  *
- * NOT: gezgin-mvi RUNTIME'da DI-agnostiktir; DI-detection (§10.1) VM'in `@HiltViewModel`/`@KoinViewModel`
- * annotation'larını + ctor `@Assisted`/`@InjectedParam`'ını **string-FQN ile** okuyan codegen'de yapılır
- * (bu annotation'a bir DI bağımlılığı eklemez).
+ * Guardrail: an `@MviViewModel` class MUST implement [dev.gezgin.mvi.GezginMvi]; otherwise a compile error.
+ * Codegen also validates the matched `@Screen(Route)` content's `(state, onIntent)` and, if present, the
+ * `@ScreenEffect`'s `Flow<E>` types against the VM's `GezginMvi<S,I,E>` supertype arguments.
  *
- * NOT (isim kuralı): Aynı-modül bir VM'in **navigator ctor-param'ı `nav` adlı OLMALIDIR** ki default
- * `viewModel` resolver'ının DI-detection'ı onu tanısın — çünkü aynı-modül `nav: XNavigator` tipi bu KSP
- * round'unda henüz üretilmemiştir (tip çözülemez), bu yüzden navigator param'ı **ada göre** (`nav`)
- * eşlenir. Başka bir ad (örn. `SettingsViewModel(navigator: SettingsNavigator)`) verirsen default
- * resolver onu tanımaz ve `viewModel` param'ı zorunlu hale gelir (güvenli ama sessiz bir degradasyon).
- * Route ctor-param'ı ise TİPE göre eşlendiğinden (route tipi her zaman çözülür) onun için böyle bir isim
- * kısıtı yoktur.
+ * Note: gezgin-mvi is DI-agnostic at RUNTIME; DI-detection (§10.1) reads the VM's
+ * `@HiltViewModel`/`@KoinViewModel` annotations + ctor `@Assisted`/`@InjectedParam` by string-FQN in codegen
+ * (this annotation adds no DI dependency).
+ *
+ * Note (naming rule): a same-module VM's navigator ctor param MUST be named `nav` so the default `viewModel`
+ * resolver's DI-detection recognizes it — the same-module `nav: XNavigator` type isn't generated yet in this
+ * KSP round (unresolvable), so the navigator param is matched BY NAME (`nav`). A different name (e.g.
+ * `SettingsViewModel(navigator: SettingsNavigator)`) is not recognized and makes the `viewModel` param
+ * required (a safe but silent degradation). The route ctor param is matched BY TYPE (always resolvable), so
+ * it has no such naming constraint.
  */
 @Target(AnnotationTarget.CLASS)
-public annotation class ViewModel(val route: KClass<out Route>)
+public annotation class MviViewModel(val route: KClass<out Route>)

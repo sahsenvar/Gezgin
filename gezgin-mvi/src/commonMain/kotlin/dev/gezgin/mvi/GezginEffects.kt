@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
  * **Neden `MutableSharedFlow` + `tryEmit` DEĞİL:** `MutableSharedFlow(replay = 0, extraBufferCapacity = n)`
  * SICAK bir yayındır ve `replay = 0` olduğundan **abone yokken** emit edilen değeri hiçbir yerde tutmaz.
  * Nav3'te örtülen (covered) entry composition'dan TAMAMEN çıkar → collector yok; ya da uygulama arka
- * plana gidince (`STOPPED`) [ObserveAsEvents]'in `repeatOnLifecycle` collect'i kesilir. Bu pencerede VM
+ * plana gidince (`STOPPED`) [ObserveEffects]'in `repeatOnLifecycle` collect'i kesilir. Bu pencerede VM
  * `_effects.tryEmit(...)` derse: (a) buffer boşsa değer yok olur (abone yok, replay yok); (b) buffer
  * doluysa (`extraBufferCapacity` aşımı — bir frame'de art arda efekt) `tryEmit` `false` döner ve efekt
  * yine düşer — ki yaygın fixture'lar dönüş değerini yok sayar. Sonuç: kullanıcı geri döndüğünde
- * snackbar/toast OYNATILMAZ. [ObserveAsEvents]'in "STARTED'a dönünce kaybolan toast yok" vaadi YALNIZ
+ * snackbar/toast OYNATILMAZ. [ObserveEffects]'in "STARTED'a dönünce kaybolan toast yok" vaadi YALNIZ
  * buffer'lı bir `Channel` backing'iyle doğrudur.
  *
  * **Neden `Channel(UNLIMITED)`:** `Channel` SICAK'tır ama tüketilene kadar değeri TUTAR. Abone olmasa
@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
  * (`receiveAsFlow` fan-out yapmaz — ikinci bir gözlemci değeri paylaşır, çoğaltmaz).
  *
  * **Stabil instance:** [flow] tek seferlik kurulur (`val`) → her erişimde AYNI `Flow`. `@ScreenEffect`
- * içindeki `ObserveAsEvents(vm.effects) { ... }` çağrısında `LaunchedEffect(effects, ...)` key'i
+ * içindeki `ObserveEffects(vm.effects) { ... }` çağrısında `LaunchedEffect(effects, ...)` key'i
  * recomposition'da değişmez, collector gereksiz yere restart olmaz. (Her erişimde `receiveAsFlow()`
  * çağıran bir `get()` property'si bu yüzden YANLIŞTIR — key her recomposition'da değişir.)
  *
