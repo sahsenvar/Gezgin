@@ -5,24 +5,26 @@ import kotlin.annotation.Repeatable
 import kotlin.reflect.KClass
 
 /**
- * Geri kenarı (§4.2): stack'te `target`'a kadar pop eder (`inclusive=true` ise target da çıkar). Codegen
- * tipli `backToX()` üretir; target stack'te yoksa `NavEvent.BackToTargetMissing` yayılır, pop olmaz.
+ * Back edge (§4.2): pops the stack up to `target` (also pops `target` when `inclusive = true`). Codegen
+ * emits a typed `backToX()`; if `target` is not on the stack, `NavEvent.BackToTargetMissing` is emitted and
+ * nothing is popped.
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
 public annotation class BackTo(val target: KClass<out Route>, val inclusive: Boolean = false)
 
-/** Geri kenarı (§4.2): stack'i start destination'a kadar boşaltır. Codegen tipli `backToStart()` üretir. */
+/** Back edge (§4.2): pops the stack down to the start destination. Codegen emits a typed `backToStart()`. */
 @Target(AnnotationTarget.CLASS)
 public annotation class BackToStart
 
-/** Flow-çıkış kenarı (§8.1): mevcut flow'u Canceled ile kapatır (root'ta `onRootBack`). Codegen tipli `quit()` üretir. */
+/** Flow-exit edge (§8.1): tears the current flow down with Canceled (at root → `onRootBack`). Codegen emits a typed `quit()`. */
 @Target(AnnotationTarget.CLASS)
 public annotation class Quit
 
 /**
- * Terminal işaret (§4.2, M5′): bu route top iken geri (sistem-back/predictive dahil) YUTULUR — Gezgin-sahipli
- * handler dispatcher LIFO'sunda kazanır. Kök muaftır (dipteyken back = `onRootBack`; kullanıcı app'e hapsolmaz).
+ * Terminal marker (§4.2): while this route is on top, back (including system-back/predictive) is SWALLOWED —
+ * a Gezgin-owned handler wins the dispatcher's LIFO. The root is exempt (back at the bottom = `onRootBack`;
+ * the user is never trapped in the app).
  */
 @Target(AnnotationTarget.CLASS)
 public annotation class NoBack
