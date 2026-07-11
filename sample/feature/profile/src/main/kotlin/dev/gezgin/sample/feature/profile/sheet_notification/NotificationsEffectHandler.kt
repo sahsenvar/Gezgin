@@ -13,7 +13,7 @@ fun NotificationsEffectHandler(effects: Flow<NotificationsEffect>) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
-            is NotificationsEffect.Announce -> Toast.makeText(
+            is NotificationsEffect.ShowMessage -> Toast.makeText(
                 context,
                 effect.text,
                 Toast.LENGTH_SHORT

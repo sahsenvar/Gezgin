@@ -1,5 +1,6 @@
 package dev.gezgin.sample.shopr.screen_order_placed
 
+import androidx.lifecycle.ViewModel
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class OrderPlacedViewModel(
     route: HomeGraph.OrderPlaced,
     private val nav: OrderPlacedNavigator,
-) : androidx.lifecycle.ViewModel(), GezginMvi<OrderPlacedUiState, OrderPlacedIntent, OrderPlacedEffect> {
+) : ViewModel(), GezginMvi<OrderPlacedUiState, OrderPlacedIntent, OrderPlacedEffect> {
 
     private val _uiState = MutableStateFlow(OrderPlacedUiState(route.orderId))
     override val uiState: StateFlow<OrderPlacedUiState> = _uiState.asStateFlow()
@@ -23,7 +24,7 @@ class OrderPlacedViewModel(
     override val effects: Flow<OrderPlacedEffect> = _effects.flow
 
     init {
-        _effects.send(OrderPlacedEffect.Message("Sipariş ${route.orderId} onaylandı"))
+        _effects.send(OrderPlacedEffect.ShowMessage("Sipariş ${route.orderId} onaylandı"))
     }
 
     override fun onIntent(intent: OrderPlacedIntent) {

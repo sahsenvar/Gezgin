@@ -24,12 +24,14 @@ class CropViewModel(
     private val _effects = GezginEffects<CropEffect>()
     override val effects: Flow<CropEffect> = _effects.flow
 
+    // Giriş ipucu entry yaratılırken gönderilir (goToZoom'dan önce DEĞİL); lossless kanal STARTED'da toplar.
+    init {
+        _effects.send(CropEffect.ShowMessage("Kaynak: ${_uiState.value.source}"))
+    }
+
     override fun onIntent(intent: CropIntent) {
         when (intent) {
-            CropIntent.Zoom -> {
-                _effects.send(CropEffect.ShowMessage("Yakınlaştırma açıldı"))
-                nav.goToZoom()
-            }
+            CropIntent.Zoom -> nav.goToZoom()
             CropIntent.Use -> nav.quitWith(AvatarChoice(uri = "avatar://${_uiState.value.source}"))
             CropIntent.Cancel -> nav.back()
         }

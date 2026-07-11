@@ -13,7 +13,7 @@ fun CartEffectHandler(effects: Flow<CartEffect>) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
-            is CartEffect.Message -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+            is CartEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
         }
     }
 }

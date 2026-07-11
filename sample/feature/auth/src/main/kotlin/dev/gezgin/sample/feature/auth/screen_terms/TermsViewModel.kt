@@ -28,10 +28,14 @@ class TermsViewModel(
             is TermsIntent.NameChanged -> _uiState.update { it.copy(name = intent.value) }
             TermsIntent.BackToStart -> nav.backToStart()
             TermsIntent.Quit -> nav.quit()
-            TermsIntent.Complete -> {
-                _effects.send(TermsEffect.ShowMessage("Kayıt tamamlandı"))
-                nav.quitAndGoToWelcome(_uiState.value.name.ifBlank { null })
-            }
+            // Efekt quitAndGoTo'dan önce gönderilse entry kalkacağı için kaybolur.
+            // Boş adda nav bloklanıp hata efekti verilir; geçerli adda yalnız navigasyon.
+            TermsIntent.Complete ->
+                if (_uiState.value.name.isBlank()) {
+                    _effects.send(TermsEffect.ShowMessage("Devam etmek için adınızı girin"))
+                } else {
+                    nav.quitAndGoToWelcome(_uiState.value.name)
+                }
         }
     }
 }

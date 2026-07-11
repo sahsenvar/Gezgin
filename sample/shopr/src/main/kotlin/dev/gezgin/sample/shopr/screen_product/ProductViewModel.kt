@@ -1,5 +1,6 @@
 package dev.gezgin.sample.shopr.screen_product
 
+import androidx.lifecycle.ViewModel
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.update
 @MviViewModel(HomeGraph.Product::class)
 class ProductViewModel(
     route: HomeGraph.Product,
-) : androidx.lifecycle.ViewModel(), GezginMvi<ProductUiState, ProductIntent, ProductEffect> {
+) : ViewModel(), GezginMvi<ProductUiState, ProductIntent, ProductEffect> {
 
     private val _uiState = MutableStateFlow(ProductUiState(id = route.id))
     override val uiState: StateFlow<ProductUiState> = _uiState.asStateFlow()
@@ -27,7 +28,7 @@ class ProductViewModel(
             ProductIntent.ToggleFavorite -> {
                 _uiState.update { it.copy(favorite = !it.favorite) }
                 val text = if (_uiState.value.favorite) "Favorilere eklendi" else "Favorilerden çıkarıldı"
-                _effects.send(ProductEffect.Message(text))
+                _effects.send(ProductEffect.ShowMessage(text))
             }
         }
     }

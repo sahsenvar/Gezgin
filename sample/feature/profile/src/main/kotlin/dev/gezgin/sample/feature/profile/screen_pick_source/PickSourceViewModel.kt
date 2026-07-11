@@ -22,16 +22,15 @@ class PickSourceViewModel(
     private val _effects = GezginEffects<PickSourceEffect>()
     override val effects: Flow<PickSourceEffect> = _effects.flow
 
+    // Giriş ipucu entry yaratılırken gönderilir (goToCrop'tan önce DEĞİL); lossless kanal STARTED'da toplar.
+    init {
+        _effects.send(PickSourceEffect.ShowMessage("Avatar kaynağı seçin"))
+    }
+
     override fun onIntent(intent: PickSourceIntent) {
         when (intent) {
-            PickSourceIntent.PickGallery -> {
-                _effects.send(PickSourceEffect.ShowMessage("Kaynak: Galeri"))
-                nav.goToCrop("gallery")
-            }
-            PickSourceIntent.PickCamera -> {
-                _effects.send(PickSourceEffect.ShowMessage("Kaynak: Kamera"))
-                nav.goToCrop("camera")
-            }
+            PickSourceIntent.PickGallery -> nav.goToCrop("gallery")
+            PickSourceIntent.PickCamera -> nav.goToCrop("camera")
         }
     }
 }

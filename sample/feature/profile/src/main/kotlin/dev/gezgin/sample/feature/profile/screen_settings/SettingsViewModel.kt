@@ -1,5 +1,6 @@
 package dev.gezgin.sample.feature.profile.screen_settings
 
+import androidx.lifecycle.ViewModel
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.update
 @MviViewModel(ProfileGraph.SettingsScreenRoute::class)
 class SettingsViewModel(
     private val nav: SettingsNavigator
-) : androidx.lifecycle.ViewModel(), GezginMvi<SettingsUiState, SettingsIntent, SettingsEffect> {
+) : ViewModel(), GezginMvi<SettingsUiState, SettingsIntent, SettingsEffect> {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     override val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()

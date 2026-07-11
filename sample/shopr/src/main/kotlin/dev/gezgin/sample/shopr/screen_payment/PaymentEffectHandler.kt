@@ -13,7 +13,7 @@ fun PaymentEffectHandler(effects: Flow<PaymentEffect>) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
-            is PaymentEffect.Message -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+            is PaymentEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
         }
     }
 }

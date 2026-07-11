@@ -23,12 +23,14 @@ class ProfileInfoViewModel(
     private val _effects = GezginEffects<ProfileInfoEffect>()
     override val effects: Flow<ProfileInfoEffect> = _effects.flow
 
+    // Giriş ipucu entry yaratılırken gönderilir (nav'dan önce DEĞİL); lossless kanal STARTED'da toplar.
+    init {
+        _effects.send(ProfileInfoEffect.ShowMessage("Hesap: ${_uiState.value.email}"))
+    }
+
     override fun onIntent(intent: ProfileInfoIntent) {
         when (intent) {
-            ProfileInfoIntent.Continue -> {
-                _effects.send(ProfileInfoEffect.ShowMessage("Profil bilgileri kaydedildi"))
-                nav.goToTerms()
-            }
+            ProfileInfoIntent.Continue -> nav.goToTerms()
         }
     }
 }

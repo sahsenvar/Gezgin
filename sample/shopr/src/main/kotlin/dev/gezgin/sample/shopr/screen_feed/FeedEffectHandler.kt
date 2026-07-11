@@ -13,7 +13,7 @@ fun FeedEffectHandler(effects: Flow<FeedEffect>) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
-            is FeedEffect.Message -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+            is FeedEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
         }
     }
 }
