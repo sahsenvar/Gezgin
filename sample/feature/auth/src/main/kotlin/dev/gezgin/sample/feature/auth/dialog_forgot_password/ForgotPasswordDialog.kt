@@ -24,9 +24,9 @@ import dev.gezgin.sample.navigation.ForgotPasswordDialogNavigator
 
 // @Screen/@Dialog/@BottomSheet/@FullscreenModal birbirinin alternatifi — ikisini aynı fonksiyona
 // koymak route'u iki kez kaydeder (SC4 derleme hatası).
-@Dialog
+@Dialog(ForgotPasswordDialogRoute::class)
 @Composable
-fun ForgotPasswordDialogScreen(route: ForgotPasswordDialogRoute, nav: ForgotPasswordDialogNavigator) {
+fun ForgotPasswordDialog(route: ForgotPasswordDialogRoute, nav: ForgotPasswordDialogNavigator) {
     var email by remember { mutableStateOf(route.email.orEmpty()) }
     // Dialog içeriği fillMaxSize DEĞİL — scrim üstünde wrap-content/ortalanmış görünmeli.
     Surface(
