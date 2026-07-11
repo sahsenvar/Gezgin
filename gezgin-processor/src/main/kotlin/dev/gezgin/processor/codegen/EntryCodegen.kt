@@ -39,7 +39,11 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
 internal object EntryCodegen {
 
     fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
-        entries.groupBy { it.packageName }.map { (packageName, group) ->
+        // Sort before grouping so file order (packageName) and per-file function order (routeFq, unique)
+        // are reproducible — KSP symbol order is not contractually stable (MN-1); graph-derived codegen
+        // already sorts (ModelReader.routes.sortedBy fqName), this brings entry codegen to parity.
+        entries.sortedWith(compareBy({ it.packageName }, { it.routeFq }))
+            .groupBy { it.packageName }.map { (packageName, group) ->
             FileSpec.builder(packageName, "GezginEntries")
                 // K4 — a nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator/
                 // LocalGezginEntryId; opt in the file only when at least one entry wires nav.

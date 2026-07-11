@@ -96,6 +96,9 @@ internal object MviEntryCodegen {
 
     fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
         entries.filter { it.mvi != null }
+            // Reproducible emit order (MN-1) — KSP symbol order isn't contractually stable; sort by
+            // (packageName, routeFq[unique]) to match graph-derived codegen's determinism.
+            .sortedWith(compareBy({ it.packageName }, { it.routeFq }))
             .groupBy { it.packageName }
             .map { (packageName, group) ->
                 FileSpec.builder(packageName, "GezginMviEntries")
