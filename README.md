@@ -20,12 +20,12 @@ Yayınlanan üç artefakt (group: `dev.gezgin`; ayrıntı [docs/gezgin-design.md
 
 ## Kurulum / Başlangıç
 
-> ⚠️ **Yayın durumu:** Gezgin henüz **Maven Central'da değil**. Üç modülün `maven-publish`
+> ⚠️ **Yayın durumu:** Gezgin henüz **Maven Central'da değil**. Dört modülün `maven-publish`
 > yapılandırması şimdilik yalnız **iskelet** (uzak repository / signing YOK) → bugün yalnız
 > `publishToMavenLocal` mümkün. Aşağıdaki koordinatlar release günü için doğrudur; şimdilik
 > **kaynaktan derleyip** (`./gradlew publishToMavenLocal`) `mavenLocal()`'den tüketin.
 
-Üç artefakt (`group = dev.gezgin`, `version = 0.1.0-alpha01`):
+Dört artefakt (`group = dev.gezgin`, `version = 0.1.0-alpha01`) — üçü runtime, biri (`gezgin-test`) test:
 
 ```kotlin
 plugins {
@@ -38,6 +38,7 @@ dependencies {
     implementation("dev.gezgin:gezgin-core:0.1.0-alpha01")     // zorunlu temel + GezginDisplay
     ksp("dev.gezgin:gezgin-processor:0.1.0-alpha01")           // zorunlu codegen
     // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha01")   // opsiyonel MVI add-on
+    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha01") // UI'sız test: GezginTestNavigator + tipli fromX()
 }
 ```
 
@@ -82,7 +83,7 @@ Adopter'ın bilebileceği KSP seçenekleri (`ksp { arg("<ad>", "<değer>") }`):
 | Seçenek | Default | Ne zaman |
 |---|---|---|
 | `gezgin.emitSerializers` | `true` | Polimorfik `Route` `SerializersModule`'ünü kendin sağlıyorsan `false` ver (opt-out). |
-| `gezgin.emitTestAccessors` | `false` | Tipli `GezginTestNavigator.fromX()` test erişimcilerini üretmek için `true` ver (opt-in). **Yalnız** `@NavGraph`'lar ile testler AYNI KSP round'undaysa (tek-modül) etki eder; çok-modül düzeninde erişimciler üretilmez → `raw.xNavigator(entryId)` yoluna düşülür (bkz. [docs/gezgin-by-example.md](docs/gezgin-by-example.md) §8). |
+| `gezgin.emitTestAccessors` | `false` | Tipli `GezginTestNavigator.fromX()` test erişimcilerini üretmek için `true` ver (opt-in). Flag'i modülün **`main` KSP round'unda** (`ksp {}` bloğu — graph'ların bulunduğu round) aç; erişimciler `main`'e üretilir ve modülün `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — **çok-modül düzeninde de çalışır**. `:gezgin-test`'i `main` compile classpath'ine `compileOnly` olarak ekle (üretilen erişimciler derlensin; app runtime'ına sızmaz), `test` için `testImplementation` ile yeniden ekle. Bkz. [docs/gezgin-by-example.md](docs/gezgin-by-example.md) §8. |
 
 ## Uyumluluk
 
