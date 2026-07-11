@@ -47,9 +47,7 @@ Her feature'ın ekran içerikleri tek-sorumluluk dosyalarına bölünür (ör. `
 kendi `kind_name` alt-paketini alır (`sheet_notification/`, `dialog_edit_name/`, `flow_avatar/`,
 `dialog_forgot_password/`, `flow_signup/`, `sheet_filter/`, `modal_image_viewer/`; shopr'da
 `ui/flow_checkout/`). KSP `provideXEntry`'yi içerik fonksiyonunun paketine ürettiğinden
-`*GraphEntries.kt` (ve shopr'da `MainActivity.kt`) import'ları bu alt-paketleri izler. Aşağıdaki
-kapsama tablosunun "dosya" sütunundaki `*Screens.kt` adları artık bölünmüş route gruplarının
-tarihsel etiketleridir.
+`*GraphEntries.kt` (ve shopr'da `MainActivity.kt`) import'ları bu alt-paketleri izler.
 
 ## Navigasyon grafiği
 
@@ -68,27 +66,27 @@ supertype'tan gelir (`: AuthGraph` / `: ProfileGraph`, aynı paket). `AvatarFlow
 | result'suz `@FlowGraph` (flat-file, top-level `: AuthGraph`) | `SignUpFlow` | `SignUpFlow.kt` |
 | `ResultFlow<T>` + nested `@FlowGraph` (flat-file, top-level `: ProfileGraph`) | `AvatarFlow` → `AvatarFlow.ZoomFlow` | `AvatarFlow.kt` |
 | `@StartDestination` / G1 (app start) | `SignUpFlow.CredentialsScreenRoute`, `AvatarFlow.PickSourceScreenRoute`, `ZoomFlow.ZoomScreenRoute`; gerçek app start = `LoginScreenRoute` | graph dosyaları, `MainActivity.kt` |
-| `@GoTo` (+ `singleTop=false` + `name=`) | `DashboardScreenRoute→ItemDetailScreenRoute`; `ItemDetailScreenRoute→ItemDetailScreenRoute` (`goToRelated`, R2 dup) | `HomeScreens.kt` |
-| `@ReplaceTo` (Self-default) | `LoginScreenRoute→DashboardScreenRoute` (`loginSuccess`), `WelcomeScreenRoute→DashboardScreenRoute` (`continueToDashboard`) | `AuthScreens.kt`, `HomeScreens.kt` |
-| `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsScreenRoute→LoginScreenRoute` | `SettingsMvi.kt` (VM `onIntent`'ten çağrılır — MVI-mode) |
-| `@GoForResult` — screen×3 (Dialog/Dialog/Sheet) | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | `AuthScreens.kt`, `ProfileScreens.kt`, `HomeScreens.kt` |
-| `@GoForResult` — flow×1, named×2 | `AvatarFlow` (`pickAvatar`), `FilterBottomSheetRoute` (`pickSort`) | `ProfileScreens.kt`, `HomeScreens.kt` |
-| Üçlü tüketimin İKİ deseni | suspend `goToPickSortForResult` (Dashboard) **vs.** `launchPickAvatar()` + `pickAvatarResults.collect` VM'siz `LaunchedEffect` (Profile) | `HomeScreens.kt` / `ProfileScreens.kt` |
-| `@QuitAndGoTo` | `TermsScreenRoute` → `WelcomeScreenRoute` | `AuthScreens.kt` |
-| `@Quit` | `TermsScreenRoute` | `AuthScreens.kt` |
-| `@BackToStart` | `TermsScreenRoute` → `CredentialsScreenRoute` | `AuthScreens.kt` |
-| `@BackTo` | `ItemDetailScreenRoute` → `DashboardScreenRoute`; `ItemImageViewerRoute` → `ItemDetailScreenRoute` (fullscreen modal'ın tipli çıkışı) | `HomeScreens.kt` |
-| `@NoBack` (cross-module) | `WelcomeScreenRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `HomeGraph.kt` / `HomeScreens.kt` |
+| `@GoTo` (+ `singleTop=false` + `name=`) | `DashboardScreenRoute→ItemDetailScreenRoute`; `ItemDetailScreenRoute→ItemDetailScreenRoute` (`goToRelated`, R2 dup) | `DashboardScreen.kt`, `ItemDetailScreen.kt` |
+| `@ReplaceTo` (Self-default) | `LoginScreenRoute→DashboardScreenRoute` (`loginSuccess`), `WelcomeScreenRoute→DashboardScreenRoute` (`continueToDashboard`) | `LoginScreen.kt`, `WelcomeScreen.kt` |
+| `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsScreenRoute→LoginScreenRoute` | `SettingsViewModel.kt` (VM `onIntent`'ten çağrılır — MVI-mode) |
+| `@GoForResult` — screen×3 (Dialog/Dialog/Sheet) | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | `dialog_forgot_password/ForgotPasswordDialog.kt`, `dialog_edit_name/EditNameDialog.kt`, `sheet_filter/FilterBottomSheet.kt` |
+| `@GoForResult` — flow×1, named×2 | `AvatarFlow` (`pickAvatar`), `FilterBottomSheetRoute` (`pickSort`) | `ProfileScreen.kt`, `DashboardScreen.kt` |
+| Üçlü tüketimin İKİ deseni | suspend `goToPickSortForResult` (Dashboard) **vs.** `launchPickAvatar()` + `pickAvatarResults.collect` VM'siz `LaunchedEffect` (Profile) | `DashboardScreen.kt` / `ProfileScreen.kt` |
+| `@QuitAndGoTo` | `TermsScreenRoute` → `WelcomeScreenRoute` | `flow_signup/TermsScreen.kt` |
+| `@Quit` | `TermsScreenRoute` | `flow_signup/TermsScreen.kt` |
+| `@BackToStart` | `TermsScreenRoute` → `CredentialsScreenRoute` | `flow_signup/TermsScreen.kt` |
+| `@BackTo` | `ItemDetailScreenRoute` → `DashboardScreenRoute`; `ItemImageViewerRoute` → `ItemDetailScreenRoute` (fullscreen modal'ın tipli çıkışı) | `ItemDetailScreen.kt`, `modal_image_viewer/ItemImageViewerModal.kt` |
+| `@NoBack` (cross-module) | `WelcomeScreenRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `HomeGraph.kt` / `WelcomeScreen.kt` |
 | `backWithResult` | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | ilgili dosyalar |
-| `quitWith` | `CropScreenRoute`, `ZoomScreenRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `ProfileScreens.kt` |
+| `quitWith` | `CropScreenRoute`, `ZoomScreenRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `flow_avatar/CropScreen.kt`, `flow_avatar/ZoomScreen.kt` |
 | Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 / `@FullscreenModal`×1 | gerçek overlay render — bkz. aşağıdaki "Faz 4 — gerçek modal overlay" | tüm feature dosyaları |
-| `DialogContract` — SABİT desen | `ForgotPasswordDialogRoute.dismissOnClickOutside = false` | `AuthGraph.kt`, `AuthScreens.kt` |
-| `DialogContract` — KOŞULLU desen | `EditNameDialogRoute.dismissOnClickOutside` ← `current.isNotBlank()` | `ProfileGraph.kt`, `ProfileScreens.kt` |
-| `BottomSheetContract` + `LocalGezginSheetController` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `controller.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `HomeScreens.kt` |
-| **`@FullscreenModal` + `FullscreenModalContract`** (tam-ekran modal, `usePlatformDefaultWidth` YOK → `DialogContract`'tan AYRI render kontratı) | `ItemImageViewerRoute.dismissOnClickOutside = false` (dış-tık kapatmaz; `dismissOnBackPress` varsayılan `true` → geri/gesture kapatır); giriş `@GoTo(ItemImageViewerRoute)` `ItemDetailScreenRoute`'tan | `HomeGraph.kt`, `HomeScreens.kt` |
+| `DialogContract` — SABİT desen | `ForgotPasswordDialogRoute.dismissOnClickOutside = false` | `AuthGraph.kt`, `dialog_forgot_password/ForgotPasswordDialog.kt` |
+| `DialogContract` — KOŞULLU desen | `EditNameDialogRoute.dismissOnClickOutside` ← `current.isNotBlank()` | `ProfileGraph.kt`, `dialog_edit_name/EditNameDialog.kt` |
+| `BottomSheetContract` + `LocalGezginSheetController` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `controller.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `sheet_filter/FilterBottomSheet.kt` |
+| **`@FullscreenModal` + `FullscreenModalContract`** (tam-ekran modal, `usePlatformDefaultWidth` YOK → `DialogContract`'tan AYRI render kontratı) | `ItemImageViewerRoute.dismissOnClickOutside = false` (dış-tık kapatmaz; `dismissOnBackPress` varsayılan `true` → geri/gesture kapatır); giriş `@GoTo(ItemImageViewerRoute)` `ItemDetailScreenRoute`'tan | `HomeGraph.kt`, `modal_image_viewer/ItemImageViewerModal.kt` |
 | Transition cascade (3 seviye) | app `navTransitions{forward{...}backward{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsScreenRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `ProfileGraph.kt` |
-| **MVI-mode add-on** (`@MviViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) | `SettingsScreenRoute` | `SettingsMvi.kt` — bkz. aşağıdaki "Faz 5 — MVI-mode" |
-| **MVI Problem 2** (rol-DIŞI content param → ZORUNLU `@Composable () -> T` resolver param) | `SettingsContent(..., buildInfo: BuildInfo)` → `provideSettingsEntry(buildInfo = { BuildInfo("1.0.0") })` | `SettingsMvi.kt`, `ProfileGraphEntries.kt` |
+| **MVI-mode add-on** (`@MviViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) | `SettingsScreenRoute` | `SettingsViewModel.kt` + `Settings*.kt` dosyaları — bkz. aşağıdaki "Faz 5 — MVI-mode" |
+| **MVI Problem 2** (rol-DIŞI content param → ZORUNLU `@Composable () -> T` resolver param) | `SettingsContent(..., buildInfo: BuildInfo)` → `provideSettingsEntry(buildInfo = { BuildInfo("1.0.0") })` | `SettingsContent.kt`, `ProfileGraphEntries.kt` |
 | **`@FragmentScreen`** (brownfield Fragment interop, View-tabanlı) | `HelpScreenRoute` | `HelpFragment.kt` + `fragment_help.xml` — bkz. aşağıdaki "Faz 6 — Fragment interop" |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
 | `onRootBack = finish()` | — | `MainActivity.kt` |
@@ -134,7 +132,7 @@ kütüphane kullanıcısına REFERANS teşkil edecek şekilde bu API'leri gerçe
 - **`FilterBottomSheetRoute`** (`HomeGraph.kt`) — gerçek `ModalBottomSheet` overlay'i (el-yazımı
   `GezginBottomSheetSceneStrategy`, arkadaki `DashboardScreenRoute` görünür kalır).
   `BottomSheetContract.skipPartiallyExpanded = true` (kısa liste, ara durak gereksiz).
-  `FilterSheetScreen` (`HomeScreens.kt`) `LocalGezginSheetController.current` ile sheet'in `GezginSheetController`'ını
+  `FilterSheetScreen` (`sheet_filter/FilterBottomSheet.kt`) `LocalGezginSheetController.current` ile sheet'in `GezginSheetController`'ını
   okur; bir sıralama seçildiğinde spec §7 deseni izlenir: ÖNCE `controller.hide()` (kapanma
   animasyonu tamamlanır), SONRA `nav.backWithResult(candidate)` (programatik pop + sonuç) — düz
   `backWithResult` çağrısı sheet'i animasyonsuz kaybettirirdi (bkz. `GezginBottomSheetScene`
@@ -143,7 +141,7 @@ kütüphane kullanıcısına REFERANS teşkil edecek şekilde bu API'leri gerçe
 
 - **`@FullscreenModal` + `FullscreenModalContract` (Faz 7.2 / GAP-1)** — `ItemImageViewerRoute`
   (`HomeGraph.kt`): `ItemDetailScreenRoute`'tan `@GoTo(ItemImageViewerRoute)` ile açılan tam-ekran
-  ürün görseli önizleyici (`ItemImageViewerScreen`, `HomeScreens.kt`). `FullscreenModalContract`,
+  ürün görseli önizleyici (`ItemImageViewerScreen`, `modal_image_viewer/ItemImageViewerModal.kt`). `FullscreenModalContract`,
   `DialogContract`'ın bir kopyası DEĞİL: `usePlatformDefaultWidth` **yok** — tam-ekran tanımı gereği
   adapter'da SABİT `false` → `DialogSceneStrategy` bunu scrim'siz/kenar-boşluksuz tam-ekran render eder;
   `DialogContract`'tan AYRI bir render kontratı. Route yalnız dismiss davranışını taşır:
@@ -180,7 +178,7 @@ amacına (yalnız "runtime wiring derlenir + çalışır") oransız büyük/risk
 `Route.transition`'a DOKUNMAZ) korurken TEK ekran hem o mevcut özelliği hem de yeni MVI-mode'u sergiler;
 yeni bir ekran gerekmedi.
 
-Üçlü (`SettingsMvi.kt`, hepsi aynı modülde, aynı route'a eşlenir):
+Üçlü (`SettingsViewModel.kt` / `SettingsContent.kt` / `SettingsEffectHandler.kt`, hepsi aynı modülde, aynı route'a eşlenir):
 
 - **`@MviViewModel(SettingsScreenRoute) class SettingsViewModel(nav: SettingsNavigator) : ViewModel(),
   GezginMvi<SettingsState, SettingsIntent, SettingsEffect>`** — gerçek androidx `ViewModel`.
@@ -225,7 +223,7 @@ public fun GezginEntryScope.provideSettingsEntry(
 `@Screen`/`@Dialog`/`@BottomSheet` content'i rol-bazlı sağlananların (`state` / `onIntent` /
 `controller`) DIŞINDA bir param alırsa, `MviEntryCodegen` onu `provideXEntry`'ye **kullanıcı-sağlamalı,
 default'suz (ZORUNLU)** bir `@Composable () -> T` resolver param'ına dönüştürür ve content'e NAMED arg
-olarak geçer. Burada `SettingsContent(..., buildInfo: BuildInfo)` (`SettingsMvi.kt`) → üretilen
+olarak geçer. Burada `SettingsContent(..., buildInfo: BuildInfo)` (`SettingsContent.kt`) → üretilen
 `provideSettingsEntry`'ye `buildInfo: @Composable () -> BuildInfo` eklenir → kurulumda AÇIKÇA verilmek
 ZORUNDA: `ProfileGraphEntries.kt`'de `provideSettingsEntry(buildInfo = { BuildInfo(version = "1.0.0") })`.
 Bu explicit, zorunlu çağrı-yeri Problem 2'nin **tüketici-tarafı** kanıtıdır (mekanizma artık yalnız
@@ -418,7 +416,7 @@ için eklendi; `kspTest(...)` bağımlılığı EKLENMEDİ (yukarıdaki nedenle 
   etmediği için bug'ı hiç tetiklememişti.)
 - **Dashboard'ın suspend `goToPickSortForResult` çağrısı** — `rememberCoroutineScope()`'a bağlı
   `scope.launch`; VM ömrü İÇİNDE güvenlidir ama VM'siz composable'da bir config-change/process-death
-  sonucu SESSİZCE düşürür (bkz. `HomeScreens.kt`'deki kod-içi yorum). Kalıcı sonuç isteniyorsa
+  sonucu SESSİZCE düşürür (bkz. `DashboardScreen.kt`'deki kod-içi yorum). Kalıcı sonuç isteniyorsa
   `ProfileScreen`'in launch+collect (stream) deseni tercih edilmelidir — yukarıdaki "İki tüketim
   deseni" karşılaştırmasına bakın.
 - **Üretilen API isimleri plan metniyle birebir eşleşmiyor** — bkz.
