@@ -356,7 +356,7 @@ runTest {
     r.await() shouldBe NavResult.Value(SelectedAddress("1", "Ev"))
 }
 ```
-Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` erişimcileri `gezgin.emitTestAccessors=true` KSP seçeneğiyle üretilir; graph'lar ile testlerin AYRI KSP round'unda olduğu kanonik çok-modül düzeninde erişimciler üretilmez → `GezginTestNavigator.raw` (`@GezginInternalApi`) + `entryIdOf(route)` → `raw.xNavigator(entryId)` yoluna düşülür (by-example §8).
+Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` erişimcileri `gezgin.emitTestAccessors=true` KSP seçeneğiyle üretilir; flag'i graph'ların bulunduğu **`main` KSP round'unda** açtığında (kanonik çok-modül düzeni: graph'lar `main`'de, testler `test`'te) erişimciler `main`'e üretilir ve `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — **çok-modül düzeninde de çalışır** (by-example §8). `GezginTestNavigator.raw` (`@GezginInternalApi`) + `entryIdOf(route)` yalnızca `fromX()` dışı düşük-seviye kaçış kapısı olarak kalır.
 
 ---
 

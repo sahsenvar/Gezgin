@@ -312,18 +312,23 @@ fun replaceTo_odeme_akisini_temizler() {
 }
 ```
 
-> **Çok-modül durumu (bugün):** tipli `fromX()` erişimcileri yalnız `@NavGraph`'lar ile testler **aynı KSP round'unda** (tek-modül düzeni) üretilir ve `gezgin.emitTestAccessors=true` KSP seçeneğiyle açılır. Kanonik çok-modül düzeninde (graph'lar `main`'de, testler ayrı bir modülün `test` source-set'inde) bu round graph sembollerini binary classpath'ten yeniden keşfedemez → erişimciler üretilmez. O düzende sample, `GezginTestNavigator.raw` fabrikasına düşer — `@GezginInternalApi` opt-in + `entryIdOf(route)` ile en yakın entry'nin navigator'ını kurar (aynı `backWithResult(...)` sonucu teslim eder):
+> **Çok-modül durumu:** tipli `fromX()` erişimcileri **kanonik çok-modül düzeninde de çalışır** (graph'lar `main`'de, testler `test` source-set'inde). `gezgin.emitTestAccessors=true` seçeneğini modülün **`main` KSP round'unda** aç — graph'ların bulunduğu round'da:
+>
+> ```kotlin
+> // build.gradle.kts (:navigation)
+> ksp { arg("gezgin.emitTestAccessors", "true") }   // GLOBAL ksp{} → main round (topology/navigator ile aynı yer)
+> dependencies { compileOnly(project(":gezgin-test")) }   // üretilen erişimciler main'de derlensin; app runtime'ına sızmaz
+> ```
+>
+> Erişimciler `@NavGraph`'ların görünür olduğu `main`'e üretilir; modülün kendi `test` source-set'i `main`'i gördüğü için `nav.fromX()`'i doğrudan çağırır. Sample bunu birebir kullanır — `sample/navigation/src/test/.../AppNavBehaviorTest.kt`'nin 18 davranış testi `nav.fromLogin().goToSignUp()` gibi **üretilmiş** erişimcilerle sürülür (opt-in gerektirmez). `nav.raw` yalnızca `fromX()` kapsamı dışındaki birkaç düşük-seviye kurulum/inceleme çağrısı için bir kaçış kapısı olarak kalır (`@GezginInternalApi` opt-in ile):
 
 ```kotlin
 @OptIn(GezginInternalApi::class)
 @Test
-fun checkout_raw() = runTest {
+fun raw_kacis_kapisi() {
     val nav = GezginTestNavigator(start = CartGraph.CheckoutRoute("cart1"), topology = gezginTopology)
-    val checkout = nav.raw.checkoutNavigator(nav.entryIdOf(CheckoutRoute::class))   // raw.xNavigator(entryId)
-    val result = async { checkout.goToSelectAddressForResult(userId = "u1") }
-    runCurrent()
-    nav.backWithResult(Address("1", "Ev"))
-    result.await() shouldBe NavResult.Value(Address("1", "Ev"))
+    nav.raw.navigate(OrderPlacedRoute("order1"))   // fromX() dışı, keyfi düşük-seviye kurulum
+    nav.raw.currentEntryId                          // entry kimliği inceleme
 }
 ```
 
