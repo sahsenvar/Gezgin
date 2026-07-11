@@ -15,6 +15,10 @@ private val ENTRY_KIND = ClassName(COMPOSE_PKG, "EntryKind")
 private val LOCAL_ENTRY_ID = MemberName(COMPOSE_PKG, "LocalGezginEntryId")
 private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigator")
 
+// mN1 — route→Bundle encode is keyed on `route` via `remember` so a recomposition of the hosting
+// entry doesn't re-serialize an unchanged route every frame (only re-runs when `route` changes).
+private val REMEMBER = MemberName("androidx.compose.runtime", "remember")
+
 // `androidx.fragment.compose.AndroidFragment` — FQ MemberName only, NO compile dependency on
 // androidx.fragment anywhere in gezgin-processor (same "emit as FQ strings" discipline as MviEntryCodegen's
 // Hilt/Koin/lifecycle references; §11.2 keeps the processor fragment-free). Pinned 1.8.9 => the 4-param
@@ -42,7 +46,7 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  *         val raw = LocalGezginRawNavigator.current
  *         val nav = raw.orderChainNavigator(LocalGezginEntryId.current)     // factory qualified by route pkg
  *         AndroidFragment<OrderChainFragment>(                              // FQ, 4-param 1.8.9 form
- *             arguments = route.toBundle(raw),                             // route → Bundle (PD-safe encode)
+ *             arguments = remember(route) { route.toBundle(raw) },         // route → Bundle (PD-safe, remembered per route)
  *             onUpdate = { fragment -> bindGezgin(fragment, route, nav) }, // live-ref re-attach (registry)
  *         )
  *     }
@@ -119,7 +123,7 @@ internal object FragmentEntryCodegen {
             }
             .add("%M<%T>(\n", ANDROID_FRAGMENT, fragmentClass)
             .indent()
-            .add("arguments = route.%M(raw),\n", TO_BUNDLE)
+            .add("arguments = %M(route) { route.%M(raw) },\n", REMEMBER, TO_BUNDLE)
             .apply {
                 if (navWired) {
                     add("onUpdate = { fragment -> %M(fragment, route, nav) },\n", BIND_GEZGIN)
