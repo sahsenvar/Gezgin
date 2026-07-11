@@ -47,14 +47,20 @@ internal expect fun GezginNoBackHandler()
  * - **android (Google `1.1.4`)**: `sceneStrategies: List<SceneStrategy<T>> = listOf(SinglePaneSceneStrategy())`
  *   — ÇOĞUL liste; ayrıca `sceneDecoratorStrategies`, `sharedTransitionScope` var.
  * Parametre hem ADI hem ARİTESİ farklı (isimli argüman hedefe göre kırılır) → ortak alt-kümede
- * DEĞİL. Actual'lar `DialogSceneStrategy()`'yi (public API, iki platformda AYNI: bkz. [toNavEntry])
- * fallback `SinglePaneSceneStrategy` ile zincirler (`then`/liste) — dialog-metadata'lı entry overlay,
- * diğerleri tek-pane. Transition spec'leri buraya GEÇMEZ (per-entry `NavEntry.metadata` ile iner,
- * bkz. [GezginDisplay] KDoc) → sarmalayıcı yalnız `entries`/`modifier`/`onBack` taşır.
+ * DEĞİL. Actual'lar Gezgin-sahipli [GezginDialogSceneStrategy] + [GezginBottomSheetSceneStrategy]'yi (C-MJ-1:
+ * dismiss'i sahip-entry'ye pinler) fallback `SinglePaneSceneStrategy` ile zincirler (`then`/liste) —
+ * modal-metadata'lı entry overlay, diğerleri tek-pane. Transition spec'leri buraya GEÇMEZ (per-entry
+ * `NavEntry.metadata` ile iner, bkz. [GezginDisplay] KDoc).
+ *
+ * [onBack] — tekil sistem-back (Nav3 `NavDisplay.onBack`, ekran/predictive back → [gezginOnBack]).
+ * [pinnedBack] — modal (dialog/sheet) dismiss'inin sahip-entry'ye pinli `navigator.back(entryId)` kancası
+ * (C-MJ-1); Gezgin scene-strategy'lerine geçirilir. İkisi AYRI: sistem-back canlı-top'a, modal-dismiss
+ * kendi entry'sine bağlanır.
  */
 @Composable
 internal expect fun GezginNavDisplay(
     entries: List<NavEntry<Route>>,
     modifier: Modifier,
     onBack: () -> Unit,
+    pinnedBack: (Long) -> Unit,
 )

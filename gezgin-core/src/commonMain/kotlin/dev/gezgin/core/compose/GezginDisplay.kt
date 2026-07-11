@@ -1,3 +1,5 @@
+@file:OptIn(GezginInternalApi::class)
+
 package dev.gezgin.core.compose
 
 import androidx.compose.runtime.Composable
@@ -8,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
@@ -115,13 +118,20 @@ public fun GezginDisplay(
     // üretiyordu (NavDisplay'in `onBack` parametresi identity ile karşılaştırılabilir call-site'lar
     // için gereksiz iş). Davranış AYNI — sadece kimlik stabilize edildi.
     val onBack = remember(navigator, scope) { gezginOnBack(navigator, scope) }
+    // C-MJ-1 — modal (dialog/sheet) dismiss'ini sahip-entry'ye pinleyen back kancası: `navigator.back(id)`
+    // yalnız o entry HÂLÂ top ise pop eder, değilse no-op → çifte-dismiss / hide-animasyon penceresi / geç
+    // async back ALTTAKİ ekranı poplamaz. `remember(navigator)` → stabil kimlik (GezginNavDisplay'in
+    // `remember(pinnedBack)` scene-strateji anahtarı stabil kalsın).
+    val pinnedBack: (Long) -> Unit = remember(navigator) { { id -> navigator.back(id) } }
     // Faz 4 scene wiring: `NavDisplay` çağrısı platform-özel sarmalayıcıda ([GezginNavDisplay]) —
     // sceneStrategy imzası android/desktop uzlaşmaz (expect/actual, bkz. PlatformDisplay.kt KDoc).
-    // DialogSceneStrategy dialog-metadata'lı entry'yi ([toNavEntry], kind==DIALOG) overlay render eder.
+    // GezginDialogSceneStrategy/GezginBottomSheetSceneStrategy modal-metadata'lı entry'yi overlay render
+    // eder; dismiss `pinnedBack` ile sahip-entry'ye pinli.
     GezginNavDisplay(
         entries = decoratedEntries,
         modifier = modifier,
         onBack = onBack,
+        pinnedBack = pinnedBack,
     )
 }
 

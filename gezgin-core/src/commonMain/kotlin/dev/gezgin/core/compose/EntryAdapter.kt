@@ -5,7 +5,6 @@ package dev.gezgin.core.compose
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.scene.DialogSceneStrategy
 import dev.gezgin.core.BottomSheetContract
 import dev.gezgin.core.DialogContract
 import dev.gezgin.core.FullscreenModalContract
@@ -78,12 +77,11 @@ internal fun GezginEntryScope.toNavEntry(
             "Do not place a modal at root with replaceTo/quitAndGoTo. route: ${key.route::class.simpleName}"
     }
     val installNoBack = registered.noBack && !isRoot
-    // Faz 4 scene wiring (§7): transition metadata (per-entry, §9) + DIALOG/FULLSCREEN_MODAL ise
-    // dialog-scene işareti. `DialogSceneStrategy.dialog(props)` public API iki platformda AYNI imzalı
-    // (`Map<String, Any>` döner) — içteki metadata-key temsili farklı (android typed `NavMetadataKey`,
-    // desktop string sabit) ama her platform kendi DialogSceneStrategy'siyle okur → platform-içi
-    // tutarlı, commonMain'den güvenli çağrı. Anahtar çakışması yok (dialog anahtarı transition
-    // anahtarlarından ayrık). BOTTOM_SHEET ise GEZGIN_BOTTOM_SHEET_KEY işaretiyle overlay (4.2, aşağıda).
+    // Faz 4 scene wiring (§7): DIALOG/FULLSCREEN_MODAL ise [GEZGIN_DIALOG_KEY] (Gezgin-sahipli
+    // GezginDialogSceneStrategy) işareti, BOTTOM_SHEET ise [GEZGIN_BOTTOM_SHEET_KEY]. İkisi de dismiss'i
+    // sahip-entry'ye pinler (C-MJ-1). Nav3'ün built-in DialogSceneStrategy'si BIRAKILDI: dismiss'i tekil
+    // NavDisplay.onBack'e bağlar → entry'ye pinlenemez (bkz. DialogScene.kt). Transition metadata YALNIZ
+    // SCREEN kind'a yazılır (aşağıda, display mn-1).
     val dialogProperties = resolveDialogProperties(registered.kind, key.route)
     val sheetProps = resolveBottomSheetProps(registered.kind, key.route)
     // §7 guard (kuruluş-zamanı runtime): @NoBack geri'yi yutar; dismissOnBackPress geri'yle kapat der.
@@ -102,13 +100,23 @@ internal fun GezginEntryScope.toNavEntry(
         if (dialogProperties != null) requireBackDismissCompatible(key.route, dialogProperties.dismissOnBackPress)
         if (sheetProps != null) requireBackDismissCompatible(key.route, sheetProps.dismissOnBackPress)
     }
-    val transitionMetadata = resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
+    // Display mn-1 — transition metadata YALNIZ SCREEN kind'a: modal (DIALOG/FULLSCREEN_MODAL/BOTTOM_SHEET)
+    // entry'sine transition anahtarları yazmak on-device'da ya etkisiz ya arka-plan SCREEN'i yanlış
+    // animasyonlar (Nav3 scene-seviyesi AnimatedContent, `Scene.metadata` = son/top entry'nin metadata'sını
+    // okur → modal entry'nin forward/pop/predictive spec'i overlay'de yanlış uygulanır). Modal kind'da ATLA.
+    val transitionMetadata =
+        if (registered.kind == EntryKind.SCREEN) {
+            resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
+        } else {
+            emptyMap()
+        }
     // Kind mutually-exclusive: dialogProperties (DIALOG/FULLSCREEN_MODAL) ve sheetProps (BOTTOM_SHEET) aynı
-    // anda dolu olamaz — her ikisi de eklense bile ayrık anahtarlar (çakışma yok). BOTTOM_SHEET artık plain
-    // değil: GEZGIN_BOTTOM_SHEET_KEY işaretiyle GezginBottomSheetSceneStrategy overlay render eder (4.2).
+    // anda dolu olamaz — her ikisi de eklense bile ayrık anahtarlar (çakışma yok). Modal kind'da
+    // transitionMetadata zaten boş (mn-1). Dialog → GEZGIN_DIALOG_KEY, sheet → GEZGIN_BOTTOM_SHEET_KEY;
+    // ikisi de kendi Gezgin scene-strategy'siyle entry-pinli dismiss render eder (C-MJ-1).
     val metadata: Map<String, Any> = buildMap {
         putAll(transitionMetadata)
-        if (dialogProperties != null) putAll(DialogSceneStrategy.dialog(dialogProperties))
+        if (dialogProperties != null) put(GEZGIN_DIALOG_KEY, dialogProperties)
         if (sheetProps != null) put(GEZGIN_BOTTOM_SHEET_KEY, sheetProps)
     }
     return NavEntry(key = key.route, contentKey = key.id, metadata = metadata) { route ->
