@@ -11,7 +11,7 @@ import kotlin.reflect.KClass
  * same file — a bare `@ViewModel` would collide with that supertype's simple name and force an import alias
  * on every usage.
  *
- * Unlike `@Screen(Route::class)`, [route] has NO sentinel (no arg-less derivation) — the VM's route is given
+ * Like every kind annotation (`@Screen` et al.), [route] is mandatory-explicit — the VM's route is given
  * directly; codegen matches the triple (`@MviViewModel`/`@Screen`/`@ScreenEffect`) by route and requires all
  * three to be in the SAME module (per-module KSP matching, §10.1).
  *

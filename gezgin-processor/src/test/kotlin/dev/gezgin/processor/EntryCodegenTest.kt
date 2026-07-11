@@ -121,12 +121,12 @@ class EntryCodegenTest {
             import dev.gezgin.shop.HomeGraph.Product
             import dev.gezgin.shop.FeedNavigator
 
-            @Screen
+            @Screen(Feed::class)
             @Composable
             fun FeedScreen(route: Feed, nav: FeedNavigator) {
             }
 
-            @Screen
+            @Screen(Product::class)
             @Composable
             fun ProductScreen(route: Product) {
             }
@@ -166,16 +166,19 @@ class EntryCodegenTest {
     }
 
     @Test
-    fun `SC1 — route type cannot be derived (no explicit route, no route param)`() {
+    fun `SC9 — explicit Route class sentinel is rejected (route must name a concrete destination)`() {
+        // The `route = Route::class` inference sentinel was removed; passing it explicitly names no
+        // concrete destination and must be rejected with an actionable "write the target route" message.
         val source = """
             package dev.gezgin.shopui
 
             import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
 
-            @Screen
+            @Screen(Route::class)
             @Composable
-            fun NoRouteScreen() {
+            fun SentinelScreen() {
             }
         """.trimIndent()
 
@@ -184,7 +187,7 @@ class EntryCodegenTest {
             SourceFile.kotlin("Bad.kt", source),
         )
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)
-        assertTrue(result.messages.contains("[SC1]"), result.messages)
+        assertTrue(result.messages.contains("[SC9]"), result.messages)
     }
 
     @Test
@@ -197,7 +200,7 @@ class EntryCodegenTest {
             import dev.gezgin.shop.HomeGraph.About
             import dev.gezgin.shop.AboutNavigator
 
-            @Screen
+            @Screen(About::class)
             @Composable
             fun AboutScreen(route: About, nav: AboutNavigator) {
             }
@@ -220,7 +223,7 @@ class EntryCodegenTest {
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.shop.HomeGraph.About
 
-            @Screen
+            @Screen(About::class)
             @Composable
             fun AboutScreen(route: About, viewModel: Any) {
             }
@@ -243,7 +246,7 @@ class EntryCodegenTest {
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.shop.HomeGraph.About
 
-            @Screen
+            @Screen(About::class)
             @Composable
             fun AboutScreen(route: About) {
             }
@@ -274,7 +277,7 @@ class EntryCodegenTest {
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.shop.HomeGraph.About
 
-            @Screen
+            @Screen(About::class)
             @Composable
             fun AboutScreen(route: About) {
             }
@@ -309,12 +312,12 @@ class EntryCodegenTest {
             class Detail : Route
             class DetailRoute : Route
 
-            @Screen
+            @Screen(Detail::class)
             @Composable
             fun DetailScreen(route: Detail) {
             }
 
-            @Screen
+            @Screen(DetailRoute::class)
             @Composable
             fun DetailRouteScreen(route: DetailRoute) {
             }
@@ -328,19 +331,26 @@ class EntryCodegenTest {
         assertTrue(result.messages.contains("[SC6]"), result.messages)
     }
 
+    // SC5 (route type does not implement Route) is no longer reachable through the public API: the kind
+    // annotations' `route` arg is typed `KClass<out Route>`, so the frontend rejects a non-Route class
+    // before KSP runs. The check survives in EntryModelReader as a defensive guard against error types
+    // (it can no longer be triggered by a well-formed source, so it has no positive test).
+
     @Test
-    fun `SC5 — derived route type does not implement Route`() {
+    fun `SC10 — route param type differs from the annotation route (mismatch)`() {
+        // The `route:` param carries route DATA, so its type must equal the annotation's route. `Feed` and
+        // `About` are both real routes but different — the composable would bind the wrong one → SC10.
         val source = """
             package dev.gezgin.shopui
 
             import androidx.compose.runtime.Composable
             import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.shop.HomeGraph.Feed
+            import dev.gezgin.shop.HomeGraph.About
 
-            class NotARoute
-
-            @Screen
+            @Screen(Feed::class)
             @Composable
-            fun BadScreen(route: NotARoute) {
+            fun MismatchScreen(route: About) {
             }
         """.trimIndent()
 
@@ -349,7 +359,39 @@ class EntryCodegenTest {
             SourceFile.kotlin("Bad.kt", source),
         )
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)
-        assertTrue(result.messages.contains("[SC5]"), result.messages)
+        assertTrue(result.messages.contains("[SC10]"), result.messages)
+    }
+
+    @Test
+    fun `explicit route with a matching route param compiles and generates the same entry`() {
+        // The canonical happy path: explicit @Screen(About::class) whose route: param type matches. No
+        // [SC*] error, and the entry registers the SAME route (only the source of the binding changed).
+        val source = """
+            package dev.gezgin.shopui
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.shop.HomeGraph.About
+
+            @Screen(About::class)
+            @Composable
+            fun AboutScreen(route: About) {
+            }
+        """.trimIndent()
+
+        val result = compileGezgin(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            SourceFile.kotlin("Bad.kt", source),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        assertTrue(
+            !result.messages.contains("[SC") && !result.messages.contains("unresolved reference"),
+            "unexpected KSP/frontend error: ${result.messages}",
+        )
+        val text = result.generatedSourceFor("GezginEntries.kt")?.readText()
+        assertTrue(text != null, "GezginEntries.kt not generated: ${result.messages}")
+        assertTrue(text!!.contains("register<HomeGraph.About>(kind = EntryKind.SCREEN, noBack = false) { route ->"), text)
+        assertTrue(text.contains("AboutScreen(route)"), text)
     }
 
     // region SC7 (@NoBack × modal) + SC8 (kind↔contract mismatch) — Faz-4 recheck M1/M2
@@ -374,7 +416,7 @@ class EntryCodegenTest {
             @NoBack
             data class SheetRoute(val x: Int = 0) : Route
 
-            @BottomSheet
+            @BottomSheet(SheetRoute::class)
             @Composable
             fun SheetScreen(route: SheetRoute) {
             }
@@ -397,7 +439,7 @@ class EntryCodegenTest {
             @NoBack
             data class PlainDialogRoute(val x: Int = 0) : Route
 
-            @Dialog
+            @Dialog(PlainDialogRoute::class)
             @Composable
             fun PlainDialog(route: PlainDialogRoute) {
             }
@@ -425,7 +467,7 @@ class EntryCodegenTest {
                 override val dismissOnBackPress get() = false
             }
 
-            @Dialog
+            @Dialog(ConfirmRoute::class)
             @Composable
             fun ConfirmDialog(route: ConfirmRoute) {
             }
@@ -448,7 +490,7 @@ class EntryCodegenTest {
             @NoBack
             data class TerminalRoute(val x: Int = 0) : Route
 
-            @Screen
+            @Screen(TerminalRoute::class)
             @Composable
             fun TerminalScreen(route: TerminalRoute) {
             }
@@ -474,7 +516,7 @@ class EntryCodegenTest {
                 override val dismissOnClickOutside get() = false
             }
 
-            @FullscreenModal
+            @FullscreenModal(BadModalRoute::class)
             @Composable
             fun BadModal(route: BadModalRoute) {
             }
@@ -498,7 +540,7 @@ class EntryCodegenTest {
                 override val dismissOnClickOutside get() = false
             }
 
-            @Dialog
+            @Dialog(GoodDialogRoute::class)
             @Composable
             fun GoodDialog(route: GoodDialogRoute) {
             }
@@ -519,7 +561,7 @@ class EntryCodegenTest {
 
             data class PlainRoute(val x: Int = 0) : Route
 
-            @Dialog
+            @Dialog(PlainRoute::class)
             @Composable
             fun PlainDialog(route: PlainRoute) {
             }
@@ -546,7 +588,7 @@ class EntryCodegenTest {
                 import dev.gezgin.core.annotation.Screen
                 import dev.gezgin.shop.HomeGraph.Feed
 
-                @Screen
+                @Screen(Feed::class)
                 @Composable
                 fun FeedScreen(route: Feed, nav: RawNavigator) {
                 }

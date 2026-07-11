@@ -49,8 +49,8 @@ private val MODAL_CONTRACT_FQS = setOf(
  *   route/nav arrive through `gezginArgs`/`gezginNav` (Task 6.2), never the ctor. → no model emitted.
  * - **`FS2` — route type sanity + no bare `Route`.** The resolved route type must implement
  *   `dev.gezgin.core.Route` (mirrors `SC5` — same [getAllSuperTypes] walk) AND must not be the bare
- *   `Route` interface itself: unlike `@Screen` (where `Route::class` is a "derive from `route:` param"
- *   SENTINEL), `@FragmentScreen`'s route arg is mandatory and concrete, so `@FragmentScreen(Route::class)`
+ *   `Route` interface itself: `@FragmentScreen`'s route arg is mandatory and concrete — as is every kind
+ *   annotation's now (`@Screen(Route::class)` is likewise rejected, as `SC9`) — so `@FragmentScreen(Route::class)`
  *   would emit a `register<Route>` no concrete-class push ever matches — a DEAD registration. → no model.
  * - **`FS7` — screen-only, no modal contract (§11.2).** A route implementing a modal presentation
  *   contract (`DialogContract`/`BottomSheetContract`/`FullscreenModalContract`) is rejected: fragment
@@ -215,16 +215,16 @@ internal class FragmentModelReader(
             return null
         }
         val routeFq = routeDecl.qualifiedName?.asString()
-        // FS2 — the bare `Route` interface itself is NOT a valid destination. Unlike @Screen (where
-        // `Route::class` is a "derive from the route: param" SENTINEL), @FragmentScreen's route arg is
-        // MANDATORY and concrete — `@FragmentScreen(Route::class)` would emit `register<Route>` which no
-        // concrete-class push (`key.route::class`) ever matches → DEAD registration (runtime "no entry").
+        // FS2 — the bare `Route` interface itself is NOT a valid destination. @FragmentScreen's route arg is
+        // MANDATORY and concrete — as is every kind annotation's now — so `@FragmentScreen(Route::class)` would
+        // emit `register<Route>` which no concrete-class push (`key.route::class`) ever matches → DEAD
+        // registration (runtime "no entry").
         if (routeFq == ROUTE_FQ) {
             error(
                 "FS2",
                 "$fragmentSimpleName: @FragmentScreen(Route::class) is invalid; the Route interface itself " +
-                    "cannot be a route (provide a concrete route class). @Screen's `Route::class` sentinel means " +
-                    "'derive from route: parameter', but @FragmentScreen has no matching sentinel; register<Route> " +
+                    "cannot be a route (provide a concrete route class). The route arg is mandatory and concrete for " +
+                    "every kind annotation (`@Screen(Route::class)` is likewise rejected as SC9); register<Route> " +
                     "matches no push, creating a dead registration (§11.1)",
             )
             return null

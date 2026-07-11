@@ -17,12 +17,11 @@ import kotlin.reflect.KClass
  * }
  * ```
  *
- * **[route] is MANDATORY — no sentinel (mirrors gezgin-mvi's `@MviViewModel(route)`).** A `@Screen`
- * sentinel (`route = Route::class` default) means "derive the route from the composable's `route:`
- * parameter type"; a `@FragmentScreen` class has **no constructor params at all** (see below), so there
- * is no parameter to derive from — the route MUST be given explicitly here. The processor reads it into
- * the fragment entry model (`FragmentModelReader`, Task 6.1) that Task 6.2's `AndroidFragment` codegen
- * consumes.
+ * **[route] is MANDATORY — no sentinel (mirrors every kind annotation: `@Screen`/`@Dialog`/`@BottomSheet`/
+ * `@FullscreenModal` and gezgin-mvi's `@MviViewModel`).** A `@FragmentScreen` class has **no constructor
+ * params at all** (see below), and the route arg is mandatory-explicit across the board, so the route MUST
+ * be named explicitly here. The processor reads it into the fragment entry model (`FragmentModelReader`,
+ * Task 6.1) that Task 6.2's `AndroidFragment` codegen consumes.
  *
  * **Parameterized Fragment ctor FORBIDDEN (§11.1).** A `@FragmentScreen`-annotated Fragment MUST have a no-arg
  * primary constructor: Android's own instantiation contract recreates Fragments via reflection on a

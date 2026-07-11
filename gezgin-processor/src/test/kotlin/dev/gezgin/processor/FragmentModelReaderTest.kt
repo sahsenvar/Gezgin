@@ -288,7 +288,7 @@ class FragmentModelReaderTest {
             class Detail : Route
             class DetailRoute : Route
 
-            @Screen
+            @Screen(Detail::class)
             @Composable
             fun DetailScreen(route: Detail) {
             }

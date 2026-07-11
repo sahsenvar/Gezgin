@@ -75,9 +75,9 @@ sealed interface OrderGraph : AppGraph {
 > **⚠️ Sürüm/PD uyarısı:** bir flow'u nested ↔ top-level arası taşımak **FQ'sunu değiştirir** (`AuthGraph.SignUpFlow` → `SignUpFlow`). `flowPath` ve polimorfik serializer adları FQ-tabanlı olduğundan, **önceki app sürümünden** serialize edilmiş bir back-stack yeni yerleşimle restore **edilemez** (bilinmeyen tip → decode hatası/kayıp entry). Yerleşim değişimi bir migration'dır: canlı kurulu tabanı olan app'te bir flow'u bir kez konumlandır, sonra FQ'sunu sabit tut.
 
 ### 3.2 Kind (composable'da)
-Kind annotation composable'da durur ve üç iş yapar: destination = binding, sunum kind'ı, `route:` param tipinden route'a bağ.
+Kind annotation composable'da durur ve üç iş yapar: destination = binding, sunum kind'ı, hedef route'a **açık** bağ (`route` zorunlu).
 - `@Screen` (tam ekran, varsayılan) · `@Dialog` / `@BottomSheet` / `@FullscreenModal` (modal, bkz. §7).
-- Argsız route'ta route açıkça: `@Screen(OrdersRoute::class)`.
+- Route her zaman açık verilir: `@Screen(OrdersRoute::class)` (sentinel/çıkarım yok). `route:` param'ı opsiyonel — route verisini taşır ve varsa tipi annotation route'uyla aynı olmalı (aksi = derleme hatası).
 
 ### 3.3 Multi-module yerleşim
 Kotlin `sealed` alt-tipleri **aynı modül**de olmak zorunda → tüm sealed graph'lar **tek nav modülünde** toplanır (cross-module `OrderGraph : AppGraph` derlenmez):
@@ -232,7 +232,7 @@ sealed interface CheckoutFlow : AppGraph, ResultFlow<OrderId> {
 
 ### 10.1 Binder modeli (stateful↔stateless boilerplate) — iki yol, `@Screen` imzası seçer
 - **Core (`gezgin-core`) — kendin bağla:** `@Screen fun XScreen(route, nav)` → codegen `entry<Route> { XScreen(route, nav) }`. VM'i içeride sen resolve edersin (herhangi MVI/DI, hatta VM'siz). Tam esneklik.
-- **MVI add-on (`gezgin-mvi`) — codegen bağlar:** stateless `@Screen fun XContent(state, onIntent)` + `@MviViewModel(Route::class)` işaretli, `GezginMvi<S,I,E>` implement eden bir VM. Codegen üretir:
+- **MVI add-on (`gezgin-mvi`) — codegen bağlar:** stateless `@Screen(Route::class) fun XContent(state, onIntent)` + `@MviViewModel(Route::class)` işaretli, `GezginMvi<S,I,E>` implement eden bir VM. Codegen üretir:
 
 ```kotlin
 // gezgin-mvi sözleşmesi (opt-in; variance = polish, artık yük taşımıyor):
