@@ -1,0 +1,17 @@
+public final class dev/gezgin/test/GezginTestNavigator {
+	public fun <init> (Ldev/gezgin/core/Route;Ldev/gezgin/core/GezginTopology;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/gezgin/core/Route;Ldev/gezgin/core/GezginTopology;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun back ()V
+	public final fun backTo (Lkotlin/reflect/KClass;Z)V
+	public static synthetic fun backTo$default (Ldev/gezgin/test/GezginTestNavigator;Lkotlin/reflect/KClass;ZILjava/lang/Object;)V
+	public final fun backWithResult (Ljava/lang/Object;)V
+	public final fun entryIdOf (Lkotlin/reflect/KClass;)J
+	public final fun getBackStack ()Ljava/util/List;
+	public final fun getCurrent ()Ldev/gezgin/core/Route;
+	public final fun navigate (Ldev/gezgin/core/Route;)V
+	public final fun quit ()V
+	public final fun quitAndGoTo (Ldev/gezgin/core/Route;)V
+	public final fun quitWith (Ljava/lang/Object;)V
+	public final fun replaceTo (Ldev/gezgin/core/Route;)V
+}
+

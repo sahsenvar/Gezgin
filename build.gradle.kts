@@ -13,14 +13,14 @@ plugins {
     alias(libs.plugins.binary.compatibility.validator)
 }
 
-// Faz 9.1 — ABI doğrulaması YALNIZ yayınlanan 3 modül için (core/mvi/processor). Yayınlanmayan her şey
-// (gezgin-test + tüm sample/* modülleri) hariç tutulur → onlar için .api dosyası tutulmaz/kontrol edilmez.
+// F-MAJOR-2 — ABI doğrulaması artık yayınlanan/yayına-komşu 4 modül için (core/mvi/processor/test).
+// gezgin-test bir POM iskeleti kazandı ve dış-benimseyene sunulabilir hale geldi → BCV kapsamına alındı
+// (.api dump tutulur). Yalnız sample/* modülleri (gerçekten yayınlanmayan) hariç tutulur.
 apiValidation {
     // Faz 9.3 (K4) — @GezginInternalApi ile işaretli forced-public semboller (codegen/gezgin-test kancaları)
     // kilitli ABI yüzeyinden düşürülür → alpha01 sonrası deprecation döngüsü olmadan evrilebilirler.
     nonPublicMarkers += "dev.gezgin.core.GezginInternalApi"
     ignoredProjects += listOf(
-        "gezgin-test",
         "shopr", "navigation", "app", "domain",
         "auth", "home", "profile",
     )
