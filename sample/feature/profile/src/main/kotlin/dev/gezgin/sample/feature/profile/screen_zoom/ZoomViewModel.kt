@@ -23,12 +23,14 @@ class ZoomViewModel(
     private val _effects = GezginEffects<ZoomEffect>()
     override val effects: Flow<ZoomEffect> = _effects.flow
 
+    // Giriş ipucu entry yaratılırken gönderilir (quitWith'ten önce DEĞİL); lossless kanal STARTED'da toplar.
+    init {
+        _effects.send(ZoomEffect.ShowMessage("Yakınlaştırıp kareyi seçin"))
+    }
+
     override fun onIntent(intent: ZoomIntent) {
         when (intent) {
-            ZoomIntent.UseFrame -> {
-                _effects.send(ZoomEffect.ShowMessage("Kare seçildi"))
-                nav.quitWith(AvatarChoice(uri = "zoomed://frame"))
-            }
+            ZoomIntent.UseFrame -> nav.quitWith(AvatarChoice(uri = "zoomed://frame"))
             ZoomIntent.Back -> nav.back()
         }
     }

@@ -26,10 +26,14 @@ class CredentialsViewModel(
     override fun onIntent(intent: CredentialsIntent) {
         when (intent) {
             is CredentialsIntent.EmailChanged -> _uiState.update { it.copy(email = intent.value) }
-            CredentialsIntent.Continue -> {
-                _effects.send(CredentialsEffect.ShowMessage("Hesap bilgileri kaydedildi"))
-                nav.goToProfileInfo(_uiState.value.email)
-            }
+            // Efekt @GoTo'dan önce gönderilse entry örtülür → geri dönünce yanlış anda görünür.
+            // Boş girişte nav bloklanıp hata efekti verilir; geçerli girişte yalnız navigasyon.
+            CredentialsIntent.Continue ->
+                if (_uiState.value.email.isBlank()) {
+                    _effects.send(CredentialsEffect.ShowMessage("Devam etmek için e-posta girin"))
+                } else {
+                    nav.goToProfileInfo(_uiState.value.email)
+                }
         }
     }
 }
