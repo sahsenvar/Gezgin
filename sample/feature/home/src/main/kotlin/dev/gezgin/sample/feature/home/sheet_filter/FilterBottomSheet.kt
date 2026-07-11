@@ -20,11 +20,11 @@ import dev.gezgin.sample.navigation.HomeGraph.FilterBottomSheetRoute
 import dev.gezgin.sample.domain.model.SortOrder
 import kotlinx.coroutines.launch
 
-// Seçim sonrası sıra ZORUNLU: ÖNCE sheetState.hide() (kapanma animasyonu), SONRA backWithResult() —
+// Seçim sonrası sıra ZORUNLU: ÖNCE controller.hide() (kapanma animasyonu), SONRA backWithResult() —
 // aksi halde back() sheet'i animasyonsuz kaybettirir.
-@BottomSheet
+@BottomSheet(FilterBottomSheetRoute::class)
 @Composable
-fun FilterSheetScreen(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavigator) {
+fun FilterBottomSheet(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavigator) {
     val controller = LocalGezginSheetController.current
     val scope = rememberCoroutineScope()
     // hide() suspend animasyon → hızlı çift tık iki backWithResult dispatch edip arkadaki Dashboard'ı da

@@ -225,7 +225,7 @@ class MviEntryCodegenTest {
 
             // core-mode entry
             data class PlainScreenRoute(val a: Int = 0) : Route
-            @Screen
+            @Screen(PlainScreenRoute::class)
             @Composable
             fun PlainScreen(route: PlainScreenRoute) {
             }

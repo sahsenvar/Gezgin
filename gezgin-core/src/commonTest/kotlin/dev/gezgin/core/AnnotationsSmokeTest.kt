@@ -40,21 +40,21 @@ class AnnotationsSmokeTest {
 	sealed interface ScreenD : Route
 	data object ScreenDImpl : ScreenD
 
-	// Kind annotation'lari (§3.2) — FUNCTION target smoke: default sentinel (route = Route::class)
-	// ve açık route param'i, dördü de derlenir.
-	@Screen
+	// Kind annotation'lari (§3.2) — FUNCTION target smoke: route zorunlu-açık (sentinel kaldırıldı);
+	// positional ve named arg formları + açık route param'i, dördü de derlenir.
+	@Screen(ScreenA::class)
 	fun screenFun(route: ScreenA) = Unit
 
 	@Screen(route = ScreenA::class)
 	fun screenFunExplicit(route: ScreenA) = Unit
 
-	@Dialog
+	@Dialog(ScreenB::class)
 	fun dialogFun(route: ScreenB) = Unit
 
-	@BottomSheet
+	@BottomSheet(ScreenC::class)
 	fun bottomSheetFun(route: ScreenC) = Unit
 
-	@FullscreenModal
+	@FullscreenModal(ScreenD::class)
 	fun fullscreenModalFun(route: ScreenD) = Unit
 
 	@Test

@@ -54,8 +54,8 @@ Yöntem: **tümden gelim** — önce developer-facing yüzey ("nasıl görünür
 ### 8. Yüzey ayrımı + binding (kilitli — "A")
 - **Kural**: navigasyon grafiği & davranışı → **sealed ağaç (route)**; pikseller & sunum → **composable**.
 - **Sealed ağaç (route)** taşır: kimlik + arg'lar, `: Graph` üyeliği/nesting, `@Serializable`, `@StartDestination`, `@DeepLink`, `meta { transition(...) ; put(...) }`.
-- **Composable** taşır: UI + **kind annotation** (`@Screen` / `@Dialog` / `@BottomSheet` / `@FullscreenModal`). Kind annotation üç işi birden yapar: (1) "bu bir destination" = binding, (2) sunum kind'ı, (3) `route:` param tipinden route'a bağ. **Ayrı `@Content` YOK.**
-- Binding kuralı: `@Screen` route'u `route:` param tipinden çıkarır; argsız route'ta açıkça `@Screen(OrdersRoute::class)`.
+- **Composable** taşır: UI + **kind annotation** (`@Screen` / `@Dialog` / `@BottomSheet` / `@FullscreenModal`). Kind annotation üç işi birden yapar: (1) "bu bir destination" = binding, (2) sunum kind'ı, (3) hedef route'a **açık** bağ (`route` zorunlu). **Ayrı `@Content` YOK.**
+- Binding kuralı: `@Screen` route'u annotation arg'ından açıkça alır — `@Screen(OrdersRoute::class)` (sentinel/çıkarım yok). `route:` param'ı opsiyonel: route verisini taşır ve varsa tipi annotation route'uyla aynı olmalı.
 - Sunum UI tarafında: aynı route'u composable'da `@BottomSheet` yapınca sheet olarak açılır — route değişmez.
 
 ### 9. MVI scoping / per-entry lifecycle (kilitli)

@@ -19,9 +19,9 @@ import dev.gezgin.core.annotation.FullscreenModal
 import dev.gezgin.sample.navigation.HomeGraph.ItemImageViewerRoute
 import dev.gezgin.sample.navigation.ItemImageViewerNavigator
 
-@FullscreenModal
+@FullscreenModal(ItemImageViewerRoute::class)
 @Composable
-fun ItemImageViewerScreen(route: ItemImageViewerRoute, nav: ItemImageViewerNavigator) {
+fun ItemImageViewerModal(route: ItemImageViewerRoute, nav: ItemImageViewerNavigator) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Ürün görseli — tam ekran")

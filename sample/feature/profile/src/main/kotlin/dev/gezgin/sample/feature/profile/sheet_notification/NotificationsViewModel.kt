@@ -1,5 +1,6 @@
 package dev.gezgin.sample.feature.profile.sheet_notification
 
+import androidx.lifecycle.ViewModel
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.update
 class NotificationsViewModel(
     route: ProfileGraph.NotificationsSheetRoute,
     private val nav: NotificationsSheetNavigator,
-) : androidx.lifecycle.ViewModel(), GezginMvi<NotificationsUiState, NotificationsIntent, NotificationsEffect> {
+) : ViewModel(), GezginMvi<NotificationsUiState, NotificationsIntent, NotificationsEffect> {
 
     private val _uiState = MutableStateFlow(NotificationsUiState(route.current))
     override val uiState: StateFlow<NotificationsUiState> = _uiState.asStateFlow()
@@ -27,7 +28,7 @@ class NotificationsViewModel(
         when (intent) {
             is NotificationsIntent.Preview -> {
                 _uiState.update { it.copy(selected = intent.level) }
-                _effects.send(NotificationsEffect.Announce("Önizleme: ${intent.level}"))
+                _effects.send(NotificationsEffect.ShowMessage("Önizleme: ${intent.level}"))
             }
             NotificationsIntent.Confirm -> nav.backWithResult(_uiState.value.selected)
         }

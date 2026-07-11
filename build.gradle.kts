@@ -21,7 +21,7 @@ apiValidation {
     nonPublicMarkers += "dev.gezgin.core.GezginInternalApi"
     ignoredProjects += listOf(
         "gezgin-test",
-        "shopr", "navigation", "app",
+        "shopr", "navigation", "app", "domain",
         "auth", "home", "profile",
     )
 }

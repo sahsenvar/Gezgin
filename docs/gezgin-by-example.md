@@ -67,7 +67,7 @@ Nested ve flat-file **denk** okunur (Kotlin sealed: alt-tip aynı paket+modülde
 Her route'taki kenar (`@GoTo` vb.) o ekranın **tipli navigator'ını** üretir. Metot adı hedeften türetilir (`ProductRoute` → `goToProduct`).
 
 ```kotlin
-@Screen
+@Screen(CatalogRoute::class)
 @Composable
 fun CatalogScreen(nav: CatalogNavigator) {
     ProductGrid(
@@ -162,7 +162,7 @@ when (val r = nav.goToSelectAddressForResult(userId)) {
 Döndüren taraf:
 
 ```kotlin
-@Screen
+@Screen(SelectAddressRoute::class)
 @Composable
 fun SelectAddressScreen(route: SelectAddressRoute, nav: SelectAddressNavigator) {
     AddressList(onPick = { nav.backWithResult(it) })             // ✅ tipli geri
@@ -202,7 +202,7 @@ data class ConfirmOrderDialog(val summary: String) :
     override val dismissOnClickOutside = false                  // SABİT davranış = override
 }
 
-@Dialog                                                          // kind: dialog
+@Dialog(ConfirmOrderDialog::class)                               // kind: dialog
 @Composable
 fun ConfirmOrderDialogScreen(route: ConfirmOrderDialog, nav: ConfirmOrderNavigator) {
     Surface {                                                    // composable = SADECE içerik
@@ -218,7 +218,7 @@ fun ConfirmOrderDialogScreen(route: ConfirmOrderDialog, nav: ConfirmOrderNavigat
 Bottom-sheet'te `controller` composable'a enjekte edilir (önce hide animasyonu, sonra sonuç):
 
 ```kotlin
-@BottomSheet
+@BottomSheet(SortSheetRoute::class)
 @Composable
 fun SortSheetScreen(nav: SortSheetNavigator, controller: GezginSheetController) {
     SortOptions(onPick = { option ->

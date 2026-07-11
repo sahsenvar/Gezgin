@@ -8,10 +8,10 @@ package dev.gezgin.processor.fixtures
  * exactly the cross-package scenario [dev.gezgin.processor.codegen.EntryCodegen] must qualify
  * navigator-factory calls for.
  *
- * - `FeedScreen(route: Feed, nav: FeedNavigator)` — full core-mode shape: explicit route+nav, kind
- *   derived from the composable's `route:` param type (`@Screen` sentinel).
+ * - `FeedScreen(route: Feed, nav: FeedNavigator)` — full core-mode shape: explicit `@Screen(Feed::class)`
+ *   route + nav; the `route:` param carries route data and its type matches the annotation route.
  * - `CatalogScreen(nav: CatalogNavigator)` — no `route:` param at all (Catalog is a bare `data
- *   object`, nothing to pass) — route type must come from the explicit `@Screen(Catalog::class)`.
+ *   object`, nothing to pass) — route type comes from the explicit `@Screen(Catalog::class)`.
  * - `AboutScreen(route: About)` — no `nav:` param — `About` has NO navigator ([SHOP_SOURCE]'s
  *   deliberately-bare route); pins that a `route`-only composable never needs one.
  * - `PromoDialog(route: Promo, nav: PromoNavigator)` — `@Dialog` kind mapping.
@@ -33,7 +33,7 @@ val ENTRY_SOURCE = """
     import dev.gezgin.shop.CatalogNavigator
     import dev.gezgin.shop.PromoNavigator
 
-    @Screen
+    @Screen(Feed::class)
     @Composable
     fun FeedScreen(route: Feed, nav: FeedNavigator) {
     }
@@ -43,17 +43,17 @@ val ENTRY_SOURCE = """
     fun CatalogScreen(nav: CatalogNavigator) {
     }
 
-    @Screen
+    @Screen(About::class)
     @Composable
     fun AboutScreen(route: About) {
     }
 
-    @Dialog
+    @Dialog(Promo::class)
     @Composable
     fun PromoDialog(route: Promo, nav: PromoNavigator) {
     }
 
-    @Screen
+    @Screen(Product::class)
     @Composable
     fun ProductScreen(route: Product) {
     }

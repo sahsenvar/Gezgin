@@ -72,24 +72,24 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  * alongside whatever models DID resolve.
  *
  * **Two modes, selected by the composable's parameter shape (§10.1) — the annotation is unchanged:**
- * - **core-mode** `(route, nav)` — the original Task 3.4 behavior, byte-for-byte UNCHANGED (see
- *   [buildCoreEntry]); `SC1`-`SC6` below. A composable with `route`/`nav` only (or neither) stays here.
+ * - **core-mode** `(route, nav)` — self-bind boilerplate (see [buildCoreEntry]); `SC2`-`SC10` below. A
+ *   composable with `route`/`nav` only (or neither) stays here.
  * - **MVI-mode** `(state, onIntent[, extras])` — a composable whose params include BOTH a `state` and
  *   an `onIntent` (by name) is MVI-mode (see [buildMviEntry]); it pairs with a same-route,
  *   same-module `@MviViewModel` (`MV2`-`MV6`). A composable with ONLY `state` or ONLY `onIntent` is
  *   malformed and deliberately NOT special-cased — it falls through to core-mode's `SC3`
  *   unknown-param rejection (a half-MVI shape is a user error, not a third mode).
  *
- * **Route resolution (`SC1`, core-mode):** the annotation's `route=` is a sentinel default
- * (`Route::class`) meaning "derive from the composable's `route:` parameter type instead". If the
- * annotation gives an explicit (non-sentinel) type AND a `route:` param exists with a DIFFERENT type,
- * or if neither source resolves a type, that's `SC1`.
+ * **Route resolution (core-mode):** the annotation's `route=` is MANDATORY and names the destination
+ * route directly (the inference-from-`route:`-param sentinel was removed — see [resolveMandatoryRoute]).
+ * `Route::class` (the old sentinel) or a missing arg is `SC9`. A `route:` param is still allowed — it
+ * carries route DATA into the composable — but its type MUST equal the annotation's route (`SC10` on
+ * mismatch).
  *
- * **Route resolution (MVI-mode):** an MVI-mode content has NO `route:` param, so it MUST carry an
- * explicit `@Screen(Route::class)` — its route link is the annotation arg itself (the spec §10.1
- * example and the Faz-5.0 `CounterMvi` fixture both do exactly this; the `state` param's TYPE is NOT
- * the route). The matched `@MviViewModel(Route::class)` binds the same route → the pairing is explicit,
- * not inferred by S/I type-match. A sentinel-only MVI content can't derive a route → `SC1`.
+ * **Route resolution (MVI-mode):** an MVI-mode content has NO `route:` param (the `state` param's TYPE is
+ * NOT the route), so the route comes solely from the mandatory `@Screen(Route)` arg; `Route::class`/
+ * missing → `SC9`. The matched `@MviViewModel(Route)` binds the same route → the pairing is explicit,
+ * not inferred by S/I type-match.
  *
  * **Nav wiring (`SC2`, core-mode):** a `nav:` param requires the resolved route to actually earn a
  * navigator ([NavigatorCodegen.hasNavigator]).
@@ -211,33 +211,24 @@ internal class EntryModelReader(
             return null
         }
 
-        val explicitRouteType = annotation.classArg("route")
-        val isSentinel = explicitRouteType == null || explicitRouteType.declaration.qualifiedName?.asString() == ROUTE_FQ
+        val resolvedRouteType = resolveMandatoryRoute(annotation, fnName) ?: return null
+
+        // A `route:` param stays legal — it carries route DATA into the composable — but its type MUST
+        // equal the mandatory annotation route; a mismatch would bind the wrong route (copy-paste bug).
         val routeParamType = routeParam?.type?.resolve()
-
-        val resolvedRouteType = when {
-            !isSentinel && routeParamType != null -> {
-                val explicitFq = explicitRouteType!!.declaration.qualifiedName?.asString()
-                val paramFq = routeParamType.declaration.qualifiedName?.asString()
-                if (explicitFq != paramFq) {
-                    error(
-                        "SC1",
-                        "$fnName: annotation route=${explicitRouteType.declaration.simpleName.asString()} conflicts with " +
-                            "route: parameter type (${routeParamType.declaration.simpleName.asString()})",
-                    )
-                    null
-                } else {
-                    explicitRouteType
-                }
+        if (routeParamType != null && !routeParamType.isError) {
+            val routeFq = resolvedRouteType.declaration.qualifiedName?.asString()
+            val paramFq = routeParamType.declaration.qualifiedName?.asString()
+            if (routeFq != paramFq) {
+                error(
+                    "SC10",
+                    "$fnName: route: parameter type (${routeParamType.declaration.simpleName.asString()}) must equal the " +
+                        "annotation route (${resolvedRouteType.declaration.simpleName.asString()}); the route: param carries " +
+                        "route DATA, so a mismatch would bind the wrong route (fix the annotation route or the route: param type)",
+                )
+                return null
             }
-
-            !isSentinel -> explicitRouteType
-            routeParamType != null -> routeParamType
-            else -> {
-                error("SC1", "$fnName: route could not be derived; no explicit route= in the annotation and no route: parameter")
-                null
-            }
-        } ?: return null
+        }
 
         val routeDecl = resolvedRouteType.declaration as? KSClassDeclaration
         val implementsRoute = routeDecl != null &&
@@ -245,7 +236,7 @@ internal class EntryModelReader(
         if (!implementsRoute) {
             error(
                 "SC5",
-                "$fnName: derived route type (${resolvedRouteType.declaration.qualifiedName?.asString()}) " +
+                "$fnName: route type (${resolvedRouteType.declaration.qualifiedName?.asString()}) " +
                     "does not implement dev.gezgin.core.Route",
             )
             return null
@@ -361,19 +352,9 @@ internal class EntryModelReader(
         val stateParam = params.first { it.name?.asString() == "state" }
         val onIntentParam = params.first { it.name?.asString() == "onIntent" }
 
-        // Route resolution — MVI-mode has no route: param, so an explicit @Screen(Route::class) is
-        // mandatory (the state param's TYPE is NOT the route). Sentinel-only → can't derive → SC1.
-        val explicitRouteType = annotation.classArg("route")
-        val isSentinel = explicitRouteType == null || explicitRouteType.declaration.qualifiedName?.asString() == ROUTE_FQ
-        if (isSentinel) {
-            error(
-                "SC1",
-                "$fnName: MVI-mode content (state, onIntent) cannot derive a route; explicit " +
-                    "@Screen(Route::class) is required (the state parameter type is not the route)",
-            )
-            return null
-        }
-        val resolvedRouteType = explicitRouteType!!
+        // Route resolution — MVI-mode has no route: param (the state param's TYPE is NOT the route), so the
+        // route comes solely from the mandatory annotation arg. Sentinel/missing → SC9.
+        val resolvedRouteType = resolveMandatoryRoute(annotation, fnName) ?: return null
 
         val routeDecl = resolvedRouteType.declaration as? KSClassDeclaration
         val implementsRoute = routeDecl != null &&
@@ -797,6 +778,26 @@ internal class EntryModelReader(
         arguments.firstOrNull { it.name?.asString() == name } ?: defaultArguments.firstOrNull { it.name?.asString() == name }
 
     private fun KSAnnotation.classArg(name: String): KSType? = arg(name)?.value as? KSType
+
+    /**
+     * Reads the kind annotation's now-MANDATORY [route] arg (shared by both modes). The `Route::class`
+     * inference sentinel was removed — a bare `Route::class` (or a missing arg, defensively) names no
+     * concrete destination and is rejected as [SC9]. Returns the resolved route KSType, or null (after
+     * reporting SC9) when it is sentinel/absent.
+     */
+    private fun resolveMandatoryRoute(annotation: KSAnnotation, fnName: String): KSType? {
+        val routeType = annotation.classArg("route")
+        val isSentinel = routeType == null || routeType.declaration.qualifiedName?.asString() == ROUTE_FQ
+        if (isSentinel) {
+            error(
+                "SC9",
+                "$fnName: route must be given explicitly — the `Route::class` sentinel was removed; name the target " +
+                    "route (e.g. `@Screen(FeedScreenRoute::class)`)",
+            )
+            return null
+        }
+        return routeType
+    }
 
     private fun error(code: String, message: String) {
         logger.error("[$code] $message")
