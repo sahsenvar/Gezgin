@@ -96,6 +96,23 @@ private val MODAL_CONTRACT_FQS = setOf(
  * the already-built [entries] list — the materialized output of that shared map. This keeps
  * `EntryModelReader` UNTOUCHED (zero change to core-mode / MVI-mode behavior) and lets `FS3` uniformly
  * own every Fragment duplicate (same-kind AND cross-kind) under one code. See the task-6.1 report.
+ *
+ * **Deliberately NOT validated: `gezginArgs<R>()`/`gezginNav<N>()` type-argument matching (mN3).** Unlike
+ * `@Screen`, whose generated `XScreen(route, nav)` call makes a wrong route/navigator type a COMPILE error,
+ * a Fragment reads its route/nav via hand-written `private val args by gezginArgs<R>()` /
+ * `private val nav by gezginNav<N>()` delegates whose `R`/`N` are NOT tied to `@FragmentScreen(route)`. A
+ * mismatch (`gezginArgs<WrongRoute>()` after a copy-paste) compiles — both are `Route`/navigator types — and
+ * fails only at RUNTIME as a `ClassCastException` in gezgin-core's `gezginBoundRoute(...) as R` /
+ * `gezginBoundNav(...) as N`. This weaker-than-`@Screen` type-safety is NOT closed here because it is not
+ * reliably tractable in KSP: KSP is a DECLARATION-level API — it exposes property/function declarations and
+ * their resolved types, but NOT delegate/initializer EXPRESSIONS, function BODIES, or the explicit type
+ * arguments of arbitrary call sites. So the processor cannot attribute a property to a `gezginArgs`/`gezginNav`
+ * call (there is no delegate-expression API — it sees only that `args` has some inferred type), and it cannot
+ * see the equally-valid INLINE usages (`gezginArgs<R>()` called inside `onViewCreated`/any body — invisible to
+ * KSP). A heuristic ("find a `Route`-typed property, assume it is the gezginArgs one") would false-positive on
+ * unrelated `Route` fields and false-negative on inline usage — worse than no check. The actionable mitigation
+ * belongs at the RUNTIME cast in gezgin-core (wrap the `as R`/`as N` to name expected-vs-actual on failure) —
+ * a separate gezgin-core task, outside this processor module.
  */
 internal class FragmentModelReader(
     private val resolver: Resolver,

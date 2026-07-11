@@ -81,7 +81,10 @@ internal object FragmentEntryCodegen {
         entries: List<FragmentEntryModel>,
         hasNavigator: (FragmentEntryModel) -> Boolean,
     ): List<FileSpec> =
-        entries.groupBy { it.packageName }.map { (packageName, group) ->
+        // Reproducible emit order (MN-1) — sort by (packageName, routeFq[unique]) before grouping so
+        // file and per-file function order don't ride on non-contractual KSP symbol order.
+        entries.sortedWith(compareBy({ it.packageName }, { it.routeFq }))
+            .groupBy { it.packageName }.map { (packageName, group) ->
             FileSpec.builder(packageName, "GezginFragmentEntries")
                 // K4 — every fragment register body reads LocalGezginRawNavigator and calls route.toBundle,
                 // all gated behind @GezginInternalApi.

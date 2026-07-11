@@ -1,5 +1,8 @@
 package dev.gezgin.processor.mvi
 
+import com.google.devtools.ksp.getConstructors
+import com.google.devtools.ksp.isInternal
+import com.google.devtools.ksp.isPublic
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotation
@@ -128,6 +131,32 @@ internal class ViewModelModelReader(
         // MviEntryCodegen can emit the right default `viewModel` resolver (Hilt/Koin/androidx) and
         // decide whether a default is even possible (only when every DI-relevant param is route/nav).
         val (di, assistedFactoryFq) = detectDi(decl)
+
+        // MV13 — androidx-mode instantiability (Fragment FS1 parity). Only the ANDROIDX resolver
+        // constructs the VM DIRECTLY (`initializer { VM(...) }`, MviEntryCodegen.defaultResolver); Hilt/Koin
+        // hand off to hiltViewModel()/koinViewModel(), which never call `VM(...)`. When the class has NO
+        // primary constructor (only parameterized secondary ctors), `ctorParams` is empty → the default
+        // resolver emits a no-arg `VM()`, which is uncompilable unless an accessible no-arg constructor
+        // exists. A public/internal `constructor()` (or a normal primary ctor) is fine; a route-carrying
+        // secondary-only VM is rejected here with an actionable message instead of a cryptic
+        // "no value passed for parameter" surfacing inside the generated GezginMviEntries.kt.
+        if (di == VmDiKind.ANDROIDX && decl.primaryConstructor == null) {
+            val hasNoArgCtor = decl.getConstructors().any {
+                it.parameters.isEmpty() && (it.isPublic() || it.isInternal())
+            }
+            if (!hasNoArgCtor) {
+                error(
+                    "MV13",
+                    "$vmSimpleName (@MviViewModel(${routeFq.substringAfterLast('.')})): androidx-mode VM has no " +
+                        "primary constructor and no accessible no-arg constructor, so the generated default " +
+                        "resolver's `$vmSimpleName()` call would not compile. Declare a primary constructor " +
+                        "(route/nav are supplied positionally) or a public `constructor()`, or override the " +
+                        "`viewModel` resolver param at the provide-entry call site (§10.1)",
+                )
+                return null
+            }
+        }
+
         val ctorParams = decl.primaryConstructor?.parameters.orEmpty().map { p ->
             val resolved = p.type.resolve()
             VmCtorParam(

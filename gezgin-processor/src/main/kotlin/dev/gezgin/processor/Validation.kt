@@ -30,8 +30,16 @@ internal class GezginValidator(
 
     private var ok = true
 
-    /** [NavigatorCodegen]'in HER navigator sınıfında koşulsuz taşıdığı üye adları — bkz. [checkN10Members]. */
-    private val RESERVED_MEMBER_NAMES = setOf("back", "quit", "quitWith", "backWithResult", "raw")
+    /**
+     * [NavigatorCodegen]'in HER navigator sınıfında koşulsuz taşıdığı üye adları — bkz. [checkN10Members].
+     * `raw`/`entryId` her navigator'da SABİT property olarak taşınır (NavigatorCodegen.kt:152-155); `back`
+     * (`@NoBack` hariç) da fiilen koşulsuz. `quit`/`quitWith`/`backWithResult` koşullu ama hiçbir edge'in
+     * TÜRETMEDİĞİ ad'lar olduğundan rezerve tutulur (yalnız `name=` override'ı çakışabilir). NOT:
+     * `backToStart` KASITEN burada DEĞİL — `@BackTo(routeNamedStart)` onu meşru şekilde tek üye olarak
+     * türetebildiğinden rezerve etmek yanlış-pozitif olur; çakışması [checkN10Members]'daki `size >= 2`
+     * (BACK_TO_START kaydı) mekanizmasıyla — yalnız gerçekten iki `backToStart()` varsa — yakalanır.
+     */
+    private val RESERVED_MEMBER_NAMES = setOf("back", "quit", "quitWith", "backWithResult", "raw", "entryId")
 
     fun validate(): Boolean {
         model.routes.forEach { route ->
@@ -355,10 +363,15 @@ internal class GezginValidator(
      * `@GoForResult` records all three triple members (not just `launchX`) so a collision against
      * either sibling is caught too.
      *
+     * `@BackToStart` earns a fixed `backToStart()` member (NavigatorCodegen.kt:350-356) — recorded
+     * here so a same-source `@GoTo(name = "backToStart")` override OR a `@BackTo` to a route whose
+     * stripped name is `Start` (both → `backToStart()`) collides with it via the `size >= 2` path.
+     *
      * Task 3.4 devir: `name=` overrides are also checked against the navigator class's FIXED
-     * members ([RESERVED_MEMBER_NAMES] — `back`/`quit`/`quitWith`/`backWithResult`/the public `raw`
-     * property) — these exist independent of any single edge, so an override that happens to spell
-     * one out (e.g. `@GoTo(X::class, name = "back")`) would silently shadow/duplicate a real member.
+     * members ([RESERVED_MEMBER_NAMES] — `back`/`quit`/`quitWith`/`backWithResult`/`raw`/`entryId`) —
+     * these exist independent of any single edge, so an override that happens to spell one out (e.g.
+     * `@GoTo(X::class, name = "back")` or `name = "entryId"`) would silently shadow/duplicate a real
+     * member.
      */
     private fun checkN10Members(route: RouteModel) {
         val byMember = linkedMapOf<String, MutableList<String>>()
@@ -379,9 +392,18 @@ internal class GezginValidator(
                 }
             }
         }
-        route.backEdges
-            .filter { it.kind == BackEdgeKind.BACK_TO }
-            .forEach { backEdge -> backEdge.targetFq?.let { record("backTo" + strip(simple(it)), it) } }
+        route.backEdges.forEach { backEdge ->
+            when (backEdge.kind) {
+                BackEdgeKind.BACK_TO -> backEdge.targetFq?.let { record("backTo" + strip(simple(it)), it) }
+                // @BackToStart → fixed backToStart(); record it so a name= override or a @BackTo(Start)
+                // that also spells backToStart() trips the size>=2 collision. (A lone @BackToStart stays
+                // size 1 → no false positive — this is why backToStart is NOT in RESERVED_MEMBER_NAMES.)
+                BackEdgeKind.BACK_TO_START -> record("backToStart", flowStartFqOf(route) ?: route.fqName)
+                // @Quit → fixed quit(); a name= override colliding with it is caught by the reserved-name
+                // guard below (quit ∈ RESERVED). Not recorded here so a lone @Quit stays collision-free.
+                BackEdgeKind.QUIT -> Unit
+            }
+        }
 
         byMember.filterValues { it.size >= 2 }.forEach { (member, targets) ->
             error(
@@ -547,6 +569,10 @@ internal class GezginValidator(
 
     /** The graph node [fq] is a direct (lexically nested) member of, if any. */
     private fun parentGraphOf(fq: String): GraphModelNode? = model.graphs.firstOrNull { fq in it.memberFq }
+
+    /** The `@StartDestination` of [route]'s innermost enclosing flow — the target `@BackToStart` returns to. */
+    private fun flowStartFqOf(route: RouteModel): String? =
+        route.flowChainFq.lastOrNull()?.let { graphsByFq[it]?.startFq }
 
     private fun simple(fq: String): String = fq.substringAfterLast('.')
 
