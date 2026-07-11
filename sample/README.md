@@ -12,6 +12,8 @@ uygulama iskeleti. Amaç bir "gerçek app" üretmek değil — spec'in her navig
 :gezgin-core         ── framework çekirdeği (RawNavigator, GezginState, ResultBus, ...)
 :gezgin-processor    ── KSP: @NavGraph/@FlowGraph/@GoTo/... → topology + navigator + entry codegen
 :gezgin-test         ── GezginTestNavigator (UI'siz test API çekirdeği)
+:sample:domain       ── kotlin-jvm — paylaşılan alan modelleri (`AvatarChoice`/`NotificationLevel`/
+                         `SortOrder`, `dev.gezgin.sample.domain.model`); navigation + feature'lar bağımlı
       │
       │  api(...)              ksp(gezgin-processor)
       ▼
@@ -23,8 +25,8 @@ uygulama iskeleti. Amaç bir "gerçek app" üretmek değil — spec'in her navig
       ├──────────────┬──────────────────┐
       ▼              ▼                  ▼
 :sample:feature:auth :sample:feature:home :sample:feature:profile
- Login, ForgotPassword   Dashboard, ItemDetail   Profile, Settings,
- Dialog, SignUp flow     FilterBottomSheet, Welcome    EditNameDialogRoute, Avatar flow
+ Login, ForgotPassword   Dashboard, ItemDetail   Profile, Settings, EditName
+ Dialog, SignUp flow     FilterBottomSheet, Welcome    Dialog, Notifications sheet, Avatar flow
       │              │                  │
       └──────────────┴──────────────────┘
                      │
@@ -42,11 +44,27 @@ olmasa bile (`model.graphs.isEmpty()`) `@Screen`/`@Dialog`/`@BottomSheet` kayıt
 
 ## Dosya düzeni (per-file)
 
-Her feature'ın ekran içerikleri tek-sorumluluk dosyalarına bölünür (ör. `ProfileScreen.kt`,
-`SettingsContent.kt`, `LoginScreen.kt`, `DashboardScreen.kt`); bir modal/dialog/sheet ya da alt-akış
-kendi `kind_name` alt-paketini alır (`sheet_notification/`, `dialog_edit_name/`, `flow_avatar/`,
-`dialog_forgot_password/`, `flow_signup/`, `sheet_filter/`, `modal_image_viewer/`; shopr'da
-`ui/flow_checkout/`). KSP `provideXEntry`'yi içerik fonksiyonunun paketine ürettiğinden
+**Her `@Screen` route'u MVI-mode'dur** ve kendi `screen_<snake_name>/` alt-paketinde **6 dosyaya**
+bölünür: `<Name>UiState.kt` / `<Name>Intent.kt` / `<Name>Effect.kt` / `<Name>ViewModel.kt` /
+`<Name>Screen.kt` (stateless `@Screen`) / `<Name>EffectHandler.kt` (`@ScreenEffect`). Örn.
+`screen_settings/{SettingsUiState,SettingsIntent,SettingsEffect,SettingsViewModel,SettingsScreen,SettingsEffectHandler}.kt`.
+
+Dialog / bottom-sheet / fullscreen-modal içerikleri `dialog_<name>/` · `sheet_<name>/` ·
+`modal_<name>/` alt-paketlerinde yaşar; **VM opsiyoneldir** (core-mode da desteklenir). Bilinçli olarak
+core-mode tutulanlar (VM'siz `fun X(route, nav)` — core-mode'un hâlâ sergilendiği yer):
+`dialog_edit_name/EditNameDialog.kt`, `dialog_forgot_password/ForgotPasswordDialog.kt`,
+`sheet_filter/FilterBottomSheet.kt`, `modal_image_viewer/ItemImageViewerModal.kt`. MVI tutulan tek
+overlay: `sheet_notification/NotificationsBottomSheet.kt` (MVI + `@BottomSheet` + `controller` +
+result — "MVI-sheet" örneği).
+
+Suffix kuralları: `@Screen`→`*Screen`, `@Dialog`→`*Dialog`, `@BottomSheet`→`*BottomSheet`,
+`@FullscreenModal`→`*Modal`, `@ScreenEffect`→`*EffectHandler`; UI state'leri `*UiState`. Ekran-yerel
+Compose yardımcıları `screen_<name>/ui/` altında (örn. `screen_settings/ui/ThemeToggle.kt`).
+Paylaşılan alan modelleri `:sample:domain`'de (`AvatarChoice`/`NotificationLevel`/`SortOrder`).
+
+`*GraphEntries.kt` her feature-modülünün KÖKÜNDE durur (`AuthGraphEntries.kt`,
+`HomeGraphEntries.kt`, `ProfileGraphEntries.kt`; shopr'da `ShopGraphEntries.kt`); flow/graph route
+ağacı `:sample:navigation`'da. KSP `provideXEntry`'yi içerik fonksiyonunun paketine ürettiğinden
 `*GraphEntries.kt` (ve shopr'da `MainActivity.kt`) import'ları bu alt-paketleri izler.
 
 ## Navigasyon grafiği
@@ -66,27 +84,28 @@ supertype'tan gelir (`: AuthGraph` / `: ProfileGraph`, aynı paket). `AvatarFlow
 | result'suz `@FlowGraph` (flat-file, top-level `: AuthGraph`) | `SignUpFlow` | `SignUpFlow.kt` |
 | `ResultFlow<T>` + nested `@FlowGraph` (flat-file, top-level `: ProfileGraph`) | `AvatarFlow` → `AvatarFlow.ZoomFlow` | `AvatarFlow.kt` |
 | `@StartDestination` / G1 (app start) | `SignUpFlow.CredentialsScreenRoute`, `AvatarFlow.PickSourceScreenRoute`, `ZoomFlow.ZoomScreenRoute`; gerçek app start = `LoginScreenRoute` | graph dosyaları, `MainActivity.kt` |
-| `@GoTo` (+ `singleTop=false` + `name=`) | `DashboardScreenRoute→ItemDetailScreenRoute`; `ItemDetailScreenRoute→ItemDetailScreenRoute` (`goToRelated`, R2 dup) | `DashboardScreen.kt`, `ItemDetailScreen.kt` |
-| `@ReplaceTo` (Self-default) | `LoginScreenRoute→DashboardScreenRoute` (`loginSuccess`), `WelcomeScreenRoute→DashboardScreenRoute` (`continueToDashboard`) | `LoginScreen.kt`, `WelcomeScreen.kt` |
-| `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsScreenRoute→LoginScreenRoute` | `SettingsViewModel.kt` (VM `onIntent`'ten çağrılır — MVI-mode) |
-| `@GoForResult` — screen×3 (Dialog/Dialog/Sheet) | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | `dialog_forgot_password/ForgotPasswordDialog.kt`, `dialog_edit_name/EditNameDialog.kt`, `sheet_filter/FilterBottomSheet.kt` |
-| `@GoForResult` — flow×1, named×2 | `AvatarFlow` (`pickAvatar`), `FilterBottomSheetRoute` (`pickSort`) | `ProfileScreen.kt`, `DashboardScreen.kt` |
-| Üçlü tüketimin İKİ deseni | suspend `goToPickSortForResult` (Dashboard) **vs.** `launchPickAvatar()` + `pickAvatarResults.collect` VM'siz `LaunchedEffect` (Profile) | `DashboardScreen.kt` / `ProfileScreen.kt` |
-| `@QuitAndGoTo` | `TermsScreenRoute` → `WelcomeScreenRoute` | `flow_signup/TermsScreen.kt` |
-| `@Quit` | `TermsScreenRoute` | `flow_signup/TermsScreen.kt` |
-| `@BackToStart` | `TermsScreenRoute` → `CredentialsScreenRoute` | `flow_signup/TermsScreen.kt` |
-| `@BackTo` | `ItemDetailScreenRoute` → `DashboardScreenRoute`; `ItemImageViewerRoute` → `ItemDetailScreenRoute` (fullscreen modal'ın tipli çıkışı) | `ItemDetailScreen.kt`, `modal_image_viewer/ItemImageViewerModal.kt` |
-| `@NoBack` (cross-module) | `WelcomeScreenRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `HomeGraph.kt` / `WelcomeScreen.kt` |
-| `backWithResult` | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` | ilgili dosyalar |
-| `quitWith` | `CropScreenRoute`, `ZoomScreenRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `flow_avatar/CropScreen.kt`, `flow_avatar/ZoomScreen.kt` |
-| Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 / `@FullscreenModal`×1 | gerçek overlay render — bkz. aşağıdaki "Faz 4 — gerçek modal overlay" | tüm feature dosyaları |
+| `@GoTo` (+ `singleTop=false` + `name=`) | `DashboardScreenRoute→ItemDetailScreenRoute`; `ItemDetailScreenRoute→ItemDetailScreenRoute` (`goToRelated`, R2 dup) | `screen_dashboard/DashboardViewModel.kt`, `screen_item_detail/ItemDetailViewModel.kt` |
+| `@ReplaceTo` (Self-default) | `LoginScreenRoute→DashboardScreenRoute` (`loginSuccess`), `WelcomeScreenRoute→DashboardScreenRoute` (`continueToDashboard`) | `screen_login/LoginViewModel.kt`, `screen_welcome/WelcomeViewModel.kt` |
+| `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsScreenRoute→LoginScreenRoute` | `screen_settings/SettingsViewModel.kt` (VM `onIntent`'ten çağrılır — MVI-mode) |
+| `@GoForResult` — screen×4 (Dialog/Dialog/Sheet/Sheet) | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute`, `NotificationsSheetRoute` | `dialog_forgot_password/ForgotPasswordDialog.kt`, `dialog_edit_name/EditNameDialog.kt`, `sheet_filter/FilterBottomSheet.kt`, `sheet_notification/NotificationsBottomSheet.kt` |
+| `@GoForResult` — flow×1, named×3 | `AvatarFlow` (`pickAvatar`), `FilterBottomSheetRoute` (`pickSort`), `NotificationsSheetRoute` (`pickNotifications`) | `screen_profile/ProfileViewModel.kt`, `screen_dashboard/DashboardViewModel.kt` |
+| Üçlü tüketimin İKİ deseni (ikisi de VM `viewModelScope`'ta) | suspend `goToPickSortForResult` (Dashboard) **vs.** `launchPickAvatar()` + `pickAvatarResults.collect` (Profile VM `init`) | `screen_dashboard/DashboardViewModel.kt` / `screen_profile/ProfileViewModel.kt` |
+| `@QuitAndGoTo` | `TermsScreenRoute` → `WelcomeScreenRoute` | `screen_terms/TermsViewModel.kt` |
+| `@Quit` | `TermsScreenRoute` | `screen_terms/TermsViewModel.kt` |
+| `@BackToStart` | `TermsScreenRoute` → `CredentialsScreenRoute` | `screen_terms/TermsViewModel.kt` |
+| `@BackTo` | `ItemDetailScreenRoute` → `DashboardScreenRoute`; `ItemImageViewerRoute` → `ItemDetailScreenRoute` (fullscreen modal'ın tipli çıkışı) | `screen_item_detail/ItemDetailViewModel.kt`, `modal_image_viewer/ItemImageViewerModal.kt` |
+| `@NoBack` (cross-module) | `WelcomeScreenRoute` (declared in `:navigation`, `@Screen` in `:feature:home`) | `HomeGraph.kt` / `screen_welcome/WelcomeScreen.kt` |
+| `backWithResult` | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute` (core-mode composable'lardan); `NotificationsSheetRoute` (MVI VM'inden) | ilgili dosyalar |
+| `quitWith` | `CropScreenRoute`, `ZoomScreenRoute` (nested içinden de en yakın sözleşme-sahibi AvatarFlow'u bitirir) | `screen_crop/CropViewModel.kt`, `screen_zoom/ZoomViewModel.kt` |
+| Kind'lar `@Screen` (her ekran) / `@Dialog`×2 / `@BottomSheet`×2 / `@FullscreenModal`×1 | gerçek overlay render — bkz. aşağıdaki "Faz 4 — gerçek modal overlay" | tüm feature dosyaları |
 | `DialogContract` — SABİT desen | `ForgotPasswordDialogRoute.dismissOnClickOutside = false` | `AuthGraph.kt`, `dialog_forgot_password/ForgotPasswordDialog.kt` |
 | `DialogContract` — KOŞULLU desen | `EditNameDialogRoute.dismissOnClickOutside` ← `current.isNotBlank()` | `ProfileGraph.kt`, `dialog_edit_name/EditNameDialog.kt` |
-| `BottomSheetContract` + `LocalGezginSheetController` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `controller.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `sheet_filter/FilterBottomSheet.kt` |
+| `BottomSheetContract` + `LocalGezginSheetController` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterBottomSheet` `controller.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `sheet_filter/FilterBottomSheet.kt` |
 | **`@FullscreenModal` + `FullscreenModalContract`** (tam-ekran modal, `usePlatformDefaultWidth` YOK → `DialogContract`'tan AYRI render kontratı) | `ItemImageViewerRoute.dismissOnClickOutside = false` (dış-tık kapatmaz; `dismissOnBackPress` varsayılan `true` → geri/gesture kapatır); giriş `@GoTo(ItemImageViewerRoute)` `ItemDetailScreenRoute`'tan | `HomeGraph.kt`, `modal_image_viewer/ItemImageViewerModal.kt` |
 | Transition cascade (3 seviye) | app `navTransitions{forward{...}backward{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsScreenRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `ProfileGraph.kt` |
-| **MVI-mode add-on** (`@MviViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) | `SettingsScreenRoute` | `SettingsViewModel.kt` + `Settings*.kt` dosyaları — bkz. aşağıdaki "Faz 5 — MVI-mode" |
-| **MVI Problem 2** (rol-DIŞI content param → ZORUNLU `@Composable () -> T` resolver param) | `SettingsContent(..., buildInfo: BuildInfo)` → `provideSettingsEntry(buildInfo = { BuildInfo("1.0.0") })` | `SettingsContent.kt`, `ProfileGraphEntries.kt` |
+| **MVI-mode add-on** (`@MviViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) — artık TÜM `@Screen`'ler | her `screen_<name>/`; detaylı örnek `SettingsScreenRoute` | `screen_settings/SettingsViewModel.kt` + `screen_settings/Settings*.kt` (her `screen_*/` paketi aynı 6-dosya desenini izler) — bkz. aşağıdaki "Faz 5 — MVI-mode" |
+| **MVI-sheet** (`@BottomSheet` MVI-mode + `controller` rol-param'ı + `ResultRoute` + hide-then-result) | `NotificationsSheetRoute` (`ResultRoute<NotificationLevel>`) | `sheet_notification/` (6 dosya: `Notifications*` + `NotificationsBottomSheet.kt`) |
+| **MVI Problem 2** (rol-DIŞI content param → ZORUNLU `@Composable () -> T` resolver param) | `SettingsScreen(..., buildInfo: BuildInfo)` → `provideSettingsEntry(buildInfo = { BuildInfo("1.0.0") })` | `screen_settings/SettingsScreen.kt`, `ProfileGraphEntries.kt` |
 | **`@FragmentScreen`** (brownfield Fragment interop, View-tabanlı) | `HelpScreenRoute` | `HelpFragment.kt` + `fragment_help.xml` — bkz. aşağıdaki "Faz 6 — Fragment interop" |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
 | `onRootBack = finish()` | — | `MainActivity.kt` |
@@ -95,18 +114,20 @@ supertype'tan gelir (`: AuthGraph` / `: ProfileGraph`, aynı paket). `AvatarFlow
 
 ## İki tüketim deseni — karşılaştırma
 
-Aynı "@GoForResult sonucunu bekle" ihtiyacının iki farklı, İKİSİ DE meşru çözümü:
+Aynı "@GoForResult sonucunu bekle" ihtiyacının iki farklı, İKİSİ DE meşru çözümü. Tüm ekranlar
+MVI olduğundan İKİSİ DE artık `viewModelScope`'ta yaşar (VM'siz composable'da DEĞİL) — bu ikisini de
+config-change/PD'ye karşı doğal olarak güvenli kılar (VM sürdürüldükçe scope da yaşar):
 
-**1. Suspend çağrı (Dashboard → FilterBottomSheetRoute, `pickSort`)** — `scope.launch { val r =
-nav.goToPickSortForResult(...) }`. Kısa, doğrudan; ama `scope`
-(`rememberCoroutineScope()`) composable'ın YAŞAM SÜRESİNE bağlıdır — bkz. aşağıdaki "Tasarım
-notları" içindeki config-change caveat'ı.
+**1. Suspend çağrı (`DashboardViewModel` → FilterBottomSheetRoute, `pickSort`)** —
+`viewModelScope.launch { val r = nav.goToPickSortForResult(...) }`. Kısa, doğrudan; sonuç tek-seferlik
+beklenir. VM scope'unda çalıştığı için eski `rememberCoroutineScope()` config-change hazard'ı ARTIK
+YOK (bkz. `DashboardViewModel.kt`'deki kod-içi yorum — hazard'ın MVI karşılığı çözülür).
 
-**2. Launch + collect / stream (Profile → AvatarFlow, `pickAvatar`)** — `nav.launchPickAvatar()`
-(fire-and-forget push) + ayrı bir `LaunchedEffect(Unit) { nav.pickAvatarResults.collect { ... } }`.
-Her (re)composition'da yeniden abone olur; bekleyen bir sonuç varsa collector kurulur kurulmaz
-teslim edilir. VM'siz bir composable'da PD/config-change sonrası kalıcı sonuç isteniyorsa BU desen
-tercih edilmeli (§6).
+**2. Launch + collect / stream (`ProfileViewModel` → AvatarFlow, `pickAvatar`)** —
+`onIntent(PickAvatar)` içinde `nav.launchPickAvatar()` (fire-and-forget push) + VM `init`'inde ayrı bir
+`viewModelScope.launch { nav.pickAvatarResults.collect { ... } }`. Kalıcı bir abone; bekleyen bir sonuç
+varsa collector'a teslim edilir. VM ömrü boyunca dinlemeye devam eder — birden çok akıştan (avatar,
+bildirim) gelen sonuçları tek bir yerde toplamak için doğal desen (§6).
 
 ## Faz 4 — gerçek modal overlay
 
@@ -132,7 +153,7 @@ kütüphane kullanıcısına REFERANS teşkil edecek şekilde bu API'leri gerçe
 - **`FilterBottomSheetRoute`** (`HomeGraph.kt`) — gerçek `ModalBottomSheet` overlay'i (el-yazımı
   `GezginBottomSheetSceneStrategy`, arkadaki `DashboardScreenRoute` görünür kalır).
   `BottomSheetContract.skipPartiallyExpanded = true` (kısa liste, ara durak gereksiz).
-  `FilterSheetScreen` (`sheet_filter/FilterBottomSheet.kt`) `LocalGezginSheetController.current` ile sheet'in `GezginSheetController`'ını
+  `FilterBottomSheet` (`sheet_filter/FilterBottomSheet.kt`) `LocalGezginSheetController.current` ile sheet'in `GezginSheetController`'ını
   okur; bir sıralama seçildiğinde spec §7 deseni izlenir: ÖNCE `controller.hide()` (kapanma
   animasyonu tamamlanır), SONRA `nav.backWithResult(candidate)` (programatik pop + sonuç) — düz
   `backWithResult` çağrısı sheet'i animasyonsuz kaybettirirdi (bkz. `GezginBottomSheetScene`
@@ -141,7 +162,7 @@ kütüphane kullanıcısına REFERANS teşkil edecek şekilde bu API'leri gerçe
 
 - **`@FullscreenModal` + `FullscreenModalContract` (Faz 7.2 / GAP-1)** — `ItemImageViewerRoute`
   (`HomeGraph.kt`): `ItemDetailScreenRoute`'tan `@GoTo(ItemImageViewerRoute)` ile açılan tam-ekran
-  ürün görseli önizleyici (`ItemImageViewerScreen`, `modal_image_viewer/ItemImageViewerModal.kt`). `FullscreenModalContract`,
+  ürün görseli önizleyici (`ItemImageViewerModal`, `modal_image_viewer/ItemImageViewerModal.kt`). `FullscreenModalContract`,
   `DialogContract`'ın bir kopyası DEĞİL: `usePlatformDefaultWidth` **yok** — tam-ekran tanımı gereği
   adapter'da SABİT `false` → `DialogSceneStrategy` bunu scrim'siz/kenar-boşluksuz tam-ekran render eder;
   `DialogContract`'tan AYRI bir render kontratı. Route yalnız dismiss davranışını taşır:
@@ -165,23 +186,23 @@ sözleşmesi, `@MviViewModel`/`@ScreenEffect` annotation'ları) + tam KSP codege
 `MviEntryCodegen`'i: Hilt/Koin/androidx-fallback için DI-detection default resolver'ı). O ana kadar
 MVI-mode yalnız kctfork'un **plugin'siz golden-text** derleme testleriyle kanıtlanmıştı — bunlar gerçek
 bir Compose/Android runtime'ını **çalıştıramaz** (kctfork backend'i gerçek composable çağrı bölgelerinde
-ICE veriyor). **Faz 5.3 bu boşluğu kapatır:** bu sample'daki `SettingsScreen`, gerçek AGP derlemesi
-(`:sample:app:assembleDebug`, gerçek compose-compiler plugin'i) ve on-device koşusuyla MVI-mode'a
-çevrildi — kütüphanenin ilk GERÇEK uçtan-uca MVI kanıtı.
+ICE veriyor). Faz 5.3 bu boşluğu ilk kez `SettingsScreen`'i gerçek AGP derlemesi
+(`:sample:app:assembleDebug`, gerçek compose-compiler plugin'i) + on-device koşusuyla MVI'a çevirerek
+kapatmıştı — kütüphanenin ilk GERÇEK uçtan-uca MVI kanıtı.
 
-**Neden `SettingsScreen` (tüm modül veya `ProfileScreen` değil):** `SettingsScreen` kendi kendine yeten
-tek ekrandı — yerel bir `darkTheme` toggle'ı + tek bir `nav.logout()` çağrısı; taşınacak suspend
-result-await ya da composable-içi Flow-collection'ı YOK (o desenler `ProfileScreen`'de yaşıyor ve onları
-bir VM'e taşımak — VM-güdümlü suspend-result tüketimi + stream-collection — tek bir örnek dönüşümünün
-amacına (yalnız "runtime wiring derlenir + çalışır") oransız büyük/riskli bir işti). Ayrıca
-`SettingsScreenRoute` route-seviyesi transition override'ını (slideIn/Out — MVI-mode içeriğe dokunur,
-`Route.transition`'a DOKUNMAZ) korurken TEK ekran hem o mevcut özelliği hem de yeni MVI-mode'u sergiler;
-yeni bir ekran gerekmedi.
+**Artık MVI, bu sample'daki TÜM `@Screen`'lerin standart modudur** (Faz 10 yapı refactor'ü): her ekran
+kendi `screen_<name>/` paketinde 6-dosya üçlüsüyle (`*UiState`/`*Intent`/`*Effect`/`*ViewModel`/
+`*Screen`/`*EffectHandler`) yazılır; nav-edge çağrıları (`nav.goToX()`/`replaceTo`/`quitWith`/...) artık
+ilgili `*ViewModel.onIntent`'inden gelir. `SettingsScreen` aşağıda **detaylı örnek** olarak kalır çünkü
+en zenginidir: hem route-seviyesi transition override'ını (slideIn/Out — MVI-mode İÇERİĞE dokunur,
+`Route.transition`'a DOKUNMAZ) taşır hem de Problem 2'yi (`buildInfo` resolver-param'ı) sergiler.
+Core-mode (VM'siz `fun X(route, nav)`) hâlâ sergilensin diye bazı overlay'ler bilinçle core tutuldu
+(bkz. "Dosya düzeni"); MVI-mode overlay örneği ise `NotificationsBottomSheet`'tir (aşağıda).
 
-Üçlü (`SettingsViewModel.kt` / `SettingsContent.kt` / `SettingsEffectHandler.kt`, hepsi aynı modülde, aynı route'a eşlenir):
+Üçlü (`screen_settings/{SettingsViewModel,SettingsScreen,SettingsEffectHandler}.kt`, hepsi aynı modülde, aynı route'a eşlenir):
 
 - **`@MviViewModel(SettingsScreenRoute) class SettingsViewModel(nav: SettingsNavigator) : ViewModel(),
-  GezginMvi<SettingsState, SettingsIntent, SettingsEffect>`** — gerçek androidx `ViewModel`.
+  GezginMvi<SettingsUiState, SettingsIntent, SettingsEffect>`** — gerçek androidx `ViewModel`.
   `onIntent(ToggleTheme)` state'teki `darkTheme`'i çevirir + bir efekt emit eder; `onIntent(Logout)`
   enjekte edilmiş `nav.logout()`'u **doğrudan** çağırır (spec §10 A deseni: "VM-driven, önerilen" —
   nav VM'e enjekte, üretilen nav metodu VM içinden çağrılır).
@@ -189,9 +210,10 @@ yeni bir ekran gerekmedi.
   tanır (aynı-modül `SettingsNavigator` tipi henüz üretilmediğinden). `navigator` gibi başka bir ad
   default `viewModel` resolver'ının onu tanımamasına yol açar (`viewModel` param'ı zorunlu olur). Route
   param'ı tipe göre eşlenir, bu kısıt yalnız nav için geçerlidir.
-- stateless **`@Screen(SettingsScreenRoute) fun SettingsContent(state, onIntent)`** — eski
-  `fun SettingsScreen(route, nav)`'in yerine; UI yalnız `state` okur + `onIntent` tetikler.
-- **`@ScreenEffect fun SettingsEffects(effects: Flow<SettingsEffect>)`** — `gezgin-mvi`'nin
+- stateless **`@Screen(SettingsScreenRoute) fun SettingsScreen(state, onIntent, buildInfo)`** —
+  suffix kuralı gereği `*Screen` adlı (core-mode `fun XScreen(route, nav)`'in aksine stateless); UI
+  yalnız `state` okur + `onIntent` tetikler (`buildInfo` = Problem 2 param'ı, aşağıda).
+- **`@ScreenEffect fun SettingsEffectHandler(effects: Flow<SettingsEffect>)`** — `gezgin-mvi`'nin
   `ObserveEffects`'iyle tek-seferlik efekt (bir `Toast` + `Log.d`); `ToggleTheme`'de bir kez tetiklenir.
   Bu, `@ScreenEffect`/`ObserveEffects`'in canlı Compose/Android runtime'da GERÇEKTEN çalıştığının ilk
   kctfork-dışı kanıtı.
@@ -213,8 +235,8 @@ public fun GezginEntryScope.provideSettingsEntry(
     val nav = LocalGezginRawNavigator.current.settingsNavigator(LocalGezginEntryId.current)
     val vm = viewModel(nav, route)
     val state by vm.uiState.collectAsStateWithLifecycle()
-    SettingsEffects(vm.effects)
-    SettingsContent(state, vm::onIntent, buildInfo = buildInfo())
+    SettingsEffectHandler(vm.effects)
+    SettingsScreen(state, vm::onIntent, buildInfo = buildInfo())
   }
 }
 ```
@@ -223,7 +245,7 @@ public fun GezginEntryScope.provideSettingsEntry(
 `@Screen`/`@Dialog`/`@BottomSheet` content'i rol-bazlı sağlananların (`state` / `onIntent` /
 `controller`) DIŞINDA bir param alırsa, `MviEntryCodegen` onu `provideXEntry`'ye **kullanıcı-sağlamalı,
 default'suz (ZORUNLU)** bir `@Composable () -> T` resolver param'ına dönüştürür ve content'e NAMED arg
-olarak geçer. Burada `SettingsContent(..., buildInfo: BuildInfo)` (`SettingsContent.kt`) → üretilen
+olarak geçer. Burada `SettingsScreen(..., buildInfo: BuildInfo)` (`screen_settings/SettingsScreen.kt`) → üretilen
 `provideSettingsEntry`'ye `buildInfo: @Composable () -> BuildInfo` eklenir → kurulumda AÇIKÇA verilmek
 ZORUNDA: `ProfileGraphEntries.kt`'de `provideSettingsEntry(buildInfo = { BuildInfo(version = "1.0.0") })`.
 Bu explicit, zorunlu çağrı-yeri Problem 2'nin **tüketici-tarafı** kanıtıdır (mekanizma artık yalnız
@@ -243,6 +265,16 @@ olarak gerçek bir Hilt/Koin Gradle bağımlılığı EKLENMEZ; `viewModel` reso
 // Koin (yine yalnız örnek):
 //   provideSettingsEntry(viewModel = { nav, args -> koinViewModel { parametersOf(nav) } })
 ```
+
+**MVI-sheet örneği — `NotificationsBottomSheet` (`sheet_notification/`).** MVI-mode yalnız tam ekranlarda
+değil, overlay'lerde de çalışır: `NotificationsSheetRoute` bir `@BottomSheet` + `ResultRoute<NotificationLevel>`'dir
+ve tam MVI üçlüsüyle yazılır (`Notifications{UiState,Intent,Effect,ViewModel,EffectHandler}.kt` +
+`NotificationsBottomSheet.kt`). Farkları Settings'ten: (a) `@BottomSheet` content'i `state`/`onIntent`
+yanında bir rol-param'ı olan `controller: GezginSheetController` alır (MVI + controller bir arada); (b)
+VM route verisini enjekte alır (`NotificationsViewModel(route, nav)` → başlangıç `UiState` `route.current`'tan);
+(c) sonuç teslimi hâlâ hide-then-result: composable önce `controller.hide()` (kapanma animasyonu), sonra
+`onIntent(Confirm)` → VM `nav.backWithResult(selected)`. Profile'dan `@GoForResult(..., name = "pickNotifications")`
+ile açılır; sonuç `ProfileViewModel`'de suspend `goToPickNotificationsForResult(...)` ile toplanır.
 
 **Cihaz-üstü doğrulama:** MVI-mode'un yalnız derlemeden görülemeyen davranışları (VM'in config-change'te
 hayatta kalması, efektin rotation'da tekrar oynamaması, logout'un stack'i doğru temizlemesi)
@@ -414,11 +446,12 @@ için eklendi; `kspTest(...)` bağımlılığı EKLENMEDİ (yukarıdaki nedenle 
   kanıtı: `nestedZoomFlowQuitWith_deliversValueToProfileTearsDownWholeAvatarFlow`. (Eski el-yazımı
   core fixture'ları zaten ownership semantiğindeydi — `PayAuthFlow : Route` kapsayanı subtype
   etmediği için bug'ı hiç tetiklememişti.)
-- **Dashboard'ın suspend `goToPickSortForResult` çağrısı** — `rememberCoroutineScope()`'a bağlı
-  `scope.launch`; VM ömrü İÇİNDE güvenlidir ama VM'siz composable'da bir config-change/process-death
-  sonucu SESSİZCE düşürür (bkz. `DashboardScreen.kt`'deki kod-içi yorum). Kalıcı sonuç isteniyorsa
-  `ProfileScreen`'in launch+collect (stream) deseni tercih edilmelidir — yukarıdaki "İki tüketim
-  deseni" karşılaştırmasına bakın.
+- **Dashboard'ın suspend `goToPickSortForResult` çağrısı** — artık `DashboardViewModel.onIntent`'te
+  `viewModelScope.launch` ile toplanır; VM scope'unda çalıştığı için config-change/process-death'te
+  SESSİZCE DÜŞMEZ (eski `rememberCoroutineScope()` composable-scope hazard'ının MVI karşılığı çözülür;
+  bkz. `DashboardViewModel.kt`'deki kod-içi yorum). Birden çok akıştan gelen kalıcı sonuç isteniyorsa
+  `ProfileViewModel`'in `init`'teki launch+collect (stream) deseni tercih edilebilir — yukarıdaki
+  "İki tüketim deseni" karşılaştırmasına bakın.
 - **Üretilen API isimleri plan metniyle birebir eşleşmiyor** — bkz.
   `.superpowers/sdd/sample-s2-report.md` "Escalations" bölümü (örn. plandaki varsayılan
   `goToForgotPasswordForResult` yerine gerçek üretilen ad `goToForgotPasswordDialogForResult`).
