@@ -25,6 +25,9 @@ kotlin {
 dependencies {
     implementation(project(":sample:navigation"))
     implementation(project(":sample:domain"))
+    // MVI add-on (Faz 10) — Dashboard/ItemDetail/Welcome MVI-mode'a çevrildi; üretilen entry'lerin
+    // viewModel()/collectAsStateWithLifecycle() çağrıları ve VM'lerin androidx `ViewModel` tabanı buradan.
+    implementation(project(":gezgin-mvi"))
     ksp(project(":gezgin-processor"))
 
     implementation(platform(libs.androidx.compose.bom))
