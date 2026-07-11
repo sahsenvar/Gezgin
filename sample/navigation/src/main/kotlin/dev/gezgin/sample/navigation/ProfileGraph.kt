@@ -15,13 +15,8 @@ import dev.gezgin.core.annotation.NavGraph
 import dev.gezgin.core.annotation.ReplaceTo
 import dev.gezgin.core.compose.GezginTransition
 import dev.gezgin.core.compose.transition
+import dev.gezgin.sample.domain.model.NotificationLevel
 import kotlinx.serialization.Serializable
-
-@Serializable
-data class AvatarChoice(val uri: String)
-
-@Serializable
-enum class NotificationLevel { ALL, MENTIONS, NONE }
 
 @NavGraph
 @Serializable

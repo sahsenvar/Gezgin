@@ -25,6 +25,7 @@ kotlin {
 dependencies {
     // The central nav module (spec §3.3) — brings gezgin-core (routes/navigators) transitively.
     implementation(project(":sample:navigation"))
+    implementation(project(":sample:domain"))
     ksp(project(":gezgin-processor"))
 
     implementation(platform(libs.androidx.compose.bom))

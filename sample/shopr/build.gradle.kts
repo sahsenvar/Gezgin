@@ -32,6 +32,7 @@ kotlin {
 
 dependencies {
     implementation(project(":gezgin-core"))
+    implementation(project(":sample:domain"))
     ksp(project(":gezgin-processor"))
 
     implementation(platform(libs.androidx.compose.bom))

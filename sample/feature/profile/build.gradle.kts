@@ -24,6 +24,7 @@ kotlin {
 
 dependencies {
     implementation(project(":sample:navigation"))
+    implementation(project(":sample:domain"))
     // MVI add-on (Faz 5) — SettingsScreen MVI-mode'a çevrildi (bkz. SettingsMvi.kt). `api` yüzeyiyle
     // JB lifecycle-viewmodel-compose / lifecycle-runtime-compose'u transitively getirir; üretilen
     // GezginMviEntries.kt'nin viewModel()/viewModelFactory{}/collectAsStateWithLifecycle() çağrıları

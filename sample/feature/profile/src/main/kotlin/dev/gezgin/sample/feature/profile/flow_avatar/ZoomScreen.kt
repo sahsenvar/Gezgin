@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.gezgin.core.annotation.Screen
-import dev.gezgin.sample.navigation.AvatarChoice
+import dev.gezgin.sample.domain.model.AvatarChoice
 import dev.gezgin.sample.navigation.AvatarFlow.ZoomFlow.ZoomScreenRoute
 import dev.gezgin.sample.navigation.ZoomNavigator
 

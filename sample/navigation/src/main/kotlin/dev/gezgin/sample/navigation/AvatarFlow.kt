@@ -4,6 +4,7 @@ import dev.gezgin.core.ResultFlow
 import dev.gezgin.core.annotation.FlowGraph
 import dev.gezgin.core.annotation.GoTo
 import dev.gezgin.core.annotation.StartDestination
+import dev.gezgin.sample.domain.model.AvatarChoice
 import kotlinx.serialization.Serializable
 
 @FlowGraph

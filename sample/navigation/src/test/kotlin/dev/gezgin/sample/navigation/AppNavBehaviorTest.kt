@@ -4,6 +4,9 @@ import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.NavResult
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
+import dev.gezgin.sample.domain.model.AvatarChoice
+import dev.gezgin.sample.domain.model.NotificationLevel
+import dev.gezgin.sample.domain.model.SortOrder
 import dev.gezgin.test.GezginTestNavigator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
