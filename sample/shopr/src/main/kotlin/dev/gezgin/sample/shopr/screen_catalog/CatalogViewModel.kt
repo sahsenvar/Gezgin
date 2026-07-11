@@ -1,5 +1,6 @@
 package dev.gezgin.sample.shopr.screen_catalog
 
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.gezgin.core.NavResult
 import dev.gezgin.mvi.GezginEffects
@@ -11,13 +12,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 @MviViewModel(HomeGraph.Catalog::class)
 class CatalogViewModel(
     private val nav: CatalogNavigator,
-) : androidx.lifecycle.ViewModel(), GezginMvi<CatalogUiState, CatalogIntent, CatalogEffect> {
+) : ViewModel(), GezginMvi<CatalogUiState, CatalogIntent, CatalogEffect> {
 
     private val _uiState = MutableStateFlow(CatalogUiState())
     override val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
@@ -31,7 +31,7 @@ class CatalogViewModel(
             nav.checkoutResults.collect { result ->
                 when (result) {
                     is NavResult.Value -> nav.replaceToOrderPlaced(result.value.value)
-                    NavResult.Canceled -> _effects.send(CatalogEffect.Message("Ödeme iptal edildi"))
+                    NavResult.Canceled -> _effects.send(CatalogEffect.ShowMessage("Ödeme iptal edildi"))
                 }
             }
         }

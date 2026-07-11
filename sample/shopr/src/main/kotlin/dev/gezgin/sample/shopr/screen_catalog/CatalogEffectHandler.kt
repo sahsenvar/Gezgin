@@ -13,7 +13,7 @@ fun CatalogEffectHandler(effects: Flow<CatalogEffect>) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
-            is CatalogEffect.Message -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+            is CatalogEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
         }
     }
 }

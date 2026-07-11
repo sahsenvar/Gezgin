@@ -13,7 +13,7 @@ fun OrderPlacedEffectHandler(effects: Flow<OrderPlacedEffect>) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
-            is OrderPlacedEffect.Message -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+            is OrderPlacedEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
         }
     }
 }

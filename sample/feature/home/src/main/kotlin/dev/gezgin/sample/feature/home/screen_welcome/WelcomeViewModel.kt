@@ -1,5 +1,6 @@
 package dev.gezgin.sample.feature.home.screen_welcome
 
+import androidx.lifecycle.ViewModel
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class WelcomeViewModel(
     route: HomeGraph.WelcomeScreenRoute,
     private val nav: WelcomeNavigator,
-) : androidx.lifecycle.ViewModel(), GezginMvi<WelcomeUiState, WelcomeIntent, WelcomeEffect> {
+) : ViewModel(), GezginMvi<WelcomeUiState, WelcomeIntent, WelcomeEffect> {
 
     private val _uiState = MutableStateFlow(WelcomeUiState(name = route.name))
     override val uiState: StateFlow<WelcomeUiState> = _uiState.asStateFlow()

@@ -1,5 +1,6 @@
 package dev.gezgin.sample.feature.home.screen_item_detail
 
+import androidx.lifecycle.ViewModel
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.update
 class ItemDetailViewModel(
     route: HomeGraph.ItemDetailScreenRoute,
     private val nav: ItemDetailNavigator,
-) : androidx.lifecycle.ViewModel(), GezginMvi<ItemDetailUiState, ItemDetailIntent, ItemDetailEffect> {
+) : ViewModel(), GezginMvi<ItemDetailUiState, ItemDetailIntent, ItemDetailEffect> {
 
     private val _uiState = MutableStateFlow(ItemDetailUiState(id = route.id))
     override val uiState: StateFlow<ItemDetailUiState> = _uiState.asStateFlow()

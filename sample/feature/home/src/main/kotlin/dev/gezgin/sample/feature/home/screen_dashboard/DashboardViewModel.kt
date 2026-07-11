@@ -1,5 +1,6 @@
 package dev.gezgin.sample.feature.home.screen_dashboard
 
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.gezgin.core.NavResult
 import dev.gezgin.mvi.GezginEffects
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
 @MviViewModel(HomeGraph.DashboardScreenRoute::class)
 class DashboardViewModel(
     private val nav: DashboardNavigator,
-) : androidx.lifecycle.ViewModel(), GezginMvi<DashboardUiState, DashboardIntent, DashboardEffect> {
+) : ViewModel(), GezginMvi<DashboardUiState, DashboardIntent, DashboardEffect> {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     override val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()

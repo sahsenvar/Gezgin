@@ -13,7 +13,7 @@ fun ProductEffectHandler(effects: Flow<ProductEffect>) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
-            is ProductEffect.Message -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+            is ProductEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
         }
     }
 }
