@@ -344,8 +344,8 @@ seçenekleri → "Predictive Back animasyonlarını etkinleştir" AÇIK.
 
 **Adımlar:**
 1. Dashboard → "Sırala" aç; bir sıralama seçeneğine dokun. Sheet'in AŞAĞI doğru kayarak (slide-down)
-   kapandığını, animasyon BİTTİKTEN SONRA listenin yeni sıra ile göründüğünü gözle (`FilterSheetScreen`
-   `controller.hide()` → `backWithResult(...)` sırası — bkz. `HomeScreens.kt`).
+   kapandığını, animasyon BİTTİKTEN SONRA listenin yeni sıra ile göründüğünü gözle (`FilterBottomSheet`
+   `controller.hide()` → `backWithResult(...)` sırası — bkz. `sheet_filter/FilterBottomSheet.kt`).
 2. Karşılaştırma için: aşağı swipe ile (seçim yapmadan) kapat — animasyon aynı, ama `order`
    DEĞİŞMEMELİ.
 
@@ -366,7 +366,7 @@ KDoc'undaki "kalıntı risk — programatik pop animasyonsuz" notunun tam da ÖN
 (`usePlatformDefaultWidth=false` → tam-ekran) pinledi; ama tam-ekran GÖRSEL occlusion (arka ekranın
 `@Dialog`/`@BottomSheet`'in aksine GÖRÜNMEMESİ — kenar boşluğu/scrim halkası YOK) ve dismiss davranışı
 yalnız gerçek cihazda/gerçek compositor'da gözlenebilir. Sample'daki route: `ItemImageViewerRoute`
-(`HomeGraph.kt`) → `ItemImageViewerScreen` (`HomeScreens.kt`).
+(`HomeGraph.kt`) → `ItemImageViewerModal` (`modal_image_viewer/ItemImageViewerModal.kt`).
 
 **Ön koşul:** `sample:app` cihaza/emülatöre kurulu.
 
@@ -396,9 +396,9 @@ dış-tık kapatmaz, geri tuşu/gesture ve "Kapat" düğmesi kapatır ve her iki
 ## 14. MVI-mode (`SettingsScreen`) — VM ömrü, tek-seferlik efekt, MVI'dan logout (Faz 5.3)
 
 Faz 5.3, `sample:app`'in `SettingsScreen`'ini MVI-mode'a çevirdi (`@MviViewModel(SettingsScreenRoute)` +
-stateless `@Screen` `SettingsContent(state, onIntent)` + `@ScreenEffect SettingsEffects`, androidx-fallback
-resolver — bkz. `sample/feature/profile/src/main/.../SettingsMvi.kt` ve `sample/README.md` "Faz 5 —
-MVI-mode"). Bu, MVI-mode'un ilk GERÇEK (kctfork-dışı) uçtan-uca kanıtı: `assembleDebug` yeşil ve
+stateless `@Screen` `SettingsScreen(state, onIntent, buildInfo)` + `@ScreenEffect SettingsEffectHandler`, androidx-fallback
+resolver — bkz. `sample/feature/profile/src/main/.../screen_settings/` ve `sample/README.md` "Faz 5 —
+MVI-mode"). Faz 10 yapı refactor'ünden sonra artık TÜM ekranlar MVI'dır; `SettingsScreen` yine en zengin örnek. Bu, MVI-mode'un ilk GERÇEK (kctfork-dışı) uçtan-uca kanıtı: `assembleDebug` yeşil ve
 `GezginMviEntries.kt` üretiliyor, ama aşağıdaki üç davranış **yalnız gerçek cihazda/emülatörde** —
 gerçek `ViewModelStore` + `Lifecycle` + Android runtime ile — gözlenebilir; derleme bunları KANITLAMAZ.
 
@@ -425,7 +425,7 @@ erişilebilir (efekt Log/Toast'unu gözlemek için).
   `logoutClearUpToDashboardInclusive_stacksASecondLoginEntry`'nin pinlediği çift-Login sonucu MVI-mode'da da aynı).
 
 **İlgili spec §:** `docs/gezgin-design.md` §10.1 (MVI-mode binding); `gezgin-mvi` `GezginMvi`/`ObserveEffects`;
-kod: `sample/feature/profile/.../SettingsMvi.kt`, üretilen `.../GezginMviEntries.kt`.
+kod: `sample/feature/profile/.../screen_settings/` (6-dosya MVI üçlüsü), üretilen `.../GezginMviEntries.kt`.
 
 **Durum:** [ ] Doğrulanmadı
 
