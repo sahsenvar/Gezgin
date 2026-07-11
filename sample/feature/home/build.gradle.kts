@@ -24,6 +24,7 @@ kotlin {
 
 dependencies {
     implementation(project(":sample:navigation"))
+    implementation(project(":sample:domain"))
     ksp(project(":gezgin-processor"))
 
     implementation(platform(libs.androidx.compose.bom))

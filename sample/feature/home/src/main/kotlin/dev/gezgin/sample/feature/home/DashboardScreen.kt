@@ -20,7 +20,7 @@ import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.sample.navigation.DashboardNavigator
 import dev.gezgin.sample.navigation.HomeGraph.DashboardScreenRoute
-import dev.gezgin.sample.navigation.SortOrder
+import dev.gezgin.sample.domain.model.SortOrder
 import kotlinx.coroutines.launch
 
 private val FAKE_ITEMS = (1..5).map { "item-$it" }

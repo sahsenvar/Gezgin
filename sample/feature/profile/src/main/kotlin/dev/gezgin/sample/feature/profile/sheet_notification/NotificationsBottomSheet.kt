@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.gezgin.core.annotation.BottomSheet
 import dev.gezgin.core.compose.GezginSheetController
-import dev.gezgin.sample.navigation.NotificationLevel
+import dev.gezgin.sample.domain.model.NotificationLevel
 import dev.gezgin.sample.navigation.ProfileGraph
 import kotlinx.coroutines.launch
 

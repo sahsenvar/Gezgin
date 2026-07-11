@@ -17,7 +17,7 @@ import dev.gezgin.core.annotation.BottomSheet
 import dev.gezgin.core.compose.LocalGezginSheetController
 import dev.gezgin.sample.navigation.FilterBottomSheetNavigator
 import dev.gezgin.sample.navigation.HomeGraph.FilterBottomSheetRoute
-import dev.gezgin.sample.navigation.SortOrder
+import dev.gezgin.sample.domain.model.SortOrder
 import kotlinx.coroutines.launch
 
 // Seçim sonrası sıra ZORUNLU: ÖNCE sheetState.hide() (kapanma animasyonu), SONRA backWithResult() —

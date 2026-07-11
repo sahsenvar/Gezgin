@@ -12,6 +12,9 @@ dependencies {
     // The central nav module owns the whole sealed graph tree; features depend on it (spec §3.3).
     // `api` so cross-module features see routes/navigators/topology transitively.
     api(project(":gezgin-core"))
+    // Domain modeller (AvatarChoice/NotificationLevel/SortOrder) — `api` yüzeyiyle route imzalarını
+    // kullanan feature'lara transitively de akar (sahibin isteği: her iki tarafta erişilebilir).
+    api(project(":sample:domain"))
     ksp(project(":gezgin-processor"))
 
     testImplementation(kotlin("test"))

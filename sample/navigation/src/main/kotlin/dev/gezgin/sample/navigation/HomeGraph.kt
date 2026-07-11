@@ -10,10 +10,8 @@ import dev.gezgin.core.annotation.GoTo
 import dev.gezgin.core.annotation.NavGraph
 import dev.gezgin.core.annotation.NoBack
 import dev.gezgin.core.annotation.ReplaceTo
+import dev.gezgin.sample.domain.model.SortOrder
 import kotlinx.serialization.Serializable
-
-@Serializable
-enum class SortOrder { RELEVANCE, PRICE_ASC, PRICE_DESC }
 
 @NavGraph
 @Serializable
