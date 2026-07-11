@@ -345,3 +345,14 @@ public final class dev/gezgin/core/fragment/FragmentBinding {
 	public static final fun gezginBoundRoute (Landroidx/fragment/app/Fragment;)Ldev/gezgin/core/Route;
 }
 
+public final class dev/gezgin/core/fragment/GezginArgsProperty : kotlin/properties/ReadOnlyProperty {
+	public static final field $stable I
+	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public fun getValue (Landroidx/fragment/app/Fragment;Lkotlin/reflect/KProperty;)Ldev/gezgin/core/Route;
+	public synthetic fun getValue (Ljava/lang/Object;Lkotlin/reflect/KProperty;)Ljava/lang/Object;
+}
+
+public abstract interface class dev/gezgin/core/fragment/GezginBindingObserver {
+	public abstract fun onGezginBound ()V
+}
+
