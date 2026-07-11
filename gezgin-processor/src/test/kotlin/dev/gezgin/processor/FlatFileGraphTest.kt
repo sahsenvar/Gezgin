@@ -3,7 +3,6 @@ package dev.gezgin.processor
 import com.squareup.kotlinpoet.ClassName
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
-import dev.gezgin.core.FlowType
 import dev.gezgin.core.GezginTopology
 import dev.gezgin.core.Route
 import dev.gezgin.processor.CompileHarness.compileGezgin
@@ -154,15 +153,15 @@ class FlatFileGraphTest {
             .getMethod("getGezginTopology").invoke(null) as GezginTopology
 
         val credentials = loader.kClassOf("dev.gezgin.flat.SignUpFlow.CredentialsRoute")
+        // M2 — compare the flow chain by public (id, isResultFlow) fields (FlowType is no longer a data class).
         assertEquals(
-            listOf(FlowType("dev.gezgin.flat.SignUpFlow", isResultFlow = true)),
-            topology.flowChain(credentials),
+            listOf("dev.gezgin.flat.SignUpFlow" to true),
+            topology.flowChain(credentials).map { it.id to it.isResultFlow },
         )
         assertEquals(credentials.java, topology.startOf("dev.gezgin.flat.SignUpFlow").java)
 
-        val homeToFlow = topology.edges["dev.gezgin.flat.HomeRoute→dev.gezgin.flat.SignUpFlow"]
-        assertNotNull(homeToFlow, "expected a cross-file HomeRoute→SignUpFlow @GoForResult edge")
-        assertNotNull(homeToFlow.resultSerializer, "the flow-result edge must carry a serializer")
+        // M2 — `edges` is now internal; the cross-file HomeRoute→SignUpFlow result edge + its serializer are
+        // proven by the generated CredentialsNavigator `quitWith(result: SignUpResult)` assertion below.
 
         // Serializers: the polymorphic subclass set spans both files (top-level route + nested flow route).
         val serializers = result.generatedSourceFor("GezginSerializers.kt")!!.readText()

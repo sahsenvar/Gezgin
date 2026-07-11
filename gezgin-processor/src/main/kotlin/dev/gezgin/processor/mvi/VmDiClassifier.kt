@@ -9,14 +9,14 @@ package dev.gezgin.processor.mvi
  * - [emitDefault] — a default `viewModel` resolver is emittable AT ALL (every DI-relevant param is
  *   route/nav-typed AND no role is duplicated — see [VmDiClassifier.classify]).
  */
-data class VmDiClassification(
+internal data class VmDiClassification(
     val vmHasNav: Boolean,
     val vmHasRoute: Boolean,
     val emitDefault: Boolean,
 )
 
 /**
- * Shared DI-param classification for a `@ViewModel`'s primary constructor (§10.1, Faz 5.2). Both
+ * Shared DI-param classification for a `@MviViewModel`'s primary constructor (§10.1, Faz 5.2). Both
  * [dev.gezgin.processor.entry.EntryModelReader] (for the `MV7` nav-presence guardrail) and
  * [dev.gezgin.processor.codegen.MviEntryCodegen] (for the default `viewModel` resolver) must agree on
  * whether a VM's ctor needs `nav`/`route` and whether a default resolver is even emittable — so that
@@ -31,7 +31,7 @@ data class VmDiClassification(
  * that compiled but crashed in Koin's by-TYPE param lookup at first render (and a spurious `MV7`). The
  * route type always resolves (user-defined), so ROUTE is matched by type.
  */
-object VmDiClassifier {
+internal object VmDiClassifier {
 
     enum class Role { ROUTE, NAV, OTHER }
 

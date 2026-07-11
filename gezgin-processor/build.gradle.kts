@@ -9,6 +9,10 @@ group = "dev.gezgin"
 version = "0.1.0-alpha01"
 
 kotlin {
+    // Faz 9.1 — açık API yüzeyi. Processor'ın yayınlanan tek public tipi KSP giriş noktası
+    // `GezginProcessorProvider`'dır (ServiceLoader); geri kalan tüm codegen/model/reader tipleri
+    // `internal` (yalnız bu modül + kendi testleri kullanır → API yüzeyi minimuma iner).
+    explicitApi()
     jvmToolchain(17)
 }
 
@@ -19,7 +23,7 @@ dependencies {
 
     testImplementation(project(":gezgin-core"))
     testImplementation(project(":gezgin-test"))
-    // Faz 5.1 — MVI-mode fixtures (`@ViewModel`/`@ScreenEffect`/`GezginMvi`) compiled by kctfork.
+    // Faz 5.1 — MVI-mode fixtures (`@MviViewModel`/`@ScreenEffect`/`GezginMvi`) compiled by kctfork.
     // Mirrors the `:gezgin-core` test dep; the processor itself has NO compile dep on gezgin-mvi
     // (all its annotations are read as string FQNs), only this test sourceset does.
     testImplementation(project(":gezgin-mvi"))
@@ -45,6 +49,26 @@ publishing {
                     "Gezgin KSP2 symbol processor — tipli navigator'ları ve entry provider'larını " +
                         "üretir; ksp(project(\":gezgin-processor\")) ile uygulanır.",
                 )
+                // Faz 9.1 — Maven Central'ın zorunlu kıldığı POM metadata'sı (url/licenses/developers/scm).
+                // repository{}/signing HÂLÂ YOK: bu blok iskelet kalır, `publish` çalıştırılmaz (yukarıdaki nota bkz.).
+                url.set("https://github.com/sahsenvar/Gezgin")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("sahsenvar")
+                        name.set("Şahan Şenvar")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/sahsenvar/Gezgin")
+                    connection.set("scm:git:https://github.com/sahsenvar/Gezgin.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/Gezgin.git")
+                }
             }
         }
     }

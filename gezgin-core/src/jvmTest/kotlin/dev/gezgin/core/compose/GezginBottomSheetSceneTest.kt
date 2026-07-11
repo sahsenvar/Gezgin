@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 
 /**
  * Task 4.2 — desktop uiTest: `EntryKind.BOTTOM_SHEET` entry'nin el-yazımı [GezginBottomSheetScene]/
- * [GezginBottomSheetSceneStrategy] wiring'i üzerinden overlay olarak render olduğu + [LocalGezginSheetState]
+ * [GezginBottomSheetSceneStrategy] wiring'i üzerinden overlay olarak render olduğu + [LocalGezginSheetController]
  * enjeksiyonu + dismiss→pop kanıtı. Dialog scene testinin (GezginDisplaySceneTest) sheet paraleli.
  */
 class GezginBottomSheetSceneTest {
@@ -65,27 +65,26 @@ class GezginBottomSheetSceneTest {
     }
 
     @Test
-    fun `sheetState LocalGezginSheetState uzerinden content'e enjekte edilir`() = runComposeUiTest {
+    fun `GezginSheetController LocalGezginSheetController uzerinden content'e enjekte edilir`() = runComposeUiTest {
         val nav = RawNavigator(start = Catalog, topology = testTopology)
         setContent {
             GezginDisplay(navigator = nav) {
                 register<Catalog> { BasicText("home-screen") }
                 register<SheetCustom>(kind = EntryKind.BOTTOM_SHEET) {
                     // Local'i oku: sağlanmamışsa staticCompositionLocalOf'un error() default'u fırlar →
-                    // test çöker. Render olabiliyorsa scene sheetState'i content'e enjekte etmiş demektir.
-                    // (Prop akışı — skipPartiallyExpanded — ayrıca adapter-level GezginBottomSheetContractTest'te
-                    // pinli; SheetState.skipPartiallyExpanded material3 1.9.0'da internal, buradan okunamaz.)
-                    val sheetState = LocalGezginSheetState.current
-                    BasicText("sheet-state-${sheetState.currentValue}")
+                    // test çöker. Render olabiliyorsa scene controller'ı content'e enjekte etmiş demektir.
+                    // (M3 — role artık Gezgin-sahipli GezginSheetController; material3 SheetState değil.)
+                    @Suppress("UNUSED_VARIABLE")
+                    val controller = LocalGezginSheetController.current
+                    BasicText("sheet-controller-injected")
                 }
             }
         }
         nav.navigate(SheetCustom("x"))
         waitForIdle()
 
-        // currentValue (Hidden→Expanded) animasyonla değişebilir → substring match; asıl kanıt: Local'den
-        // okuyabildi (yoksa error() fırlar), yani sheetState content'e enjekte edildi.
-        onNodeWithText("sheet-state-", substring = true).assertIsDisplayed()
+        // Asıl kanıt: Local'den okuyabildi (yoksa error() fırlar), yani controller content'e enjekte edildi.
+        onNodeWithText("sheet-controller-injected").assertIsDisplayed()
     }
 
     @Test

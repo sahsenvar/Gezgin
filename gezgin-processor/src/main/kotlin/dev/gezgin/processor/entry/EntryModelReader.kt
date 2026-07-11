@@ -43,7 +43,8 @@ private val CONTRACT_BY_KIND = mapOf(
 private val ALL_KIND_CONTRACT_FQS = CONTRACT_BY_KIND.values.toSet()
 
 // MVI-mode (§10.1) FQ constants — read as strings, no compile dep on gezgin-mvi.
-private const val SHEET_STATE_FQ = "androidx.compose.material3.SheetState"
+// M3 — the @BottomSheet role extra is Gezgin's own GezginSheetController (not material3 SheetState).
+private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetController"
 private const val FLOW_FQ = "kotlinx.coroutines.flow.Flow"
 private const val FUNCTION1_FQ = "kotlin.Function1"
 private const val UNIT_FQ = "kotlin.Unit"
@@ -75,7 +76,7 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  *   [buildCoreEntry]); `SC1`-`SC6` below. A composable with `route`/`nav` only (or neither) stays here.
  * - **MVI-mode** `(state, onIntent[, extras])` — a composable whose params include BOTH a `state` and
  *   an `onIntent` (by name) is MVI-mode (see [buildMviEntry]); it pairs with a same-route,
- *   same-module `@ViewModel` (`MV2`-`MV6`). A composable with ONLY `state` or ONLY `onIntent` is
+ *   same-module `@MviViewModel` (`MV2`-`MV6`). A composable with ONLY `state` or ONLY `onIntent` is
  *   malformed and deliberately NOT special-cased — it falls through to core-mode's `SC3`
  *   unknown-param rejection (a half-MVI shape is a user error, not a third mode).
  *
@@ -87,7 +88,7 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  * **Route resolution (MVI-mode):** an MVI-mode content has NO `route:` param, so it MUST carry an
  * explicit `@Screen(Route::class)` — its route link is the annotation arg itself (the spec §10.1
  * example and the Faz-5.0 `CounterMvi` fixture both do exactly this; the `state` param's TYPE is NOT
- * the route). The matched `@ViewModel(Route::class)` binds the same route → the pairing is explicit,
+ * the route). The matched `@MviViewModel(Route::class)` binds the same route → the pairing is explicit,
  * not inferred by S/I type-match. A sentinel-only MVI content can't derive a route → `SC1`.
  *
  * **Nav wiring (`SC2`, core-mode):** a `nav:` param requires the resolved route to actually earn a
@@ -104,20 +105,20 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  * one package (`SC6`), is rejected.
  *
  * **MVI guardrails (Faz 5.1):**
- * - `MV2` — an MVI-mode content whose route has no `@ViewModel` in THIS module (route-linked, not
+ * - `MV2` — an MVI-mode content whose route has no `@MviViewModel` in THIS module (route-linked, not
  *   state/onIntent-type-matched).
- * - `MV3` — a `@ViewModel` with no matching MVI-mode content in this module (symmetric to `MV2`).
+ * - `MV3` — a `@MviViewModel` with no matching MVI-mode content in this module (symmetric to `MV2`).
  * - `MV5` — a matched content's `state`/`onIntent` types don't satisfy the VM's `GezginMvi<S,I,E>`
  *   contract: `state` ≠ `S` (compared by [TypeName], generics-preserving), or `onIntent` is not a
  *   `(I) -> Unit` function type.
- * - `MV6` — a `@ScreenEffect`'s `Flow<E>` `E` (by [TypeName]) matches no `@ViewModel`'s effect type (`E`).
+ * - `MV6` — a `@ScreenEffect`'s `Flow<E>` `E` (by [TypeName]) matches no `@MviViewModel`'s effect type (`E`).
  * - `MV7` — MVI-mode `SC2` parity: nav is wired (the matched VM's ctor wants `nav`, or the matched
  *   `@ScreenEffect` takes a `nav` param) but the route earns no navigator ([NavigatorCodegen.hasNavigator]
  *   false) — otherwise codegen would emit an unresolved `<x>Navigator()` factory call.
  *
  * **MVI guardrails (Faz 5 final review):**
- * - `MV8` — a `sheetState: SheetState` extra on a non-`BOTTOM_SHEET`-kind MVI content: role-injected
- *   `LocalGezginSheetState.current` `error()`s outside a `@BottomSheet`, so codegen would emit
+ * - `MV8` — a `controller: GezginSheetController` extra on a non-`BOTTOM_SHEET`-kind MVI content: role-injected
+ *   `LocalGezginSheetController.current` `error()`s outside a `@BottomSheet`, so codegen would emit
  *   compile-clean code that crashes at first render. Classified as a role extra ONLY on `BOTTOM_SHEET`.
  * - `MV9` — two `@ScreenEffect` binders resolving to the same effect type `E` (symmetric to `MV4`):
  *   only one wires to any VM, the other silently dangles.
@@ -133,10 +134,10 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  *   (parameterized ctor). Nav3 has no path that writes the route into `SavedStateHandle`, so such a VM
  *   silently reads null route data; rejected with a "use HILT_ASSISTED / parameterless route" message.
  *
- * (`MV1`/`MV4` — `@ViewModel` must implement `GezginMvi`, and no two `@ViewModel`s per route — live in
+ * (`MV1`/`MV4` — `@MviViewModel` must implement `GezginMvi`, and no two `@MviViewModel`s per route — live in
  * [dev.gezgin.processor.mvi.ViewModelModelReader], whose output [vmModels] this reader consumes.)
  */
-class EntryModelReader(
+internal class EntryModelReader(
     private val resolver: Resolver,
     private val logger: KSPLogger,
     private val model: GraphModel,
@@ -150,7 +151,7 @@ class EntryModelReader(
     private var ok = true
     private val seenRouteFqs = mutableMapOf<String, String>() // routeFq -> first function's simple name
     private val seenProvideNames = mutableMapOf<Pair<String, String>, String>() // (package, x) -> first function's simple name
-    private val matchedVmRoutes = mutableSetOf<String>() // routes whose @ViewModel got a matching content (for MV3)
+    private val matchedVmRoutes = mutableSetOf<String>() // routes whose @MviViewModel got a matching content (for MV3)
 
     fun read(): Pair<List<EntryFunctionModel>, Boolean> {
         // Scan @ScreenEffect binders once (also runs MV6); MVI entries wire them by effect type.
@@ -163,12 +164,12 @@ class EntryModelReader(
                 .toList()
         }
 
-        // MV3 — every @ViewModel must have a matching content in this module (§10.1 same-module triple).
+        // MV3 — every @MviViewModel must have a matching content in this module (§10.1 same-module triple).
         vmModels.forEach { vm ->
             if (vm.routeFq !in matchedVmRoutes) {
                 error(
                     "MV3",
-                    "@ViewModel ${vm.vmSimpleName}(${vm.routeFq.substringAfterLast('.')}) exists, but this module " +
+                    "@MviViewModel ${vm.vmSimpleName}(${vm.routeFq.substringAfterLast('.')}) exists, but this module " +
                         "has no matching @Screen(state, onIntent) content (§10.1 same-module triple)",
                 )
             }
@@ -400,14 +401,14 @@ class EntryModelReader(
         // SC8 (kind↔contract) + SC7 (@NoBack × modal) — shared with core-mode, statically decidable.
         if (!checkKindContractAndNoBack(fnName, routeDecl!!, kind)) return null
 
-        // MV2 — the content's route must have a @ViewModel in THIS module (§10.1 same-module triple).
+        // MV2 — the content's route must have a @MviViewModel in THIS module (§10.1 same-module triple).
         val vm = vmByRouteFq[routeFq]
         if (vm == null) {
             error(
                 "MV2",
-                "$fnName: MVI-mode content has no matching @ViewModel for route ${routeFq.substringAfterLast('.')} " +
+                "$fnName: MVI-mode content has no matching @MviViewModel for route ${routeFq.substringAfterLast('.')} " +
                     "in this module; content is linked to the VM by ROUTE, not by state/onIntent types. " +
-                    "Add @ViewModel(${routeFq.substringAfterLast('.')}::class) for the same route (§10.1)",
+                    "Add @MviViewModel(${routeFq.substringAfterLast('.')}::class) for the same route (§10.1)",
             )
             return null
         }
@@ -426,7 +427,7 @@ class EntryModelReader(
             error(
                 "MV12",
                 "$fnName: route ${routeFq.substringAfterLast('.')} has parameters (carries route data), but " +
-                    "@ViewModel ${vm.vmSimpleName} is plain @HiltViewModel (no assistedFactory). In Nav3, a plain-Hilt " +
+                    "@MviViewModel ${vm.vmSimpleName} is plain @HiltViewModel (no assistedFactory). In Nav3, a plain-Hilt " +
                     "VM cannot access route arguments: nothing writes the route into SavedStateHandle, so " +
                     "`SavedStateHandle.get(...)` always returns null. For a screen with route data, use " +
                     "@HiltViewModel(assistedFactory = …) (HILT_ASSISTED), or make the route parameterless (§10.1)",
@@ -462,11 +463,11 @@ class EntryModelReader(
             return null
         }
 
-        // Problem 2 — record params beyond {state, onIntent}. sheetState (by TYPE) is role-provided
-        // (Local-injected via Faz-4's LocalGezginSheetState); everything else becomes a 5.2 resolver
-        // param. Deliberately NOT SC3-rejected here — that hard-reject is core-mode only (§10.1) — but
-        // MV10 (reserved name) and MV8 (sheetState off a @BottomSheet) ARE rejected: both would otherwise
-        // reach codegen and emit compile-clean-but-broken/crashing code, against the compile-safe philosophy.
+        // Problem 2 — record params beyond {state, onIntent}. A GezginSheetController (by TYPE) is
+        // role-provided (Local-injected via LocalGezginSheetController); everything else becomes a 5.2
+        // resolver param. Deliberately NOT SC3-rejected here — that hard-reject is core-mode only (§10.1) —
+        // but MV10 (reserved name) and MV8 (controller off a @BottomSheet) ARE rejected: both would
+        // otherwise reach codegen and emit compile-clean-but-broken/crashing code (compile-safe philosophy).
         val roleExtras = mutableListOf<MviExtraParam>()
         val resolverExtras = mutableListOf<MviExtraParam>()
         var extrasInvalid = false
@@ -486,19 +487,19 @@ class EntryModelReader(
             }
             val t = p.type.resolve()
             val extra = MviExtraParam(pName, t.fqOf(), t.toTypeName())
-            if (t.declaration.qualifiedName?.asString() == SHEET_STATE_FQ) {
-                // MV8 — sheetState is a @BottomSheet-ONLY role extra (Local-injected via Faz-4's
-                // LocalGezginSheetState, whose default `error()`s outside a @BottomSheet content). On a
+            if (t.declaration.qualifiedName?.asString() == SHEET_CONTROLLER_FQ) {
+                // MV8 — a GezginSheetController is a @BottomSheet-ONLY role extra (Local-injected via
+                // LocalGezginSheetController, whose default `error()`s outside a @BottomSheet content). On a
                 // SCREEN/DIALOG/FULLSCREEN_MODAL kind, codegen would still emit
-                // `sheetState = LocalGezginSheetState.current` → compiles clean, crashes at first render.
+                // `<param> = LocalGezginSheetController.current` → compiles clean, crashes at first render.
                 // Classify as a valid role extra ONLY on BOTTOM_SHEET; else reject.
                 if (kind == EntryKindModel.BOTTOM_SHEET) {
                     roleExtras += extra
                 } else {
                     error(
                         "MV8",
-                        "$fnName: sheetState parameter is only valid in @BottomSheet content (role-extra, " +
-                            "provided from LocalGezginSheetState); this content is $kind, not @BottomSheet",
+                        "$fnName: GezginSheetController parameter is only valid in @BottomSheet content (role-extra, " +
+                            "provided from LocalGezginSheetController); this content is $kind, not @BottomSheet",
                     )
                     extrasInvalid = true
                 }
@@ -619,7 +620,7 @@ class EntryModelReader(
 
     /**
      * Reads every `@ScreenEffect` composable and extracts its `Flow<E>` `E` type. Also runs `MV6` (an
-     * effect binder whose `E` matches no `@ViewModel`'s effect type — compared by [TypeName], NOT
+     * effect binder whose `E` matches no `@MviViewModel`'s effect type — compared by [TypeName], NOT
      * flattened FQ, so a generic-arg mismatch is caught here rather than downstream — or that has no
      * `Flow<E>` param at all → dangling/mis-typed) and `MV9` (two binders resolving to the SAME `E`,
      * symmetric to `MV4`: only one could ever wire to a given VM, the other silently dangles).
@@ -667,7 +668,7 @@ class EntryModelReader(
                     effectTypeName !in vmEffectTypeNames -> error(
                         "MV6",
                         "@ScreenEffect $simpleName's Flow<${effectTypeFq?.substringAfterLast('.')}> type does not " +
-                            "match any @ViewModel GezginMvi effect (E) type",
+                            "match any @MviViewModel GezginMvi effect (E) type",
                     )
                 }
 
@@ -685,7 +686,7 @@ class EntryModelReader(
 
         // MV9 — two @ScreenEffect binders that resolve to the SAME effect type E both pass MV6, but only
         // ONE can wire to any given VM (buildMviEntry's firstOrNull, over KSP's non-guaranteed traversal
-        // order) — the other silently dangles with no diagnostic. Symmetric to MV4 (two @ViewModel per
+        // order) — the other silently dangles with no diagnostic. Symmetric to MV4 (two @MviViewModel per
         // route): reject the ambiguity up front rather than let a binder be silently dropped.
         effectFuns
             .groupBy { it.effectTypeName }

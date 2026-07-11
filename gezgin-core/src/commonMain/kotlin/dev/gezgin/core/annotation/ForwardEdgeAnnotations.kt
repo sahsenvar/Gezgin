@@ -6,34 +6,34 @@ import kotlin.annotation.Repeatable
 import kotlin.reflect.KClass
 
 /**
- * İleri navigasyon kenarı (§3.1/§4.1): kaynak graph interface'inden her `target`'a push. Codegen her
- * hedef için tipli `goToX()` üretir; `singleTop=true` (varsayılan) aynı-değerli top'u dedup eder,
- * `name` aynı hedefe giden birden çok kenarı ayırır (`@Repeatable`).
+ * Forward navigation edge (§3.1/§4.1): push to each `target` from the source graph interface. Codegen
+ * emits a typed `goToX()` per target; `singleTop = true` (default) dedups an equal-valued top, and `name`
+ * distinguishes multiple edges to the same target (`@Repeatable`).
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class GoTo(vararg val target: KClass<out Route>, val singleTop: Boolean = true, val name: String = "")
+public annotation class GoTo(vararg val target: KClass<out Route>, val singleTop: Boolean = true, val name: String = "")
 
 /**
- * Replace kenarı (§4.1): mevcut hedefi `target` ile değiştirir — `clearUpTo` (varsayılan `Self`) + `inclusive`
- * ile ne kadarının temizleneceği belirlenir; auth-success/onboarding gibi geri-dönülmez geçişler için.
- * Codegen tipli `replaceToX()` üretir.
+ * Replace edge (§4.1): replaces the current destination with `target` — `clearUpTo` (default `Self`) +
+ * `inclusive` control how much is cleared; for irreversible transitions such as auth-success/onboarding.
+ * Codegen emits a typed `replaceToX()`.
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class ReplaceTo(val target: KClass<out Route>, val clearUpTo: KClass<out Route> = Self::class, val inclusive: Boolean = true, val name: String = "")
+public annotation class ReplaceTo(val target: KClass<out Route>, val clearUpTo: KClass<out Route> = Self::class, val inclusive: Boolean = true, val name: String = "")
 
 /**
- * Sonuç-döndüren ileri kenar (§6): `target` bir `ResultRoute<T>` ya da `ResultFlow<T>` olmalı. Codegen
- * PD-güvenli üçlüyü üretir — `launchX()` (tetik) + `xResults` (stream) + suspend `goToXForResult()` (sugar).
+ * Result-returning forward edge (§6): `target` must be a `ResultRoute<T>` or `ResultFlow<T>`. Codegen emits
+ * the PD-safe triple — `launchX()` (trigger) + `xResults` (stream) + suspend `goToXForResult()` (sugar).
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class GoForResult(val target: KClass<out Route>, val name: String = "")
+public annotation class GoForResult(val target: KClass<out Route>, val name: String = "")
 
 /**
- * Flow-çıkış + ileri kenar (§8.1): mevcut flow'u Canceled ile kapatıp `target`'a gider. Codegen tipli
- * `quitAndGoToX()` üretir.
+ * Flow-exit + forward edge (§8.1): tears the current flow down with Canceled and navigates to `target`.
+ * Codegen emits a typed `quitAndGoToX()`.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class QuitAndGoTo(val target: KClass<out Route>)
+public annotation class QuitAndGoTo(val target: KClass<out Route>)

@@ -73,10 +73,10 @@ supertype'tan gelir (`: AuthGraph` / `: ProfileGraph`, aynı paket). `AvatarFlow
 | Kind'lar `@Screen` / `@Dialog`×2 / `@BottomSheet`×1 / `@FullscreenModal`×1 | gerçek overlay render — bkz. aşağıdaki "Faz 4 — gerçek modal overlay" | tüm feature dosyaları |
 | `DialogContract` — SABİT desen | `ForgotPasswordDialogRoute.dismissOnClickOutside = false` | `AuthGraph.kt`, `AuthScreens.kt` |
 | `DialogContract` — KOŞULLU desen | `EditNameDialogRoute.dismissOnClickOutside` ← `current.isNotBlank()` | `ProfileGraph.kt`, `ProfileScreens.kt` |
-| `BottomSheetContract` + `LocalGezginSheetState` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `sheetState.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `HomeScreens.kt` |
+| `BottomSheetContract` + `LocalGezginSheetController` + hide-then-result | `FilterBottomSheetRoute.skipPartiallyExpanded = true`; `FilterSheetScreen` `controller.hide()` → `backWithResult(...)` | `HomeGraph.kt`, `HomeScreens.kt` |
 | **`@FullscreenModal` + `FullscreenModalContract`** (tam-ekran modal, `usePlatformDefaultWidth` YOK → `DialogContract`'tan AYRI render kontratı) | `ItemImageViewerRoute.dismissOnClickOutside = false` (dış-tık kapatmaz; `dismissOnBackPress` varsayılan `true` → geri/gesture kapatır); giriş `@GoTo(ItemImageViewerRoute)` `ItemDetailScreenRoute`'tan | `HomeGraph.kt`, `HomeScreens.kt` |
 | Transition cascade (3 seviye) | app `navTransitions{forward{...}backward{...}}` → `ProfileGraph` arayüz override (`fadeIn/fadeOut`) → `SettingsScreenRoute` getter override (`slideIn/slideOut`) | `MainActivity.kt`, `ProfileGraph.kt` |
-| **MVI-mode add-on** (`@ViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) | `SettingsScreenRoute` | `SettingsMvi.kt` — bkz. aşağıdaki "Faz 5 — MVI-mode" |
+| **MVI-mode add-on** (`@MviViewModel`/stateless `@Screen`/`@ScreenEffect`, androidx-fallback resolver) | `SettingsScreenRoute` | `SettingsMvi.kt` — bkz. aşağıdaki "Faz 5 — MVI-mode" |
 | **MVI Problem 2** (rol-DIŞI content param → ZORUNLU `@Composable () -> T` resolver param) | `SettingsContent(..., buildInfo: BuildInfo)` → `provideSettingsEntry(buildInfo = { BuildInfo("1.0.0") })` | `SettingsMvi.kt`, `ProfileGraphEntries.kt` |
 | **`@FragmentScreen`** (brownfield Fragment interop, View-tabanlı) | `HelpScreenRoute` | `HelpFragment.kt` + `fragment_help.xml` — bkz. aşağıdaki "Faz 6 — Fragment interop" |
 | Events observability | `NavLogger` (`navigator.events.collect { Log.d(...) }`) | `MainActivity.kt` |
@@ -123,8 +123,8 @@ kütüphane kullanıcısına REFERANS teşkil edecek şekilde bu API'leri gerçe
 - **`FilterBottomSheetRoute`** (`HomeGraph.kt`) — gerçek `ModalBottomSheet` overlay'i (el-yazımı
   `GezginBottomSheetSceneStrategy`, arkadaki `DashboardScreenRoute` görünür kalır).
   `BottomSheetContract.skipPartiallyExpanded = true` (kısa liste, ara durak gereksiz).
-  `FilterSheetScreen` (`HomeScreens.kt`) `LocalGezginSheetState.current` ile sheet'in `SheetState`'ini
-  okur; bir sıralama seçildiğinde spec §7 deseni izlenir: ÖNCE `sheetState.hide()` (kapanma
+  `FilterSheetScreen` (`HomeScreens.kt`) `LocalGezginSheetController.current` ile sheet'in `GezginSheetController`'ını
+  okur; bir sıralama seçildiğinde spec §7 deseni izlenir: ÖNCE `controller.hide()` (kapanma
   animasyonu tamamlanır), SONRA `nav.backWithResult(candidate)` (programatik pop + sonuç) — düz
   `backWithResult` çağrısı sheet'i animasyonsuz kaybettirirdi (bkz. `GezginBottomSheetScene`
   KDoc'undaki "kalıntı risk" notu). Kullanıcı swipe-down/scrim-tap/geri-tuşu ile kapatırsa
@@ -152,7 +152,7 @@ kütüphane kullanıcısına REFERANS teşkil edecek şekilde bu API'leri gerçe
 ## Faz 5 — MVI-mode (opsiyonel `:gezgin-mvi` add-on)
 
 Faz 5, kütüphaneye **opsiyonel** bir MVI binder'ı ekledi (`:gezgin-mvi` modülü: `GezginMvi<S,I,E>`
-sözleşmesi, `@ViewModel`/`@ScreenEffect` annotation'ları) + tam KSP codegen'i (`gezgin-processor`'ın
+sözleşmesi, `@MviViewModel`/`@ScreenEffect` annotation'ları) + tam KSP codegen'i (`gezgin-processor`'ın
 `MviEntryCodegen`'i: Hilt/Koin/androidx-fallback için DI-detection default resolver'ı). O ana kadar
 MVI-mode yalnız kctfork'un **plugin'siz golden-text** derleme testleriyle kanıtlanmıştı — bunlar gerçek
 bir Compose/Android runtime'ını **çalıştıramaz** (kctfork backend'i gerçek composable çağrı bölgelerinde
@@ -171,7 +171,7 @@ yeni bir ekran gerekmedi.
 
 Üçlü (`SettingsMvi.kt`, hepsi aynı modülde, aynı route'a eşlenir):
 
-- **`@ViewModel(SettingsScreenRoute) class SettingsViewModel(nav: SettingsNavigator) : ViewModel(),
+- **`@MviViewModel(SettingsScreenRoute) class SettingsViewModel(nav: SettingsNavigator) : ViewModel(),
   GezginMvi<SettingsState, SettingsIntent, SettingsEffect>`** — gerçek androidx `ViewModel`.
   `onIntent(ToggleTheme)` state'teki `darkTheme`'i çevirir + bir efekt emit eder; `onIntent(Logout)`
   enjekte edilmiş `nav.logout()`'u **doğrudan** çağırır (spec §10 A deseni: "VM-driven, önerilen" —
@@ -183,8 +183,8 @@ yeni bir ekran gerekmedi.
 - stateless **`@Screen(SettingsScreenRoute) fun SettingsContent(state, onIntent)`** — eski
   `fun SettingsScreen(route, nav)`'in yerine; UI yalnız `state` okur + `onIntent` tetikler.
 - **`@ScreenEffect fun SettingsEffects(effects: Flow<SettingsEffect>)`** — `gezgin-mvi`'nin
-  `ObserveAsEvents`'iyle tek-seferlik efekt (bir `Toast` + `Log.d`); `ToggleTheme`'de bir kez tetiklenir.
-  Bu, `@ScreenEffect`/`ObserveAsEvents`'in canlı Compose/Android runtime'da GERÇEKTEN çalıştığının ilk
+  `ObserveEffects`'iyle tek-seferlik efekt (bir `Toast` + `Log.d`); `ToggleTheme`'de bir kez tetiklenir.
+  Bu, `@ScreenEffect`/`ObserveEffects`'in canlı Compose/Android runtime'da GERÇEKTEN çalıştığının ilk
   kctfork-dışı kanıtı.
 
 **androidx-fallback resolver (gerçek Hilt/Koin bağımlılığı EKLENMEDİ).** `SettingsViewModel`'in tek ctor
@@ -212,7 +212,7 @@ public fun GezginEntryScope.provideSettingsEntry(
 
 **Problem 2 (Faz 7.2 / GAP-2) — rol-DIŞI content param → EK resolver param (§10.1).** MVI-mode bir
 `@Screen`/`@Dialog`/`@BottomSheet` content'i rol-bazlı sağlananların (`state` / `onIntent` /
-`sheetState`) DIŞINDA bir param alırsa, `MviEntryCodegen` onu `provideXEntry`'ye **kullanıcı-sağlamalı,
+`controller`) DIŞINDA bir param alırsa, `MviEntryCodegen` onu `provideXEntry`'ye **kullanıcı-sağlamalı,
 default'suz (ZORUNLU)** bir `@Composable () -> T` resolver param'ına dönüştürür ve content'e NAMED arg
 olarak geçer. Burada `SettingsContent(..., buildInfo: BuildInfo)` (`SettingsMvi.kt`) → üretilen
 `provideSettingsEntry`'ye `buildInfo: @Composable () -> BuildInfo` eklenir → kurulumda AÇIKÇA verilmek

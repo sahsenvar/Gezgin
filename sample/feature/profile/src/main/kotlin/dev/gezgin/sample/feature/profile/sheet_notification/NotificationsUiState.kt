@@ -1,4 +1,4 @@
-package dev.gezgin.sample.feature.profile.notification
+package dev.gezgin.sample.feature.profile.sheet_notification
 
 import dev.gezgin.sample.navigation.NotificationLevel
 

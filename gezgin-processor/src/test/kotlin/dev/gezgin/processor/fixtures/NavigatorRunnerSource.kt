@@ -9,6 +9,8 @@ package dev.gezgin.processor.fixtures
  * without needing Continuation-based reflection for a suspend function.
  */
 val RUNNER_SOURCE = """
+    @file:OptIn(dev.gezgin.core.GezginInternalApi::class)
+
     package dev.gezgin.shop
 
     import dev.gezgin.core.RawNavigator
@@ -53,6 +55,8 @@ val RUNNER_SOURCE = """
  * must fail to COMPILE (unresolved reference), not merely fail at runtime.
  */
 val UNDECLARED_EDGE_RUNNER_SOURCE = """
+    @file:OptIn(dev.gezgin.core.GezginInternalApi::class)
+
     package dev.gezgin.shop
 
     import dev.gezgin.core.RawNavigator

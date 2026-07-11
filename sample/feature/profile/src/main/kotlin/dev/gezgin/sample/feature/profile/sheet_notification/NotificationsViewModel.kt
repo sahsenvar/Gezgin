@@ -1,8 +1,8 @@
-package dev.gezgin.sample.feature.profile.notification
+package dev.gezgin.sample.feature.profile.sheet_notification
 
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.annotation.ViewModel
+import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.sample.navigation.NotificationsSheetNavigator
 import dev.gezgin.sample.navigation.ProfileGraph
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-@ViewModel(ProfileGraph.NotificationsSheetRoute::class)
+@MviViewModel(ProfileGraph.NotificationsSheetRoute::class)
 class NotificationsViewModel(
     route: ProfileGraph.NotificationsSheetRoute,
     private val nav: NotificationsSheetNavigator,

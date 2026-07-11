@@ -4,12 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import dev.gezgin.core.compose.GezginDisplay
-import dev.gezgin.core.compose.rememberNavigator
 import dev.gezgin.sample.shopr.nav.HomeGraph.Feed
-import dev.gezgin.sample.shopr.nav.gezginSerializersModule
-import dev.gezgin.sample.shopr.nav.gezginTopology
+import dev.gezgin.sample.shopr.nav.rememberGezginNavigator
 import dev.gezgin.sample.shopr.ui.provideCartEntry
 import dev.gezgin.sample.shopr.ui.provideCatalogEntry
 import dev.gezgin.sample.shopr.ui.provideFeedEntry
@@ -27,14 +24,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ShoprApp(onRootBack: () -> Unit) {
-    // json TEK ve sabit tutulmalı — PD-restore Saver'ı encode/decode simetrisi için aynı instance'a bağımlı.
-    val json = remember { Json { serializersModule = gezginSerializersModule } }
-    val navigator = rememberNavigator(
-        start = Feed,
-        topology = gezginTopology,
-        json = json,
-        onRootBack = onRootBack,
-    )
+    // M1 — generated convenience: bundles gezginTopology + a stable Json(gezginSerializersModule),
+    // so the PD-restore Json-stability contract is handled by generated code, not a hand-written comment.
+    val navigator = rememberGezginNavigator(start = Feed, onRootBack = onRootBack)
     GezginDisplay(navigator = navigator) {
         provideFeedEntry()
         provideCatalogEntry()

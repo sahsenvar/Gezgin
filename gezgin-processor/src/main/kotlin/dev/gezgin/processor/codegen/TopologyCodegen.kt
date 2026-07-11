@@ -3,23 +3,37 @@ package dev.gezgin.processor.codegen
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.MemberName
+import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.UNIT
 import dev.gezgin.processor.model.EdgeKind
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
 
 private const val CORE_PKG = "dev.gezgin.core"
+private const val COMPOSE_PKG = "dev.gezgin.core.compose"
+private const val COMPOSE_RUNTIME_PKG = "androidx.compose.runtime"
+private const val JSON_PKG = "kotlinx.serialization.json"
 private const val SERIALIZATION_MODULES_PKG = "kotlinx.serialization.modules"
 
 private val ROUTE = ClassName(CORE_PKG, "Route")
+private val RAW_NAVIGATOR = ClassName(CORE_PKG, "RawNavigator")
 private val GEZGIN_TOPOLOGY = ClassName(CORE_PKG, "GezginTopology")
 private val FLOW_TYPE = ClassName(CORE_PKG, "FlowType")
 private val EDGE_SPEC = ClassName(CORE_PKG, "EdgeSpec")
 private val SERIALIZERS_MODULE = ClassName(SERIALIZATION_MODULES_PKG, "SerializersModule")
 private val POLYMORPHIC = MemberName(SERIALIZATION_MODULES_PKG, "polymorphic")
 private val SUBCLASS = MemberName(SERIALIZATION_MODULES_PKG, "subclass")
+
+// M1 — convenience `rememberGezginNavigator` + stable `gezginJson` references.
+private val COMPOSABLE = ClassName(COMPOSE_RUNTIME_PKG, "Composable")
+private val JSON = ClassName(JSON_PKG, "Json")
+private val JSON_FUN = MemberName(JSON_PKG, "Json")
+private val REMEMBER_NAVIGATOR = MemberName(COMPOSE_PKG, "rememberNavigator")
 
 /**
  * The reified `kotlinx.serialization.serializer<T>()` lookup — used instead of `T.serializer()` so a
@@ -48,10 +62,11 @@ private val SERIALIZER = MemberName("kotlinx.serialization", "serializer")
  * uppercase = simple-name segment" convention (the same convention this codebase's fully-qualified
  * names already follow).
  */
-object TopologyCodegen {
+internal object TopologyCodegen {
 
     private const val GENERATED_TOPOLOGY_FILE = "GezginGenerated"
     private const val GENERATED_SERIALIZERS_FILE = "GezginSerializers"
+    private const val GENERATED_REMEMBER_FILE = "GezginRememberNavigator"
 
     /** Every distinct package a graph/route in [model] declares — the `[PKG]` (M2) equality check's input. */
     fun declaredPackages(model: GraphModel): List<String> =
@@ -88,7 +103,47 @@ object TopologyCodegen {
             .build()
 
         return FileSpec.builder(packageName, GENERATED_TOPOLOGY_FILE)
+            // K4 — the topology initializer calls the @GezginInternalApi-gated GezginTopology/FlowType/
+            // EdgeSpec constructors, so the whole generated file opts in.
+            .optInGezginInternalApi()
             .addProperty(property)
+            .build()
+    }
+
+    /**
+     * M1 — `GezginRememberNavigator.kt`: a per-graph-package convenience that bundles the generated
+     * `gezginTopology` + a STABLE `Json(gezginSerializersModule)` so app call sites stop hand-assembling
+     * `rememberNavigator(start, gezginTopology, remember { Json { … } }, …)` (and stop leaning on a comment
+     * to keep the `Json` instance stable across PD-restore). Emitted only alongside `GezginSerializers.kt`
+     * (same `emitSerializers` gate) since it references `gezginSerializersModule`.
+     *
+     * `gezginJson` is a top-level `val` (one instance per process — stronger than a `remember`d one and
+     * exactly the encode/decode symmetry the PD-restore Saver needs), which also keeps the emitted file free
+     * of inline `@Composable` calls that the compose-plugin-less test compiler can't inline.
+     */
+    fun generateRememberNavigator(packageName: String): FileSpec {
+        val jsonProp = PropertySpec.builder("gezginJson", JSON)
+            .initializer("%M { serializersModule = gezginSerializersModule }", JSON_FUN)
+            .build()
+
+        val navigator = FunSpec.builder("rememberGezginNavigator")
+            .addAnnotation(COMPOSABLE)
+            .addParameter("start", ROUTE)
+            .addParameter(
+                ParameterSpec.builder("onRootBack", LambdaTypeName.get(returnType = UNIT))
+                    .defaultValue("{ }")
+                    .build(),
+            )
+            .returns(RAW_NAVIGATOR)
+            .addStatement(
+                "return %M(start = start, topology = gezginTopology, json = gezginJson, onRootBack = onRootBack)",
+                REMEMBER_NAVIGATOR,
+            )
+            .build()
+
+        return FileSpec.builder(packageName, GENERATED_REMEMBER_FILE)
+            .addProperty(jsonProp)
+            .addFunction(navigator)
             .build()
     }
 

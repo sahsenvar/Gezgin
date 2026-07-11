@@ -1,19 +1,19 @@
 package dev.gezgin.core.annotation
 
 /**
- * Şeffaf graph konteyneri (§3/§8.1): route'ları gruplayan bir sealed interface'i işaretler; üyeleri sıradan
- * stack entry'leridir (flow-unit sınırı YOK). Her route tam olarak bir graph'a aittir.
+ * Transparent graph container (§3/§8.1): marks a sealed interface that groups routes; its members are
+ * ordinary stack entries (NO flow-unit boundary). Every route belongs to exactly one graph.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class NavGraph
+public annotation class NavGraph
 
 /**
- * Opak flow konteyneri (§8.1): üyeleri tek bir flow-unit oluşturan bir sealed interface'i işaretler;
- * `quit`/`quitWith` birimin TAMAMINI yıkar. `ResultFlow<T>` ile birleşince sonuç-sahipliği taşır.
+ * Opaque flow container (§8.1): marks a sealed interface whose members form a single flow-unit;
+ * `quit`/`quitWith` tears the WHOLE unit down. Combined with `ResultFlow<T>` it carries result ownership.
  */
 @Target(AnnotationTarget.CLASS)
-annotation class FlowGraph
+public annotation class FlowGraph
 
-/** Bir `@NavGraph`/`@FlowGraph` içindeki başlangıç hedefini işaretler (§8.1) — konteyner'a girişte ilk açılan route. */
+/** Marks the start destination inside a `@NavGraph`/`@FlowGraph` (§8.1) — the first route opened on entering the container. */
 @Target(AnnotationTarget.CLASS)
-annotation class StartDestination
+public annotation class StartDestination

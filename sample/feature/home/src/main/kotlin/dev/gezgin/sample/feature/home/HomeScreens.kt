@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package dev.gezgin.sample.feature.home
 
 import androidx.compose.foundation.background
@@ -10,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,7 +28,7 @@ import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.BottomSheet
 import dev.gezgin.core.annotation.FullscreenModal
 import dev.gezgin.core.annotation.Screen
-import dev.gezgin.core.compose.LocalGezginSheetState
+import dev.gezgin.core.compose.LocalGezginSheetController
 import dev.gezgin.sample.navigation.DashboardNavigator
 import dev.gezgin.sample.navigation.FilterBottomSheetNavigator
 import dev.gezgin.sample.navigation.HomeGraph.DashboardScreenRoute
@@ -105,7 +102,7 @@ fun ItemDetailScreen(route: ItemDetailScreenRoute, nav: ItemDetailNavigator) {
 @BottomSheet
 @Composable
 fun FilterSheetScreen(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavigator) {
-    val sheetState = LocalGezginSheetState.current
+    val controller = LocalGezginSheetController.current
     val scope = rememberCoroutineScope()
     // hide() suspend animasyon → hızlı çift tık iki backWithResult dispatch edip arkadaki Dashboard'ı da
     // pop'lar; dispatched bayrağı onClick'te SENKRON (launch'tan önce) set edilir → yalnız ilk tık iş yapar.
@@ -118,7 +115,7 @@ fun FilterSheetScreen(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavig
                     if (dispatched) return@onClick
                     dispatched = true
                     scope.launch {
-                        sheetState.hide()
+                        controller.hide()
                         nav.backWithResult(candidate)
                     }
                 },

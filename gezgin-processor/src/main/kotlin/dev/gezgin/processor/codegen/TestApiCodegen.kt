@@ -24,13 +24,15 @@ private val TEST_NAVIGATOR = ClassName(TEST_PKG, "GezginTestNavigator")
  * opt-OUT precedent) — production modules never depend on `:gezgin-test`; only a test source set's
  * KSP configuration turns this on.
  */
-object TestApiCodegen {
+internal object TestApiCodegen {
 
     fun generate(model: GraphModel, packageName: String): FileSpec? {
         val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)
         val funs = model.routes.mapNotNull { route -> fromFun(route, graphsByFq, packageName) }
         if (funs.isEmpty()) return null
         return FileSpec.builder(packageName, "GezginTestAccessors")
+            // K4 — the generated fromX() accessors read GezginTestNavigator.raw, gated by @GezginInternalApi.
+            .optInGezginInternalApi()
             .addFunctions(funs)
             .build()
     }

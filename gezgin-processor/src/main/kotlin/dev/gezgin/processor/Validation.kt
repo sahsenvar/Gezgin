@@ -20,7 +20,7 @@ import dev.gezgin.processor.model.RouteModel
  * [validate] never throws — it logs every violation it finds in one pass (rather than stopping at
  * the first) and returns whether the model was clean, purely for caller-side bookkeeping.
  */
-class GezginValidator(
+internal class GezginValidator(
     private val model: GraphModel,
     private val logger: KSPLogger,
 ) {

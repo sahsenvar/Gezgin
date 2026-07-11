@@ -2,6 +2,7 @@ package dev.gezgin.processor
 
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.NavResult
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
@@ -28,7 +29,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
  * other tests pin the positive one (the generated API compiles AND behaves like the real
  * [RawNavigator] it wraps).
  */
-@OptIn(ExperimentalCompilerApi::class)
+@OptIn(ExperimentalCompilerApi::class, GezginInternalApi::class)
 class NavigatorCodegenTest {
 
     /** Kotlin `data object`s expose their singleton via a static `INSTANCE` field. */

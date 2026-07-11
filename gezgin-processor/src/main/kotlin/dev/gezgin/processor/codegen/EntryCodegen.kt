@@ -36,11 +36,14 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
  * (rather than off one shared nav-topology package) is what makes the factory import resolve in a
  * cross-module feature, whose own model has no graphs and hence no target package of its own (§3.3).
  */
-object EntryCodegen {
+internal object EntryCodegen {
 
     fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
         entries.groupBy { it.packageName }.map { (packageName, group) ->
             FileSpec.builder(packageName, "GezginEntries")
+                // K4 — a nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator/
+                // LocalGezginEntryId; opt in the file only when at least one entry wires nav.
+                .apply { if (group.any { it.hasNavParam }) optInGezginInternalApi() }
                 .apply { group.forEach { addFunction(provideEntryFun(it)) } }
                 .build()
         }

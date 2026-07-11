@@ -146,8 +146,10 @@ class EntryCodegenTest {
         assertTrue(entries != null, "feature module emitted no GezginEntries.kt: ${feature.messages}")
         val text = entries!!.readText()
 
+        // K4 — a nav-wired entry file opts in to the generated-code gate.
+        assertTrue(text.startsWith("@file:OptIn(GezginInternalApi::class)"), text)
         // Entry file lives in the FEATURE package…
-        assertTrue(text.startsWith("package dev.gezgin.featureui"), text)
+        assertTrue(text.contains("package dev.gezgin.featureui"), text)
         // …but (b) the navigator FACTORY is imported/qualified from the ROUTE's (nav-module) package,
         // not the feature's — cross-module resolution via EntryFunctionModel.routePackageName.
         assertTrue(text.contains("import dev.gezgin.shop.feedNavigator"), text)

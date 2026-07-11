@@ -1,5 +1,6 @@
 package dev.gezgin.test
 
+import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.NavResult
 import dev.gezgin.test.fixtures.Cart
 import dev.gezgin.test.fixtures.Catalog
@@ -16,7 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, GezginInternalApi::class)
 class GezginTestNavigatorTest {
 
     // §13 by-example — brief verbatim.
@@ -32,8 +33,33 @@ class GezginTestNavigatorTest {
         val nav = GezginTestNavigator(start = Catalog, topology = testTopology)
         val r = async { nav.raw.navigateForResult<OrderId>("Catalog→CheckoutFlow", Cart) }
         runCurrent()
-        nav.deliverResult(OrderId("o1"))
+        nav.backWithResult(OrderId("o1"))
         assertEquals(NavResult.Value(OrderId("o1")), r.await())
+    }
+
+    // M5 — the typed quit/quitWith/backTo delegates mirror the runtime ops without dropping to `raw`.
+    @Test fun quitDelegateUnwindsFlow() {
+        val nav = GezginTestNavigator(start = Catalog, topology = testTopology)
+        nav.navigate(Cart)
+        nav.navigate(Payment)
+        nav.quit()
+        assertEquals(listOf(Catalog), nav.backStack)
+    }
+
+    @Test fun backToDelegatePopsToTarget() {
+        val nav = GezginTestNavigator(start = Catalog, topology = testTopology)
+        nav.navigate(Product("p1"))
+        nav.navigate(Product("p2"))
+        nav.backTo(Catalog::class)
+        assertEquals(listOf(Catalog), nav.backStack)
+    }
+
+    @Test fun quitWithDelegateDeliversValue() = runTest {
+        val nav = GezginTestNavigator(start = Catalog, topology = testTopology)
+        val r = async { nav.raw.navigateForResult<OrderId>("Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        nav.quitWith(OrderId("q1"))
+        assertEquals(NavResult.Value(OrderId("q1")), r.await())
     }
 
     // Extra (a): back() at root invokes onRootBack — constructor param plumbed through.

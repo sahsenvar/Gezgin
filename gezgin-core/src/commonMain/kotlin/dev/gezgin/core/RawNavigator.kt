@@ -1,3 +1,5 @@
+@file:OptIn(GezginInternalApi::class)
+
 package dev.gezgin.core
 
 import kotlin.reflect.KClass
@@ -15,33 +17,45 @@ import kotlinx.serialization.json.Json
  * Faz 2 (codegen) and Faz 3 (display) wrap. Single-writer: all mutation happens through the
  * methods below, each of which keeps [backStack] and [events] in sync with the underlying state.
  *
- * **Threading sözleşmesi (main-thread confinement, integ-m3):** bu tip thread-safe DEĞİLDİR. İçteki
- * [GezginState] `_stack`'i düz bir `MutableList`'tir; tüm mutasyon op'ları (navigate/back/replaceTo/
- * quit/…) VE display'in okumaları (`keysState`/`backStack` collect) AYNI thread'de — uygulamanın UI/
- * main thread'inde — çalışmalıdır. Faz-5 deseni navigator'ı VM ctor'una taşıdığından bu sınır özellikle
- * önemlidir: bir VM `viewModelScope.launch(Dispatchers.IO) { nav.quit() }` YAZMAMALI — off-main bir
- * mutasyon composition okumalarıyla yarışıp stack'i sessizce bozar. Arka-plan işi bittikten sonra
- * navigasyon yapılacaksa çağrı ana-thread'e taşınmalıdır (ör. `withContext(Dispatchers.Main) { … }` ya da
- * doğrudan ana-thread'li `viewModelScope`'tan). commonMain'de (KMP) taşınabilir ucuz bir main-thread
- * assert mekanizması yok (Android `Looper` gibi bir kanca common'da mevcut değil) → sözleşme yalnız bu
- * KDoc ile taşınır, çalışma-zamanı guard'ı EKLENMEDİ.
+ * **Threading contract (main-thread confinement, integ-m3):** this type is NOT thread-safe. The inner
+ * [GezginState] `_stack` is a plain `MutableList`; all mutation ops (navigate/back/replaceTo/quit/…) AND the
+ * display's reads (`keysState`/`backStack` collect) must run on the SAME thread — the app's UI/main thread.
+ * Because the Faz-5 pattern moves the navigator into the VM ctor, this boundary matters especially: a VM must
+ * NOT write `viewModelScope.launch(Dispatchers.IO) { nav.quit() }` — an off-main mutation races with the
+ * composition's reads and silently corrupts the stack. If navigation must happen after background work
+ * finishes, the call must be moved to the main thread (e.g. `withContext(Dispatchers.Main) { … }`, or from a
+ * main-threaded `viewModelScope` directly). There is no portable, cheap main-thread assert mechanism in
+ * commonMain (KMP) (a hook like Android's `Looper` is not available in common) → the contract is carried only
+ * by this KDoc; a runtime guard was NOT added.
  *
- * [restored] — PD (process death) simülasyonu: non-null ise stack + nextId + pending result
- * slot'ları [SavedState]'ten geri yüklenir, `start` PUSH EDİLMEZ (§1.10). Yani `restored != null`
- * iken ctor'a verilen [start] parametresi YOK SAYILIR (yalnız restore'suz ilk açılışta kullanılır).
- * [json] — restore'da slot payload decode'u için (SerializersModule gerektiren result tipleri —
- * açık polimorfizm/@Contextual — encode'daki modülle SİMETRİK decode edilsin diye). Faz 6 (§11):
- * `internal` yapıldı (eskiden `private`) — Fragment interop'un `androidMain` `route.toBundle(nav)`
- * yardımcısı bu AYNI app-Json'ı (polimorfik Route modülüyle) `arguments` Bundle encode'unda yeniden
- * kullanır (ikinci Json ÜRETMEZ → backstack PD'siyle simetri). Yalnız modül-içi görünür, public'e sızmaz.
+ * [restored] — the PD (process death) simulation: if non-null, the stack + nextId + pending result slots are
+ * restored from [SavedState] and `start` is NOT PUSHED (§1.10). That is, while `restored != null` the [start]
+ * parameter passed to the ctor is IGNORED (it is used only on the first, restore-less launch). [json] — for
+ * decoding slot payloads on restore (so result types requiring a SerializersModule — open polymorphism/
+ * @Contextual — decode SYMMETRICALLY with the module used at encode). Faz 6 (§11): made `internal` (was
+ * `private`) — Fragment interop's `androidMain` `route.toBundle(nav)` helper reuses this SAME app-Json (with
+ * the polymorphic Route module) when encoding the `arguments` Bundle (it does NOT create a second Json →
+ * symmetry with backstack PD). Visible only within the module, it does not leak to public.
  */
-class RawNavigator(
+public class RawNavigator internal constructor(
     start: Route,
     private val topology: GezginTopology,
-    internal val onRootBack: () -> Unit = {},
-    internal val json: Json = Json,
+    internal val onRootBack: () -> Unit,
+    internal val json: Json,
     restored: SavedState? = null,
 ) {
+    /**
+     * Public construction for tests and integration (`GezginTestNavigator`, custom hosts). Deliberately
+     * omits the [json]/[restored] process-death parameters — those belong to the same-module
+     * `rememberNavigator` restore path (the app's stable [kotlinx.serialization.json.Json] is supplied
+     * there), so [SavedState] and its slot schema stay off the public surface.
+     */
+    public constructor(
+        start: Route,
+        topology: GezginTopology,
+        onRootBack: () -> Unit = {},
+    ) : this(start, topology, onRootBack, Json, restored = null)
+
     // `var` (C1): identity-stabil facade — config-change'te [adoptRestored] AYNI instance'ın `state`'ini
     // re-point eder (yeni RawNavigator KURMAZ). VM ctor'unda yakalanan navigator referansı böylece
     // rotasyondan sonra da display'in gözlemlediği aynı akışları sürer (spec §225 "stable RawNavigator").
@@ -62,10 +76,10 @@ class RawNavigator(
 
     private val _backStack = MutableStateFlow<List<Route>>(emptyList())
     /**
-     * Public, gözlemlenebilir back stack (§10) — devtools / "şu an neredeyiz" göstergesi. Yalnız `Route`
-     * taşır (id'siz); display'in ihtiyaç duyduğu id-duyarlı akış [keysState]'tir (internal).
+     * The public, observable back stack (§10) — a devtools / "where are we now" indicator. It carries only
+     * `Route` (id-less); the id-aware stream the display needs is [keysState] (internal).
      */
-    val backStack: StateFlow<List<Route>> = _backStack.asStateFlow()
+    public val backStack: StateFlow<List<Route>> = _backStack.asStateFlow()
 
     private val _keysState = MutableStateFlow<List<GezginKey>>(emptyList())
     /**
@@ -80,17 +94,17 @@ class RawNavigator(
 
     private val _events = MutableSharedFlow<NavEvent>(extraBufferCapacity = 64)
     /**
-     * Gözlem-amaçlı (observe-only) navigasyon olay akışı. `extraBufferCapacity=64` + `tryEmit` —
-     * abonesizken ya da yavaş bir collector'da buffer dolarsa event SESSİZCE DÜŞER (drop). Kaynak-
-     * doğruluk [backStack]/[keys]'tedir; bu akış onların yerine değil, yanında bir sinyal kanalıdır.
+     * The observe-only navigation event stream. `extraBufferCapacity=64` + `tryEmit` — if there is no
+     * subscriber, or a slow collector fills the buffer, an event is SILENTLY DROPPED. The source of truth is
+     * [backStack]/[keys]; this stream is a signal channel alongside them, not a replacement.
      */
-    val events: Flow<NavEvent> = _events
+    public val events: Flow<NavEvent> = _events
 
     /** GezginDisplay adapter'ı için raw entry görünümü. */
     internal val keys: List<GezginKey> get() = state.stack
 
-    /** Stack'in tepesindeki (şu an aktif) route. */
-    val current: Route get() = state.stack.last().route
+    /** The route at the top of the stack (currently active). */
+    public val current: Route get() = state.stack.last().route
 
     init {
         if (restored != null) {
@@ -105,7 +119,7 @@ class RawNavigator(
     /** slot payload'ı topology.edges[edgeId].resultSerializer ile encode → PD-güvenli anlık görüntü.
      *  ctor'daki [json] kullanılır (encode/decode simetrisi için tek kaynak). */
     @Suppress("UNCHECKED_CAST")
-    fun save(): SavedState {
+    internal fun save(): SavedState {
         val pendingSlots = bus.slots.map { slot ->
             when (val result = slot.result) {
                 null -> SavedSlot(slot.callerEntryId, slot.edgeId, slot.targetEntryId, payloadJson = null, canceled = false)
@@ -156,8 +170,8 @@ class RawNavigator(
 
     // ---- public ops ----
 
-    /** @GoTo — enterFlow'u topology'den çözer (hedef flow-start container-entry'si mi). */
-    fun navigate(route: Route, singleTop: Boolean = true) {
+    /** @GoTo — resolves enterFlow from the topology (is the target a flow-start container entry). */
+    public fun navigate(route: Route, singleTop: Boolean = true) {
         val enterFlow = resolveEnterFlow(route)
         val pushed = state.push(route, enterFlow = enterFlow, singleTop = singleTop) ?: return
         refreshBackStack()
@@ -165,12 +179,12 @@ class RawNavigator(
     }
 
     /**
-     * Geri: sıra (§8.1 / Fix 9) — (1) top flow-ENTRY ise TAMAMEN quit()'e devret (pending target olsa
-     * bile: settleRemoved Canceled teslim eder), event `FlowQuit(canceled=true)` olur, `Popped` YOK;
-     * (2) düz pop + `Popped` — top pending-target ise Canceled'ı settleRemoved teslim eder (tek kapı).
-     * Dipte → onRootBack.
+     * Back: the order (§8.1 / Fix 9) — (1) if the top is a flow ENTRY, delegate ENTIRELY to quit() (even if
+     * there is a pending target: settleRemoved delivers Canceled), the event becomes `FlowQuit(canceled=true)`,
+     * NO `Popped`; (2) a plain pop + `Popped` — if the top is a pending-target, settleRemoved delivers its
+     * Canceled (a single gate). At the bottom → onRootBack.
      */
-    fun back() {
+    public fun back() {
         val top = state.stack.last()
         if (isFlowEntry(top)) {          // (1) flow entry → quit() (settleRemoved Canceled'ı teslim eder)
             quit()
@@ -179,8 +193,8 @@ class RawNavigator(
         popTopAndEmit()                  // (2) düz pop — pending-target Canceled'ı da settleRemoved verir
     }
 
-    /** `@ReplaceTo` runtime'ı: `clearUpTo`'ya kadar (null = yalnız top) temizleyip `route`'u iter; çıkarılan pending-target'lara Canceled teslim eder. */
-    fun replaceTo(route: Route, clearUpTo: KClass<out Route>? = null, inclusive: Boolean = true) {
+    /** The `@ReplaceTo` runtime: clears up to `clearUpTo` (null = the top only) and pushes `route`; delivers Canceled to the removed pending-targets. */
+    public fun replaceTo(route: Route, clearUpTo: KClass<out Route>? = null, inclusive: Boolean = true) {
         // M4 — modal-kind-at-root reddi MUTASYONDAN ÖNCE: replaceTo kökü temizleyip yerine bir modal
         // koyacaksa (sonuçtaki stack'in dibi = bir modal route) state hiç değiştirilmeden fırlat.
         // Aksi halde eski davranış (state önce `[modal]`'a döner, guard SONRAKİ composition'da patlar)
@@ -201,8 +215,8 @@ class RawNavigator(
         settleRemoved(removed)
     }
 
-    /** `@BackTo` runtime'ı: stack'te `target`'a kadar pop (`inclusive` ise target da). Target yoksa `BackToTargetMissing` event'i, pop YOK. */
-    fun backTo(target: KClass<out Route>, inclusive: Boolean = false) {
+    /** The `@BackTo` runtime: pops up to `target` in the stack (including target if `inclusive`). If the target is absent, a `BackToTargetMissing` event, NO pop. */
+    public fun backTo(target: KClass<out Route>, inclusive: Boolean = false) {
         val removed = state.backTo(target, inclusive)
         if (removed == null) {
             _events.tryEmit(NavEvent.BackToTargetMissing(target.simpleName ?: "?"))
@@ -213,8 +227,8 @@ class RawNavigator(
         settleRemoved(removed)
     }
 
-    /** Canceled ile flow kapat (root'ta onRootBack). */
-    fun quit() {
+    /** Close the flow with Canceled (onRootBack at the root). */
+    public fun quit() {
         val flowId = state.currentFlowId() ?: return
         val removed = state.quitFlow(flowId)
         if (removed == null) {
@@ -227,9 +241,10 @@ class RawNavigator(
         settleRemoved(removed)                       // deliverValue=null → hayatta-kalan caller'lı target'lara Canceled
     }
 
-    /** Value ile atomik kapat + caller'a teslim. Flow içinde değilken sessiz no-op (quit() ile simetrik).
-     *  Nested ResultFlow'da hedef = EN-YAKIN-KAPSAYAN ResultFlow (spec §6); quit() ise innermost kalır. */
-    fun quitWith(result: Any?) {
+    /** Close atomically with a Value + deliver to the caller. A silent no-op when not inside a flow (symmetric
+     *  with quit()). In a nested ResultFlow the target = the NEAREST-ENCLOSING ResultFlow (spec §6); quit()
+     *  stays on the innermost. */
+    public fun quitWith(result: Any?) {
         // quitWith hedef seçimi: en içteki KAPSAYAN ResultFlow (spec §6);
         // hiç ResultFlow yoksa fallback = en içteki flow (typed katman quitWith'i zaten yalnız ResultFlow'da üretir).
         val top = state.stack.last()
@@ -250,13 +265,15 @@ class RawNavigator(
     }
 
     /**
-     * M3 — entry-scoped `backWithResult`: SONUCU SAHİBİ entry'ye pinler. [entryId] artık top DEĞİLSE
-     * (ör. sheet jest'le kapatıldıktan sonra async iş sonucu geç geldi) SESSİZ NO-OP → değer, o slotu
-     * beklemeyen (başka tipte sonuç bekleyen) yabancı bir entry'nin slotuna teslim edilmez ve o entry
-     * yanlışlıkla pop edilmez (kirli-teslim/çifte-back yarışı önlenir). Faz 2 codegen'in ürettiği tipli
-     * `backWithResult(result)` ctor'daki `entryId`'yi bu overload'a bağlar.
+     * M3 — entry-scoped `backWithResult`: pins THE RESULT to its OWNER entry. If [entryId] is no longer the
+     * top (e.g. an async job's result arrived late after the sheet was dismissed by a gesture) it is a SILENT
+     * NO-OP → the value is not delivered to the slot of a foreign entry that is not waiting for that slot (that
+     * expects a result of a different type) and that entry is not accidentally popped (a dirty-delivery/
+     * double-back race is prevented). The typed `backWithResult(result)` that Faz 2 codegen generates binds the
+     * ctor's `entryId` to this overload.
      */
-    fun backWithResult(entryId: Long, result: Any?) {
+    @GezginInternalApi
+    public fun backWithResult(entryId: Long, result: Any?) {
         val top = state.stack.last()
         if (top.id != entryId) return            // sahip entry artık top değil → teslim etme, pop etme
         if (!isPendingTarget(top.id)) return
@@ -264,25 +281,28 @@ class RawNavigator(
         popTopAndEmit()
     }
 
-    /** Kolaylık: sahip = ÇAĞRI ANINDAKİ top (call-time-top). Tipli katman entry'ye bağlayan overload'ı kullanır. */
-    fun backWithResult(result: Any?) = backWithResult(currentEntryId, result)
+    /** Convenience: owner = the call-time top entry. The typed layer pins the entry via the id overload. */
+    public fun backWithResult(result: Any?): Unit = backWithResult(currentEntryId, result)
 
-    /** Çağrı anındaki top entry id — açık-caller overload'larına Faz 2 codegen'in bağlayacağı kanca. */
-    val currentEntryId: Long get() = state.stack.last().id
+    /** The call-time top entry id — the hook generated navigators bind to the explicit-caller overloads. */
+    @GezginInternalApi
+    public val currentEntryId: Long get() = state.stack.last().id
 
     /**
-     * Task 2.6 — `:gezgin-test`'in tipli `fromX()` erişimi için minimal public kapı: [route]'u
-     * uygulayan EN YAKIN (stack'te en üstteki) entry'nin id'si, yoksa `null`. `keys` `internal`
-     * kalır; bu, üstüne kurulan tek [GezginInternalApi] opt-in üye.
+     * Task 2.6 — a minimal public entry point for `:gezgin-test`'s typed `fromX()` access: the id of the
+     * NEAREST (topmost in the stack) entry that implements [route], or `null`. `keys` stays `internal`; this is
+     * the single [GezginInternalApi] opt-in member built on top of it.
      */
     @GezginInternalApi
-    fun entryIdOf(route: KClass<out Route>): Long? = keys.lastOrNull { route.isInstance(it.route) }?.id
+    public fun entryIdOf(route: KClass<out Route>): Long? = keys.lastOrNull { route.isInstance(it.route) }?.id
 
     /**
-     * Açık-caller (Faz 2 kancası): idempotent (§6) — aynı (caller, edge) için slot varken (in-flight
-     * VEYA teslim edilmiş-tüketilmemiş) push YAPMA. Aksi halde result isteği DAİMA yeni entry yaratır.
+     * Explicit-caller (the Faz 2 hook): idempotent (§6) — do NOT push while a slot exists for the same
+     * (caller, edge) (in-flight OR delivered-but-unconsumed). Otherwise a result request would ALWAYS create a
+     * new entry.
      */
-    fun launchForResult(callerEntryId: Long, edgeId: String, route: Route) {
+    @GezginInternalApi
+    public fun launchForResult(callerEntryId: Long, edgeId: String, route: Route) {
         // Pre-guard, bus.launch'un predicate'iyle birebir aynı (HERHANGİ bir slot — result durumu fark etmez):
         // teslim edilmiş ama tüketilmemiş slot varken re-launch, slotsuz öksüz bir entry push'lardı.
         if (bus.slots.any { it.callerEntryId == callerEntryId && it.edgeId == edgeId }) return
@@ -295,39 +315,41 @@ class RawNavigator(
         _events.tryEmit(NavEvent.Pushed(pushed.route))
     }
 
-    /** Kolaylık: caller = ÇAĞRI ANINDAKİ top. Faz 2 codegen (caller top değilken) açık overload'ı kullanmalı.
-     *  İki hızlı top-based çağrı farklı caller görür (ilk push top'u değiştirir) → dedupe istiyorsan
-     *  explicit-caller overload'ını kullan; typed katman caller'ı entry'ye bağlar. */
-    fun launchForResult(edgeId: String, route: Route) = launchForResult(currentEntryId, edgeId, route)
+    /** Convenience: caller = the top AT CALL TIME. Faz 2 codegen (when the caller is not the top) must use the
+     *  explicit overload. Two quick top-based calls see different callers (the first push changes the top) → if
+     *  you want dedupe, use the explicit-caller overload; the typed layer binds the caller to the entry. */
+    public fun launchForResult(edgeId: String, route: Route): Unit = launchForResult(currentEntryId, edgeId, route)
 
-    /** Açık-caller (Faz 2 kancası): (caller, edge) slotunun sonuç akışı. */
-    fun <T> results(callerEntryId: Long, edgeId: String): Flow<NavResult<T>> = bus.results(callerEntryId, edgeId)
+    /** Explicit-caller (the Faz 2 hook): the result stream of the (caller, edge) slot. */
+    @GezginInternalApi
+    public fun <T> results(callerEntryId: Long, edgeId: String): Flow<NavResult<T>> = bus.results(callerEntryId, edgeId)
 
     /**
-     * Kolaylık: caller = ÇAĞRI ANINDAKİ top entry id. Restore sonrası geç re-attach bu yüzden ancak
-     * orijinal caller entry mevcut top iken çalışır (call-time-top sözleşmesi); caller top DEĞİLKEN
-     * (PD re-attach, Faz 2 codegen) açık [results]`(callerEntryId, edgeId)` overload'ı KULLANILMALI.
+     * Convenience: caller = the top entry id AT CALL TIME. A late re-attach after restore therefore only works
+     * while the original caller entry is the current top (the call-time-top contract); when the caller is NOT
+     * the top (PD re-attach, Faz 2 codegen) the explicit [results]`(callerEntryId, edgeId)` overload MUST be used.
      */
-    fun <T> results(edgeId: String): Flow<NavResult<T>> = results(currentEntryId, edgeId)
+    public fun <T> results(edgeId: String): Flow<NavResult<T>> = results(currentEntryId, edgeId)
 
-    /** Açık-caller sugar = launch + results.first() (Faz 2 kancası). */
-    suspend fun <T> navigateForResult(callerEntryId: Long, edgeId: String, route: Route): NavResult<T> {
+    /** Explicit-caller sugar = launch + results.first() (the Faz 2 hook). */
+    @GezginInternalApi
+    public suspend fun <T> navigateForResult(callerEntryId: Long, edgeId: String, route: Route): NavResult<T> {
         launchForResult(callerEntryId, edgeId, route)
         return bus.results<T>(callerEntryId, edgeId).first()
     }
 
-    /** Kolaylık sugar; caller çağrı anındaki top'tan (push'tan ÖNCE) yakalanır. */
-    suspend fun <T> navigateForResult(edgeId: String, route: Route): NavResult<T> =
+    /** Convenience sugar; the caller is captured from the call-time top (BEFORE the push). */
+    public suspend fun <T> navigateForResult(edgeId: String, route: Route): NavResult<T> =
         navigateForResult(currentEntryId, edgeId, route)
 
     /**
-     * @QuitAndGoTo (Faz 2 codegen kancası) — mevcut flow'u result'suz yık (quit() ile birebir aynı
-     * teardown: hayatta kalan caller'lı pending slotlara Canceled, `FlowQuit(canceled = true)`) ve
-     * ardından hedefe navigate et. Kaynak bir flow İÇİNDE DEĞİLKEN (flowId yok) yıkılacak bir şey
-     * yoktur — düz `navigate` ile eşdeğerdir. Kök flow'da (quitFlow → null) quit()/quitWith ile aynı
-     * kural: onRootBack()'e düş + `RootBack` yay, navigate ETME (teardown'un kendisi başarısız).
+     * @QuitAndGoTo (the Faz 2 codegen hook) — tear down the current flow without a result (exactly the same
+     * teardown as quit(): Canceled to surviving caller-bearing pending slots, `FlowQuit(canceled = true)`) and
+     * then navigate to the target. When the source is NOT INSIDE a flow (no flowId) there is nothing to tear
+     * down — it is equivalent to a plain `navigate`. In the root flow (quitFlow → null), the same rule as
+     * quit()/quitWith: fall to onRootBack() + emit `RootBack`, do NOT navigate (the teardown itself failed).
      */
-    fun quitAndGoTo(route: Route) {
+    public fun quitAndGoTo(route: Route) {
         val flowId = state.currentFlowId()
         if (flowId != null) {
             val removed = state.quitFlow(flowId)

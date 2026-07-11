@@ -1,9 +1,9 @@
-package dev.gezgin.sample.feature.profile.notification
+package dev.gezgin.sample.feature.profile.sheet_notification
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import dev.gezgin.mvi.ObserveAsEvents
+import dev.gezgin.mvi.ObserveEffects
 import dev.gezgin.mvi.annotation.ScreenEffect
 import kotlinx.coroutines.flow.Flow
 
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun NotificationsEffectHandler(effects: Flow<NotificationsEffect>) {
     val context = LocalContext.current
-    ObserveAsEvents(effects) { effect ->
+    ObserveEffects(effects) { effect ->
         when (effect) {
             is NotificationsEffect.Announce -> Toast.makeText(
                 context,

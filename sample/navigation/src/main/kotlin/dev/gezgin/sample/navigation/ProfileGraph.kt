@@ -57,7 +57,7 @@ sealed interface ProfileGraph : Route {
         override val dismissOnClickOutside: Boolean get() = current.isNotBlank()
     }
 
-    // @ViewModel/@BottomSheet-content/@ScreenEffect üçlüsü :feature:profile'da olmalı (per-module KSP, §10.1).
+    // @MviViewModel/@BottomSheet-content/@ScreenEffect üçlüsü :feature:profile'da olmalı (per-module KSP, §10.1).
     @Serializable
     data class NotificationsSheetRoute(
         val current: NotificationLevel

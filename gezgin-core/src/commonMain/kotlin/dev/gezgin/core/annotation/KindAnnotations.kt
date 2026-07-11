@@ -4,39 +4,39 @@ import dev.gezgin.core.Route
 import kotlin.reflect.KClass
 
 /**
- * Kind annotation'ları (§3.2) — composable üzerinde durur, üç iş yapar: destination = binding,
- * sunum kind'ı, `route:` param tipinden route'a bağ. `route = Route::class` sentinel'i "route'u
- * composable'ın `route:` param tipinden türet" anlamına gelir (argsız route'ta açıkça verilmeli).
- * Processor okuması Faz 3.4'te; bu görevde yalnız tanım.
+ * Kind annotations (§3.2) — placed on a composable; they do three things: mark it as a destination,
+ * declare its presentation kind, and bind it to a route. The `route = Route::class` sentinel means
+ * "derive the route from the composable's `route:` parameter type" (must be given explicitly for a
+ * parameterless route). Marks a plain full-screen destination.
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class Screen(val route: KClass<out Route> = Route::class)
+public annotation class Screen(val route: KClass<out Route> = Route::class)
 
 /**
- * Kind: route'u modal bir **dialog** overlay'i olarak render eder (§3.2/§7) — sunum property'leri için
- * route opsiyonel [dev.gezgin.core.DialogContract] implement edebilir. `route = Route::class` sentinel'i
- * için [Screen]'e bakınız.
+ * Kind: renders the route as a modal **dialog** overlay (§3.2/§7) — the route may implement the optional
+ * [dev.gezgin.core.DialogContract] for presentation properties. See [Screen] for the `route = Route::class`
+ * sentinel.
  *
- * Ad çakışması notu: `androidx.compose.ui.window.Dialog` (Compose'un kendi dialog composable'ı) ile
- * AYNI basit ad — aynı dosyada/paket-import'unda ikisi birden kullanılacaksa import alias'ı önerilir
- * (örn. `import androidx.compose.ui.window.Dialog as ComposeDialog`), aksi halde derleyici ambiguity
- * hatası verir ya da (import sırasına göre) yanlış olan sessizce çözülebilir.
+ * Name-clash note: shares the simple name `Dialog` with `androidx.compose.ui.window.Dialog` (Compose's own
+ * dialog composable) — if both are used in the same file, an import alias is recommended
+ * (e.g. `import androidx.compose.ui.window.Dialog as ComposeDialog`); otherwise the compiler reports an
+ * ambiguity, or (depending on import order) silently resolves the wrong one.
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class Dialog(val route: KClass<out Route> = Route::class)
+public annotation class Dialog(val route: KClass<out Route> = Route::class)
 
 /**
- * Kind: route'u alttan açılan modal bir **bottom sheet** olarak render eder (§3.2/§7) — sunum property'leri
- * için route opsiyonel [dev.gezgin.core.BottomSheetContract] implement edebilir; içerik
- * `LocalGezginSheetState` ile sheet'i programatik kapatabilir.
+ * Kind: renders the route as a modal **bottom sheet** (§3.2/§7) — the route may implement the optional
+ * [dev.gezgin.core.BottomSheetContract] for presentation properties; content can dismiss the sheet
+ * programmatically via [dev.gezgin.core.compose.LocalGezginSheetController].
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class BottomSheet(val route: KClass<out Route> = Route::class)
+public annotation class BottomSheet(val route: KClass<out Route> = Route::class)
 
 /**
- * Kind: route'u **tam-ekran** modal overlay olarak render eder (§3.2/§7; scrim'siz, `usePlatformDefaultWidth`
- * kavramı yok) — sunum property'leri için route opsiyonel [dev.gezgin.core.FullscreenModalContract]
- * implement edebilir.
+ * Kind: renders the route as a **full-screen** modal overlay (§3.2/§7; no scrim, no
+ * `usePlatformDefaultWidth` concept) — the route may implement the optional
+ * [dev.gezgin.core.FullscreenModalContract] for presentation properties.
  */
 @Target(AnnotationTarget.FUNCTION)
-annotation class FullscreenModal(val route: KClass<out Route> = Route::class)
+public annotation class FullscreenModal(val route: KClass<out Route> = Route::class)

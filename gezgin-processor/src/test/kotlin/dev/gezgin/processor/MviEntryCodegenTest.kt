@@ -164,14 +164,13 @@ class MviEntryCodegenTest {
                 "imageLoader: @Composable () -> ImageLoader)",
         )
         assertContains(text, "register<SheetRoute>(kind = EntryKind.BOTTOM_SHEET, noBack = false) { route ->")
-        // The generated register injects `LocalGezginSheetState.current` (a material3 `SheetState`), so
-        // the generated file — not the user's content — must opt in to the ERROR-level experimental API;
-        // otherwise the consumer module fails to compile.
-        assertContains(text, "@OptIn(ExperimentalMaterial3Api::class)")
+        // M3 — the role is now Gezgin's own GezginSheetController (not the experimental material3 SheetState),
+        // so no @ExperimentalMaterial3Api opt-in leaks into the generated file.
+        assertFalse("ExperimentalMaterial3Api" in text, text)
         // Role extra reads its Local; resolver extra is invoked — all content args NAMED (MN1).
         assertContains(
             text,
-            "SheetContent(state = state, onIntent = vm::onIntent, sheetState = LocalGezginSheetState.current, " +
+            "SheetContent(state = state, onIntent = vm::onIntent, controller = LocalGezginSheetController.current, " +
                 "imageLoader = imageLoader())",
         )
     }
@@ -220,7 +219,7 @@ class MviEntryCodegenTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ViewModel
+            import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.MutableStateFlow
             import kotlinx.coroutines.flow.StateFlow
 
@@ -237,7 +236,7 @@ class MviEntryCodegenTest {
             sealed interface MIntent { data object Go : MIntent }
             data class MEffect(val m: String)
 
-            @ViewModel(MRoute::class)
+            @MviViewModel(MRoute::class)
             class MVm(route: MRoute) : GezginMvi<MState, MIntent, MEffect> {
                 override val uiState: StateFlow<MState> = MutableStateFlow(MState(route.b))
                 override fun onIntent(intent: MIntent) {}
@@ -282,7 +281,7 @@ class MviEntryCodegenTest {
                 import androidx.compose.runtime.Composable
                 import dev.gezgin.core.annotation.Screen
                 import dev.gezgin.mvi.GezginMvi
-                import dev.gezgin.mvi.annotation.ViewModel
+                import dev.gezgin.mvi.annotation.MviViewModel
                 import dev.gezgin.shop.HomeGraph.About
                 import kotlinx.coroutines.flow.MutableStateFlow
                 import kotlinx.coroutines.flow.StateFlow
@@ -295,7 +294,7 @@ class MviEntryCodegenTest {
                 class AnalyticsTracker
 
                 // NAMED `nav` but TYPED AnalyticsTracker (resolvable, NOT the navigator) → OTHER.
-                @ViewModel(About::class)
+                @MviViewModel(About::class)
                 @KoinViewModel
                 class AboutVm(@InjectedParam nav: AnalyticsTracker) :
                     GezginMvi<AboutState, AboutIntent, AboutEffect> {
@@ -331,7 +330,7 @@ class MviEntryCodegenTest {
                 import dev.gezgin.core.Route
                 import dev.gezgin.core.annotation.Screen
                 import dev.gezgin.mvi.GezginMvi
-                import dev.gezgin.mvi.annotation.ViewModel
+                import dev.gezgin.mvi.annotation.MviViewModel
                 import kotlinx.coroutines.flow.MutableStateFlow
                 import kotlinx.coroutines.flow.StateFlow
 
@@ -340,7 +339,7 @@ class MviEntryCodegenTest {
                 sealed interface ConfigIntent { data object Go : ConfigIntent }
                 data class ConfigEffect(val m: String)
 
-                @ViewModel(ConfigRoute::class)
+                @MviViewModel(ConfigRoute::class)
                 class ConfigVm(route: ConfigRoute, retries: Int = 3) :
                     GezginMvi<ConfigState, ConfigIntent, ConfigEffect> {
                     override val uiState: StateFlow<ConfigState> = MutableStateFlow(ConfigState(retries))
@@ -376,7 +375,7 @@ class MviEntryCodegenTest {
                 import dev.gezgin.core.Route
                 import dev.gezgin.core.annotation.Screen
                 import dev.gezgin.mvi.GezginMvi
-                import dev.gezgin.mvi.annotation.ViewModel
+                import dev.gezgin.mvi.annotation.MviViewModel
                 import kotlinx.coroutines.flow.MutableStateFlow
                 import kotlinx.coroutines.flow.StateFlow
 
@@ -385,7 +384,7 @@ class MviEntryCodegenTest {
                 sealed interface PageIntent { data object Go : PageIntent }
                 data class PageEffect(val m: String)
 
-                @ViewModel(PageRoute::class)
+                @MviViewModel(PageRoute::class)
                 class PageVm(route: PageRoute) : GezginMvi<PageState, PageIntent, PageEffect> {
                     override val uiState: StateFlow<PageState> = MutableStateFlow(PageState(0))
                     override fun onIntent(intent: PageIntent) {}

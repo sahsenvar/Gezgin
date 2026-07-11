@@ -5,36 +5,38 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 
 /**
- * MVI add-on sözleşmesi (§10.1) — opt-in. Gezgin state-holder dünyasına GİRMEZ (store/reducer dayatmaz);
- * bu yalnız codegen'in okuyacağı **minimal yüzey**: state akışı, opsiyonel efekt akışı, intent girişi.
+ * The MVI add-on contract (§10.1) — opt-in. It does NOT enter Gezgin's state-holder world (it imposes no
+ * store/reducer); it is just the **minimal surface** codegen reads: a state stream, an optional effect
+ * stream, an intent entry point.
  *
- * `@ViewModel(Route::class)` işaretli VM bunu implement ETMELİDİR (İKİSİ DE ZORUNLU — guardrail, §10.1):
- * codegen VM'in somut tipini `@ViewModel`'den, **S/I/E'yi bu supertype'ın tip arg'larından** okur
- * (content'ten türetme yok → spec'in E-kaynağı problemi çözülür). `@ViewModel` var ama `GezginMvi`
- * yoksa → derleme hatası (5.1).
+ * A VM marked `@MviViewModel(Route::class)` MUST implement this (BOTH ARE MANDATORY — guardrail, §10.1):
+ * codegen reads the VM's concrete type from `@MviViewModel`, and **S/I/E from this supertype's type args**
+ * (no derivation from the content → the spec's E-source problem is solved). If `@MviViewModel` is present but
+ * `GezginMvi` is not → compile error (5.1).
  *
- * Variance (`out S, in I, out E`) = polish (S/E üretilir/çıkar, I tüketilir); tip çıkarımını
- * kolaylaştırır, artık yük taşımaz — S/I/E doğrudan supertype arg'larından okunduğu için codegen'e
- * ekstra kısıt getirmez.
+ * The variance (`out S, in I, out E`) = polish (S/E are produced/come out, I is consumed); it eases type
+ * inference and no longer carries weight — since S/I/E are read directly from the supertype args, it adds no
+ * extra constraint on codegen.
  */
-interface GezginMvi<out S, in I, out E> {
-    /** UI state akışı — codegen `collectAsStateWithLifecycle()` ile gözler, stateless content'e `state` verir. */
-    val uiState: StateFlow<S>
+public interface GezginMvi<out S, in I, out E> {
+    /** The UI state stream — codegen observes it with `collectAsStateWithLifecycle()` and gives `state` to the stateless content. */
+    public val uiState: StateFlow<S>
 
     /**
-     * Opsiyonel tek-seferlik efekt akışı (nav-olmayan yan etkiler; snackbar/toast/haptic). Yoksa
-     * `emptyFlow()`. `@ScreenEffect` bunu [ObserveAsEvents] ile **yalnız STARTED iken** tüketir → örtülen
-     * (covered) veya STOPPED entry'de gözlemci YOKTUR.
+     * The optional one-shot effect stream (non-nav side effects; snackbar/toast/haptic). If absent,
+     * `emptyFlow()`. `@ScreenEffect` consumes it via [ObserveEffects] **only while STARTED** → there is NO
+     * observer on a covered or STOPPED entry.
      *
-     * **Backing sözleşmesi (kayıpsızlık, Faz 5 recheck / MJ2):** gözlemci yokken emit edilen efektin
-     * KAYBOLMAMASI için buffer'lı bir kaynak ŞART. ÖNERİLEN: [GezginEffects] (`Channel(UNLIMITED)
-     * .receiveAsFlow()`). `MutableSharedFlow(replay = 0) + tryEmit` deseni gözlemci yokken efekti SESSİZCE
-     * düşürür (bkz. [GezginEffects] KDoc'undaki gerekçe). Ayrıca döndürülen `Flow` **stabil bir instance**
-     * olmalı (tek `val` — her erişimde `receiveAsFlow()` çağıran `get()` DEĞİL), aksi halde
-     * [ObserveAsEvents]'in `LaunchedEffect` key'i her recomposition'da değişip collector'ı restart eder.
+     * **Backing contract (losslessness, Faz 5 recheck / MJ2):** a buffered source is REQUIRED so that an
+     * effect emitted while there is no observer is NOT LOST. RECOMMENDED: [GezginEffects] (`Channel(UNLIMITED)
+     * .receiveAsFlow()`). The `MutableSharedFlow(replay = 0) + tryEmit` pattern SILENTLY drops an effect while
+     * there is no observer (see the rationale in the [GezginEffects] KDoc). The returned `Flow` must also be a
+     * **stable instance** (a single `val` — NOT a `get()` that calls `receiveAsFlow()` on every access),
+     * otherwise [ObserveEffects]'s `LaunchedEffect` key changes on every recomposition and restarts the
+     * collector.
      */
-    val effects: Flow<E> get() = emptyFlow()
+    public val effects: Flow<E> get() = emptyFlow()
 
-    /** Intent girişi — stateless content `onIntent(...)` ile çağırır. */
-    fun onIntent(intent: I)
+    /** The intent entry point — the stateless content calls it via `onIntent(...)`. */
+    public fun onIntent(intent: I)
 }

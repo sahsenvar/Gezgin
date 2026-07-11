@@ -52,7 +52,7 @@ private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavi
  * consistently named. `@BackTo` has no `name=` param at all (see `Annotations.kt`) — its method
  * name is always derived (`backTo` + target's `X`), never overridable.
  */
-object NavigatorCodegen {
+internal object NavigatorCodegen {
 
     // Route-kind sonek token'ları — türetilmiş X adından (`XNavigator`/`provideXEntry`/`goToX`/`fromX`)
     // atılır. "Screen"/"Flow" atılır (LoginScreenRoute → Login, SignUpFlow → SignUp); "Dialog"/
@@ -165,6 +165,9 @@ object NavigatorCodegen {
             .build()
 
         return FileSpec.builder(packageName, navigatorClassName)
+            // K4 — every generated navigator applies @GezginNavigatorFor and may call the entry-id
+            // RawNavigator overloads, all gated behind @GezginInternalApi.
+            .optInGezginInternalApi()
             .addType(classSpec)
             .addFunction(extensionFun)
             .build()

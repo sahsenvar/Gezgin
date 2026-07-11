@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Task-5.0: `@ViewModel` + `GezginMvi<S,I,E>` sözleşmesinin birlikte derlendiğini VE S/I/E generic
+ * Task-5.0: `@MviViewModel` + `GezginMvi<S,I,E>` sözleşmesinin birlikte derlendiğini VE S/I/E generic
  * şeklinin çalışır olduğunu kanıtlayan minimal runnable test (compose'suz, saf Kotlin — §13 ruhu).
  * Codegen okuması (S/I/E extraction, guardrail) 5.1'de; bu yalnız runtime sözleşmesini doğrular.
  */

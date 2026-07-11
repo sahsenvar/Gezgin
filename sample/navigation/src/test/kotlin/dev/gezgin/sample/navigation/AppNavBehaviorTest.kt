@@ -165,7 +165,7 @@ class AppNavBehaviorTest {
         runCurrent()
         assertEquals(AuthGraph.ForgotPasswordDialogRoute(null), nav.current)
 
-        nav.deliverResult(true)
+        nav.backWithResult(true)
 
         assertEquals(NavResult.Value(true), resultDeferred.await())
     }

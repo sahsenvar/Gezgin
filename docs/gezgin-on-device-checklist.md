@@ -345,7 +345,7 @@ seçenekleri → "Predictive Back animasyonlarını etkinleştir" AÇIK.
 **Adımlar:**
 1. Dashboard → "Sırala" aç; bir sıralama seçeneğine dokun. Sheet'in AŞAĞI doğru kayarak (slide-down)
    kapandığını, animasyon BİTTİKTEN SONRA listenin yeni sıra ile göründüğünü gözle (`FilterSheetScreen`
-   `sheetState.hide()` → `backWithResult(...)` sırası — bkz. `HomeScreens.kt`).
+   `controller.hide()` → `backWithResult(...)` sırası — bkz. `HomeScreens.kt`).
 2. Karşılaştırma için: aşağı swipe ile (seçim yapmadan) kapat — animasyon aynı, ama `order`
    DEĞİŞMEMELİ.
 
@@ -395,7 +395,7 @@ dış-tık kapatmaz, geri tuşu/gesture ve "Kapat" düğmesi kapatır ve her iki
 
 ## 14. MVI-mode (`SettingsScreen`) — VM ömrü, tek-seferlik efekt, MVI'dan logout (Faz 5.3)
 
-Faz 5.3, `sample:app`'in `SettingsScreen`'ini MVI-mode'a çevirdi (`@ViewModel(SettingsScreenRoute)` +
+Faz 5.3, `sample:app`'in `SettingsScreen`'ini MVI-mode'a çevirdi (`@MviViewModel(SettingsScreenRoute)` +
 stateless `@Screen` `SettingsContent(state, onIntent)` + `@ScreenEffect SettingsEffects`, androidx-fallback
 resolver — bkz. `sample/feature/profile/src/main/.../SettingsMvi.kt` ve `sample/README.md` "Faz 5 —
 MVI-mode"). Bu, MVI-mode'un ilk GERÇEK (kctfork-dışı) uçtan-uca kanıtı: `assembleDebug` yeşil ve
@@ -413,7 +413,7 @@ erişilebilir (efekt Log/Toast'unu gözlemek için).
    kaydedildi` yazmalı.
 3. Cihazı DÖNDÜR (portrait↔landscape — configuration change). Switch AÇIK kalmalı (state VM'de tutuluyor,
    `remember`'da değil → sıfırlanmaz); dönme sırasında Toast/log TEKRAR tetiklenmemeli (efekt tek-seferlik,
-   `MutableSharedFlow` replay=0 + `ObserveAsEvents` STARTED-collect → recomposition/rotation'da replay YOK).
+   `MutableSharedFlow` replay=0 + `ObserveEffects` STARTED-collect → recomposition/rotation'da replay YOK).
 4. "Çıkış yap"a bas — VM'in `onIntent(Logout)`'u `nav.logout()`'u çağırır.
 
 **Beklenen / Pas kriteri:**
@@ -424,7 +424,7 @@ erişilebilir (efekt Log/Toast'unu gözlemek için).
   Login gelir; geri tuşu Dashboard'a/Settings'e dönmez (davranış testi
   `logoutClearUpToDashboardInclusive_stacksASecondLoginEntry`'nin pinlediği çift-Login sonucu MVI-mode'da da aynı).
 
-**İlgili spec §:** `docs/gezgin-design.md` §10.1 (MVI-mode binding); `gezgin-mvi` `GezginMvi`/`ObserveAsEvents`;
+**İlgili spec §:** `docs/gezgin-design.md` §10.1 (MVI-mode binding); `gezgin-mvi` `GezginMvi`/`ObserveEffects`;
 kod: `sample/feature/profile/.../SettingsMvi.kt`, üretilen `.../GezginMviEntries.kt`.
 
 **Durum:** [ ] Doğrulanmadı

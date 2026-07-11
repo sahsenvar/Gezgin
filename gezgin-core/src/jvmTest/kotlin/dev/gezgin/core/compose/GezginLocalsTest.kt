@@ -1,10 +1,10 @@
-@file:OptIn(ExperimentalTestApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalTestApi::class, GezginInternalApi::class)
 
 package dev.gezgin.core.compose
 
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.runComposeUiTest
+import dev.gezgin.core.GezginInternalApi
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -36,14 +36,14 @@ class GezginLocalsTest {
     }
 
     @Test
-    fun `LocalGezginSheetState outside bottom sheet content throws`() {
+    fun `LocalGezginSheetController outside bottom sheet content throws`() {
         val error = assertFailsWith<IllegalStateException> {
             runComposeUiTest {
-                setContent { LocalGezginSheetState.current }
+                setContent { LocalGezginSheetController.current }
                 waitForIdle()
             }
         }
 
-        assertTrue(error.message?.contains("LocalGezginSheetState") == true, error.message)
+        assertTrue(error.message?.contains("LocalGezginSheetController") == true, error.message)
     }
 }

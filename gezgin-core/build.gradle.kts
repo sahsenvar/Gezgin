@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -5,6 +7,14 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
     `maven-publish`
+}
+
+// Faz 9.3 (M7) — JVM/Android derlemelerinde `-Xjvm-default=all`: default'lu interface üyeleri gerçek JVM
+// default method'una çevrilir → `$DefaultImpls` sınıfları ABI'ye girmez (yayın sonrası `all`'a geçiş
+// binary-breaking olurdu; ilk yayında temiz başlanır). `KotlinCompile` yalnız JVM+Android compile
+// task'lerini yakalar (metadata `KotlinCompileCommon` hariç → JVM-only flag orada uyarı vermez).
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions.freeCompilerArgs.add("-Xjvm-default=all")
 }
 
 // Faz 7.4 — versiyonlama: proje ilk sürümü. Convention-plugin bilinçle kullanılmıyor (sample netliği
@@ -15,6 +25,11 @@ group = "dev.gezgin"
 version = "0.1.0-alpha01"
 
 kotlin {
+    // Faz 9.1 — açık API yüzeyi (her public bildirim explicit visibility + dönüş tipi ister). Codegen'in
+    // ürettiği kodun dokunduğu tipler (RawNavigator/GezginEntryScope/Local*/topology tipleri/fragment
+    // interop) public KALIR; salt-iç durum makinesi (GezginState/ResultBus) ve PD save()/platform kökü
+    // `internal`'a çekildi. BCV .api dump'ı bu yüzeyi kilitler.
+    explicitApi()
     jvmToolchain(17)
     // jvm() = desktop Compose hedefi (Faz 3 GezginDisplay); compose.desktop.currentOs çalıştırma zamanı
     // yalnız desktop uiTest'te gerekebilir (Faz 3.2+), burada eklenmedi.
@@ -92,6 +107,26 @@ publishing {
                 "DI-agnostik runtime + core codegen + Compose display katmanı (GezginDisplay) + " +
                     "modal scene strategy'leri — Gezgin'in zorunlu temeli.",
             )
+            // Faz 9.1 — Maven Central'ın zorunlu kıldığı POM metadata'sı (url/licenses/developers/scm).
+            // repository{}/signing HÂLÂ YOK: bu blok iskelet kalır, `publish` çalıştırılmaz (yukarıdaki nota bkz.).
+            url.set("https://github.com/sahsenvar/Gezgin")
+            licenses {
+                license {
+                    name.set("The Apache License, Version 2.0")
+                    url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                }
+            }
+            developers {
+                developer {
+                    id.set("sahsenvar")
+                    name.set("Şahan Şenvar")
+                }
+            }
+            scm {
+                url.set("https://github.com/sahsenvar/Gezgin")
+                connection.set("scm:git:https://github.com/sahsenvar/Gezgin.git")
+                developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/Gezgin.git")
+            }
         }
     }
 }

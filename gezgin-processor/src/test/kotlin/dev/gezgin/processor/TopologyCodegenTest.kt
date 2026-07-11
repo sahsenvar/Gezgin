@@ -48,6 +48,10 @@ class TopologyCodegenTest {
     private fun ClassLoader.kClassOf(fqName: String): KClass<out Route> =
         routeClassOf(fqName).kotlin as KClass<out Route>
 
+    // M2 — FlowType is no longer a data class (no structural equals), so compare flow chains by their
+    // public (id, isResultFlow) fields instead of whole-object equality.
+    private fun List<FlowType>.ids(): List<Pair<String, Boolean>> = map { it.id to it.isResultFlow }
+
     @Test
     fun `SHOP_SOURCE compiles and GezginTopology loads via reflection off the compiled classloader`() {
         val result = compileGezgin(
@@ -76,33 +80,30 @@ class TopologyCodegenTest {
         val giftPick = loader.kClassOf("dev.gezgin.shop.CheckoutFlow.CheckoutPages.GiftFlow.GiftPick")
 
         assertEquals(
-            listOf(FlowType("dev.gezgin.shop.CheckoutFlow", isResultFlow = true)),
-            topology.flowChain(cart),
+            listOf("dev.gezgin.shop.CheckoutFlow" to true),
+            topology.flowChain(cart).ids(),
         )
         assertEquals(
             listOf(
-                FlowType("dev.gezgin.shop.CheckoutFlow", isResultFlow = true),
-                FlowType("dev.gezgin.shop.CheckoutFlow.PayAuthFlow", isResultFlow = false),
+                "dev.gezgin.shop.CheckoutFlow" to true,
+                "dev.gezgin.shop.CheckoutFlow.PayAuthFlow" to false,
             ),
-            topology.flowChain(otp),
+            topology.flowChain(otp).ids(),
         )
         assertEquals(
             listOf(
-                FlowType("dev.gezgin.shop.CheckoutFlow", isResultFlow = true),
-                FlowType("dev.gezgin.shop.CheckoutFlow.CheckoutPages.GiftFlow", isResultFlow = false),
+                "dev.gezgin.shop.CheckoutFlow" to true,
+                "dev.gezgin.shop.CheckoutFlow.CheckoutPages.GiftFlow" to false,
             ),
-            topology.flowChain(giftPick),
+            topology.flowChain(giftPick).ids(),
         )
 
         assertEquals(cart.java, topology.startOf("dev.gezgin.shop.CheckoutFlow").java)
         assertEquals(otp.java, topology.startOf("dev.gezgin.shop.CheckoutFlow.PayAuthFlow").java)
         assertEquals(giftPick.java, topology.startOf("dev.gezgin.shop.CheckoutFlow.CheckoutPages.GiftFlow").java)
 
-        val feedToCheckoutFlow = topology.edges["dev.gezgin.shop.HomeGraph.Feed→dev.gezgin.shop.CheckoutFlow"]
-        assertNotNull(feedToCheckoutFlow, "expected a Feed→CheckoutFlow edge (Feed's @GoForResult(CheckoutFlow::class))")
-        assertEquals("dev.gezgin.shop.HomeGraph.Feed→dev.gezgin.shop.CheckoutFlow", feedToCheckoutFlow.id)
-        // Presence only — never invoke the (test-stub) serializer.
-        assertNotNull(feedToCheckoutFlow.resultSerializer)
+        // M2 — `edges` is now internal (read only by the same-module runtime); the Feed→CheckoutFlow
+        // edge's presence + serialization is proven end-to-end by NavigatorCodegenTest's live result round-trip.
     }
 
     @Test
@@ -185,14 +186,14 @@ class TopologyCodegenTest {
         // The declaring flow OWNS the contract (true); the transitively-ResultFlow sub-flow does NOT.
         assertEquals(
             listOf(
-                FlowType("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow", isResultFlow = true),
-                FlowType("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow.ZoomFlow", isResultFlow = false),
+                "dev.gezgin.nestedresult.ProfileGraph.AvatarFlow" to true,
+                "dev.gezgin.nestedresult.ProfileGraph.AvatarFlow.ZoomFlow" to false,
             ),
-            topology.flowChain(zoom),
+            topology.flowChain(zoom).ids(),
         )
         assertEquals(
-            listOf(FlowType("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow", isResultFlow = true)),
-            topology.flowChain(crop),
+            listOf("dev.gezgin.nestedresult.ProfileGraph.AvatarFlow" to true),
+            topology.flowChain(crop).ids(),
         )
 
         // NavigatorCodegen alignment: the sub-flow member's generated `quitWith` param type is the

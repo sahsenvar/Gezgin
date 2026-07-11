@@ -3,17 +3,17 @@ package dev.gezgin.core
 import dev.gezgin.core.compose.GezginTransition
 
 /**
- * Tüm graph interface'lerinin kökü. App'in kök sealed graph'ı bunu extend eder (AppGraph : Route).
+ * The root of every graph interface. The app's root sealed graph extends this (AppGraph : Route).
  *
- * [transition] (§9) — runtime transition değeri, **getter zorunlu**: `override val transition
- * get() = transition { forward { .. } }` — initializer'lı hâli (`val transition = transition { .. }`)
- * `@Serializable` data class route'larda backing field yaratır, bu da kotlinx.serialization codegen'iyle
- * çakışır (non-serializable alan). Varsayılan `null` = "bu seviye bir şey söylemiyor" (§9 cascade'in
- * temeli): bir graph interface'i bu property'yi override edip kendi grup-geneli transition'ını
- * verebilir; onu implement eden route'lar kendi override'ı yoksa Kotlin'in interface property override
- * zinciriyle graph'ın değerini miras alır (screen>graph cascade BEDAVA gelir — ek kod gerekmez). Kalan
- * app-seviyesi basamak ([dev.gezgin.core.compose.navTransitions]) [dev.gezgin.core.compose.resolveTransition]'da.
+ * [transition] (§9) — the runtime transition value, **getter required**: `override val transition
+ * get() = transition { forward { .. } }` — the initializer form (`val transition = transition { .. }`)
+ * creates a backing field on `@Serializable` data-class routes, which collides with kotlinx.serialization
+ * codegen (a non-serializable field). The default `null` = "this level says nothing" (the basis of the §9
+ * cascade): a graph interface may override this property to supply its own group-wide transition; routes
+ * that implement it inherit the graph's value through Kotlin's interface property-override chain unless they
+ * have their own override (the screen>graph cascade comes FOR FREE — no extra code). The remaining
+ * app-level step ([dev.gezgin.core.compose.navTransitions]) lives in [dev.gezgin.core.compose.resolveTransition].
  */
-interface Route {
-    val transition: GezginTransition? get() = null
+public interface Route {
+    public val transition: GezginTransition? get() = null
 }

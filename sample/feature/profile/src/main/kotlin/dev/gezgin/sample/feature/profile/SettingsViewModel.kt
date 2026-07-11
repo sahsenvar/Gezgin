@@ -2,7 +2,7 @@ package dev.gezgin.sample.feature.profile
 
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.annotation.ViewModel
+import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.sample.navigation.ProfileGraph
 import dev.gezgin.sample.navigation.SettingsNavigator
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-@ViewModel(ProfileGraph.SettingsScreenRoute::class)
+@MviViewModel(ProfileGraph.SettingsScreenRoute::class)
 class SettingsViewModel(
     private val nav: SettingsNavigator
 ) : androidx.lifecycle.ViewModel(), GezginMvi<SettingsState, SettingsIntent, SettingsEffect> {

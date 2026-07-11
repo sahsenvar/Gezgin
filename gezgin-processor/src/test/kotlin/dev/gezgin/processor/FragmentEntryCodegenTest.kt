@@ -56,8 +56,10 @@ class FragmentEntryCodegenTest {
     fun `provideXEntry golden text — AndroidFragment host, toBundle args, onUpdate bind, cross-module probe nav`() {
         val text = generateFragmentEntries()
 
+        // K4 — the fragment entry file opts in to the generated-code gate (route.toBundle/bindGezgin are gated).
+        assertTrue(text.startsWith("@file:OptIn(GezginInternalApi::class)"), text)
         // File lives in the FRAGMENT's own package (like core-mode's composable-package grouping).
-        assertTrue(text.startsWith("package dev.gezgin.fragui"), text)
+        assertTrue(text.contains("package dev.gezgin.fragui"), text)
 
         // FQ-imported symbols: AndroidFragment (androidx.fragment, no processor dep), the gezgin-core
         // runtime glue, and the navigator FACTORY qualified against the ROUTE's package (cross-module-safe).

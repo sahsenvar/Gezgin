@@ -70,7 +70,7 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * call, when wired, is qualified against [FragmentEntryModel.routePackageName] — cross-module-safe, exactly
  * like [EntryCodegen].
  */
-object FragmentEntryCodegen {
+internal object FragmentEntryCodegen {
 
     /**
      * @param hasNavigator per-entry predicate — `true` iff the entry's route earns a `NavigatorCodegen`
@@ -83,6 +83,9 @@ object FragmentEntryCodegen {
     ): List<FileSpec> =
         entries.groupBy { it.packageName }.map { (packageName, group) ->
             FileSpec.builder(packageName, "GezginFragmentEntries")
+                // K4 — every fragment register body reads LocalGezginRawNavigator and calls route.toBundle,
+                // all gated behind @GezginInternalApi.
+                .optInGezginInternalApi()
                 .apply { group.forEach { addFunction(provideFragmentEntryFun(it, hasNavigator(it))) } }
                 .build()
         }

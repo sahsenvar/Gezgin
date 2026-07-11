@@ -4,7 +4,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import dev.gezgin.mvi.ObserveAsEvents
+import dev.gezgin.mvi.ObserveEffects
 import dev.gezgin.mvi.annotation.ScreenEffect
 import kotlinx.coroutines.flow.Flow
 
@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun SettingsEffectHandler(effects: Flow<SettingsEffect>) {
     val context = LocalContext.current
-    ObserveAsEvents(effects) { effect ->
+    ObserveEffects(effects) { effect ->
         when (effect) {
             is SettingsEffect.ShowMessage -> {
                 Log.d("SettingsMvi", "effect: ${effect.text}")

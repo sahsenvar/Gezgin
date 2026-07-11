@@ -1,7 +1,7 @@
 package dev.gezgin.processor.fixtures
 
 /**
- * Faz 5.1 positive fixture — a well-formed MVI triple (§10.1): `@ViewModel(CounterRoute::class)` VM
+ * Faz 5.1 positive fixture — a well-formed MVI triple (§10.1): `@MviViewModel(CounterRoute::class)` VM
  * implementing `GezginMvi<S,I,E>`, a stateless MVI-mode `@Screen(CounterRoute::class)` content
  * `(state, onIntent)`, and an optional `@ScreenEffect fun CounterEffects(effects: Flow<CounterEffect>)`.
  *
@@ -18,7 +18,7 @@ val MVI_SOURCE = """
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
     import dev.gezgin.mvi.annotation.ScreenEffect
-    import dev.gezgin.mvi.annotation.ViewModel
+    import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.Flow
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +34,7 @@ val MVI_SOURCE = """
         data class Toast(val text: String) : CounterEffect
     }
 
-    @ViewModel(CounterRoute::class)
+    @MviViewModel(CounterRoute::class)
     class CounterViewModel(route: CounterRoute) : GezginMvi<CounterState, CounterIntent, CounterEffect> {
         override val uiState: StateFlow<CounterState> = MutableStateFlow(CounterState(route.start))
         override val effects: Flow<CounterEffect> = emptyFlow()

@@ -9,8 +9,9 @@ import kotlin.test.assertTrue
 
 class TopologyTest {
     @Test fun flowChainOfFlowMemberContainsCheckout() {
-        assertEquals(listOf(FlowType("CheckoutFlow", isResultFlow = true)),
-            testTopology.flowChain(Cart::class))
+        // M2 — FlowType is no longer a data class; compare by its public (id, isResultFlow) fields.
+        assertEquals(listOf("CheckoutFlow" to true),
+            testTopology.flowChain(Cart::class).map { it.id to it.isResultFlow })
     }
     @Test fun flowChainOfPlainRouteIsEmpty() {
         assertTrue(testTopology.flowChain(Feed::class).isEmpty())

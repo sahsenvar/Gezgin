@@ -4,14 +4,14 @@ import com.squareup.kotlinpoet.TypeName
 import dev.gezgin.processor.mvi.ViewModelModel
 
 /** Core-mode kind (§3.2/§10.1) — mirrors `dev.gezgin.core.compose.EntryKind` 1:1. */
-enum class EntryKindModel { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
+internal enum class EntryKindModel { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
 
 /**
  * One content-composable parameter that is NEITHER `state` NOR `onIntent` in an MVI-mode `@Screen`
  * (Problem 2 groundwork, §10.1). Carries both the flattened [typeFq] (for classification/dump) and
  * the KotlinPoet [typeName] (for 5.2 codegen), same FQ+TypeName rationale as [ViewModelModel]'s S/I/E.
  */
-data class MviExtraParam(val name: String, val typeFq: String, val typeName: TypeName)
+internal data class MviExtraParam(val name: String, val typeFq: String, val typeName: TypeName)
 
 /**
  * The MVI-mode (§10.1) descriptor attached to an [EntryFunctionModel] whose content composable is
@@ -19,15 +19,15 @@ data class MviExtraParam(val name: String, val typeFq: String, val typeName: Typ
  * MVI-mode entries; a core-mode entry carries `mvi = null` and is emitted by [dev.gezgin.processor.codegen.EntryCodegen]
  * exactly as before (zero behavior change). Faz 5.2's MVI codegen branches on this being non-null.
  *
- * [vm] is the matched `@ViewModel` (linked by shared route — see [EntryModelReader]); its `S/I/E`
+ * [vm] is the matched `@MviViewModel` (linked by shared route — see [EntryModelReader]); its `S/I/E`
  * types drove the content/effect validation (`MV5`/`MV6`) that produced this descriptor.
  *
  * **Problem 2 extras split (5.2 needs the distinction):** [roleExtraParams] are Gezgin-role-provided
- * (currently only `sheetState: androidx.compose.material3.SheetState`, Local-injected via Faz-4's
- * `LocalGezginSheetState`); [resolverExtraParams] are truly-unknown content params that 5.2 turns into
- * `@Composable () -> T` resolver params on `provideXEntry`.
+ * (currently only a `dev.gezgin.core.compose.GezginSheetController`, Local-injected via
+ * `LocalGezginSheetController`); [resolverExtraParams] are truly-unknown content params that 5.2 turns
+ * into `@Composable () -> T` resolver params on `provideXEntry`.
  */
-data class MviEntryModel(
+internal data class MviEntryModel(
     val vm: ViewModelModel,
     /** Matched `@ScreenEffect` composable's simple name (linked by effect type), or null if none. */
     val effectFunSimpleName: String?,
@@ -50,7 +50,7 @@ data class MviEntryModel(
  * and validated (Task 3.4, spec §10.1/§12/§14 core-mode slice) into everything [EntryCodegen] needs
  * to emit a `provideXEntry()` — no further KSP lookups happen at codegen time.
  */
-data class EntryFunctionModel(
+internal data class EntryFunctionModel(
     /** The composable function's own package — `provideXEntry` is emitted INTO this same package. */
     val packageName: String,
     /** The composable function's simple name (e.g. `OrderChainScreen`). */

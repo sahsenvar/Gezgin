@@ -264,7 +264,7 @@ class NavigatorProbeTest {
         import dev.gezgin.core.Route
         import dev.gezgin.core.annotation.Screen
         import dev.gezgin.mvi.GezginMvi
-        import dev.gezgin.mvi.annotation.ViewModel
+        import dev.gezgin.mvi.annotation.MviViewModel
         import kotlinx.coroutines.flow.Flow
         import kotlinx.coroutines.flow.MutableStateFlow
         import kotlinx.coroutines.flow.StateFlow
@@ -276,7 +276,7 @@ class NavigatorProbeTest {
         sealed interface WIntent { data object Tick : WIntent }
         sealed interface WEffect { data class Toast(val t: String) : WEffect }
 
-        @ViewModel($route::class)
+        @MviViewModel($route::class)
         class WidgetVm($vmCtor) : GezginMvi<WState, WIntent, WEffect> {
             override val uiState: StateFlow<WState> = MutableStateFlow(WState(0))
             override val effects: Flow<WEffect> = emptyFlow()

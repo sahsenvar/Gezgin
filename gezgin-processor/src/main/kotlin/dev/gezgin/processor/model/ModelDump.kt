@@ -8,7 +8,7 @@ package dev.gezgin.processor.model
  * entries are sorted by the owning declaration's fully-qualified name so the output never depends on
  * KSP's traversal order.
  */
-fun GraphModel.dumpText(): String {
+internal fun GraphModel.dumpText(): String {
     val lines = mutableListOf<String>()
 
     graphs.sortedBy { it.fqName }.forEach { graph ->

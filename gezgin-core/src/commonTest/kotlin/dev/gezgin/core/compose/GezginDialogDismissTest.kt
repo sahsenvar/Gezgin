@@ -1,3 +1,5 @@
+@file:OptIn(dev.gezgin.core.GezginInternalApi::class)
+
 package dev.gezgin.core.compose
 
 import dev.gezgin.core.NavResult
