@@ -176,7 +176,7 @@ class NavigatorProbeTest {
             @GezginNavigatorFor(WidgetRoute::class)
             class WidgetNavigator
 
-            @Screen
+            @Screen(WidgetRoute::class)
             @Composable
             fun WidgetScreen(route: WidgetRoute, nav: WidgetNavigator) {
             }
@@ -207,7 +207,7 @@ class NavigatorProbeTest {
 
             data class BareRoute(val id: String = "x") : Route
 
-            @Screen
+            @Screen(BareRoute::class)
             @Composable
             fun BareScreen(route: BareRoute, nav: BareNavigator) {
             }
@@ -235,7 +235,7 @@ class NavigatorProbeTest {
             @GezginNavigatorFor(FooRoute::class)
             class FooNavigator
 
-            @Screen
+            @Screen(FooScreenRoute::class)
             @Composable
             fun FooScreen(route: FooScreenRoute, nav: FooNavigator) {
             }
