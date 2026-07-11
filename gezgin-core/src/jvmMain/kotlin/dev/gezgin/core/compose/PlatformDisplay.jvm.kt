@@ -9,7 +9,6 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavEntryDecorator
-import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.Route
@@ -67,21 +66,23 @@ internal actual fun GezginNoBackHandler() { /* no-op — bkz. KDoc */ }
 
 /**
  * Desktop (JB alpha05): `NavDisplay` scene-strategy'si **TEKİL** `sceneStrategy: SceneStrategy<T>`.
- * `DialogSceneStrategy() then GezginBottomSheetSceneStrategy() then SinglePaneSceneStrategy()` — dialog-
- * ve sheet-metadata'lı entry'ler overlay olarak (her strateji kendi metadata key'ini okur, ayrık), kalanı
- * tek-pane (SceneStrategy.then overlay-önce sözleşmesi; iki overlay stratejisi karşılıklı-dışlayan, sıra
- * önemsiz — SinglePane en sonda fallback).
+ * `GezginDialogSceneStrategy(pinnedBack) then GezginBottomSheetSceneStrategy(pinnedBack) then SinglePaneSceneStrategy()`
+ * — dialog- ve sheet-metadata'lı entry'ler overlay olarak (her strateji kendi metadata key'ini okur, ayrık;
+ * dismiss'i sahip-entry'ye pinli, C-MJ-1), kalanı tek-pane (SceneStrategy.then overlay-önce sözleşmesi; iki
+ * overlay stratejisi karşılıklı-dışlayan, sıra önemsiz — SinglePane en sonda fallback). Nav3 built-in
+ * `DialogSceneStrategy` BIRAKILDI (entry-pin edilemezdi).
  */
 @Composable
 internal actual fun GezginNavDisplay(
     entries: List<NavEntry<Route>>,
     modifier: Modifier,
     onBack: () -> Unit,
+    pinnedBack: (Long) -> Unit,
 ) {
     // m3 — strateji zinciri stateless ama HER recomposition'da yeniden kurulmasın (Android actual'la
     // aynı kimlik-stabilizasyonu; GezginDisplay'in decorator/onBack `remember`'ıyla tutarlı).
-    val sceneStrategy = remember {
-        DialogSceneStrategy<Route>() then GezginBottomSheetSceneStrategy() then SinglePaneSceneStrategy()
+    val sceneStrategy = remember(pinnedBack) {
+        GezginDialogSceneStrategy(pinnedBack) then GezginBottomSheetSceneStrategy(pinnedBack) then SinglePaneSceneStrategy()
     }
     NavDisplay(
         entries = entries,

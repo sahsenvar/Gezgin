@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.gezgin.core.GezginTopology
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
@@ -72,7 +73,23 @@ internal actual fun rememberRawNavigatorInstance(
     if (!holder.adoptChecked) {
         holder.adoptChecked = true
         if (pdSnapshot.isNotEmpty()) {
-            decodeSavedStateOrNull(pdSnapshot, json)?.let(navigator::adoptRestored)
+            // MJ-B — Android adopt yolunda slot-payload decode HATA-TOLERANSI (desktop pariteyi kur):
+            // `decodeSavedStateOrNull` yalnız YAPISAL decode yapar (payload opak string → edge silinse/
+            // yeniden-adlandırılsa bile geçer). Gerçek slot-decode `adoptRestored`→`decodeSlot` içinde geç
+            // çalışır; migration sonrası bir edge/şema uyumsuzluğunda `IllegalArgumentException`/
+            // `SerializationException` fırlatır. Guard'sız bu, açılışta CRASH/crash-loop olurdu (desktop
+            // `decodeNavigatorStateOrNull` bunu zaten yakalayıp fresh-start yapar → asimetri). Burada yakala
+            // → navigator `start`'ta kalır (adoptRestored atomik: fırlarsa state dokunulmadı), sessiz
+            // fresh-start (RawNavigator KDoc'unun vaat ettiği dayanıklılık).
+            decodeSavedStateOrNull(pdSnapshot, json)?.let { restored ->
+                try {
+                    navigator.adoptRestored(restored)
+                } catch (e: SerializationException) {
+                    // şema-uyumsuz payload → graceful fresh-start (desktop ile aynı semantik)
+                } catch (e: IllegalArgumentException) {
+                    // edge silinmiş/yeniden-adlandırılmış (resultSerializer yok) → graceful fresh-start
+                }
+            }
         }
     }
     return navigator
