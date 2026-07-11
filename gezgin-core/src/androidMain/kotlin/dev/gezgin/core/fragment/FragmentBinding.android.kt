@@ -7,6 +7,7 @@ import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.Route
 import java.util.WeakHashMap
 import kotlin.properties.ReadOnlyProperty
+import kotlin.reflect.KProperty
 
 /**
  * Task 6.2 — the LIVE-reference (`gezginNav`) and typed-arg (`gezginArgs`) access half of `@FragmentScreen`
@@ -42,6 +43,43 @@ import kotlin.properties.ReadOnlyProperty
 private class BoundGezgin(val nav: Any?)
 
 /**
+ * E-MJ-F1 — the reliable post-bind hook a `@FragmentScreen` Fragment implements when it is a result
+ * LAUNCHER (its route declares a `@GoForResult` edge, so it must collect the generated `xResults` Flow).
+ *
+ * **Why this is needed:** `gezginNav` is bound inside `AndroidFragment.onUpdate`, which runs AFTER the
+ * internal `commitNow()` (fragment-compose 1.8.9 fact). So `gezginNav` is NOT yet bound in `onCreateView`/
+ * `onViewCreated` — a fragment cannot start a `nav.xResults` collector there, and there was no callback that
+ * says "binding is complete". Without this hook a `@GoForResult` launcher fragment compiles but is
+ * practically broken (the delivered result is never observed until some later interaction re-reads it).
+ *
+ * **Contract:** [bindGezgin] calls [onGezginBound] on the MAIN thread right after it registers the navigator
+ * — which is after `commitNow`, so `onCreateView`/`onViewCreated` have already run and `viewLifecycleOwner`
+ * exists. `gezginNav` is GUARANTEED readable here (it was just bound). Start the result collector in the
+ * fragment's `viewLifecycleOwner` scope, e.g.:
+ * ```
+ * class PickerFragment : Fragment(R.layout.picker), GezginBindingObserver {
+ *     private val nav by gezginNav<PickerNavigator>()
+ *     override fun onGezginBound() {
+ *         viewLifecycleOwner.lifecycleScope.launch {
+ *             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+ *                 nav.chooseAddressResults.collect { result -> /* handle */ }
+ *             }
+ *         }
+ *     }
+ * }
+ * ```
+ * On config-change/PD the fragment is a NEW instance and `bindGezgin` (hence [onGezginBound]) runs again for
+ * it → the collector is re-attached against the fresh `viewLifecycleOwner`. It fires ONCE per live instance
+ * (bind is once-per-instance, §1c) → no duplicate collectors on the same instance. If the route is an
+ * edge-less leaf (NO navigator), [onGezginBound] is still invoked, but `gezginNav` throws `[FS5]` — a
+ * display-only leaf should NOT implement this interface.
+ */
+public interface GezginBindingObserver {
+    /** Called on the main thread right after this Fragment's navigator is bound (post-`commitNow`). */
+    public fun onGezginBound()
+}
+
+/**
  * Fragment-instance → live navigator side-table. **Weak key (`WeakHashMap`):** a Fragment recreated on
  * config-change/PD is a DIFFERENT instance (a new weak key) → the old entry is GC'd, so the registry
  * naturally tracks the live instance (Task 6.0 §1c). Set up/read on the main thread; no synchronization.
@@ -67,6 +105,10 @@ private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
     boundRegistry[fragment] = BoundGezgin(nav)
+    // E-MJ-F1 — post-bind hook: registry SET edildikten SONRA çağrılır (onGezginBound içinde gezginNav
+    // okunabilir). commitNow SONRASI çalıştığından viewLifecycleOwner hazır → result-LAUNCHER fragment'ı
+    // xResults collector'ını burada güvenle kurar. İmplement etmeyen fragment'lar için no-op.
+    (fragment as? GezginBindingObserver)?.onGezginBound()
 }
 
 /**
@@ -87,6 +129,9 @@ public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route) {
     boundRegistry[fragment] = BoundGezgin(nav = null)
+    // E-MJ-F1 — nav'sız leaf de bind edilir; onGezginBound çağrılır ama gezginNav [FS5] fırlatır (leaf
+    // ekran bu interface'i implement ETMEMELİ). Simetri için ve "bind tamamlandı" sinyali olarak çağrılır.
+    (fragment as? GezginBindingObserver)?.onGezginBound()
 }
 
 /**
@@ -145,12 +190,29 @@ internal fun gezginBoundRoute(fragment: Fragment): Route {
 }
 
 /**
+ * mN2 — the memoizing `ReadOnlyProperty` behind [gezginArgs]. Decodes the route from the `arguments` Bundle
+ * ONCE (on the first successful read) and caches it; every later read of the same delegate returns the SAME
+ * instance (no per-read JSON re-decode, no fresh-instance-per-read foot-gun). The delegate is created per
+ * `by gezginArgs()` property, which is per fragment-instance, so the cache is correctly instance-scoped. A
+ * FAILED first read (fresh-process restore before `toBundle`, [gezginBoundRoute] throws) does NOT cache →
+ * the strict validity window (§B4) is preserved and a later `onViewCreated` read still succeeds.
+ */
+@PublishedApi
+internal class GezginArgsProperty<R : Route>(private val cast: (Route) -> R) : ReadOnlyProperty<Fragment, R> {
+    private var cached: R? = null
+    override fun getValue(thisRef: Fragment, property: KProperty<*>): R =
+        cached ?: cast(gezginBoundRoute(thisRef)).also { cached = it }
+}
+
+/**
  * The Fragment counterpart of `@Screen`'s `route` param (§11.1). `by gezginArgs<XRoute>()` — decodes the typed
  * route from the Fragment's `arguments` Bundle and casts to the reified type. INDEPENDENT of `onUpdate`
- * (arguments are set up at instantiation time). **Validity:** PD-safe in ALL cases from `onCreateView`/
- * `onViewCreated` onward; in `onAttach`/`onCreate` it is safe only on the FIRST-CREATION instance, NOT in the
- * fresh-process FragmentManager-restore branch (at that moment [gezginFragmentJson] is still `null` — see the
- * file-level KDoc + the [gezginBoundRoute] error). Read the route in `onCreateView`/`onViewCreated` (§B4).
+ * (arguments are set up at instantiation time). **Memoized (mN2):** decodes ONCE per fragment instance and
+ * returns a STABLE instance on repeated reads (see [GezginArgsProperty]). **Validity:** PD-safe in ALL cases
+ * from `onCreateView`/`onViewCreated` onward; in `onAttach`/`onCreate` it is safe only on the FIRST-CREATION
+ * instance, NOT in the fresh-process FragmentManager-restore branch (at that moment [gezginFragmentJson] is
+ * still `null` — see the file-level KDoc + the [gezginBoundRoute] error). Read the route in `onCreateView`/
+ * `onViewCreated` (§B4).
  */
 public inline fun <reified R : Route> gezginArgs(): ReadOnlyProperty<Fragment, R> =
-    ReadOnlyProperty { fragment, _ -> gezginBoundRoute(fragment) as R }
+    GezginArgsProperty { it as R }
