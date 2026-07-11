@@ -367,4 +367,66 @@ class RawNavigatorTest {
         n.backTo(Catalog::class)
         assertEquals(listOf<Route>(Feed, Catalog), n.backStack.value)
     }
+
+    // --- MJ-A: ResultFlow<T?>.quitWith(null) — null-as-sentinel hatası ---
+
+    // MJ-A — nullable sonuç tipli bir ResultFlow'da quitWith(null): meşru bir `null` DEĞER flow-entry
+    // slotuna Value(null) teslim eder, Canceled DEĞİL. Eski `deliverValue != null` guard'ı null'ı
+    // "değer yok"tan ayıramayıp Canceled'a çökerdi → "iptal etti" ile "'değer yok' seçti" karışırdı.
+    // backWithResult(null)'ın (doğru Value(null)) davranışıyla tutarlılık. RED-önce/GREEN-sonra.
+    @Test fun quitWithNullDeliversValueNull_notCanceled() = runTest {
+        val n = nav(); n.navigate(Catalog)
+        val r = async { n.navigateForResult<OrderId?>("Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        n.quitWith(null)                                       // ResultFlow<OrderId?> — "değer yok" seçildi
+        assertEquals(NavResult.Value<OrderId?>(null), r.await())   // Value(null), Canceled DEĞİL
+        assertEquals(Catalog, n.current)                      // flow yıkıldı, caller top
+    }
+
+    // Kontrast: Canceled-only çağıran (quit) valueTargetId=null geçirir → null DEĞER teslim etmez,
+    // Canceled verir (MJ-A fix'i yalnız quitWith'in value-taşıyan yolunu etkiler, quit'i DEĞİL).
+    @Test fun plainQuitStillDeliversCanceled_notValueNull() = runTest {
+        val n = nav(); n.navigate(Catalog)
+        val r = async { n.navigateForResult<OrderId?>("Catalog→CheckoutFlow", Cart) }
+        runCurrent()
+        n.quit()                                              // value taşımaz → Canceled
+        assertEquals(NavResult.Canceled, r.await())
+    }
+
+    // --- mn-1: backWithResult owner-top-ama-pending-target-değil → yine de pop ---
+
+    // mn-1 — owner top iken (top.id == entryId) ama onu hedefleyen bekleyen slot yoksa (ResultRoute düz
+    // @GoTo/navigate ile açıldı), backWithResult değeri düşürür ama owner ekranı YİNE KAPATIR. Eskiden hem
+    // teslim hem pop atlanır → ekran kapanmaz, kullanıcı sıkışırdı. RED-önce (Product top'ta kalır)/GREEN-sonra.
+    @Test fun backWithResultWhenOwnerTopButNotPendingTarget_stillPops() = runTest {
+        val n = nav()
+        n.navigate(Product("p"))                              // düz navigate → Product için bekleyen slot YOK
+        assertEquals(Product("p"), n.current)
+        n.backWithResult(OrderId("v"))                        // owner top ama pending-target değil
+        assertEquals(Feed, n.current, "owner ekranı yine de kapanmalı (mn-1)")
+        assertEquals(listOf<Route>(Feed), n.backStack.value)
+    }
+
+    // --- C-MJ-1: back(entryId) entry-pinned — modal dismiss'i sahibe pinlemenin çekirdeği ---
+
+    // back(entryId): entry HÂLÂ top ise normal back (pop).
+    @Test fun backWithEntryId_popsWhenEntryIsTop() {
+        val n = nav()
+        n.navigate(Catalog)                                   // [Feed, Catalog]
+        val catalogId = n.currentEntryId
+        n.back(catalogId)                                     // Catalog top → pop
+        assertEquals(listOf<Route>(Feed), n.backStack.value)
+    }
+
+    // back(entryId): entry artık top DEĞİLSE NO-OP → bayat/geç bir modal dismiss ALTTAKİ ekranı poplamaz
+    // (çifte-dismiss / hide-animasyon penceresi / app-scope geç back yarışının çekirdek koruması, C-MJ-1).
+    @Test fun backWithEntryId_noOpWhenEntryNotTop() {
+        val n = nav()
+        n.navigate(Catalog)                                   // [Feed, Catalog]
+        val catalogId = n.currentEntryId
+        n.navigate(Product("p"))                              // Catalog artık top DEĞİL
+        n.back(catalogId)                                     // bayat dismiss → NO-OP
+        assertEquals(listOf<Route>(Feed, Catalog, Product("p")), n.backStack.value)
+        assertEquals(Product("p"), n.current)
+    }
 }

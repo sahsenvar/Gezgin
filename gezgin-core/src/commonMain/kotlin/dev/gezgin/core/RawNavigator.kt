@@ -163,8 +163,14 @@ public class RawNavigator internal constructor(
      * event yayınlamaz — bu bir kuruluş, navigasyon değil.
      */
     internal fun adoptRestored(restored: SavedState) {
+        // MJ-B (atomicity) — riskli slot decode'unu MUTASYONDAN ÖNCE yap: `decodeSlot` bir edge silinmiş/
+        // yeniden-adlandırılmışsa (IllegalArgumentException) ya da şema değişmişse (SerializationException)
+        // fırlatabilir. Decode'u önce yaparak, fırlatırsa `state` (ve dolayısıyla navigator) DOKUNULMADAN
+        // `start`'ta kalır → çağıran (Android adopt yolu) istisnayı yutup graceful fresh-start yapabilir
+        // (yarı-adopt edilmiş tutarsız bir stack bırakmaz; desktop ctor'unun bütün-ya-hiç semantiğiyle simetrik).
+        val decodedSlots = restored.pendingSlots.map(::decodeSlot)
         state = GezginState(restored.keys, restored.nextId, topology)
-        bus.restore(restored.pendingSlots.map(::decodeSlot))
+        bus.restore(decodedSlots)
         refreshBackStack()
     }
 
@@ -271,18 +277,38 @@ public class RawNavigator internal constructor(
      * expects a result of a different type) and that entry is not accidentally popped (a dirty-delivery/
      * double-back race is prevented). The typed `backWithResult(result)` that Faz 2 codegen generates binds the
      * ctor's `entryId` to this overload.
+     *
+     * **mn-1 — owner top ama pending-target DEĞİL:** owner top iken (`top.id == entryId`) ama onu hedefleyen
+     * bekleyen bir slot yoksa (bir `ResultRoute` düz `@GoTo`/`navigate` ile ya da core-mode raw kullanımla
+     * açılmışsa), eskiden bu hem teslimi hem pop'u atlar → ekran kapanmaz, kullanıcı sıkışırdı. Artık en
+     * güvenli davranış: değeri düşür (kimse dinlemiyor) ama owner ekranı yine de KAPAT (`popTopAndEmit`).
+     * `bus.deliver` yalnız gerçek bir pending-target varken çağrılır; ardından `popTopAndEmit`'in
+     * [settleRemoved]'ı zaten teslim edilmiş (result != null) slotu atlar (çift-teslim yok).
      */
     @GezginInternalApi
     public fun backWithResult(entryId: Long, result: Any?) {
         val top = state.stack.last()
         if (top.id != entryId) return            // sahip entry artık top değil → teslim etme, pop etme
-        if (!isPendingTarget(top.id)) return
-        bus.deliver(top.id, NavResult.Value(result))
-        popTopAndEmit()
+        if (isPendingTarget(top.id)) bus.deliver(top.id, NavResult.Value(result))
+        popTopAndEmit()                          // owner top → değer düşse bile ekranı kapat (mn-1)
     }
 
     /** Convenience: owner = the call-time top entry. The typed layer pins the entry via the id overload. */
     public fun backWithResult(result: Any?): Unit = backWithResult(currentEntryId, result)
+
+    /**
+     * C-MJ-1 — entry-pinned `back`: [backWithResult]`(entryId, …)` deseninin sonuçsuz eşleniği. Yalnız
+     * [entryId] HÂLÂ top ise normal [back]'i uygular; değilse SESSİZ NO-OP. Modal (dialog/sheet) dismiss'i
+     * kendi sahip-entry'sine pinlemek için kullanılır: çifte-dismiss / hide-animasyon penceresinde geç gelen
+     * / app-scope coroutine'den gelen bir `back`, modal artık top değilken ALTTAKİ ekranı poplamaz — no-op
+     * olur (fail-loud/sahibe-pin felsefesi, spec §7). Ek: modal artık top değilse (kullanıcı zaten kapattı)
+     * bu no-op'tur; canlı top'a etki etmez.
+     */
+    @GezginInternalApi
+    public fun back(entryId: Long) {
+        if (state.stack.last().id != entryId) return   // sahip entry artık top değil → no-op
+        back()
+    }
 
     /** The call-time top entry id — the hook generated navigators bind to the explicit-caller overloads. */
     @GezginInternalApi
@@ -407,14 +433,19 @@ public class RawNavigator internal constructor(
     /** Stack'ten kalkan entry'lerin slot/event muhasebesi — tüm removal path'lerinin TEK kapısı.
      *  Value YALNIZ [valueTargetId]'nin slotuna (quit edilen flow'un KENDİ entry'si) teslim edilir;
      *  diğer hayatta-kalan caller'lı pending target'lar Canceled alır — açık out-of-flow caller'lı
-     *  yabancı-tipli bir slota asla Value sızmaz. deliverValue == null ise hepsi Canceled. */
+     *  yabancı-tipli bir slota asla Value sızmaz. [valueTargetId] == null ise hepsi Canceled. */
     private fun settleRemoved(removed: List<GezginKey>, deliverValue: Any? = null, valueTargetId: Long? = null) {
         if (removed.isEmpty()) return
         val removedIds = removed.map { it.id }.toSet()
         for (slot in bus.slots) {
             if (slot.result == null && slot.targetEntryId in removedIds && slot.callerEntryId !in removedIds) {
+                // MJ-A — "değer taşıyor muyuz"u [valueTargetId]'in VARLIĞINDAN oku, [deliverValue]'nun
+                // içeriğinden DEĞİL: quitWith DAİMA non-null valueTargetId geçirir (Canceled-only çağıranlar —
+                // quit/replaceTo/backTo/quitAndGoTo — DAİMA null). Böylece meşru bir `null` DEĞER
+                // (ResultFlow<T?>.quitWith(null)) flow-entry slotuna Value(null) teslim eder, Canceled'a
+                // çökmez (backWithResult(null) ile tutarlı).
                 bus.deliver(slot.targetEntryId,
-                    if (deliverValue != null && slot.targetEntryId == valueTargetId) NavResult.Value(deliverValue)
+                    if (valueTargetId != null && slot.targetEntryId == valueTargetId) NavResult.Value(deliverValue)
                     else NavResult.Canceled)
             }
         }
