@@ -44,6 +44,15 @@ kotlin {
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
         }
+        // MN-A — desktop (jvm) MVI'nın uçtan-uca (collectAsStateWithLifecycle + ObserveEffects, host-sürülen
+        // LocalLifecycleOwner'a bağlı) render/efekt teslimini cihazsız doğrulamak için `runComposeUiTest`
+        // altyapısı. gezgin-core jvmTest ile AYNI koordinatlar (String-tipli compose.uiTest DSL yardımcıları
+        // hard-deprecated → doğrudan koordinat).
+        jvmTest.dependencies {
+            implementation("org.jetbrains.compose.ui:ui-test:${libs.versions.compose.multiplatform.get()}")
+            implementation(compose.desktop.currentOs)
+            implementation("org.jetbrains.compose.ui:ui-test-junit4:${libs.versions.compose.multiplatform.get()}")
+        }
     }
 }
 android { namespace = "dev.gezgin.mvi"; compileSdk = 36; defaultConfig { minSdk = 24 } }
