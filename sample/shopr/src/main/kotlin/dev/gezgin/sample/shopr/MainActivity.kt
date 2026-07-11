@@ -7,11 +7,11 @@ import androidx.compose.runtime.Composable
 import dev.gezgin.core.compose.GezginDisplay
 import dev.gezgin.sample.shopr.nav.HomeGraph.Feed
 import dev.gezgin.sample.shopr.nav.rememberGezginNavigator
-import dev.gezgin.sample.shopr.ui.provideCartEntry
+import dev.gezgin.sample.shopr.ui.flow_checkout.provideCartEntry
+import dev.gezgin.sample.shopr.ui.flow_checkout.providePaymentEntry
 import dev.gezgin.sample.shopr.ui.provideCatalogEntry
 import dev.gezgin.sample.shopr.ui.provideFeedEntry
 import dev.gezgin.sample.shopr.ui.provideOrderPlacedEntry
-import dev.gezgin.sample.shopr.ui.providePaymentEntry
 import dev.gezgin.sample.shopr.ui.provideProductEntry
 import kotlinx.serialization.json.Json
 

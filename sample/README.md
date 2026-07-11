@@ -40,6 +40,17 @@ paketine karşı navigator-factory'sini çözer; bu yüzden bir feature modülü
 olmasa bile (`model.graphs.isEmpty()`) `@Screen`/`@Dialog`/`@BottomSheet` kayıtları ve
 `provideXEntry()` codegen'i sorunsuz çalışır (S1'in ana keşfi — cross-module entry codegen).
 
+## Dosya düzeni (per-file)
+
+Her feature'ın ekran içerikleri tek-sorumluluk dosyalarına bölünür (ör. `ProfileScreen.kt`,
+`SettingsContent.kt`, `LoginScreen.kt`, `DashboardScreen.kt`); bir modal/dialog/sheet ya da alt-akış
+kendi `kind_name` alt-paketini alır (`sheet_notification/`, `dialog_edit_name/`, `flow_avatar/`,
+`dialog_forgot_password/`, `flow_signup/`, `sheet_filter/`, `modal_image_viewer/`; shopr'da
+`ui/flow_checkout/`). KSP `provideXEntry`'yi içerik fonksiyonunun paketine ürettiğinden
+`*GraphEntries.kt` (ve shopr'da `MainActivity.kt`) import'ları bu alt-paketleri izler. Aşağıdaki
+kapsama tablosunun "dosya" sütunundaki `*Screens.kt` adları artık bölünmüş route gruplarının
+tarihsel etiketleridir.
+
 ## Navigasyon grafiği
 
 Tam grafik `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/` altında;
