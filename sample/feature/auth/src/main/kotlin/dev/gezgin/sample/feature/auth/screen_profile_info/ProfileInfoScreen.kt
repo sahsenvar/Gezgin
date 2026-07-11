@@ -1,4 +1,4 @@
-package dev.gezgin.sample.feature.auth.flow_signup
+package dev.gezgin.sample.feature.auth.screen_profile_info
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,17 +11,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.gezgin.core.annotation.Screen
-import dev.gezgin.sample.navigation.ProfileInfoNavigator
 import dev.gezgin.sample.navigation.SignUpFlow.ProfileInfoScreenRoute
 
-@Screen
+@Screen(ProfileInfoScreenRoute::class)
 @Composable
-fun ProfileInfoScreen(route: ProfileInfoScreenRoute, nav: ProfileInfoNavigator) {
+fun ProfileInfoScreen(state: ProfileInfoUiState, onIntent: (ProfileInfoIntent) -> Unit) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Kayıt ol — profil bilgileri")
-            Text("E-posta: ${route.email}")
-            Button(onClick = { nav.goToTerms() }) { Text("Devam") }
+            Text("E-posta: ${state.email}")
+            Button(onClick = { onIntent(ProfileInfoIntent.Continue) }) { Text("Devam") }
         }
     }
 }
