@@ -92,17 +92,16 @@ fun bindGezgin(fragment: Fragment, route: Route) {
 @PublishedApi
 internal fun gezginBoundNav(fragment: Fragment): Any {
     val bound = boundRegistry[fragment] ?: error(
-        "gezginNav yalnız AndroidFragment'ın onUpdate'i bu Fragment instance'ını bind ettikten SONRA " +
-            "okunabilir (bind = ilk onUpdate; §11.1 lifecycle sözleşmesi). ${fragment::class.simpleName} " +
-            "için henüz bind yok — canlı navigator serileştirilemez, arguments'tan gelemez.",
+        "gezginNav can only be read after AndroidFragment.onUpdate binds this Fragment instance " +
+            "(bind = first onUpdate; §11.1 lifecycle contract). ${fragment::class.simpleName} " +
+            "has not been bound yet; a live navigator cannot be serialized or read from arguments.",
     )
     return bound.nav ?: error(
-        "[FS5] gezginNav okunamaz: ${fragment::class.simpleName}'ın @FragmentScreen route'unun bir " +
-            "navigator'ı YOK — hiç @GoTo/@ReplaceTo/@BackTo/... edge'i (ve result-contract'ı) tanımlamıyor, " +
-            "dolayısıyla NavigatorCodegen ona bir XNavigator ÜRETMEDİ (bu Fragment navigator'sız bağlandı). " +
-            "Bu 'henüz bind edilmedi'den FARKLI bir durumdur. Çözüm: gezginNav'ı yalnız en az bir navigasyon " +
-            "edge'i tanımlayan bir route'ta kullan (route'a bir edge ekle) ya da bu görüntü-yalnızca ekrandan " +
-            "gezginNav delegesini kaldır (yalnız gezginArgs kullan).",
+        "[FS5] gezginNav cannot be read: ${fragment::class.simpleName}'s @FragmentScreen route has no " +
+            "navigator because it declares no @GoTo/@ReplaceTo/@BackTo/... edge and no result contract, " +
+            "so NavigatorCodegen did not generate an XNavigator for it (this Fragment was bound without a navigator). " +
+            "This is different from 'not bound yet'. Use gezginNav only on a route that defines at least one navigation " +
+            "edge, or remove the gezginNav delegate from this display-only screen and use only gezginArgs.",
     )
 }
 
@@ -125,15 +124,14 @@ inline fun <reified N> gezginNav(): ReadOnlyProperty<Fragment, N> =
 @PublishedApi
 internal fun gezginBoundRoute(fragment: Fragment): Route {
     val json = gezginFragmentJson ?: error(
-        "gezginArgs okunmadan önce hiç Gezgin route.toBundle() değerlendirilmemiş — @FragmentScreen'li " +
-            "Fragment yalnız Gezgin'in (GezginDisplay + üretilen provideXEntry) host ettiği bir entry olarak " +
-            "geçerlidir (§11.1). Bu, process-death sonrası FragmentManager'ın Fragment'ı onCreate'te henüz " +
-            "route.toBundle() çalışmadan geri yüklediği durumda da olabilir — gezginArgs'ı onAttach/onCreate'te " +
-            "DEĞİL, onCreateView/onViewCreated'da okuyun (§B4).",
+        "No Gezgin route.toBundle() has been evaluated before gezginArgs was read. A @FragmentScreen " +
+            "Fragment is only valid as an entry hosted by Gezgin (GezginDisplay + generated provideXEntry, §11.1). " +
+            "This can also happen after process death when FragmentManager restores the Fragment in onCreate before " +
+            "route.toBundle() has run. Read gezginArgs in onCreateView/onViewCreated, not in onAttach/onCreate (§B4).",
     )
     val bundle = fragment.arguments ?: error(
-        "gezginArgs: ${fragment::class.simpleName}.arguments null — Fragment Gezgin route.toBundle() ile " +
-            "kurulan arguments taşımıyor (yalnız @FragmentScreen host'unda geçerli, §11.1).",
+        "gezginArgs: ${fragment::class.simpleName}.arguments is null; the Fragment does not have arguments " +
+            "created by Gezgin route.toBundle() (only valid in a @FragmentScreen host, §11.1).",
     )
     return decodeGezginRoute(json, bundle)
 }

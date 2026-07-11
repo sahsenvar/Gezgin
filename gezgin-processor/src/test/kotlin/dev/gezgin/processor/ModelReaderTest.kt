@@ -172,6 +172,45 @@ class ModelReaderTest {
     }
 
     @Test
+    fun `reading rule - GoTo vararg target expands to one edge per target`() {
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "VarargGoToSource.kt",
+                """
+                package dev.gezgin.vararggoto
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.GoTo
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                sealed interface RootGraph : Route {
+                    @GoTo(Detail::class, Settings::class, singleTop = false)
+                    data object Home : RootGraph
+
+                    data class Detail(val id: String) : RootGraph
+
+                    data object Settings : RootGraph
+                }
+                """.trimIndent(),
+            ),
+            kspArgs = mapOf("gezgin.dumpModel" to "true"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val dump = findGeneratedResource("GezginModelDump.txt")!!.readText().lines()
+        assertEquals(
+            listOf(
+                "edge dev.gezgin.vararggoto.RootGraph.Home GO_TO " +
+                    "dev.gezgin.vararggoto.RootGraph.Detail singleTop=false clearUpTo=- inclusive=false name=-",
+                "edge dev.gezgin.vararggoto.RootGraph.Home GO_TO " +
+                    "dev.gezgin.vararggoto.RootGraph.Settings singleTop=false clearUpTo=- inclusive=false name=-",
+            ),
+            dump.filter { it.startsWith("edge dev.gezgin.vararggoto.RootGraph.Home ") },
+        )
+    }
+
+    @Test
     fun `reading rule - ReplaceTo Self sentinel maps to null and explicit args are read`() {
         assertEquals(
             listOf(

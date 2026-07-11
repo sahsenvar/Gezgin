@@ -57,7 +57,7 @@ class GezginEntryScope internal constructor() {
     ) {
         val routeClass = R::class
         if (registry.containsKey(routeClass)) {
-            error("Route için entry zaten kayıtlı: ${routeClass.simpleName}")
+            error("Entry is already registered for route: ${routeClass.simpleName}")
         }
         @Suppress("UNCHECKED_CAST")
         registry[routeClass] = RegisteredEntry(kind, noBack) { route -> content(route as R) }

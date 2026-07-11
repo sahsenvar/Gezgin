@@ -8,6 +8,11 @@ import kotlinx.serialization.json.Json
 
 class SavedStateTest {
     private val json = Json { serializersModule = testSerializersModule }
+    private val missingResultSerializerTopology = GezginTopology(
+        flowChains = emptyMap(),
+        flowStarts = emptyMap(),
+        edges = mapOf("missing-result" to EdgeSpec("missing-result", resultSerializer = null)),
+    )
 
     // --- Brief's 2 verbatim tests ---
 
@@ -76,5 +81,37 @@ class SavedStateTest {
             restored = json.decodeFromString(SavedState.serializer(), saved))
         val r = n2.results<Pick>("Feed→AddressPick").first()
         assertEquals(NavResult.Value(ChosenAddress("a1")), r)
+    }
+
+    @Test fun saveFailsWhenDeliveredResultSlotHasNoSerializer() {
+        val nav = RawNavigator(Feed, missingResultSerializerTopology)
+        nav.launchForResult("missing-result", Product("x"))
+        nav.backWithResult(OrderId("late"))
+
+        val error = assertFailsWith<IllegalArgumentException> { nav.save() }
+
+        assertTrue(error.message?.contains("resultSerializer") == true, error.message)
+    }
+
+    @Test fun restoreFailsWhenValuePayloadHasNoSerializer() {
+        val saved = SavedState(
+            keys = listOf(GezginKey(Feed, id = 0L)),
+            nextId = 1L,
+            pendingSlots = listOf(
+                SavedSlot(
+                    callerEntryId = 0L,
+                    edgeId = "missing-result",
+                    targetEntryId = 1L,
+                    payloadJson = "{}",
+                    canceled = false,
+                ),
+            ),
+        )
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            RawNavigator(Feed, missingResultSerializerTopology, restored = saved)
+        }
+
+        assertTrue(error.message?.contains("resultSerializer") == true, error.message)
     }
 }

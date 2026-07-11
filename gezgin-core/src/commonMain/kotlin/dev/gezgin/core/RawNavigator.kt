@@ -112,7 +112,7 @@ class RawNavigator(
                 NavResult.Canceled -> SavedSlot(slot.callerEntryId, slot.edgeId, slot.targetEntryId, payloadJson = null, canceled = true)
                 is NavResult.Value<*> -> {
                     val serializer = requireNotNull(topology.edges[slot.edgeId]?.resultSerializer) {
-                        "Edge '${slot.edgeId}' için resultSerializer yok — teslim edilmiş Value slotu serialize edilemez."
+                        "Edge '${slot.edgeId}' has no resultSerializer; delivered Value slot cannot be serialized."
                     } as KSerializer<Any?>
                     val payload = json.encodeToString(serializer, result.value)
                     SavedSlot(slot.callerEntryId, slot.edgeId, slot.targetEntryId, payloadJson = payload, canceled = false)
@@ -128,7 +128,7 @@ class RawNavigator(
             saved.canceled -> NavResult.Canceled
             saved.payloadJson != null -> {
                 val serializer = requireNotNull(topology.edges[saved.edgeId]?.resultSerializer) {
-                    "Edge '${saved.edgeId}' için resultSerializer yok — Value payload'ı decode edilemez."
+                    "Edge '${saved.edgeId}' has no resultSerializer; Value payload cannot be decoded."
                 } as KSerializer<Any?>
                 NavResult.Value(json.decodeFromString(serializer, saved.payloadJson))
             }
@@ -187,9 +187,9 @@ class RawNavigator(
         // error-boundary'li host'ta navigator'ı kalıcı geçersiz bir stack'te bırakırdı.
         val resultingRoot = state.resultingRootAfterReplace(route, clearUpTo, inclusive)
         require(!modalRootGuard(resultingRoot)) {
-            "replaceTo: sonuçtaki stack'in kökü modal kind olamaz (${resultingRoot::class.simpleName}) — " +
-                "bir modal'ın altında en az bir SCREEN entry olmalı (Nav3 OverlayScene invariant'ı, §7). " +
-                "clearUpTo=root ile bir modal'ı köke koymayın."
+            "replaceTo: resulting stack root cannot be a modal kind (${resultingRoot::class.simpleName}); " +
+                "a modal must have at least one SCREEN entry underneath it (Nav3 OverlayScene invariant, §7). " +
+                "Do not place a modal at root with clearUpTo=root."
         }
         val before = state.stack.toList()
         val enterFlow = resolveEnterFlow(route)

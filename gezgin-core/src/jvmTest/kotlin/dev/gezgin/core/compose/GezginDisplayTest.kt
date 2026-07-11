@@ -157,6 +157,6 @@ class GezginDisplayTest {
                 waitForIdle()
             }
         }
-        kotlin.test.assertTrue(error.message?.contains("modal kind olamaz") == true)
+        kotlin.test.assertTrue(error.message?.contains("cannot be a modal kind") == true)
     }
 }

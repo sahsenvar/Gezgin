@@ -20,8 +20,9 @@ sealed interface AuthGraph : Route {
     data object LoginScreenRoute : AuthGraph
 
     @Serializable
-    data class ForgotPasswordDialogRoute(val email: String? = null) :
-        AuthGraph, ResultRoute<Boolean>, DialogContract {
+    data class ForgotPasswordDialogRoute(
+        val email: String? = null
+    ) : AuthGraph, ResultRoute<Boolean>, DialogContract {
         override val dismissOnClickOutside: Boolean get() = false
     }
 }

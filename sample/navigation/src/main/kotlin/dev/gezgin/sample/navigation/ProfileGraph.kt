@@ -45,19 +45,23 @@ sealed interface ProfileGraph : Route {
     )
     @Serializable
     data object SettingsScreenRoute : ProfileGraph {
-        override val transition: GezginTransition?
-            get() = transition { forward { slideInHorizontally() togetherWith slideOutHorizontally() } }
+        override val transition: GezginTransition
+            get() = transition {
+                forward { slideInHorizontally() togetherWith slideOutHorizontally() }
+            }
     }
 
     @Serializable
-    data class EditNameDialogRoute(val current: String) : ProfileGraph, ResultRoute<String>, DialogContract {
+    data class EditNameDialogRoute(val current: String) : ProfileGraph, ResultRoute<String>,
+        DialogContract {
         override val dismissOnClickOutside: Boolean get() = current.isNotBlank()
     }
 
     // @ViewModel/@BottomSheet-content/@ScreenEffect üçlüsü :feature:profile'da olmalı (per-module KSP, §10.1).
     @Serializable
-    data class NotificationsSheetRoute(val current: NotificationLevel) :
-        ProfileGraph, ResultRoute<NotificationLevel>, BottomSheetContract {
+    data class NotificationsSheetRoute(
+        val current: NotificationLevel
+    ) : ProfileGraph, ResultRoute<NotificationLevel>, BottomSheetContract {
         override val skipPartiallyExpanded: Boolean get() = true
     }
 }

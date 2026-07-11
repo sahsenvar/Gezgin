@@ -57,8 +57,8 @@ fun Route.toBundle(nav: RawNavigator): Bundle {
  */
 internal fun decodeGezginRoute(json: Json, bundle: Bundle): Route {
     val encoded = requireNotNull(bundle.getString(GEZGIN_FRAGMENT_ROUTE_KEY)) {
-        "Bundle '$GEZGIN_FRAGMENT_ROUTE_KEY' taşımıyor — bu Bundle Gezgin route.toBundle() ile üretilmedi " +
-            "(gezginArgs yalnız @FragmentScreen ile Gezgin'in host ettiği Fragment içinde geçerli, §11.1)"
+        "Bundle does not contain '$GEZGIN_FRAGMENT_ROUTE_KEY'; this Bundle was not created by " +
+            "Gezgin route.toBundle() (gezginArgs is only valid inside a @FragmentScreen Fragment hosted by Gezgin, §11.1)"
     }
     return json.decodeFromString(PolymorphicSerializer(Route::class), encoded)
 }

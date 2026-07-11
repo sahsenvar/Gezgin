@@ -70,8 +70,8 @@ class GezginProcessor(
                         // unrelated top-level packages and there is no coherent home for the
                         // generated code; fail rather than emit into "".
                         environment.logger.error(
-                            "[PKG] nav modülü route'ları ortak bir pakette olmalı — ortak paket öneki boş " +
-                                "(kaynaklar ayrışık top-level paketlere dağılmış)",
+                            "[PKG] navigation-module routes must share a common package; the common " +
+                                "package prefix is empty (sources are spread across unrelated top-level packages)",
                         )
                         return emptyList()
                     }
@@ -82,9 +82,10 @@ class GezginProcessor(
                     val strayPackages = TopologyCodegen.declaredPackages(model).filter { it != packageName }
                     if (strayPackages.isNotEmpty()) {
                         environment.logger.error(
-                            "[PKG] nav modülünün her graph/route'u AYNI pakette olmalı (hedef paket: " +
-                                "$packageName) — navigator'lar oraya üretilir; farklı paket cross-module probe'u " +
-                                "ıskalatır. Ortak paket dışına düşen paket(ler): ${strayPackages.sorted()}",
+                            "[PKG] every graph/route in the navigation module must be in the SAME package " +
+                                "(target package: $packageName); navigators are generated there, and a different " +
+                                "package would make the cross-module probe miss them. Package(s) outside the common " +
+                                "package: ${strayPackages.sorted()}",
                         )
                         return emptyList()
                     }

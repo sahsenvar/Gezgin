@@ -6,13 +6,13 @@ import kotlin.annotation.Repeatable
 import kotlin.reflect.KClass
 
 /**
- * İleri navigasyon kenarı (§3.1/§4.1): kaynak graph interface'inden `target`'a push. Codegen tipli
- * `goToX()` üretir; `singleTop=true` (varsayılan) aynı-değerli top'u dedup eder, `name` aynı hedefe giden
- * birden çok kenarı ayırır (`@Repeatable`).
+ * İleri navigasyon kenarı (§3.1/§4.1): kaynak graph interface'inden her `target`'a push. Codegen her
+ * hedef için tipli `goToX()` üretir; `singleTop=true` (varsayılan) aynı-değerli top'u dedup eder,
+ * `name` aynı hedefe giden birden çok kenarı ayırır (`@Repeatable`).
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
-annotation class GoTo(val target: KClass<out Route>, val singleTop: Boolean = true, val name: String = "")
+annotation class GoTo(vararg val target: KClass<out Route>, val singleTop: Boolean = true, val name: String = "")
 
 /**
  * Replace kenarı (§4.1): mevcut hedefi `target` ile değiştirir — `clearUpTo` (varsayılan `Self`) + `inclusive`

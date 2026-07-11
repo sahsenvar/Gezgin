@@ -63,16 +63,16 @@ internal fun GezginEntryScope.toNavEntry(
     isRoot: Boolean = false,
 ): NavEntry<Route> {
     val registered = registry[key.route::class]
-        ?: error("route için entry kaydı yok: ${key.route::class.simpleName}")
+        ?: error("No entry is registered for route: ${key.route::class.simpleName}")
     // §7 modal-kind-at-root guard (kuruluş-zamanı RUNTIME) — TÜM dinamik yolları tek yerde kapatır:
     // start route DIŞINDA `replaceTo(SomeDialogRoute)`/`quitAndGoTo` da tek-modal (kök) stack üretebilir.
     // Bu ANA guard'dır; [GezginDisplay]'deki setup-time check yalnız start route'u kapsar → redundant
     // güvenlik ağı olarak kalır. DIALOG/FULLSCREEN_MODAL Nav3-içi `require(overlaidEntries.isNotEmpty())`
     // ile çökerdi (Gezgin-mesajsız), BOTTOM_SHEET ise hiç fırlamayıp boş arka-planda sessiz render'dı.
     require(!(isRoot && registered.kind != EntryKind.SCREEN)) {
-        "GezginDisplay: modal kind (${registered.kind}) stack'te tek/kök entry olamaz — bir modal'ın " +
-            "altında en az bir SCREEN entry olmalı (Nav3 OverlayScene invariant'ı, §7). replaceTo/" +
-            "quitAndGoTo ile modal'ı köke koymayın. route: ${key.route::class.simpleName}"
+        "GezginDisplay: modal kind (${registered.kind}) cannot be the only/root entry in the stack; " +
+            "a modal must have at least one SCREEN entry underneath it (Nav3 OverlayScene invariant, §7). " +
+            "Do not place a modal at root with replaceTo/quitAndGoTo. route: ${key.route::class.simpleName}"
     }
     val installNoBack = registered.noBack && !isRoot
     // Faz 4 scene wiring (§7): transition metadata (per-entry, §9) + DIALOG/FULLSCREEN_MODAL ise
@@ -91,10 +91,10 @@ internal fun GezginEntryScope.toNavEntry(
         // ama entry'yi stack'te top'ta tutar (görsel/state desync). Dialog için @NoBack HÂLÂ legal
         // (dismissOnBackPress=false ile, aşağıdaki requireBackDismissCompatible) — yalnız sheet yasak.
         require(registered.kind != EntryKind.BOTTOM_SHEET) {
-            "@NoBack + @BottomSheet tutarsız (${key.route::class.simpleName}): swipe-to-dismiss hiçbir " +
-                "prop'la kapatılamaz → @NoBack geri-yutması sheet'i görünmez bırakıp entry'yi stack'te " +
-                "tutar (görsel/state desync). BottomSheet için @NoBack kullanmayın; Dialog için " +
-                "dismissOnBackPress=false ile @NoBack legal (§7)."
+            "@NoBack + @BottomSheet is inconsistent (${key.route::class.simpleName}): swipe-to-dismiss " +
+                "cannot be disabled by any prop, so @NoBack would leave the sheet hidden while keeping " +
+                "the entry on the stack (visual/state desync). Do not use @NoBack for BottomSheet; " +
+                "@NoBack is legal for Dialog with dismissOnBackPress=false (§7)."
         }
         if (dialogProperties != null) requireBackDismissCompatible(key.route, dialogProperties.dismissOnBackPress)
         if (sheetProps != null) requireBackDismissCompatible(key.route, sheetProps.dismissOnBackPress)
@@ -174,9 +174,9 @@ private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottom
  */
 private fun requireBackDismissCompatible(route: Route, dismissOnBackPress: Boolean) {
     require(!dismissOnBackPress) {
-        "Modal kuruluş çelişkisi (${route::class.simpleName}): @NoBack (geri yutulur) ile " +
-            "dismissOnBackPress=true (geri modal'ı kapatır) birlikte olamaz. Modal " +
-            "DialogContract/FullscreenModalContract/BottomSheetContract'ında " +
-            "`override val dismissOnBackPress = false` ver ya da @NoBack'i kaldır (§7)."
+        "Modal setup conflict (${route::class.simpleName}): @NoBack (back is swallowed) and " +
+            "dismissOnBackPress=true (back dismisses the modal) cannot be used together. In the modal " +
+            "DialogContract/FullscreenModalContract/BottomSheetContract, set " +
+            "`override val dismissOnBackPress = false`, or remove @NoBack (§7)."
     }
 }

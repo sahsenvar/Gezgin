@@ -32,7 +32,7 @@ class GezginModalRootGuardTest {
         val ex = assertFailsWith<IllegalArgumentException> {
             scope().toNavEntry(GezginKey(route = route, id = id), navigator, navTransitions {}, isRoot = true)
         }
-        assertTrue(ex.message?.contains("tek/kök entry olamaz") == true, "guard mesaji: ${ex.message}")
+        assertTrue(ex.message?.contains("only/root entry") == true, "guard message: ${ex.message}")
     }
 
     @Test

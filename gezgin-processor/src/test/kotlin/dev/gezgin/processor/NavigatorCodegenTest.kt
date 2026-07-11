@@ -92,6 +92,47 @@ class NavigatorCodegenTest {
     }
 
     @Test
+    fun `GoTo vararg target emits one generated method per target`() {
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "VarargGoToSource.kt",
+                """
+                package dev.gezgin.vararggoto
+
+                import dev.gezgin.core.RawNavigator
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.GoTo
+                import dev.gezgin.core.annotation.NavGraph
+
+                @NavGraph
+                sealed interface RootGraph : Route {
+                    @GoTo(Detail::class, Settings::class)
+                    data object Home : RootGraph
+
+                    data class Detail(val id: String) : RootGraph
+
+                    data object Settings : RootGraph
+                }
+
+                fun drive(raw: RawNavigator, entryId: Long) {
+                    val nav = raw.homeNavigator(entryId)
+                    nav.goToDetail("42")
+                    nav.goToSettings()
+                }
+                """.trimIndent(),
+            ),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val homeSource = result.generatedSourceFor("HomeNavigator.kt")
+        assertNotNull(homeSource)
+        val text = homeSource.readText()
+        assertTrue("fun goToDetail(id: String)" in text, text)
+        assertTrue("fun goToSettings()" in text, text)
+    }
+
+    @Test
     fun `NoBack source has no back() member — golden text`() {
         val result = compileGezgin(
             SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),

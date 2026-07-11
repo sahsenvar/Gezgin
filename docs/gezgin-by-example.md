@@ -98,7 +98,7 @@ Aynı hedefe farklı davranış = farklı kenar = farklı metot. Davranış anno
 
 | Annotation | Üretilen metot | Ne yapar |
 |---|---|---|
-| `@GoTo(X::class)` | `goToX(params)` | push (değere göre singleTop) |
+| `@GoTo(X::class, Y::class)` | `goToX(params)` · `goToY(params)` | her hedef için push (değere göre singleTop) |
 | `@ReplaceTo(X::class, clearUpTo = Self)` | `replaceToX(params)` | `clearUpTo`'ya kadar temizle + push (`Self` = mevcut route) |
 | `@GoForResult(X::class)` | `launchX(...)` · `xResults: Flow<NavResult<T>>` · `suspend goToXForResult()` | tetik + PD-safe re-attach stream + sugar (hedef `ResultFlow`/`ResultRoute`) |
 

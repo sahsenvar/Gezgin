@@ -140,18 +140,18 @@ class FragmentModelReader(
         if (Modifier.ABSTRACT in decl.modifiers) {
             error(
                 "FS1",
-                "$fragmentSimpleName: @FragmentScreen abstract bir sınıfa konamaz — Android onu argsız " +
-                    "ctor'la yeniden yaratamaz (FragmentFactory.instantiate → InstantiationException). " +
-                    "Somut bir Fragment alt sınıfı yap (§11.1)",
+                "$fragmentSimpleName: @FragmentScreen cannot be placed on an abstract class; Android cannot " +
+                    "recreate it with a no-arg constructor (FragmentFactory.instantiate -> InstantiationException). " +
+                    "Use a concrete Fragment subclass (§11.1)",
             )
             return null
         }
         if (Modifier.INNER in decl.modifiers) {
             error(
                 "FS1",
-                "$fragmentSimpleName: @FragmentScreen'li Fragment `inner` olamaz — inner ctor dış-sınıf " +
-                    "örneğini taşır, argsız yeniden-yaratma çöker (NoSuchMethodException). Top-level ya da " +
-                    "`static` (nested) bir sınıf yap (§11.1)",
+                "$fragmentSimpleName: @FragmentScreen Fragment cannot be `inner`; an inner constructor carries " +
+                    "the outer-class instance, so no-arg recreation fails (NoSuchMethodException). Use a top-level " +
+                    "or `static` (nested) class (§11.1)",
             )
             return null
         }
@@ -161,10 +161,10 @@ class FragmentModelReader(
         if (ctorParams.isNotEmpty()) {
             error(
                 "FS1",
-                "$fragmentSimpleName: @FragmentScreen'li Fragment'ın ctor'u parametresiz OLMALIDIR — " +
-                    "şu param(lar)ı var: ${ctorParams.joinToString { it.name?.asString().orEmpty() }} " +
-                    "(Android PD/config-change'de Fragment'ı argsız ctor'la yeniden yaratır; route/nav " +
-                    "ctor'dan DEĞİL gezginArgs/gezginNav delege'lerinden gelir, §11.1)",
+                "$fragmentSimpleName: @FragmentScreen Fragment constructor must be parameterless; it has " +
+                    "parameter(s): ${ctorParams.joinToString { it.name?.asString().orEmpty() }} " +
+                    "(Android recreates Fragments after process death/config change with a no-arg constructor; " +
+                    "route/nav come from the gezginArgs/gezginNav delegates, not from the constructor, §11.1)",
             )
             return null
         }
@@ -175,10 +175,10 @@ class FragmentModelReader(
         if (!hasPublicNoArgCtor) {
             error(
                 "FS1",
-                "$fragmentSimpleName: @FragmentScreen'li Fragment'ın erişilebilir (public) argümansız bir " +
-                    "ctor'u yok — yalnız secondary ctor'lu ya da private/protected ctor'lu bir sınıf argsız " +
-                    "yeniden-yaratmada çöker (NoSuchMethodException). Public bir `constructor()` (ya da hiç " +
-                    "ctor bildirmeyen) Fragment yaz (§11.1)",
+                "$fragmentSimpleName: @FragmentScreen Fragment has no accessible public no-arg constructor; " +
+                    "a class with only secondary constructors or a private/protected constructor fails no-arg " +
+                    "recreation (NoSuchMethodException). Use a Fragment with a public `constructor()` or no " +
+                    "declared constructor (§11.1)",
             )
             return null
         }
@@ -197,11 +197,10 @@ class FragmentModelReader(
         if (!extendsFragment) {
             error(
                 "FS6",
-                "$fragmentSimpleName: @FragmentScreen yalnız bir androidx.fragment.app.Fragment alt sınıfına " +
-                    "konulabilir — bu sınıf Fragment'ı extend ETMİYOR (düz bir sınıf/Activity'ye yanlışlıkla " +
-                    "eklenmiş olabilir). Fragment'ı `class $fragmentSimpleName : Fragment()` yap ya da " +
-                    "@FragmentScreen'i kaldır (route/nav bir Fragment host'una gezginArgs/gezginNav ile " +
-                    "teslim edilir, §11.1)",
+                "$fragmentSimpleName: @FragmentScreen can only be placed on an androidx.fragment.app.Fragment " +
+                    "subclass; this class does not extend Fragment (it may have been added to a plain class/Activity " +
+                    "by mistake). Make it `class $fragmentSimpleName : Fragment()`, or remove @FragmentScreen " +
+                    "(route/nav are delivered to a Fragment host via gezginArgs/gezginNav, §11.1)",
             )
             return null
         }
@@ -212,7 +211,7 @@ class FragmentModelReader(
         val routeType = annotation.classArg("route")
         val routeDecl = routeType?.declaration as? KSClassDeclaration
         if (routeDecl == null) {
-            error("FS2", "$fragmentSimpleName: @FragmentScreen(route=…) türü çözülemedi")
+            error("FS2", "$fragmentSimpleName: @FragmentScreen(route=…) type could not be resolved")
             return null
         }
         val routeFq = routeDecl.qualifiedName?.asString()
@@ -223,10 +222,10 @@ class FragmentModelReader(
         if (routeFq == ROUTE_FQ) {
             error(
                 "FS2",
-                "$fragmentSimpleName: @FragmentScreen(Route::class) — Route arayüzünün KENDİSİ route olamaz " +
-                    "(somut bir route sınıfı ver). @Screen'deki `Route::class` = 'route: param'ından türet' " +
-                    "sentinel'inin @FragmentScreen'de karşılığı yok; register<Route> hiçbir push'la eşleşmez " +
-                    "→ ölü kayıt (§11.1)",
+                "$fragmentSimpleName: @FragmentScreen(Route::class) is invalid; the Route interface itself " +
+                    "cannot be a route (provide a concrete route class). @Screen's `Route::class` sentinel means " +
+                    "'derive from route: parameter', but @FragmentScreen has no matching sentinel; register<Route> " +
+                    "matches no push, creating a dead registration (§11.1)",
             )
             return null
         }
@@ -234,8 +233,8 @@ class FragmentModelReader(
         if (routeFq == null || !implementsRoute) {
             error(
                 "FS2",
-                "$fragmentSimpleName: route tipi (${routeDecl.qualifiedName?.asString()}) " +
-                    "dev.gezgin.core.Route implement etmiyor",
+                "$fragmentSimpleName: route type (${routeDecl.qualifiedName?.asString()}) " +
+                    "does not implement dev.gezgin.core.Route",
             )
             return null
         }
@@ -252,10 +251,10 @@ class FragmentModelReader(
             error(
                 "FS7",
                 "$fragmentSimpleName: route ${routeFq.substringAfterLast('.')} " +
-                    "${modalContract.substringAfterLast('.')} implement ediyor ama @FragmentScreen ekranları " +
-                    "YALNIZ screen-mode render edilir (§11.2) — modal contract SESSİZCE yok sayılırdı " +
-                    "(kullanıcı modal isterken düz tam-ekran fragment alırdı). Contract'ı route'tan kaldır ya " +
-                    "da modal'ı Fragment yerine @Dialog/@BottomSheet/@FullscreenModal composable ile kur",
+                    "implements ${modalContract.substringAfterLast('.')}, but @FragmentScreen entries render " +
+                    "only in screen-mode (§11.2); the modal contract would be silently ignored (the user asks " +
+                    "for a modal but gets a plain full-screen fragment). Remove the contract from the route, " +
+                    "or build the modal as a @Dialog/@BottomSheet/@FullscreenModal composable instead of a Fragment",
             )
             return null
         }
@@ -266,9 +265,9 @@ class FragmentModelReader(
         if (previousOwner != null) {
             error(
                 "FS3",
-                "route ${routeFq.substringAfterLast('.')} birden çok destination tarafından kaydediliyor: " +
-                    "$previousOwner, $fragmentSimpleName — bir route'a yalnız bir @Screen/@Dialog/" +
-                    "@BottomSheet/@FullscreenModal/@FragmentScreen bağlanabilir (SC4/MV4 ile aynı kural)",
+                "route ${routeFq.substringAfterLast('.')} is registered by multiple destinations: " +
+                    "$previousOwner, $fragmentSimpleName; only one @Screen/@Dialog/@BottomSheet/" +
+                    "@FullscreenModal/@FragmentScreen may bind to a route (same rule as SC4/MV4)",
             )
             return null
         }
@@ -285,10 +284,10 @@ class FragmentModelReader(
         if (previousProvideOwner != null) {
             error(
                 "FS4",
-                "$packageName paketinde provide${x}Entry() birden çok destination tarafından üretiliyor: " +
-                    "$previousProvideOwner, $fragmentSimpleName — route adlarının aynı 'X' türetimine (${x}) " +
-                    "çözülmesi (SC6 ile aynı kural; @FragmentScreen entry'si core/MVI provideXEntry'siyle de " +
-                    "çakışabilir — aynı pakette GezginFragmentEntries.kt, GezginEntries.kt yan yana)",
+                "$packageName generates provide${x}Entry() from multiple destinations: " +
+                    "$previousProvideOwner, $fragmentSimpleName; route names resolve to the same derived 'X' (${x}) " +
+                    "(same rule as SC6; an @FragmentScreen entry can also collide with a core/MVI provideXEntry " +
+                    "because GezginFragmentEntries.kt and GezginEntries.kt sit side by side in the same package)",
             )
             return null
         }

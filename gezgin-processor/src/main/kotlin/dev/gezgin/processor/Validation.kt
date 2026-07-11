@@ -87,8 +87,8 @@ class GezginValidator(
                 if (entersResultFlowDirectly) {
                     error(
                         "E1",
-                        "@${edge.kind.annotationName()} hedefi ${simple(target)} bir ResultFlow — girişe " +
-                            "yalnız @GoForResult izin verir (kaynak: ${route.simpleName})",
+                        "@${edge.kind.annotationName()} target ${simple(target)} is a ResultFlow; only " +
+                            "@GoForResult may enter it (source: ${route.simpleName})",
                     )
                 } else if (entersResultFlowViaStart) {
                     // Target is a plain ROUTE, not the flow-graph type itself — it's a ResultFlow only
@@ -96,8 +96,8 @@ class GezginValidator(
                     // rather than (incorrectly) calling the route itself "a ResultFlow".
                     error(
                         "E1",
-                        "@${edge.kind.annotationName()} hedefi ${simple(target)}, ${simple(parent!!.fqName)} " +
-                            "ResultFlow'un START'ı — girişe yalnız @GoForResult izin verir (kaynak: " +
+                        "@${edge.kind.annotationName()} target ${simple(target)} is the start route of " +
+                            "ResultFlow ${simple(parent!!.fqName)}; only @GoForResult may enter it (source: " +
                             "${route.simpleName})",
                     )
                 }
@@ -115,8 +115,8 @@ class GezginValidator(
             if (!isValid) {
                 error(
                     "E2",
-                    "@GoForResult hedefi ${simple(target)} ne bir ResultRoute ne de bir ResultFlow — " +
-                        "sonuç alınamaz (kaynak: ${route.simpleName})",
+                    "@GoForResult target ${simple(target)} is neither a ResultRoute nor a ResultFlow; " +
+                        "no result can be produced (source: ${route.simpleName})",
                 )
             }
         }
@@ -161,9 +161,9 @@ class GezginValidator(
             if (violated != null) {
                 error(
                     "E3",
-                    "${simple(target)}, ${simple(violated)} flow'unun bir iç üyesi ve kaynağın " +
-                        "(${route.simpleName}) flow-chain'i dışında — doğrudan hedeflenemez, yalnız " +
-                        "${simple(violated)}'un kendisi (start'ı) hedeflenebilir",
+                    "${simple(target)} is an inner member of flow ${simple(violated)}, which is outside " +
+                        "the source (${route.simpleName}) flow chain; target the flow container " +
+                        "${simple(violated)} itself instead of its inner member",
                 )
             }
         }
@@ -203,8 +203,8 @@ class GezginValidator(
                 if (!isMember) {
                     error(
                         "E4",
-                        "@ReplaceTo.clearUpTo=${simple(clearUpTo)} kaynağın (${route.simpleName}) en " +
-                            "içteki flow'u ${simple(innermostFlowFq)}'un üyesi değil",
+                        "@ReplaceTo.clearUpTo=${simple(clearUpTo)} is not a member of the source " +
+                            "(${route.simpleName}) innermost flow ${simple(innermostFlowFq)}",
                     )
                 }
             }
@@ -220,9 +220,8 @@ class GezginValidator(
         extra.forEach { second ->
             error(
                 "E5",
-                "${route.simpleName}, nested olduğu ${simple(route.graphFq)} dışında ikinci bir " +
-                    "graph-arayüzü (${simple(second)}) implement ediyor — bir route yalnız kendi " +
-                    "graph'ını implement edebilir",
+                "${route.simpleName} implements a second graph interface (${simple(second)}) in addition " +
+                    "to its owning graph ${simple(route.graphFq)}; a route may implement only its own graph",
             )
         }
     }
@@ -241,8 +240,8 @@ class GezginValidator(
         if (graph.directParentFqs.size >= 2) {
             error(
                 "N11",
-                "${simple(graph.fqName)} birden çok annotated graph/flow'u doğrudan implement ediyor " +
-                    "(${graph.directParentFqs.joinToString { simple(it) }}) — bir graph/flow'un ebeveyni tek olmalı",
+                "${simple(graph.fqName)} directly implements more than one annotated graph/flow " +
+                    "(${graph.directParentFqs.joinToString { simple(it) }}); a graph/flow must have one parent",
             )
         }
     }
@@ -258,10 +257,10 @@ class GezginValidator(
         if (graph.isFlow && graph.membershipParentFq == null && graph.isNested) {
             error(
                 "N12",
-                "${simple(graph.fqName)} bir @FlowGraph ama hiçbir annotated graph/flow'a bağlı değil " +
-                    "(öksüz): ne supertype (`: ParentGraph`) deklare ediyor ne de kapsayanı annotated bir " +
-                    "graph. Ya EN ÜST SEVİYEYE taşı (edge ile girilen bağımsız root flow olur) ya da " +
-                    "bir annotated parent ver (`: ParentGraph`) / annotated bir graph içine koy",
+                "${simple(graph.fqName)} is a @FlowGraph but is not attached to any annotated graph/flow: " +
+                    "it declares no annotated supertype (`: ParentGraph`) and is not enclosed by an " +
+                    "annotated graph. Move it to top level for an edge-entered root flow, or attach it " +
+                    "with an annotated parent (`: ParentGraph`) / enclosing annotated graph",
             )
         }
     }
@@ -281,8 +280,9 @@ class GezginValidator(
             val kind = if (graph.isFlow) "@FlowGraph" else "@NavGraph"
             error(
                 "N13",
-                "${simple(graph.fqName)} bir $kind ama `sealed interface` değil — ayrı dosyadaki üyeler " +
-                    "sessizce düşer (getSealedSubclasses yalnız sealed tipte üye bulur); `sealed interface` yap",
+                "${simple(graph.fqName)} is a $kind but is not a `sealed interface`; members declared " +
+                    "in separate files would be silently dropped because getSealedSubclasses only finds " +
+                    "members for sealed types. Use `sealed interface`",
             )
         }
     }
@@ -306,8 +306,8 @@ class GezginValidator(
             if (!resolvable) {
                 error(
                     "E6",
-                    "@${edge.kind.annotationName()} hedefi çözülemedi/geçersiz: $target " +
-                        "(kaynak: ${route.simpleName}) — hedef bir route ya da @FlowGraph olmalı",
+                    "@${edge.kind.annotationName()} target is unresolved or invalid: $target " +
+                        "(source: ${route.simpleName}); target must be a route or @FlowGraph",
                 )
             }
         }
@@ -318,8 +318,8 @@ class GezginValidator(
                 if (target == null || target !in routesByFq) {
                     error(
                         "E6",
-                        "@BackTo hedefi çözülemedi/geçersiz: ${target ?: "?"} " +
-                            "(kaynak: ${route.simpleName}) — hedef model'de bir route olmalı",
+                        "@BackTo target is unresolved or invalid: ${target ?: "?"} " +
+                            "(source: ${route.simpleName}); target must be a route in the model",
                     )
                 }
             }
@@ -342,8 +342,8 @@ class GezginValidator(
             .forEach { (x, routes) ->
                 error(
                     "N10",
-                    "${x}Navigator birden çok kaynaktan üretiliyor (aynı pakete çıkacak sınıf adı " +
-                        "çakışması): ${routes.joinToString { it.fqName }}",
+                    "${x}Navigator would be generated from multiple sources into the same package " +
+                        "(class-name collision): ${routes.joinToString { it.fqName }}",
                 )
             }
     }
@@ -386,16 +386,16 @@ class GezginValidator(
         byMember.filterValues { it.size >= 2 }.forEach { (member, targets) ->
             error(
                 "N10",
-                "${route.simpleName} içinde iki ayrı edge aynı üye adını ($member) üretiyor — " +
-                    "çakışan hedefler: ${targets.joinToString()}",
+                "${route.simpleName} has multiple edges producing the same member name ($member); " +
+                    "conflicting targets: ${targets.joinToString()}",
             )
         }
 
         byMember.keys.filter { it in RESERVED_MEMBER_NAMES }.forEach { member ->
             error(
                 "N10",
-                "${route.simpleName} içinde bir name= override üretilen üye adı ($member) " +
-                    "navigator'ın rezerve üyeleriyle (${RESERVED_MEMBER_NAMES.joinToString()}) çakışıyor",
+                "${route.simpleName} has a name= override producing reserved navigator member " +
+                    "($member); reserved members: ${RESERVED_MEMBER_NAMES.joinToString()}",
             )
         }
     }
@@ -416,8 +416,8 @@ class GezginValidator(
         if (requiredParams.isNotEmpty()) {
             error(
                 "G1",
-                "${simple(graph.fqName)} bir FlowGraph ama start'ı ${start.simpleName} argümansız " +
-                    "kurulamıyor (zorunlu ctor parametresi var: ${requiredParams.joinToString { it.name }})",
+                "${simple(graph.fqName)} is a FlowGraph but its start route ${start.simpleName} cannot " +
+                    "be constructed without arguments (required ctor params: ${requiredParams.joinToString { it.name }})",
             )
         }
     }
@@ -436,8 +436,8 @@ class GezginValidator(
                     val (kind, target) = key
                     error(
                         "N9",
-                        "${route.simpleName} içinde aynı hedefe (${simple(target)}, $kind) isimsiz iki " +
-                            "edge var — birbirinden ayırt edilemez, en az birine name= ver",
+                        "${route.simpleName} has two unnamed edges of the same kind to the same target " +
+                            "(${simple(target)}, $kind); add name= to at least one edge to disambiguate",
                     )
                 }
             }
@@ -452,8 +452,8 @@ class GezginValidator(
         if (graph.isResultFlow && !graph.isFlow) {
             error(
                 "R1",
-                "${simple(graph.fqName)} bir ResultFlow<T> implement ediyor ama @FlowGraph değil — " +
-                    "yalnız @FlowGraph bir ResultFlow olabilir",
+                "${simple(graph.fqName)} implements ResultFlow<T> but is not annotated @FlowGraph; " +
+                    "only @FlowGraph may be a ResultFlow",
             )
         }
     }
@@ -464,7 +464,7 @@ class GezginValidator(
 
     private fun checkNB1(route: RouteModel) {
         if (route.noBack && route.isStart) {
-            error("NB1", "${route.simpleName} hem @NoBack hem @StartDestination olamaz")
+            error("NB1", "${route.simpleName} cannot be both @NoBack and @StartDestination")
         }
     }
 
@@ -478,15 +478,15 @@ class GezginValidator(
             if (starts.size != 1) {
                 error(
                     "SD1",
-                    "${simple(graph.fqName)} bir FlowGraph ama ${starts.size} @StartDestination var " +
-                        "(tam olarak 1 olmalı)",
+                    "${simple(graph.fqName)} is a FlowGraph but has ${starts.size} @StartDestination " +
+                        "members (exactly 1 required)",
                 )
             }
         } else if (starts.isNotEmpty()) {
             error(
                 "SD1",
-                "@StartDestination yalnız @FlowGraph üyesinde olabilir — ${simple(graph.fqName)} bir " +
-                    "@NavGraph (üye: ${starts.joinToString { it.simpleName }})",
+                "@StartDestination may only be used in a @FlowGraph; ${simple(graph.fqName)} is a " +
+                    "@NavGraph (members: ${starts.joinToString { it.simpleName }})",
             )
         }
     }
@@ -503,8 +503,8 @@ class GezginValidator(
         if (hasFlowScopedBackEdge && route.flowChainFq.isEmpty()) {
             error(
                 "FX1",
-                "${route.simpleName} bir flow üyesi değilken @BackToStart/@Quit kullanıyor — dönülecek " +
-                    "veya çıkılacak bir flow yok",
+                "${route.simpleName} uses @BackToStart/@Quit but is not a flow member; there is no " +
+                    "flow to return to or quit",
             )
         }
     }
@@ -515,8 +515,8 @@ class GezginValidator(
         if (insideResultFlow && route.edges.any { it.kind == EdgeKind.QUIT_AND_GO_TO }) {
             error(
                 "FX2",
-                "${route.simpleName} bir ResultFlow üyesiyken @QuitAndGoTo kullanıyor — beklenen sonuç " +
-                    "kaybolur, uygun bir result-dönen back-edge kullan",
+                "${route.simpleName} uses @QuitAndGoTo while inside a ResultFlow; the expected result " +
+                    "would be lost. Use a result-returning back edge instead",
             )
         }
     }

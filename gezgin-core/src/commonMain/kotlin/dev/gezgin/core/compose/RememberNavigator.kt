@@ -43,7 +43,7 @@ fun rememberNavigator(
     onRootBack: () -> Unit = platformDefaultRootBack(),
 ): RawNavigator {
     require(topology.flowChain(start::class).none { it.isResultFlow }) {
-        "rememberNavigator: start bir ResultFlow üyesi olamaz (bekleyen caller yok, §8.1/§12) — " +
+        "rememberNavigator: start cannot be a ResultFlow member; there is no pending caller (§8.1/§12). " +
             "route: ${start::class.simpleName}"
     }
     val latestOnRootBack by rememberUpdatedState(onRootBack)

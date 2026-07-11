@@ -78,9 +78,9 @@ fun GezginDisplay(
             // guard'ı [toNavEntry]'dedir (her entry kurulurken `isRoot` ile) — o TÜM dinamik yolları da
             // (replaceTo/quitAndGoTo ile modal'ı köke koyma) kapatır. Bu check yine de erken/açık kalır.
             require(rootKind == null || rootKind == EntryKind.SCREEN) {
-                "GezginDisplay: start route modal kind olamaz (kind=$rootKind) — §12 kuruluş " +
-                    "guard'ı (KALICI: modal genuinely root OLAMAZ — OverlayScene ≥1 underlaid entry " +
-                    "ister, §7). route: ${rootRoute::class.simpleName}"
+                "GezginDisplay: start route cannot be a modal kind (kind=$rootKind); §12 setup " +
+                    "guard is permanent because a modal cannot be root and OverlayScene requires at " +
+                    "least one underlaid entry (§7). route: ${rootRoute::class.simpleName}"
             }
             // M4 — kind-lookup kancasını navigator'a enjekte et: replaceTo (clearUpTo=root) MUTASYONDAN
             // ÖNCE, sonuçtaki kök modal olacaksa reddedebilsin. Kind yalnız burada (registry) bilinir;

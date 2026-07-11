@@ -168,8 +168,8 @@ class EntryModelReader(
             if (vm.routeFq !in matchedVmRoutes) {
                 error(
                     "MV3",
-                    "@ViewModel ${vm.vmSimpleName}(${vm.routeFq.substringAfterLast('.')}) var ama eşleşen " +
-                        "@Screen(state, onIntent) content bu modülde yok (§10.1 aynı-modül üçlüsü)",
+                    "@ViewModel ${vm.vmSimpleName}(${vm.routeFq.substringAfterLast('.')}) exists, but this module " +
+                        "has no matching @Screen(state, onIntent) content (§10.1 same-module triple)",
                 )
             }
         }
@@ -203,9 +203,9 @@ class EntryModelReader(
         if (unknownParams.isNotEmpty()) {
             error(
                 "SC3",
-                "$fnName şu param(lar)ı destekliyor gibi görünmüyor: " +
+                "$fnName has unsupported parameter(s): " +
                     unknownParams.joinToString { it.name?.asString().orEmpty() } +
-                    " — core-mode yalnız route:/nav: destekler (resolver mekanizması Faz 5)",
+                    "; core-mode only supports route:/nav: (resolver mechanism is MVI-mode only)",
             )
             return null
         }
@@ -221,8 +221,8 @@ class EntryModelReader(
                 if (explicitFq != paramFq) {
                     error(
                         "SC1",
-                        "$fnName: annotation route=${explicitRouteType.declaration.simpleName.asString()} ile " +
-                            "route: param tipi (${routeParamType.declaration.simpleName.asString()}) çelişiyor",
+                        "$fnName: annotation route=${explicitRouteType.declaration.simpleName.asString()} conflicts with " +
+                            "route: parameter type (${routeParamType.declaration.simpleName.asString()})",
                     )
                     null
                 } else {
@@ -233,7 +233,7 @@ class EntryModelReader(
             !isSentinel -> explicitRouteType
             routeParamType != null -> routeParamType
             else -> {
-                error("SC1", "$fnName: route türetilemedi — ne annotation'da açık route= var ne de route: param'ı")
+                error("SC1", "$fnName: route could not be derived; no explicit route= in the annotation and no route: parameter")
                 null
             }
         } ?: return null
@@ -244,8 +244,8 @@ class EntryModelReader(
         if (!implementsRoute) {
             error(
                 "SC5",
-                "$fnName: türetilen route tipi (${resolvedRouteType.declaration.qualifiedName?.asString()}) " +
-                    "dev.gezgin.core.Route implement etmiyor",
+                "$fnName: derived route type (${resolvedRouteType.declaration.qualifiedName?.asString()}) " +
+                    "does not implement dev.gezgin.core.Route",
             )
             return null
         }
@@ -255,7 +255,7 @@ class EntryModelReader(
 
         val previousOwner = seenRouteFqs[routeFq]
         if (previousOwner != null) {
-            error("SC4", "route ${routeFq.substringAfterLast('.')} birden çok fonksiyon tarafından kaydediliyor: $previousOwner, $fnName")
+            error("SC4", "route ${routeFq.substringAfterLast('.')} is registered by multiple functions: $previousOwner, $fnName")
             return null
         }
         seenRouteFqs[routeFq] = fnName
@@ -276,8 +276,8 @@ class EntryModelReader(
             if (!hasNavigator) {
                 error(
                     "SC2",
-                    "$fnName: nav: param'ı istendi ama hedef route'un (${routeFq.substringAfterLast('.')}) " +
-                        "navigator'ı yok (hiç edge/back-edge/result-contract'ı yok)",
+                    "$fnName: nav: parameter was requested, but target route (${routeFq.substringAfterLast('.')}) " +
+                        "has no navigator (no edge, back-edge, or result contract)",
                 )
                 return null
             }
@@ -293,9 +293,9 @@ class EntryModelReader(
             if (!navParamType.isError && navParamFq != expectedNavigatorFq) {
                 error(
                     "SC2",
-                    "$fnName: nav: param'ının tipi ($navParamFq) beklenen navigator tipi değil " +
-                        "($expectedNavigatorFq) — üretilen ${x}Screen(route, nav) çağrısı tip uyuşmazlığıyla " +
-                        "GezginEntries.kt içinde patlardı. nav param'ını `nav: ${x}Navigator` yap (§10.1)",
+                    "$fnName: nav: parameter type ($navParamFq) is not the expected navigator type " +
+                        "($expectedNavigatorFq); the generated ${x}Screen(route, nav) call would fail with " +
+                        "a type mismatch in GezginEntries.kt. Use `nav: ${x}Navigator` (§10.1)",
                 )
                 return null
             }
@@ -309,8 +309,8 @@ class EntryModelReader(
         if (previousProvideOwner != null) {
             error(
                 "SC6",
-                "$packageName paketinde provide${x}Entry() birden çok fonksiyon tarafından üretiliyor: " +
-                    "$previousProvideOwner, $fnName — route adlarının aynı 'X' türetimine (${x}) çözülmesi",
+                "$packageName generates provide${x}Entry() from multiple functions: " +
+                    "$previousProvideOwner, $fnName; route names resolve to the same derived 'X' (${x})",
             )
             return null
         }
@@ -367,8 +367,8 @@ class EntryModelReader(
         if (isSentinel) {
             error(
                 "SC1",
-                "$fnName: MVI-mode content (state, onIntent) route türetemez — açık @Screen(Route::class) şart " +
-                    "(state param tipi route DEĞİLDİR)",
+                "$fnName: MVI-mode content (state, onIntent) cannot derive a route; explicit " +
+                    "@Screen(Route::class) is required (the state parameter type is not the route)",
             )
             return null
         }
@@ -380,8 +380,8 @@ class EntryModelReader(
         if (!implementsRoute) {
             error(
                 "SC5",
-                "$fnName: route tipi (${resolvedRouteType.declaration.qualifiedName?.asString()}) " +
-                    "dev.gezgin.core.Route implement etmiyor",
+                "$fnName: route type (${resolvedRouteType.declaration.qualifiedName?.asString()}) " +
+                    "does not implement dev.gezgin.core.Route",
             )
             return null
         }
@@ -392,7 +392,7 @@ class EntryModelReader(
         // SC4 — shared with core-mode: a route may have only ONE content registration.
         val previousOwner = seenRouteFqs[routeFq]
         if (previousOwner != null) {
-            error("SC4", "route ${routeFq.substringAfterLast('.')} birden çok fonksiyon tarafından kaydediliyor: $previousOwner, $fnName")
+            error("SC4", "route ${routeFq.substringAfterLast('.')} is registered by multiple functions: $previousOwner, $fnName")
             return null
         }
         seenRouteFqs[routeFq] = fnName
@@ -405,9 +405,9 @@ class EntryModelReader(
         if (vm == null) {
             error(
                 "MV2",
-                "$fnName: MVI-mode content ama route ${routeFq.substringAfterLast('.')} için eşleşen @ViewModel " +
-                    "bu modülde yok — content'i VM'e ROUTE üzerinden bağlar (state/onIntent TİPİYLE değil); " +
-                    "aynı route'a @ViewModel(${routeFq.substringAfterLast('.')}::class) ekle (§10.1)",
+                "$fnName: MVI-mode content has no matching @ViewModel for route ${routeFq.substringAfterLast('.')} " +
+                    "in this module; content is linked to the VM by ROUTE, not by state/onIntent types. " +
+                    "Add @ViewModel(${routeFq.substringAfterLast('.')}::class) for the same route (§10.1)",
             )
             return null
         }
@@ -425,11 +425,11 @@ class EntryModelReader(
         if (vm.di == VmDiKind.HILT_PLAIN && routeDecl!!.primaryConstructor?.parameters.orEmpty().isNotEmpty()) {
             error(
                 "MV12",
-                "$fnName: route ${routeFq.substringAfterLast('.')} parametreli (route verisi taşıyor) ama " +
-                    "@ViewModel ${vm.vmSimpleName} düz @HiltViewModel (assistedFactory YOK) — Nav3'te plain-Hilt " +
-                    "VM route argümanlarına ERİŞEMEZ: route'u SavedStateHandle'a yazan bir mekanizma yok, " +
-                    "`SavedStateHandle.get(...)` her zaman null döner. Route verisi taşıyan ekran için " +
-                    "@HiltViewModel(assistedFactory = …) (HILT_ASSISTED) kullan ya da route'u parametresiz yap (§10.1)",
+                "$fnName: route ${routeFq.substringAfterLast('.')} has parameters (carries route data), but " +
+                    "@ViewModel ${vm.vmSimpleName} is plain @HiltViewModel (no assistedFactory). In Nav3, a plain-Hilt " +
+                    "VM cannot access route arguments: nothing writes the route into SavedStateHandle, so " +
+                    "`SavedStateHandle.get(...)` always returns null. For a screen with route data, use " +
+                    "@HiltViewModel(assistedFactory = …) (HILT_ASSISTED), or make the route parameterless (§10.1)",
             )
             return null
         }
@@ -442,7 +442,7 @@ class EntryModelReader(
         // resolves fully (unlike a same-module navigator type — cf. VmCtorParam's FQ-only note).
         val stateTypeName = stateParam.type.resolve().toTypeName()
         if (stateTypeName != vm.stateTypeName) {
-            error("MV5", "$fnName: state param tipi ($stateTypeName) VM ${vm.vmSimpleName}'in state tipi (${vm.stateTypeName}) ile örtüşmüyor")
+            error("MV5", "$fnName: state parameter type ($stateTypeName) does not match VM ${vm.vmSimpleName}'s state type (${vm.stateTypeName})")
             return null
         }
         val onIntentType = onIntentParam.type.resolve()
@@ -451,14 +451,14 @@ class EntryModelReader(
         if (onIntentDeclFq != FUNCTION1_FQ || !returnsUnit) {
             error(
                 "MV5",
-                "$fnName: onIntent param'ı bir (${vm.intentTypeFq.substringAfterLast('.')}) -> Unit fonksiyonu değil " +
-                    "(tip: ${onIntentType.fqOf()})",
+                "$fnName: onIntent parameter is not a (${vm.intentTypeFq.substringAfterLast('.')}) -> Unit function " +
+                    "(type: ${onIntentType.fqOf()})",
             )
             return null
         }
         val intentArgTypeName = onIntentType.arguments.getOrNull(0)?.type?.resolve()?.toTypeName()
         if (intentArgTypeName != vm.intentTypeName) {
-            error("MV5", "$fnName: onIntent'in intent tipi ($intentArgTypeName) VM ${vm.vmSimpleName}'in intent tipi (${vm.intentTypeName}) ile örtüşmüyor")
+            error("MV5", "$fnName: onIntent intent type ($intentArgTypeName) does not match VM ${vm.vmSimpleName}'s intent type (${vm.intentTypeName})")
             return null
         }
 
@@ -477,9 +477,9 @@ class EntryModelReader(
             if (pName in RESERVED_EXTRA_NAMES) {
                 error(
                     "MV10",
-                    "$fnName: '$pName' bir content-extra param adı olamaz — üretilen register gövdesinde " +
-                        "ayrılmış bir isim (viewModel/nav/route/vm). Farklı bir ad kullan " +
-                        "(MVI'da nav erişimi content'e değil VM ctor'una aittir)",
+                    "$fnName: '$pName' cannot be a content-extra parameter name; it is reserved in the " +
+                        "generated register body (viewModel/nav/route/vm). Use a different name " +
+                        "(in MVI, nav access belongs in the VM constructor, not content)",
                 )
                 extrasInvalid = true
                 return@forEach
@@ -497,8 +497,8 @@ class EntryModelReader(
                 } else {
                     error(
                         "MV8",
-                        "$fnName: sheetState param'ı yalnız @BottomSheet content'inde geçerli (rol-extra, " +
-                            "LocalGezginSheetState'ten beslenir) — bu content $kind, @BottomSheet değil",
+                        "$fnName: sheetState parameter is only valid in @BottomSheet content (role-extra, " +
+                            "provided from LocalGezginSheetState); this content is $kind, not @BottomSheet",
                     )
                     extrasInvalid = true
                 }
@@ -542,8 +542,8 @@ class EntryModelReader(
             if (!hasNavigator) {
                 error(
                     "MV7",
-                    "$fnName: nav bağlanıyor (VM ctor'u ya da @ScreenEffect nav istiyor) ama hedef route'un " +
-                        "(${routeFq.substringAfterLast('.')}) navigator'ı yok (hiç edge/back-edge/result-contract'ı yok)",
+                    "$fnName: nav is being wired (VM constructor or @ScreenEffect requests nav), but target route " +
+                        "(${routeFq.substringAfterLast('.')}) has no navigator (no edge, back-edge, or result contract)",
                 )
                 return null
             }
@@ -559,9 +559,9 @@ class EntryModelReader(
         ) {
             error(
                 "MV11",
-                "@ScreenEffect ${effect.simpleName}'in nav param tipi (${effect.navParamTypeFq}) bu route'un " +
-                    "navigator'ı değil ($navigatorTypeFq) — üretilen ${effect.simpleName}(effects = …, nav = nav) " +
-                    "çağrısı GezginMviEntries.kt içinde tip uyuşmazlığıyla patlardı. nav param'ını `nav: ${x}Navigator` yap",
+                "@ScreenEffect ${effect.simpleName}'s nav parameter type (${effect.navParamTypeFq}) is not this route's " +
+                    "navigator ($navigatorTypeFq); the generated ${effect.simpleName}(effects = …, nav = nav) " +
+                    "call would fail with a type mismatch in GezginMviEntries.kt. Use `nav: ${x}Navigator`",
             )
             return null
         }
@@ -572,8 +572,8 @@ class EntryModelReader(
         if (previousProvideOwner != null) {
             error(
                 "SC6",
-                "$packageName paketinde provide${x}Entry() birden çok fonksiyon tarafından üretiliyor: " +
-                    "$previousProvideOwner, $fnName — route adlarının aynı 'X' türetimine (${x}) çözülmesi",
+                "$packageName generates provide${x}Entry() from multiple functions: " +
+                    "$previousProvideOwner, $fnName; route names resolve to the same derived 'X' (${x})",
             )
             return null
         }
@@ -650,24 +650,24 @@ class EntryModelReader(
                 if (extraParams.isNotEmpty()) {
                     error(
                         "MV11",
-                        "@ScreenEffect $simpleName şu fazladan param(lar)ı alıyor: " +
+                        "@ScreenEffect $simpleName has unsupported extra parameter(s): " +
                             extraParams.joinToString { it.name?.asString().orEmpty() } +
-                            " — binder imzası yalnız fun XEffects(effects: Flow<E>[, nav: XNavigator]) olabilir " +
-                            "(efekt binder'ının content'teki gibi resolver-extra mekanizması YOK; " +
-                            "SnackbarHostState gibi bağımlılıkları content'te Problem-2 resolver'ıyla ver)",
+                            "; binder signature must be only fun XEffects(effects: Flow<E>[, nav: XNavigator]) " +
+                            "(effect binders do not have the content resolver-extra mechanism; provide dependencies " +
+                            "such as SnackbarHostState through a Problem-2 resolver in content)",
                     )
                 }
 
                 when {
                     effectTypeName == null -> error(
                         "MV6",
-                        "@ScreenEffect $simpleName bir Flow<E> parametresi almıyor — binder imzası " +
-                            "fun XEffects(effects: Flow<E>[, nav]) olmalı",
+                        "@ScreenEffect $simpleName does not take a Flow<E> parameter; binder signature must be " +
+                            "fun XEffects(effects: Flow<E>[, nav])",
                     )
                     effectTypeName !in vmEffectTypeNames -> error(
                         "MV6",
-                        "@ScreenEffect $simpleName'in Flow<${effectTypeFq?.substringAfterLast('.')}> tipi hiçbir " +
-                            "@ViewModel'in GezginMvi effect (E) tipiyle eşleşmiyor",
+                        "@ScreenEffect $simpleName's Flow<${effectTypeFq?.substringAfterLast('.')}> type does not " +
+                            "match any @ViewModel GezginMvi effect (E) type",
                     )
                 }
 
@@ -693,9 +693,9 @@ class EntryModelReader(
                 if (typeName != null && binders.size > 1) {
                     error(
                         "MV9",
-                        "birden çok @ScreenEffect binder'ı aynı effect (E) tipine ($typeName) çözülüyor: " +
-                            "${binders.joinToString { it.simpleName }} — bir E'ye yalnız bir binder bağlanabilir " +
-                            "(hangisinin VM'e bağlanacağı KSP sırasına kalır, biri sessizce boşta kalır)",
+                        "multiple @ScreenEffect binders resolve to the same effect (E) type ($typeName): " +
+                            "${binders.joinToString { it.simpleName }}; only one binder may be connected to one E " +
+                            "(otherwise KSP order decides which one binds to the VM and another is silently dropped)",
                     )
                 }
             }
@@ -744,11 +744,11 @@ class EntryModelReader(
             val mismatch = mismatched.first().substringAfterLast('.')
             error(
                 "SC8",
-                "$fnName: route $routeSimple @${kind.name}-kind ama $mismatch implement ediyor — kind ile " +
-                    "presentation contract eşleşmeli (@Dialog↔DialogContract, @FullscreenModal↔" +
-                    "FullscreenModalContract, @BottomSheet↔BottomSheetContract). Adapter yalnız kind'ın " +
-                    "contract'ını okur → yanlış contract `route as? …` ile null'a düşer, override'ların " +
-                    "(ör. dismissOnClickOutside=false) SESSİZCE düşer. Ya kind'ı düzelt ya contract'ı kaldır (§7)",
+                "$fnName: route $routeSimple is @${kind.name}-kind but implements $mismatch; kind and " +
+                    "presentation contract must match (@Dialog↔DialogContract, @FullscreenModal↔" +
+                    "FullscreenModalContract, @BottomSheet↔BottomSheetContract). The adapter reads only the " +
+                    "contract for the kind, so the wrong contract becomes null through `route as? …` and overrides " +
+                    "(for example dismissOnClickOutside=false) are silently dropped. Fix the kind or remove the contract (§7)",
             )
             return false
         }
@@ -759,10 +759,10 @@ class EntryModelReader(
                 EntryKindModel.BOTTOM_SHEET -> {
                     error(
                         "SC7",
-                        "$fnName: @NoBack + @BottomSheet tutarsız (route $routeSimple) — swipe-to-dismiss " +
-                            "hiçbir prop'la kapatılamaz → @NoBack geri-yutması sheet'i görünmez bırakıp " +
-                            "entry'yi stack'te tutar (görsel/state desync). @BottomSheet'te @NoBack " +
-                            "KULLANMAYIN; ilk navigasyonda kesin runtime crash olurdu (§7, EntryAdapter guard)",
+                        "$fnName: @NoBack + @BottomSheet is inconsistent (route $routeSimple); swipe-to-dismiss " +
+                            "cannot be disabled by any prop, so @NoBack would leave the sheet hidden while keeping " +
+                            "the entry on the stack (visual/state desync). Do not use @NoBack on @BottomSheet; " +
+                            "the first navigation would definitely crash at runtime (§7, EntryAdapter guard)",
                     )
                     return false
                 }
@@ -770,12 +770,12 @@ class EntryModelReader(
                     if (expectedContract !in implementedContracts) {
                         error(
                             "SC7",
-                            "$fnName: @NoBack + @${kind.name} ama route $routeSimple " +
-                                "${expectedContract!!.substringAfterLast('.')} implement etmiyor → " +
-                                "dismissOnBackPress default TRUE (statik biliniyor) = @NoBack ile tezat, " +
-                                "ilk navigasyonda kesin runtime crash. Route'a `$routeSimple : …, " +
+                            "$fnName: @NoBack + @${kind.name}, but route $routeSimple " +
+                                "${expectedContract!!.substringAfterLast('.')} is not implemented; " +
+                                "dismissOnBackPress defaults to TRUE (statically known), which conflicts with @NoBack, " +
+                                "so the first navigation would definitely crash at runtime. Add `$routeSimple : …, " +
                                 "${expectedContract.substringAfterLast('.')} { override val " +
-                                "dismissOnBackPress get() = false }` ekle ya da @NoBack'i kaldır (§7)",
+                                "dismissOnBackPress get() = false }` to the route, or remove @NoBack (§7)",
                         )
                         return false
                     }

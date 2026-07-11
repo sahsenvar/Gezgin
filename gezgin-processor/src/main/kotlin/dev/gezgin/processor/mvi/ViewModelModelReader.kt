@@ -70,7 +70,7 @@ class ViewModelModelReader(
         val routeType = annotation.classArg("route")
         val routeFq = routeType?.declaration?.qualifiedName?.asString()
         if (routeFq == null) {
-            error("MV1", "$vmSimpleName: @ViewModel(route=…) türü çözülemedi")
+            error("MV1", "$vmSimpleName: @ViewModel(route=…) type could not be resolved")
             return null
         }
 
@@ -82,7 +82,7 @@ class ViewModelModelReader(
             error(
                 "MV1",
                 "$vmSimpleName (@ViewModel(${routeFq.substringAfterLast('.')})) " +
-                    "$GEZGIN_MVI_FQ<S,I,E> implement etmiyor — @ViewModel + GezginMvi İKİSİ DE zorunlu (§10.1)",
+                    "does not implement $GEZGIN_MVI_FQ<S,I,E>; both @ViewModel and GezginMvi are required (§10.1)",
             )
             return null
         }
@@ -103,10 +103,10 @@ class ViewModelModelReader(
         } catch (e: NoSuchElementException) {
             error(
                 "MV1",
-                "$vmSimpleName: GezginMvi<S,I,E>'nin tip argümanları çözülemedi (${e.message}) — büyük " +
-                    "olasılıkla iç içe jenerik forwarding (ör. Base<S> : GezginMvi<Wrapped<S>, …>); KSP bu " +
-                    "tip-parametresi ikamesini desteklemiyor. GezginMvi'yi doğrudan somut tiplerle implement " +
-                    "et ya da ara-tabanı `Base<S,I,E> : GezginMvi<S,I,E>` biçiminde forward et (§10.1)",
+                "$vmSimpleName: GezginMvi<S,I,E> type arguments could not be resolved (${e.message}); this is most " +
+                    "likely nested generic forwarding (for example Base<S> : GezginMvi<Wrapped<S>, …>). KSP does " +
+                    "not support this type-parameter substitution. Implement GezginMvi directly with concrete " +
+                    "types, or forward through an intermediate base as `Base<S,I,E> : GezginMvi<S,I,E>` (§10.1)",
             )
             return null
         }
@@ -117,7 +117,7 @@ class ViewModelModelReader(
         if (previousOwner != null) {
             error(
                 "MV4",
-                "route ${routeFq.substringAfterLast('.')} birden çok @ViewModel tarafından işaretleniyor: " +
+                "route ${routeFq.substringAfterLast('.')} is annotated by multiple @ViewModel classes: " +
                     "$previousOwner, $vmSimpleName",
             )
             return null

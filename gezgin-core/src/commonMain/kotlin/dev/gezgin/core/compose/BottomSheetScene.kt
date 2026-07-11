@@ -40,7 +40,7 @@ import dev.gezgin.core.Route
  * instance'ı `remember`'lı kalır); dynamic read-tracking maliyeti gereksiz.
  */
 val LocalGezginSheetState = staticCompositionLocalOf<SheetState> {
-    error("LocalGezginSheetState yalnız GezginDisplay'in kurduğu @BottomSheet content'i içinde okunabilir.")
+    error("LocalGezginSheetState can only be read inside @BottomSheet content installed by GezginDisplay.")
 }
 
 /** [GezginBottomSheetScene]'in `NavEntry.metadata`'da taşındığı anahtar (Gezgin-tanımlı, iki platformda
@@ -93,8 +93,8 @@ internal class GezginBottomSheetScene(
         // DialogScene paritesi (§7) — bir overlay scene altında en az bir underlaid entry ŞART. toNavEntry'nin
         // modal-kind-at-root guard'ı bunu zaten önceler; bu scene-invariant kendi başına net olsun diye defansif.
         require(overlaidEntries.isNotEmpty()) {
-            "GezginBottomSheetScene: overlaidEntries boş olamaz — bir BottomSheet overlay'i altında en az " +
-                "bir SCREEN entry olmalı (Nav3 OverlayScene invariant'ı, §7). key: $key"
+            "GezginBottomSheetScene: overlaidEntries cannot be empty; a BottomSheet overlay must have at " +
+                "least one SCREEN entry underneath it (Nav3 OverlayScene invariant, §7). key: $key"
         }
     }
 

@@ -14,9 +14,9 @@ import dev.gezgin.core.RawNavigator
  * gerek yok.
  */
 val LocalGezginEntryId = staticCompositionLocalOf<Long> {
-    error("LocalGezginEntryId yalnız GezginDisplay'in kurduğu entry content'leri içinde okunabilir.")
+    error("LocalGezginEntryId can only be read inside entry content installed by GezginDisplay.")
 }
 
 val LocalGezginRawNavigator = staticCompositionLocalOf<RawNavigator> {
-    error("LocalGezginRawNavigator yalnız GezginDisplay'in kurduğu entry content'leri içinde okunabilir.")
+    error("LocalGezginRawNavigator can only be read inside entry content installed by GezginDisplay.")
 }

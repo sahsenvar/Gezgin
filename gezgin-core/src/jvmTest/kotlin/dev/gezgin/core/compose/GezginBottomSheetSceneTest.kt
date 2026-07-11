@@ -8,13 +8,17 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.navigation3.runtime.NavEntry
 import dev.gezgin.core.RawNavigator
+import dev.gezgin.core.Route
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.SheetCustom
 import dev.gezgin.core.fixtures.SheetDefault
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 /**
  * Task 4.2 — desktop uiTest: `EntryKind.BOTTOM_SHEET` entry'nin el-yazımı [GezginBottomSheetScene]/
@@ -22,6 +26,25 @@ import kotlin.test.assertEquals
  * enjeksiyonu + dismiss→pop kanıtı. Dialog scene testinin (GezginDisplaySceneTest) sheet paraleli.
  */
 class GezginBottomSheetSceneTest {
+
+    @Test
+    fun `BottomSheet scene rejects empty overlaid entries`() {
+        val error = assertFailsWith<IllegalArgumentException> {
+            GezginBottomSheetScene(
+                key = "sheet",
+                entry = NavEntry<Route>(key = SheetDefault("x"), contentKey = 1L) { },
+                overlaidEntries = emptyList(),
+                props = GezginBottomSheetProps(
+                    skipPartiallyExpanded = false,
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = true,
+                ),
+                onBack = {},
+            )
+        }
+
+        assertTrue(error.message?.contains("overlaidEntries cannot be empty") == true, error.message)
+    }
 
     @Test
     fun `BOTTOM_SHEET kind entry overlay render olur - alttaki SCREEN gorunur kalir`() = runComposeUiTest {

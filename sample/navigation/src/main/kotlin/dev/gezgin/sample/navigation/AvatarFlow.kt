@@ -19,8 +19,6 @@ sealed interface AvatarFlow : ProfileGraph, ResultFlow<AvatarChoice> {
     @Serializable
     data class CropScreenRoute(val source: String) : AvatarFlow
 
-    // quitWith, sözleşmeyi DOĞRUDAN deklare eden en yakın atayı (AvatarFlow) bitirir — ZoomFlow onu
-    // yalnız transitif taşır (spec §6); nested içinden çağrı hem ZoomFlow hem AvatarFlow segmentini yıkar.
     @FlowGraph
     @Serializable
     sealed interface ZoomFlow : AvatarFlow {

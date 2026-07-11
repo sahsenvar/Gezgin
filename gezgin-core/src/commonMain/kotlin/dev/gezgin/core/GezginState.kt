@@ -41,7 +41,7 @@ class GezginState(initial: List<GezginKey>, internal var nextId: Long, private v
     private fun cutIndex(clearUpTo: KClass<out Route>?, inclusive: Boolean): Int =
         if (clearUpTo == null) _stack.lastIndex else {
             val i = _stack.indexOfLast { clearUpTo.isInstance(it.route) }   // nearest-ancestor (§4.2/M3)
-            require(i >= 0) { "clearUpTo hedefi stack'te yok: ${clearUpTo.simpleName}" }
+            require(i >= 0) { "clearUpTo target is not on the stack: ${clearUpTo.simpleName}" }
             if (inclusive) i else i + 1
         }
 

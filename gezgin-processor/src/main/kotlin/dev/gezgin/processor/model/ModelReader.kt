@@ -236,31 +236,45 @@ class ModelReader(
     // region Edges
 
     private fun edgesOf(decl: KSClassDeclaration): List<EdgeModel> =
-        decl.annotations.mapNotNull { annotation ->
+        decl.annotations.flatMap { annotation ->
             val kind = when (annotation.fqName()) {
                 GO_TO_FQ -> EdgeKind.GO_TO
                 REPLACE_TO_FQ -> EdgeKind.REPLACE_TO
                 GO_FOR_RESULT_FQ -> EdgeKind.GO_FOR_RESULT
                 QUIT_AND_GO_TO_FQ -> EdgeKind.QUIT_AND_GO_TO
                 else -> null
-            } ?: return@mapNotNull null
+            } ?: return@flatMap emptyList()
 
-            val targetFq = annotation.classArg("target")?.declaration?.qualifiedName?.asString()
-                ?: error("@${annotation.shortName.asString()} on ${decl.requireQualifiedName()} has no resolvable target")
+            val targetTypes = when (kind) {
+                EdgeKind.GO_TO -> annotation.classArgs("target")
+                EdgeKind.REPLACE_TO,
+                EdgeKind.GO_FOR_RESULT,
+                EdgeKind.QUIT_AND_GO_TO -> listOfNotNull(annotation.classArg("target"))
+            }
+            if (targetTypes.isEmpty()) {
+                error("@${annotation.shortName.asString()} on ${decl.requireQualifiedName()} has no resolvable target")
+            }
             val clearUpTo = annotation.classArg("clearUpTo")?.declaration?.qualifiedName?.asString()
             val clearUpToFq = clearUpTo?.takeUnless { it == SELF_FQ }
 
-            EdgeModel(
-                kind = kind,
-                targetFq = targetFq,
-                // `?: false` fallback'leri savunma amaçlı — gerçek default'lar arguments+defaultArguments
-                // merge'ünden gelir; buraya sadece annotation'da o parametre hiç yoksa düşülür
-                // (ör. @GoForResult'ta singleTop/inclusive olmaması).
-                singleTop = annotation.boolArg("singleTop") ?: false,
-                clearUpToFq = clearUpToFq,
-                inclusive = annotation.boolArg("inclusive") ?: false,
-                name = annotation.stringArg("name").orEmpty(),
-            )
+            targetTypes.map { targetType ->
+                val targetFq = targetType.declaration.qualifiedName?.asString()
+                    ?: error(
+                        "@${annotation.shortName.asString()} on ${decl.requireQualifiedName()} " +
+                            "has no resolvable target",
+                    )
+                EdgeModel(
+                    kind = kind,
+                    targetFq = targetFq,
+                    // `?: false` fallback'leri savunma amaçlı — gerçek default'lar arguments+defaultArguments
+                    // merge'ünden gelir; buraya sadece annotation'da o parametre hiç yoksa düşülür
+                    // (ör. @GoForResult'ta singleTop/inclusive olmaması).
+                    singleTop = annotation.boolArg("singleTop") ?: false,
+                    clearUpToFq = clearUpToFq,
+                    inclusive = annotation.boolArg("inclusive") ?: false,
+                    name = annotation.stringArg("name").orEmpty(),
+                )
+            }
         }.toList()
 
     private fun backEdgesOf(decl: KSClassDeclaration): List<BackEdgeModel> =
@@ -307,6 +321,16 @@ class ModelReader(
             ?: defaultArguments.firstOrNull { it.name?.asString() == name }
 
     private fun KSAnnotation.classArg(name: String): KSType? = arg(name)?.value as? KSType
+
+    private fun KSAnnotation.classArgs(name: String): List<KSType> {
+        val value = arg(name)?.value ?: return emptyList()
+        return when (value) {
+            is KSType -> listOf(value)
+            is List<*> -> value.filterIsInstance<KSType>()
+            is Array<*> -> value.filterIsInstance<KSType>()
+            else -> emptyList()
+        }
+    }
 
     private fun KSAnnotation.boolArg(name: String): Boolean? = arg(name)?.value as? Boolean
 

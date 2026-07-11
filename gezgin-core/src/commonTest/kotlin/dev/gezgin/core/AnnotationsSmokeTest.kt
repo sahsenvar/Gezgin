@@ -17,8 +17,8 @@ class AnnotationsSmokeTest {
 
 	sealed interface TestGraph : Route {
 		@NavGraph
-		@GoTo(target = ScreenA::class, singleTop = true)
-		@GoTo(target = ScreenB::class, singleTop = false) // Repeatable proof
+		@GoTo(ScreenA::class, singleTop = true)
+		@GoTo(ScreenB::class, singleTop = false) // Repeatable proof
 		data object Screen1 : TestGraph
 
 		@ReplaceTo(target = ScreenC::class) // Using Self::class default implicitly
