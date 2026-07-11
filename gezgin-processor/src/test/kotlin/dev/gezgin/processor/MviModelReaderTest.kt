@@ -884,4 +884,75 @@ class MviModelReaderTest {
     }
 
     // endregion
+
+    // region MV13 — androidx-mode instantiability (Fragment FS1 parity)
+
+    @Test
+    fun `MV13 — androidx VM with no primary ctor and only a parameterized secondary is rejected`() {
+        // di=ANDROIDX, primaryConstructor=null (only `constructor(route: R)`), so codegen's default
+        // resolver would emit `Vm()` — uncompilable. Rejected at KSP with an actionable message instead.
+        assertViolates(
+            "MV13",
+            """
+            package dev.gezgin.mv13
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.MviViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @MviViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+
+                constructor(route: R)
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `MV13 positive — androidx VM with a public no-arg secondary ctor is NOT rejected`() {
+        // primaryConstructor is null but a public `constructor()` exists → `Vm()` compiles → no MV13.
+        // (A full compile ICEs kctfork's plugin-less backend, so assert only the absence of the guard.)
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "Ok.kt",
+                """
+                package dev.gezgin.mv13ok
+
+                import dev.gezgin.core.Route
+                import dev.gezgin.mvi.GezginMvi
+                import dev.gezgin.mvi.annotation.MviViewModel
+                import kotlinx.coroutines.flow.MutableStateFlow
+                import kotlinx.coroutines.flow.StateFlow
+
+                data class R(val x: Int = 0) : Route
+                data class S(val n: Int)
+                sealed interface I { data object Go : I }
+                data class E(val m: String)
+
+                @MviViewModel(R::class)
+                class Vm : GezginMvi<S, I, E> {
+                    override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                    override fun onIntent(intent: I) {}
+
+                    constructor()
+                    constructor(route: R) : this()
+                }
+                """.trimIndent(),
+            ),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false", "gezgin.emitEntries" to "false"),
+        )
+        assertTrue(!result.messages.contains("[MV13]"), "unexpected MV13: ${result.messages}")
+    }
+
+    // endregion
 }
