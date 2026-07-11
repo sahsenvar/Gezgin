@@ -22,9 +22,9 @@ import dev.gezgin.core.annotation.Dialog
 import dev.gezgin.sample.navigation.EditNameDialogNavigator
 import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialogRoute
 
-@Dialog
+@Dialog(EditNameDialogRoute::class)
 @Composable
-fun EditNameDialogScreen(route: EditNameDialogRoute, nav: EditNameDialogNavigator) {
+fun EditNameDialog(route: EditNameDialogRoute, nav: EditNameDialogNavigator) {
     var text by remember { mutableStateOf(route.current) }
     // Dialog içeriği fillMaxSize DEĞİL — scrim üstünde wrap-content/ortalanmış görünmeli.
     Surface(
