@@ -966,6 +966,113 @@ class ValidationTest {
         )
     }
 
+    @Test
+    fun `N10 - name=entryId collides with the navigator's unconditional private entryId property`() {
+        // Every navigator carries `private val entryId: Long` (NavigatorCodegen.kt:154). A name=
+        // override spelling `entryId` emits `fun entryId(...)` alongside it → conflicting declarations.
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10entryid
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.NavGraph
+
+            @NavGraph
+            sealed interface HomeGraph : Route {
+                @GoTo(Detail::class, name = "entryId")
+                data object Feed : HomeGraph
+
+                data object Detail : HomeGraph
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `N10 - name=backToStart override collides with the @BackToStart fixed member`() {
+        // Crop carries a fixed backToStart() from @BackToStart AND a goTo named "backToStart" — two
+        // backToStart() members in one navigator (uncompilable) → N10 via the size>=2 collision path.
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10backtostart
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BackToStart
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.GoTo
+            import dev.gezgin.core.annotation.StartDestination
+
+            @FlowGraph
+            sealed interface AvatarFlow : Route {
+                @StartDestination
+                data object Pick : AvatarFlow
+
+                @BackToStart
+                @GoTo(Preview::class, name = "backToStart")
+                data object Crop : AvatarFlow
+
+                data object Preview : AvatarFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `N10 - @BackToStart plus @BackTo(StartRoute) both derive backToStart (no name= needed)`() {
+        // Refactor leftover: Crop keeps @BackTo(StartRoute) after gaining @BackToStart. StartRoute strips
+        // to "Start" → backTo+"Start" = backToStart, duplicating the @BackToStart member → N10.
+        assertViolates(
+            "N10",
+            """
+            package dev.gezgin.n10backtostart2
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BackTo
+            import dev.gezgin.core.annotation.BackToStart
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.StartDestination
+
+            @FlowGraph
+            sealed interface AvatarFlow : Route {
+                @StartDestination
+                data object StartRoute : AvatarFlow
+
+                @BackToStart
+                @BackTo(StartRoute::class)
+                data object Crop : AvatarFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `N10 positive - a lone @BackToStart (no collision) compiles clean`() {
+        // Guards against over-broadness: backToStart is NOT in RESERVED_MEMBER_NAMES, so a single
+        // @BackToStart member must NOT trip N10.
+        assertCompilesClean(
+            """
+            package dev.gezgin.n10backtostartok
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BackToStart
+            import dev.gezgin.core.annotation.FlowGraph
+            import dev.gezgin.core.annotation.StartDestination
+
+            @FlowGraph
+            sealed interface AvatarFlow : Route {
+                @StartDestination
+                data object Pick : AvatarFlow
+
+                @BackToStart
+                data object Crop : AvatarFlow
+            }
+            """.trimIndent(),
+        )
+    }
+
     // endregion
 
     // region PKG — generated code needs a single common target package

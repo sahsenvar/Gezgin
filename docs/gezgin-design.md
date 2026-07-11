@@ -352,11 +352,11 @@ nav.backStack; nav.current                          // switchTo/activeTab/stackO
 
 runTest {
     val r = async { nav.fromCheckout().goToSelectAddressForResult() }   // tipli erişim: üretilmiş fromX() (reified from<X>() codegen'siz mümkün değil)
-    nav.deliverResult(SelectedAddress("1", "Ev"))
+    nav.backWithResult(SelectedAddress("1", "Ev"))                      // top pending-target'a Value teslim + pop (runtime `backWithResult` ile aynı ad)
     r.await() shouldBe NavResult.Value(SelectedAddress("1", "Ev"))
 }
 ```
-Enforcement'ı test etmeye gerek yok (compile-time garanti).
+Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` erişimcileri `gezgin.emitTestAccessors=true` KSP seçeneğiyle üretilir; flag'i graph'ların bulunduğu **`main` KSP round'unda** açtığında (kanonik çok-modül düzeni: graph'lar `main`'de, testler `test`'te) erişimciler `main`'e üretilir ve `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — **çok-modül düzeninde de çalışır** (by-example §8). `GezginTestNavigator.raw` (`@GezginInternalApi`) + `entryIdOf(route)` yalnızca `fromX()` dışı düşük-seviye kaçış kapısı olarak kalır.
 
 ---
 

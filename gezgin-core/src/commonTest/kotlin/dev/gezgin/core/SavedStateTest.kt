@@ -116,4 +116,34 @@ class SavedStateTest {
 
         assertTrue(error.message?.contains("resultSerializer") == true, error.message)
     }
+
+    // MJ-B — adoptRestored ATOMİK: riskli slot-decode'u MUTASYONDAN ÖNCE yapar. Bir edge silinmiş/
+    // yeniden-adlandırılmış senaryosunu (resultSerializer'ı olmayan bir Value slotu) taşıyan snapshot
+    // adopt edilmeye çalışılınca decodeSlot IllegalArgumentException fırlatır AMA navigator'ın stack'i
+    // DOKUNULMADAN `start`'ta kalır. Bu atomiklik, Android adopt yolunun (RememberNavigator.android.kt)
+    // istisnayı yutup graceful fresh-start yapmasını mümkün kılar — desktop ile simetri. Eski (mutasyon-
+    // önce-decode) kodda `state` alanı önce [Catalog]'a re-point edilir, decodeSlot sonra patlardı →
+    // `current` yarı-adopt edilmiş Catalog'a kayardı (bu test onu yakalar). RED-önce/GREEN-sonra.
+    @Test fun adoptRestoredIsAtomic_badSlotLeavesNavigatorAtStart() {
+        val nav = RawNavigator(Feed, missingResultSerializerTopology)
+        val before = nav.backStack.value
+        val badSnapshot = SavedState(
+            keys = listOf(GezginKey(Catalog, id = 10L)),
+            nextId = 11L,
+            pendingSlots = listOf(
+                SavedSlot(
+                    callerEntryId = 9L,
+                    edgeId = "missing-result",
+                    targetEntryId = 10L,
+                    payloadJson = "{}",
+                    canceled = false,
+                ),
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> { nav.adoptRestored(badSnapshot) }
+
+        assertEquals(Feed, nav.current, "adopt fırlarsa navigator start'ta kalmalı (atomik, yarı-adopt yok)")
+        assertEquals(before, nav.backStack.value)
+    }
 }

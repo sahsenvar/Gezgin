@@ -99,13 +99,13 @@ Aynı hedefe farklı davranış = farklı kenar = farklı metot. Davranış anno
 | Annotation | Üretilen metot | Ne yapar |
 |---|---|---|
 | `@GoTo(X::class, Y::class)` | `goToX(params)` · `goToY(params)` | her hedef için push (değere göre singleTop) |
-| `@ReplaceTo(X::class, clearUpTo = Self)` | `replaceToX(params)` | `clearUpTo`'ya kadar temizle + push (`Self` = mevcut route) |
+| `@ReplaceTo(X::class, clearUpTo = Self::class)` | `replaceToX(params)` | `clearUpTo`'ya kadar temizle + push (`clearUpTo` bir `KClass`'tır; default `Self::class` = mevcut route) |
 | `@GoForResult(X::class)` | `launchX(...)` · `xResults: Flow<NavResult<T>>` · `suspend goToXForResult()` | tetik + PD-safe re-attach stream + sugar (hedef `ResultFlow`/`ResultRoute`) |
 
 Checkout'un en güzel yeri — **başarıyla biten ödeme**: result ekranını push'lamak yerine **replace** edersin ki kullanıcı geri tuşuyla ödeme formuna dönemesin:
 
 ```kotlin
-@ReplaceTo(OrderPlacedRoute::class)            // ödeme akışını temizle (clearUpTo = Self)
+@ReplaceTo(OrderPlacedRoute::class)            // ödeme akışını temizle (clearUpTo default'u = Self::class)
 @Serializable
 data class PaymentRoute(val cartId: String) : CartGraph
 
@@ -289,15 +289,16 @@ data class ProductRoute(val id: String) : HomeGraph
 
 ## 8. UI'sız test — saf Kotlin
 
-State-as-data çekirdek sayesinde navigasyon davranışını **Compose/emülatör olmadan** assert edersin.
+State-as-data çekirdek sayesinde navigasyon davranışını **Compose/emülatör olmadan** assert edersin. `GezginTestNavigator` (`dev.gezgin:gezgin-test`) raw çekirdeği ince bir katmanla sarar; codegen her kaynak için tipli `fromX()` erişimcisini üretir (metot adı `@Screen(route)`'un navigator adından türer — `CheckoutRoute` → `fromCheckout()`; reified `from<X>()` codegen'siz mümkün değil). Sonuç, tipli navigator'ın `backWithResult(...)`'ıyla teslim edilir.
 
 ```kotlin
 @Test
 fun checkout_adres_secimini_doner() = runTest {
-    val nav = GezginTestNavigator(start = CartGraph.CartRoute, topology = gezginTopology)   // gezginTopology: codegen üretir
+    val nav = GezginTestNavigator(start = CartGraph.CheckoutRoute("cart1"), topology = gezginTopology)   // gezginTopology: codegen üretir
 
-    val result = async { nav.from<CheckoutRoute>().goToSelectAddressForResult(userId = "u1") }
-    nav.deliverResult(Address(id = "1", label = "Ev"))
+    val result = async { nav.fromCheckout().goToSelectAddressForResult(userId = "u1") }   // üretilmiş tipli erişim
+    runCurrent()
+    nav.backWithResult(Address(id = "1", label = "Ev"))   // top pending-target'a tipli sonuç teslim + pop
 
     result.await() shouldBe NavResult.Value(Address("1", "Ev"))
 }
@@ -305,9 +306,29 @@ fun checkout_adres_secimini_doner() = runTest {
 @Test
 fun replaceTo_odeme_akisini_temizler() {
     val nav = GezginTestNavigator(start = CartGraph.PaymentRoute("cart1"), topology = gezginTopology)
-    nav.from<PaymentRoute>().replaceToOrderPlaced("order1")   // ödeme akışını temizle
+    nav.fromPayment().replaceToOrderPlaced("order1")   // ödeme akışını temizle
     nav.current shouldBe OrderPlacedRoute("order1")
-    nav.backStack shouldHaveSize 1                            // form gitti, geri ödemeye dönülemez
+    nav.backStack shouldHaveSize 1                      // form gitti, geri ödemeye dönülemez
+}
+```
+
+> **Çok-modül durumu:** tipli `fromX()` erişimcileri **kanonik çok-modül düzeninde de çalışır** (graph'lar `main`'de, testler `test` source-set'inde). `gezgin.emitTestAccessors=true` seçeneğini modülün **`main` KSP round'unda** aç — graph'ların bulunduğu round'da:
+>
+> ```kotlin
+> // build.gradle.kts (:navigation)
+> ksp { arg("gezgin.emitTestAccessors", "true") }   // GLOBAL ksp{} → main round (topology/navigator ile aynı yer)
+> dependencies { compileOnly(project(":gezgin-test")) }   // üretilen erişimciler main'de derlensin; app runtime'ına sızmaz
+> ```
+>
+> Erişimciler `@NavGraph`'ların görünür olduğu `main`'e üretilir; modülün kendi `test` source-set'i `main`'i gördüğü için `nav.fromX()`'i doğrudan çağırır. Sample bunu birebir kullanır — `sample/navigation/src/test/.../AppNavBehaviorTest.kt`'nin 18 davranış testi `nav.fromLogin().goToSignUp()` gibi **üretilmiş** erişimcilerle sürülür (opt-in gerektirmez). `nav.raw` yalnızca `fromX()` kapsamı dışındaki birkaç düşük-seviye kurulum/inceleme çağrısı için bir kaçış kapısı olarak kalır (`@GezginInternalApi` opt-in ile):
+
+```kotlin
+@OptIn(GezginInternalApi::class)
+@Test
+fun raw_kacis_kapisi() {
+    val nav = GezginTestNavigator(start = CartGraph.CheckoutRoute("cart1"), topology = gezginTopology)
+    nav.raw.navigate(OrderPlacedRoute("order1"))   // fromX() dışı, keyfi düşük-seviye kurulum
+    nav.raw.currentEntryId                          // entry kimliği inceleme
 }
 ```
 

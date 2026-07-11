@@ -18,6 +18,73 @@ Yayınlanan üç artefakt (group: `dev.gezgin`; ayrıntı [docs/gezgin-design.md
 | `gezgin-processor` | Zorunlu | KSP2 symbol processor — tipli navigator'ları ve entry provider'larını üretir. `ksp(project(":gezgin-processor"))` ile uygulanır. |
 | `gezgin-mvi` | Opsiyonel add-on | `gezgin-core`'a bağımlı MVI binder: `@MviViewModel`/`@ScreenEffect` + `GezginMvi<S,I,E>` sözleşmesi + codegen binder (`provideXEntry`) + `ObserveEffects` + DI-detection (Hilt/Koin, androidx fallback). |
 
+## Kurulum / Başlangıç
+
+> ⚠️ **Yayın durumu:** Gezgin henüz **Maven Central'da değil**. Dört modülün `maven-publish`
+> yapılandırması şimdilik yalnız **iskelet** (uzak repository / signing YOK) → bugün yalnız
+> `publishToMavenLocal` mümkün. Aşağıdaki koordinatlar release günü için doğrudur; şimdilik
+> **kaynaktan derleyip** (`./gradlew publishToMavenLocal`) `mavenLocal()`'den tüketin.
+
+Dört artefakt (`group = dev.gezgin`, `version = 0.1.0-alpha01`) — üçü runtime, biri (`gezgin-test`) test:
+
+```kotlin
+plugins {
+    kotlin("multiplatform")                                    // veya kotlin("jvm")
+    kotlin("plugin.serialization")                             // route'lar @Serializable
+    id("com.google.devtools.ksp") version "2.2.20-2.0.2"       // KSP2; Kotlin 2.2.20 ile eşleşir
+}
+
+dependencies {
+    implementation("dev.gezgin:gezgin-core:0.1.0-alpha01")     // zorunlu temel + GezginDisplay
+    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha01")           // zorunlu codegen
+    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha01")   // opsiyonel MVI add-on
+    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha01") // UI'sız test: GezginTestNavigator + tipli fromX()
+}
+```
+
+Minimal uçtan-uca örnek — graph → `@Screen` → `rememberGezginNavigator` → `GezginDisplay`:
+
+```kotlin
+// 1) Navigasyon grafiği = sealed route ağacı
+@NavGraph
+@Serializable
+sealed interface AppGraph {
+    @Serializable
+    data object HomeRoute : AppGraph          // app-start: argümansız kurulabilmeli (data object)
+}
+
+// 2) Ekran — bir @GoTo kenarı eklersen fonksiyona tipli `nav: HomeNavigator` üretilir
+@Screen(HomeRoute::class)
+@Composable
+fun HomeScreen() {
+    Text("Merhaba Gezgin")
+}
+
+// 3) Host + display. rememberGezginNavigator, graph paketine codegen tarafından üretilir
+//    (gezginTopology + stable Json'u bundle'lar). @FragmentScreen kullanıyorsan Activity
+//    FragmentActivity/AppCompatActivity OLMALI; yalnız @Screen ekranlar için ComponentActivity yeter.
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            val navigator = rememberGezginNavigator(start = HomeRoute, onRootBack = { finish() })
+            GezginDisplay(navigator = navigator) {
+                appGraphEntries()   // entry bundle'ını SEN yazarsın: @Screen başına üretilen provideXEntry()'leri topla
+            }
+        }
+    }
+}
+```
+
+### KSP seçenekleri
+
+Adopter'ın bilebileceği KSP seçenekleri (`ksp { arg("<ad>", "<değer>") }`):
+
+| Seçenek | Default | Ne zaman |
+|---|---|---|
+| `gezgin.emitSerializers` | `true` | Polimorfik `Route` `SerializersModule`'ünü kendin sağlıyorsan `false` ver (opt-out). |
+| `gezgin.emitTestAccessors` | `false` | Tipli `GezginTestNavigator.fromX()` test erişimcilerini üretmek için `true` ver (opt-in). Flag'i modülün **`main` KSP round'unda** (`ksp {}` bloğu — graph'ların bulunduğu round) aç; erişimciler `main`'e üretilir ve modülün `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — **çok-modül düzeninde de çalışır**. `:gezgin-test`'i `main` compile classpath'ine `compileOnly` olarak ekle (üretilen erişimciler derlensin; app runtime'ına sızmaz), `test` için `testImplementation` ile yeniden ekle. Bkz. [docs/gezgin-by-example.md](docs/gezgin-by-example.md) §8. |
+
 ## Uyumluluk
 
 Gezgin'in derlenip test edildiği sürümler (kaynak: `gradle/libs.versions.toml` + modül build dosyaları):

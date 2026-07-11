@@ -373,9 +373,9 @@ madde 15-17'de insan-doğrulaması olarak listelendi.
 
 ## Davranış testleri
 
-`sample/navigation/src/test/kotlin/dev/gezgin/sample/navigation/AppNavBehaviorTest.kt` — 12 test,
-UI katmanına hiç dokunmadan `GezginTestNavigator` + üretilen navigator sınıfları üzerinden
-kurgulanmış senaryolar (kapsama matrisinin DAVRANIŞ kanıtı):
+`sample/navigation/src/test/kotlin/dev/gezgin/sample/navigation/AppNavBehaviorTest.kt` — 18 test,
+UI katmanına hiç dokunmadan `GezginTestNavigator` + üretilen tipli `fromX()` erişimcileri üzerinden
+kurgulanmış senaryolar (kapsama matrisinin DAVRANIŞ kanıtı; tablo çekirdek senaryoları gösterir):
 
 | Test | Kanıtladığı |
 |---|---|
@@ -392,33 +392,34 @@ kurgulanmış senaryolar (kapsama matrisinin DAVRANIŞ kanıtı):
 | `termsQuit_tearsDownSignUpFlowLeavesLoginOnTop` | `@Quit` bütün SignUpFlow segmentini yıkar, Login üstte kalır |
 | `backToDashboardThenCrossGraphGoToProfile_bothViaGeneratedNavigators` | `@BackTo` (ItemDetail→Dashboard) + cross-graph B1 edge'i (`goToProfile`) TAMAMEN üretilen navigator'larla (raw.navigate YOK) pinler |
 
-### kspTest wiring — denendi, yapısal nedenle vazgeçildi
+### Tipli `fromX()` erişimcileri — çok-modül düzeninde çalışıyor (F-MAJOR-2)
 
-Plan, `gezgin.emitTestAccessors=true`'u `:sample:navigation`'ın `kspTest` kaynak kümesinde açıp
-üretilen tipli `GezginTestNavigator.fromX()` erişimcileriyle test yazmayı öngörüyordu. Denendi:
+Manşet "UI'sız test" özelliği kanonik çok-modül düzeninde (graph'lar `main`'de, testler `test`
+kaynak kümesinde) uçtan uca çalışır: yukarıdaki 18 test `nav.fromLogin().goToSignUp()` gibi
+**üretilmiş** tipli erişimcilerle sürülür — hiçbir `raw.xNavigator(entryId)` fabrika plumbing'i yok.
 
-1. Paylaşılan `ksp { arg(...) }` bloğu GLOBAL'dir (`KspExtension.apOptions` tek bir map, hem `main`
-   hem `test` KSP task'larınca okunur) — orada açmak `GezginTestAccessors.kt`'yi ana kaynak kümesine
-   de (`:gezgin-test`'e bağımlı olmayan) sızdırıp `compileKotlin`'i kırardı.
-2. Bunun için `kspTestKotlin` TASK'ının kendi `commandLineArgumentProviders`'ına (KSP Gradle
-   plugin'inin `KspAATask.kt`'sinde task-seviyesinde, paylaşılan listenin ÜSTÜNE eklenen bir liste)
-   doğrudan argüman eklemek mümkün — bu kısım ÇALIŞIYOR, flag yalnız test derlemesinde açılabiliyor.
-3. Ama gerçek engel YAPISAL: `TestApiCodegen`, [GraphModel] gerektirir; `kspTestKotlin`'in KSP
-   round'u yalnızca `test` kaynak kümesinin `.kt` dosyalarını görür. `AuthGraph.kt`/`HomeGraph.kt`/`ProfileGraph.kt`'nin `@NavGraph`'ları
-   `main`'de yaşar ve o noktada zaten `.class`'a derlenmiştir — `getSymbolsWithAnnotation` binary
-   classpath girdilerinden annotation'ları asla yeniden keşfetmez. Sonuç: `model.graphs`/`routes`
-   HER ZAMAN boş → `GezginTestAccessors.kt` hiç üretilmez. Ampirik doğrulama: `kspTestKotlin`'i tek
-   başına çalıştırınca ÇIKTI YOK (topology bile değil) — sadece test-accessor'lar değil, tüm codegen
-   sıfır.
+Doğru bağlama noktası, flag'i graph'ların bulunduğu **`main` KSP round'unda** açmaktır. Önceki
+`kspTest`-scoped deneme yapısal olarak yanlıştı: `kspTestKotlin` round'u yalnız `test` kaynak
+kümesinin `.kt`'lerini görür; `@NavGraph`'lar (`AuthGraph.kt`/`HomeGraph.kt`/`ProfileGraph.kt`) ise
+`main`'de zaten `.class`'a derlenmiştir ve `getSymbolsWithAnnotation` binary classpath'ten
+annotation'ları yeniden keşfetmez → boş model → hiç erişimci üretilmez. Çözüm
+`sample/navigation/build.gradle.kts` içinde:
 
-Bu, "graph'lar ve testler ayrı Gradle kaynak kümelerinde yaşayan" HER modül için geçerli yapısal bir
-sınır (processor'ın kctfork-tabanlı kendi testleri bunu görmez çünkü orada graph+test kaynağı AYNI
-KSP round'unda derlenir). **Fallback (meşru, plan'ın öngördüğü gibi):** testler
-`GezginTestNavigator.raw` üzerinden, ana round'da zaten üretilmiş `raw.xNavigator(entryId)`
-factory'lerini `entryIdOf(...)` ile birlikte doğrudan çağırır — `GezginDisplay`'in de kullandığı
-AYNI üretilmiş kod, yalnızca `fromX()` sarmalayıcısı olmadan. `sample/navigation/build.gradle.kts`
-içinde `testImplementation(project(":gezgin-test"))` + `kotlinx-coroutines-test` bağımlılığı bunun
-için eklendi; `kspTest(...)` bağımlılığı EKLENMEDİ (yukarıdaki nedenle işe yaramıyor).
+- `ksp { arg("gezgin.emitTestAccessors", "true") }` — GLOBAL `ksp{}` bloğu `kspKotlin` (main round)
+  üzerinde çalışır; `TestApiCodegen` `GezginTestAccessors.kt`'yi `main`'e, topology/navigator ile
+  aynı yere üretir. (`kspTestKotlin` round'u flag'i alır ama orada graph olmadığı için no-op'tur —
+  çift üretim yok.)
+- `compileOnly(project(":gezgin-test"))` — üretilen erişimciler `GezginTestNavigator`'a dokunur, bu
+  yüzden `compileKotlin`'in (main) sınıf yolunda görünür olmalı; `compileOnly` bu test-yardımcı
+  artefaktı app'in RUNTIME sınıf yolundan uzak tutar. `test` kaynak kümesi için
+  `testImplementation(project(":gezgin-test"))` onu compile + runtime'a yeniden ekler.
+
+`test` kaynak kümesi `main`'i gördüğü için üretilmiş `nav.fromX()`'i doğrudan çağırır (opt-in
+gerektirmez). `nav.raw` yalnızca `fromX()` kapsamı dışındaki birkaç düşük-seviye `raw.navigate` /
+`raw.currentEntryId` kurulum/inceleme çağrısı için (`@GezginInternalApi` opt-in ile) kalır — sample'da
+hâlâ `kotlinx-coroutines-test` bağımlılığı vardır. Processor'ın kctfork tabanlı kendi testleri de bu
+çok-modül senaryosunu doğrular (`TestApiCodegenTest`: main round üretir, ayrı bir round classpath'ten
+tüketir ama yeniden üretmez).
 
 ## Tasarım notları (S2/S3 bulguları)
 

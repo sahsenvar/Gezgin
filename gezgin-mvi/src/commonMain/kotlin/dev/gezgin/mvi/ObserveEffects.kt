@@ -2,6 +2,8 @@ package dev.gezgin.mvi
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -24,14 +26,23 @@ import kotlinx.coroutines.withContext
  *
  * `Main.immediate` = on recompose/collect resume (returning to STARTED) the buffered effect is processed
  * without being deferred to the next frame or skipped.
+ *
+ * **Stale-lambda fix (MJ-A):** the [LaunchedEffect] keys are `(effects, lifecycleOwner)` only — both stable,
+ * so the running `collect` is NOT restarted on recomposition. If `onEffect` were passed straight to
+ * `collect(onEffect)` the collector would bind the FIRST composition's lambda FOREVER; an `onEffect` that
+ * closes over a value that changes across recomposition (a callback re-created by the parent, or a captured
+ * `currentUser`/state read by value) would keep delivering to the STALE target, silently. So `onEffect` is
+ * wrapped in [rememberUpdatedState] and the collector invokes the MOST RECENT instance on every emission —
+ * the same pattern `rememberNavigator` applies to `onRootBack`.
  */
 @Composable
 public fun <E> ObserveEffects(effects: Flow<E>, onEffect: (E) -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val latestOnEffect by rememberUpdatedState(onEffect)
     LaunchedEffect(effects, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             withContext(Dispatchers.Main.immediate) {
-                effects.collect(onEffect)
+                effects.collect { latestOnEffect(it) }
             }
         }
     }

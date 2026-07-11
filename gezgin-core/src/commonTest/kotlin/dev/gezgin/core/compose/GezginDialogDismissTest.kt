@@ -4,6 +4,8 @@ package dev.gezgin.core.compose
 
 import dev.gezgin.core.NavResult
 import dev.gezgin.core.RawNavigator
+import dev.gezgin.core.Route
+import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.DialogDefault
 import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.FullModal
@@ -82,5 +84,31 @@ class GezginDialogDismissTest {
             nav.results<String>(callerId, "Feed→Modal").first(),
             "fullscreen modal dismiss → Canceled teslim edilmeli",
         )
+    }
+
+    // C-MJ-1 — GezginDialogScene'in FİİLİ dismiss çağrısı entry-pinli: onDismissRequest = { back(dialogId) }.
+    // Dialog HÂLÂ top iken pop + Canceled (eski davranışla aynı sonuç, artık sahibe-pinli kapı üzerinden).
+    @Test fun `pinned dialog dismiss - back(entryId) top iken Canceled teslim eder`() = runTest {
+        val nav = RawNavigator(start = Feed, topology = testTopology)
+        val callerId = nav.currentEntryId
+        nav.launchForResult(callerId, edgeId = "Feed→Dialog", route = DialogDefault("d"))
+        val dialogId = nav.currentEntryId
+        nav.back(dialogId)                                  // GezginDialogScene.onDismissRequest'in yaptığı
+        assertEquals(Feed, nav.current, "pinli dismiss dialog'u pop etmeli")
+        assertEquals(NavResult.Canceled, nav.results<String>(callerId, "Feed→Dialog").first())
+    }
+
+    // C-MJ-1 (asıl bug) — dialog artık top DEĞİLKEN pinli dismiss NO-OP: çifte-dismiss / geç-dismiss
+    // ALTTAKİ SCREEN'i poplamaz. Eski (pinsiz) `back()` yolu ikinci dismiss'te Catalog'u poplardı.
+    @Test fun `pinned dialog dismiss - top degilken NO-OP (cifte-dismiss altindaki ekrani korur)`() = runTest {
+        val nav = RawNavigator(start = Feed, topology = testTopology)
+        nav.navigate(Catalog)                               // [Feed, Catalog]
+        nav.navigate(DialogDefault("d"))                    // [Feed, Catalog, Dialog]
+        val dialogId = nav.currentEntryId
+        nav.back(dialogId)                                  // ilk dismiss → [Feed, Catalog]
+        assertEquals(Catalog, nav.current)
+        nav.back(dialogId)                                  // bayat ikinci dismiss → NO-OP
+        assertEquals(Catalog, nav.current, "ikinci (bayat) dismiss alttaki SCREEN'i poplamamalı")
+        assertEquals(listOf<Route>(Feed, Catalog), nav.backStack.value)
     }
 }

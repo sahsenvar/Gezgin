@@ -64,6 +64,8 @@ class FragmentEntryCodegenTest {
         // FQ-imported symbols: AndroidFragment (androidx.fragment, no processor dep), the gezgin-core
         // runtime glue, and the navigator FACTORY qualified against the ROUTE's package (cross-module-safe).
         assertContains(text, "import androidx.fragment.compose.AndroidFragment")
+        // mN1 — the route→Bundle encode is wrapped in `remember(route) { … }` (compose-runtime import).
+        assertContains(text, "import androidx.compose.runtime.remember")
         assertContains(text, "import dev.gezgin.core.fragment.toBundle")
         assertContains(text, "import dev.gezgin.core.fragment.bindGezgin")
         assertContains(text, "import dev.gezgin.fragroutes.orderChainNavigator")
@@ -76,7 +78,7 @@ class FragmentEntryCodegenTest {
         assertContains(text, "val raw = LocalGezginRawNavigator.current")
         assertContains(text, "val nav = raw.orderChainNavigator(LocalGezginEntryId.current)")
         assertContains(text, "AndroidFragment<OrderChainFragment>(")
-        assertContains(text, "arguments = route.toBundle(raw),")
+        assertContains(text, "arguments = remember(route) { route.toBundle(raw) },")
         assertContains(text, "onUpdate = { fragment -> bindGezgin(fragment, route, nav) },")
 
         // Archived: @NoBack route → register carries noBack = true (read off the route decl, cross-module).
@@ -125,7 +127,7 @@ class FragmentEntryCodegenTest {
             "edge-less About must NOT wire a navigator (no `val nav`, no aboutNavigator factory): $text",
         )
         // The register body still emits sensibly for About: `raw` is still bound (route.toBundle needs it).
-        assertContains(text, "arguments = route.toBundle(raw),")
+        assertContains(text, "arguments = remember(route) { route.toBundle(raw) },")
     }
 
     /**
@@ -160,7 +162,7 @@ class FragmentEntryCodegenTest {
             "display-only cross-module leaf must NOT wire a navigator (no `val nav`, no settingsNavigator): $text",
         )
         // `raw` is still bound (route.toBundle needs it) even when nav wiring is suppressed.
-        assertContains(text, "arguments = route.toBundle(raw),")
+        assertContains(text, "arguments = remember(route) { route.toBundle(raw) },")
     }
 
     @Test
