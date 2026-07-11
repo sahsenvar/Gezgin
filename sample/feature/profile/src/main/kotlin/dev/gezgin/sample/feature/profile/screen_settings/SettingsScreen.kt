@@ -1,4 +1,4 @@
-package dev.gezgin.sample.feature.profile
+package dev.gezgin.sample.feature.profile.screen_settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,11 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.gezgin.core.annotation.Screen
+import dev.gezgin.sample.feature.profile.screen_settings.ui.ThemeToggle
 import dev.gezgin.sample.navigation.ProfileGraph
 
 @Screen(ProfileGraph.SettingsScreenRoute::class)
 @Composable
-fun SettingsContent(state: SettingsState, onIntent: (SettingsIntent) -> Unit, buildInfo: BuildInfo) {
+fun SettingsScreen(state: SettingsUiState, onIntent: (SettingsIntent) -> Unit, buildInfo: BuildInfo) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.padding(24.dp),

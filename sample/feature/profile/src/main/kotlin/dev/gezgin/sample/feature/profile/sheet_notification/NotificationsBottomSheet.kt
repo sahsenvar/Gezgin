@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 
 @BottomSheet(ProfileGraph.NotificationsSheetRoute::class)
 @Composable
-fun NotificationsSheetContent(
+fun NotificationsBottomSheet(
     state: NotificationsUiState,
     onIntent: (NotificationsIntent) -> Unit,
     controller: GezginSheetController,

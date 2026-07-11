@@ -1,4 +1,4 @@
-package dev.gezgin.sample.feature.profile
+package dev.gezgin.sample.feature.profile.screen_settings.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Switch
