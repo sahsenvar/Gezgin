@@ -1,0 +1,34 @@
+# Madde 13 — @FullscreenModal (ItemImageViewer) tam-ekran occlusion + dismiss
+# Dashboard -> item-1 (ItemDetail) -> "Görseli tam ekran gör" (@FullscreenModal)
+#  - occlusion: alttaki ItemDetail'in kendine-özgü butonları GÖRÜNMEMELİ (tam-ekran örter)
+#  - sistem back  -> kapanır, ItemDetail geri gelir
+#  - "Kapat"      -> kapanır, ItemDetail'e döner (backToItemDetail)
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "item-1"
+- assertVisible: "Ürün: item-1"
+- assertVisible: "Görseli tam ekran gör"
+- tapOn: "Görseli tam ekran gör"
+# tam-ekran modal açık
+- assertVisible: "Ürün görseli — tam ekran"
+- assertVisible: "Görsel: item-1"
+- assertVisible: "Kapat"
+# occlusion proxy: alttaki ItemDetail'in butonları görünmemeli (dialog/sheet'te görünürdü)
+- assertNotVisible: "Panoya dön"
+- assertNotVisible: "Görseli tam ekran gör"
+# sistem back -> kapanır, ItemDetail geri
+- pressKey: Back
+- assertNotVisible: "Ürün görseli — tam ekran"
+- assertVisible: "Ürün: item-1"
+- assertVisible: "Görseli tam ekran gör"
+# tekrar aç -> "Kapat" -> ItemDetail'e döner
+- tapOn: "Görseli tam ekran gör"
+- assertVisible: "Görsel: item-1"
+- tapOn: "Kapat"
+- assertNotVisible: "Ürün görseli — tam ekran"
+- assertVisible: "Ürün: item-1"

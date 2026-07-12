@@ -1,0 +1,26 @@
+# Madde 11 — Predictive-back modal üstünde (DAVRANIŞSAL yarı: tam geri-JESTİ modal'ı kapatır, alttaki
+# ekranı navige ETMEZ). Sol-kenar swipe = sistem geri jesti (API 34+ predictive-back). Preview-frame
+# GÖRSELLERİ (yarım jest önizlemesi, alttaki ekranda preview başlamaması) görsel-only -> checklist'te ayrı.
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+# --- Dialog üstünde geri-jesti ---
+- tapOn: "Şifremi unuttum"
+- assertVisible: "Şifre sıfırlama"
+- swipe:
+    start: "0%,50%"
+    end: "70%,50%"
+- assertNotVisible: "Şifre sıfırlama"   # jest modal'ın onDismissRequest'ine gitti -> kapandı
+- assertVisible: "Giriş yap"            # alttaki ekran yerinde, navige olmadı
+# --- BottomSheet üstünde geri-jesti ---
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Sırala"
+- assertVisible: "Sırala (şu an: RELEVANCE)"
+- swipe:
+    start: "0%,50%"
+    end: "70%,50%"
+- assertNotVisible: "Sırala (şu an: RELEVANCE)"   # sheet kapandı (Canceled)
+- assertVisible: "Panel — sıralama: RELEVANCE"     # order DEĞİŞMEDİ, Dashboard yerinde

@@ -1,0 +1,12 @@
+# Madde 4 (bölüm B) — process-death SONRASI (launchApp YOK — runner Activity'yi öldürüp geri getirir).
+# (a) Payment aynı derinlikte restore (Feed'e sıfırlanma YOK): "Ödemeyi tamamla" görünür, "Kataloğa git" DEĞİL.
+# (b) Restore sonrası tamamla -> Catalog'un checkoutResults collector'ı sonucu HÂLÂ alır (pendingSlots PD-safe)
+#     -> terminal OrderPlaced'e geçilir (Value); "Ödeme iptal edildi" (Canceled) GÖRÜNMEZ, crash yok.
+appId: dev.gezgin.sample.shopr
+---
+- assertVisible: "Ödemeyi tamamla"
+- assertNotVisible: "Kataloğa git"
+- tapOn: "Ödemeyi tamamla"
+- assertVisible:
+    text: "Order placed:.*"
+- assertNotVisible: "Ödeme iptal edildi"

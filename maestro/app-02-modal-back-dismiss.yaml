@@ -1,0 +1,20 @@
+# Madde 2 — Modal (Dialog) sistem-back ile kapanınca alt ekran sağlıklı geri gelir
+# Login -> "Şifremi unuttum" (ForgotPasswordDialog) -> sistem back -> dialog kapanır,
+# LoginScreen geri görünür ve ETKİLEŞİLEBİLİR (dialog tekrar açılabiliyor = alt ekran canlı).
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Şifremi unuttum"
+- assertVisible: "Şifre sıfırlama"
+# sistem geri tuşu -> dialog kapanmalı (dismissOnBackPress varsayılan true)
+- pressKey: Back
+- assertNotVisible: "Şifre sıfırlama"
+- assertVisible: "Giriş yap"
+# alt ekran gerçekten etkileşilebilir mi: dialog'u tekrar aç
+- tapOn: "Şifremi unuttum"
+- assertVisible: "Şifre sıfırlama"
+- tapOn: "Vazgeç"
+- assertNotVisible: "Şifre sıfırlama"
+- assertVisible: "Giriş yap"
