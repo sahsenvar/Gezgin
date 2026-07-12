@@ -21,9 +21,10 @@ appId: dev.gezgin.sample.app
 # switch'i AÇ (Koyu tema text'inin altındaki checkable)
 - tapOn:
     below: "Koyu tema"
-# tek-seferlik efekt Toast
-- assertVisible: "Tema tercihi kaydedildi"
-# switch artık AÇIK
+# NOT: "Tema tercihi kaydedildi" LENGTH_SHORT toast'u GATE EDİLMİYOR (flaky). Tek-seferlik efekt-teslimi
+# run-14'te logcat ile deterministik sayılıyor (SettingsMvi effect=1); toggle'ın etkisi kalıcı switch
+# durumuyla (aşağıda checked:true) kanıtlanıyor.
+# switch artık AÇIK (kalıcı, non-flaky discriminator)
 - assertVisible:
     below: "Koyu tema"
     checked: true

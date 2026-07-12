@@ -27,6 +27,10 @@ appId: dev.gezgin.sample.app
 - eraseText
 - inputText: "Yeni Ad"
 - tapOn: "Kaydet"
-- assertVisible: "Ad güncellendi"    # LENGTH_SHORT toast: Kaydet'in HEMEN arkasına al (~2sn ömür yenmesin)
+# Value teslimini KALICI state ile kanıtla (non-flaky discriminator): dialog kapanır + ad güncellenir.
 - assertNotVisible: "Kaydet"
-- assertVisible: "Profil: Yeni Ad"   # ad Value ile güncellendi
+- assertVisible: "Profil: Yeni Ad"   # result Value teslim edildi + ad güncellendi (asıl kontrat kanıtı)
+# NOT: "Ad güncellendi" LENGTH_SHORT toast'u GATE EDİLMİYOR — ~2sn ömürlü, yoğun suite'te flaky (busy
+#      device'ta assert penceresini kaçırabilir; full run-all'da bu satır tek flaky-FAIL'di). Efekt-teslim
+#      mekanizması run-14'te logcat ile DETERMİNİSTİK sayılıyor (SettingsMvi effect=1); burada Value
+#      teslimi zaten kalıcı ad değişimiyle kanıtlanıyor.

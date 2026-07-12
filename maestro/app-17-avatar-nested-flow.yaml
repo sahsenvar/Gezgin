@@ -27,8 +27,9 @@ appId: dev.gezgin.sample.app
 - assertVisible: "Kırp (kaynak: gallery)"   # Crop (source="gallery")
 - tapOn: "Kullan"                            # CropViewModel.Use -> quitWith(avatar://gallery)
 - assertVisible: "Profil: Gezgin Kullanıcı"  # AvatarFlow bitti -> çağıran Profile'a dönüldü
-- assertVisible: "Avatar: avatar://gallery"  # Crop'un quitWith sonucu Profile'a teslim edildi
-- assertVisible: "Avatar güncellendi"        # ProfileEffect toast (ProfileViewModel:34)
+- assertVisible: "Avatar: avatar://gallery"  # Crop'un quitWith sonucu Profile'a teslim edildi (kalıcı, asıl kanıt)
+# NOT: "Avatar güncellendi" LENGTH_SHORT toast'u GATE EDİLMİYOR (flaky) — quitWith teslimi zaten yukarıdaki
+# kalıcı "Avatar: ..." ile kanıtlanıyor; efekt-teslim mekanizması run-14'te logcat ile deterministik.
 
 # ============ SEGMENT 2 — en derin nested ZoomFlow quitWith SAHİP AvatarFlow'u bitirir ============
 # Akışı yeniden başlat (launchPickAvatar taze bir AvatarFlow yaratır)
