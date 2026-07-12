@@ -14,11 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import dev.gezgin.core.compose.GezginDisplay
 import dev.gezgin.core.compose.navTransitions
+import dev.gezgin.core.compose.rememberNavigator
 import dev.gezgin.sample.feature.auth.authGraphEntries
 import dev.gezgin.sample.feature.home.homeGraphEntries
 import dev.gezgin.sample.feature.profile.profileGraphEntries
 import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
-import dev.gezgin.sample.navigation.rememberGezginNavigator
+import dev.gezgin.sample.navigation.gezginJson
+import dev.gezgin.sample.navigation.gezginTopology
 
 // @FragmentScreen yaprakları AndroidFragment ile host edilir → host bir AppCompatActivity/FragmentActivity
 // OLMALI (aksi halde runtime'da fırlatır) ve AppCompat teması gerektirir (bkz. res/values/themes.xml).
@@ -31,8 +33,15 @@ class MainActivity : AppCompatActivity() {
 
 @Composable
 private fun GezginShowcaseApp(onRootBack: () -> Unit) {
-    // M1 — generated convenience: bundles gezginTopology + a stable Json(gezginSerializersModule).
-    val navigator = rememberGezginNavigator(start = LoginScreenRoute, onRootBack = onRootBack)
+    // Generated gezginTopology + stable gezginJson bundled into the core @Composable rememberNavigator
+    // (which lives in gezgin-core — a Compose module, so it is lowered correctly; a generated @Composable
+    // in the plain-JVM graph module would not be, see TopologyCodegen.generateRememberNavigator).
+    val navigator = rememberNavigator(
+        start = LoginScreenRoute,
+        topology = gezginTopology,
+        json = gezginJson,
+        onRootBack = onRootBack,
+    )
 
     LaunchedEffect(navigator) {
         navigator.events.collect { event -> Log.d("GezginNav", event.toString()) }

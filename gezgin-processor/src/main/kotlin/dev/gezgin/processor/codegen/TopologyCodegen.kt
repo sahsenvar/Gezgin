@@ -122,28 +122,22 @@ internal object TopologyCodegen {
      * of inline `@Composable` calls that the compose-plugin-less test compiler can't inline.
      */
     fun generateRememberNavigator(packageName: String): FileSpec {
+        // gezginJson — process-wide stable Json(gezginSerializersModule) so app call sites don't hand-assemble
+        // a `remember { Json { … } }` (the encode/decode symmetry the PD-restore Saver needs). Call sites use
+        // the core `rememberNavigator(start, gezginTopology, gezginJson, onRootBack)`.
+        //
+        // NO generated `@Composable rememberGezginNavigator` convenience: this file is emitted into the graph
+        // module (§3.3), which in the canonical layout is a plain `kotlin.jvm` module WITHOUT the Compose
+        // compiler plugin. A `@Composable` FUNCTION compiled there gets a NON-lowered bytecode signature (no
+        // `Composer`/`$changed`/`$default` params) → a Compose consumer calling it crashes at runtime with
+        // `NoSuchMethodError` (compiles fine; only fails when the app actually runs). `gezginJson` is a plain
+        // `val`, so it is safe here; the @Composable helper is not.
         val jsonProp = PropertySpec.builder("gezginJson", JSON)
             .initializer("%M { serializersModule = gezginSerializersModule }", JSON_FUN)
             .build()
 
-        val navigator = FunSpec.builder("rememberGezginNavigator")
-            .addAnnotation(COMPOSABLE)
-            .addParameter("start", ROUTE)
-            .addParameter(
-                ParameterSpec.builder("onRootBack", LambdaTypeName.get(returnType = UNIT))
-                    .defaultValue("{ }")
-                    .build(),
-            )
-            .returns(RAW_NAVIGATOR)
-            .addStatement(
-                "return %M(start = start, topology = gezginTopology, json = gezginJson, onRootBack = onRootBack)",
-                REMEMBER_NAVIGATOR,
-            )
-            .build()
-
         return FileSpec.builder(packageName, GENERATED_REMEMBER_FILE)
             .addProperty(jsonProp)
-            .addFunction(navigator)
             .build()
     }
 
