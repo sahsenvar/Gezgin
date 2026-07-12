@@ -1,0 +1,13 @@
+# Madde 18b (restore) — process-death SONRASI: bottom-sheet yeniden gösterildi mi + result teslimi.
+# İSPAT/İSPATLANMAYAN: modal entry restore edilir ("Sırala (şu an: RELEVANCE)" görünür). Sonra bir seçenek seç
+#   (PRICE_ASC) -> backWithResult(PRICE_ASC) -> çağıran DashboardViewModel.PickSort suspend-await'ine teslim
+#   BEKLENİR ("Panel — sıralama: PRICE_ASC"). Gerçek PD'de await continuation ölürse sonuç DÜŞER (aday bug).
+appId: dev.gezgin.sample.app
+---
+# 1) Modal yeniden gösterildi mi? (sheet'e özgü metin); Login'e reset olmadı
+- assertVisible: "Sırala (şu an: RELEVANCE)"
+- assertNotVisible: "Giriş yap"
+# 2) Seçenek seç -> hide-then-result; sonuç PD sonrası çağırana teslim edilmeli
+- tapOn: "PRICE_ASC"
+- assertNotVisible: "Sırala (şu an: RELEVANCE)"
+- assertVisible: "Panel — sıralama: PRICE_ASC"

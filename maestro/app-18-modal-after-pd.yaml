@@ -1,0 +1,20 @@
+# Madde 18 (restore) — process-death SONRASI: MODAL kendisi yeniden gösterildi mi + result teslimi.
+# İSPAT: modal entry (EditNameDialogRoute) serialize edildi -> fresh-process'te dialog YENİDEN render edildi
+#   ("Kaydet" görünür). Sonra tamamla (ad değiştir -> Kaydet) -> pending @GoForResult slot PD-safe ->
+#   sonuç çağırana (Profile) teslim edilir: "Profil: PD Sonrasi".
+appId: dev.gezgin.sample.app
+---
+# 1) Modal yeniden gösterildi mi? (dialog'a özgü "Kaydet"); Login/Dashboard'a reset olmadı
+- assertVisible: "Kaydet"
+- assertNotVisible: "Giriş yap"
+- assertNotVisible: "Panel — sıralama: RELEVANCE"
+# 2) Modal'ı tamamla: text-field'i yeni adla değiştir (regex-anchor sadece alanı hedefler, "Profil: ..." değil)
+- tapOn:
+    text: "^Gezgin Kullanıcı$"
+- eraseText
+- inputText: "PD Sonrasi"
+- hideKeyboard
+- tapOn: "Kaydet"
+# 3) Sonuç PD sonrası çağırana teslim edildi
+- assertVisible: "Profil: PD Sonrasi"
+- assertNotVisible: "Kaydet"

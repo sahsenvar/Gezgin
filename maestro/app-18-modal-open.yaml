@@ -1,0 +1,15 @@
+# Madde 18 (seed) — @GoForResult MODAL'ı (EditNameDialog) aç, pending result slot beklerken bırak.
+# Login -> Dashboard -> Profil -> "Adı düzenle" -> EditNameDialog (DialogContract, ProfileGraph @GoForResult).
+# Dialog AÇIK sinyali = "Kaydet" (dialog'a özgü buton; "Adı düzenle" Profile butonu ile ÇAKIŞIR, ayırt etmez).
+# Bu, process-death'in modal TOP entry iken tetikleneceği zemini kurar (run-18 CASE A/B yeniden tohumlar).
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Profil"
+- assertVisible: "Profil: Gezgin Kullanıcı"
+- tapOn: "Adı düzenle"
+- assertVisible: "Kaydet"   # dialog açık (modal top entry) — PD burada tetiklenecek

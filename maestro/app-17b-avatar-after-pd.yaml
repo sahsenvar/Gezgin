@@ -1,0 +1,13 @@
+# Madde 17b (restore) — process-death SONRASI: nested akış AYNI DERİNLİKTE geri geldi mi + quitWith teslimi.
+# İSPAT: gerçek process ölümünden sonra flowChain + flowPath restore edildi -> hâlâ Zoom'dayız (Login/Dashboard'a
+#   RESET olmadı). Sonra nested ZoomFlow içinden quitWith -> pendingSlots + flowPath PD-safe -> Profile sonucu alır.
+appId: dev.gezgin.sample.app
+---
+# 1) Aynı derinlik: hâlâ en derin nested ekran (Zoom); Login/Dashboard'a düşmedik
+- assertVisible: "Yakınlaştır (nested ZoomFlow)"
+- assertNotVisible: "Giriş yap"
+- assertNotVisible: "Panel — sıralama: RELEVANCE"
+# 2) Nested içinden quitWith -> SAHİP AvatarFlow biter, sonuç Profile'a teslim (PD sonrası)
+- tapOn: "Bu kareyi kullan"
+- assertVisible: "Profil: Gezgin Kullanıcı"
+- assertVisible: "Avatar: zoomed://frame"

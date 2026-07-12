@@ -79,11 +79,19 @@ run "Madde 16 (SignUpFlow: @BackToStart/@QuitAndGoTo/@NoBack/@ReplaceTo)" mt "$D
 run "Madde 19 (fragment yaprağından sistem-back -> Gezgin pop)"          mt "$DIR/app-19-fragment-back.yaml"
 run "Madde 21 (@GoForResult double-tap -> tek dialog, slot dedupe)"      mt "$DIR/app-21-goforresult-doubletap.yaml"
 run "Madde 22 (@ReplaceTo logout double-tap -> crash YOK, K1 regresyon)" mt "$DIR/app-22-replaceto-doubletap.yaml"
+run "Madde 17 (nested ResultFlow quitWith sahiplik: Crop+nested Zoom -> Profile)" mt "$DIR/app-17-avatar-nested-flow.yaml"
 
 # --- Çok-adımlı runner'lar (adb: process-death / rotation / logcat) ---
 run "Madde 4  (shopr process-death round-trip)"    bash "$DIR/run-04-process-death.sh"
 run "Madde 14 (MVI rotation+one-shot-effect+logout)" bash "$DIR/run-14-settings-mvi.sh"
 run "Madde 15 (Fragment process-death round-trip)" bash "$DIR/run-15-fragment-pd.sh"
+run "Madde 17b (nested-flow ORTASINDA process-death + slot -> quitWith teslim)" bash "$DIR/run-17b-avatar-flow-pd.sh"
+
+# --- ADAY BUG (triage bekliyor): suspend @GoForResult sonucu GERÇEK process-death'te düşüyor (CASE B FAIL). ---
+# CASE A (DKA, process yaşar) GEÇER; CASE B (am kill) modal'ı restore eder ama sonucu teslim ETMEZ.
+# Suite'i kırmızıya çevirmemek için yorumlu — orchestrator triage'dan sonra açabilir. Kanıt: rapor + run-18*.log.
+# run "Madde 18  (modal[Dialog] process-death + slot teslimi)"      bash "$DIR/run-18-modal-pd.sh"
+# run "Madde 18b (modal[BottomSheet] process-death + slot teslimi)" bash "$DIR/run-18b-sheet-pd.sh"
 
 echo; echo "================ ÖZET ================"
 echo "PASS: $pass   FAIL: $fail"

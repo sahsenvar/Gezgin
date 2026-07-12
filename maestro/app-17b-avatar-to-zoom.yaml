@@ -1,0 +1,18 @@
+# Madde 17b (seed) — nested akışın EN DERİN ekranına (Zoom) kadar yürü.
+# Login -> Dashboard -> Profil -> Avatar seç -> Galeri -> Yakınlaştır -> Zoom (nested ZoomFlow @StartDestination).
+# Bu, process-death'in nested-flow ORTASINDA tetikleneceği zemini kurar (run-17b CASE A/B tarafından yeniden tohumlanır).
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Profil"
+- assertVisible: "Profil: Gezgin Kullanıcı"
+- tapOn: "Avatar seç"
+- assertVisible: "Avatar kaynağı seç"
+- tapOn: "Galeri"
+- assertVisible: "Kırp (kaynak: gallery)"
+- tapOn: "Yakınlaştır"
+- assertVisible: "Yakınlaştır (nested ZoomFlow)"   # en derin nested ekran — PD burada tetiklenecek

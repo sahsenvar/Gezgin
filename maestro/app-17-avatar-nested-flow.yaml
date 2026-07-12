@@ -1,0 +1,52 @@
+# Madde 17 — nested ResultFlow quitWith SAHİPLİK ispatı (cihazda).
+# AvatarFlow : ProfileGraph, ResultFlow<AvatarChoice> — result'ı DOĞRUDAN bildiren = AvatarFlow (sahip).
+#   PickSource(@StartDestination) -@GoTo-> Crop -@GoTo-> ZoomFlow(nested @FlowGraph) / ZoomScreen(@StartDestination).
+# Profile @GoForResult(AvatarFlow, "pickAvatar") ile akışı başlatır; sonuç ProfileViewModel.pickAvatarResults'a akar.
+# İSPAT: quitWith(...) hangi iç ekrandan çağrılırsa çağrılsın (Crop=orta, Zoom=en derin/nested) SAHİP AvatarFlow'u
+#   bitirir ve AvatarChoice'i Profile'a teslim eder — nested ZoomFlow tarafından YUTULMAZ.
+#   Crop.Use   -> quitWith(AvatarChoice("avatar://gallery"))  (CropViewModel:35)
+#   Zoom.UseFrame -> quitWith(AvatarChoice("zoomed://frame")) (ZoomViewModel:33) — nested flow içinden.
+# Ayrıca Zoom.Back = nav.back() intra-flow geri (Zoom->Crop) doğrulanır (quit vs quitWith ayrımı).
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+
+# Login -> Dashboard -> Profil
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Profil"
+- assertVisible: "Profil: Gezgin Kullanıcı"
+- assertVisible: "Avatar: (seçilmedi)"   # henüz sonuç yok
+
+# ============ SEGMENT 1 — Crop (orta ekran) quitWith SAHİP AvatarFlow'u bitirir ============
+- tapOn: "Avatar seç"
+- assertVisible: "Avatar kaynağı seç"       # PickSource (@StartDestination)
+- tapOn: "Galeri"
+- assertVisible: "Kırp (kaynak: gallery)"   # Crop (source="gallery")
+- tapOn: "Kullan"                            # CropViewModel.Use -> quitWith(avatar://gallery)
+- assertVisible: "Profil: Gezgin Kullanıcı"  # AvatarFlow bitti -> çağıran Profile'a dönüldü
+- assertVisible: "Avatar: avatar://gallery"  # Crop'un quitWith sonucu Profile'a teslim edildi
+- assertVisible: "Avatar güncellendi"        # ProfileEffect toast (ProfileViewModel:34)
+
+# ============ SEGMENT 2 — en derin nested ZoomFlow quitWith SAHİP AvatarFlow'u bitirir ============
+# Akışı yeniden başlat (launchPickAvatar taze bir AvatarFlow yaratır)
+- tapOn: "Avatar seç"
+- assertVisible: "Avatar kaynağı seç"
+- tapOn: "Galeri"
+- assertVisible: "Kırp (kaynak: gallery)"
+- tapOn: "Yakınlaştır"                        # Crop.Zoom -> goToZoom -> nested ZoomFlow
+- assertVisible: "Yakınlaştır (nested ZoomFlow)"
+
+# Zoom.Back = intra-flow geri (nested ZoomFlow -> Crop), SAHİP flow'u BİTİRMEZ
+- tapOn: "Geri"
+- assertVisible: "Kırp (kaynak: gallery)"     # Crop'a döndük, hâlâ AvatarFlow içindeyiz
+- assertNotVisible: "Profil: Gezgin Kullanıcı"
+
+# Tekrar en derine in ve nested içinden quitWith tetikle
+- tapOn: "Yakınlaştır"
+- assertVisible: "Yakınlaştır (nested ZoomFlow)"
+- tapOn: "Bu kareyi kullan"                   # ZoomViewModel.UseFrame -> quitWith(zoomed://frame) NESTED içinden
+- assertVisible: "Profil: Gezgin Kullanıcı"   # SAHİP AvatarFlow bitti -> Profile'a dönüldü (ZoomFlow yutmadı)
+- assertVisible: "Avatar: zoomed://frame"     # nested quitWith sonucu Profile'a teslim edildi

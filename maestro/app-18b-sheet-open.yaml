@@ -1,0 +1,13 @@
+# Madde 18b (seed) — @GoForResult MODAL bottom-sheet (FilterBottomSheet) aç, pending result slot beklerken bırak.
+# Login -> Dashboard -> "Sırala" -> FilterBottomSheet (BottomSheetContract, HomeGraph @GoForResult "pickSort").
+# Bu rota DashboardViewModel.PickSort — kaynak yorumu suspend sonucun "config-change/PD'de sessizce düşmez"
+# olduğunu İDDİA eder. Bu seed, PD'nin sheet TOP entry iken tetikleneceği zemini kurar.
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Sırala"
+- assertVisible: "Sırala (şu an: RELEVANCE)"   # sheet açık (modal top entry) — PD burada tetiklenecek
