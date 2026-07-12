@@ -1,0 +1,13 @@
+# Madde 15 (bölüm A) — @FragmentScreen (HelpFragment) ekranına git, PD öncesi durumu kur.
+# Login -> Giriş -> Dashboard -> "Yardım (legacy Fragment)" (goToHelp("navigasyon")) -> HelpFragment.
+# gezginArgs<HelpScreenRoute>().topic -> "Konu: navigasyon" TextView'ına yansır.
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Yardım (legacy Fragment)"
+- assertVisible: "Konu: navigasyon"
+- assertVisible: "Panoya dön"

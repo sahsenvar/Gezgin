@@ -1,0 +1,29 @@
+# Madde 14 (bölüm A) — MVI Settings: "Koyu tema" toggle -> switch ON + tek-seferlik efekt Toast
+# Switch = "Koyu tema" text'inin ALTINDAKİ checkable View (relative selector ile hedeflenir).
+# (rotation state-survival + efekt-replay-yok + logout -> runner: run-14-settings-mvi.sh)
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Profil"
+- assertVisible: "Profil: Gezgin Kullanıcı"
+- tapOn: "Ayarlar"
+- assertVisible: "Çıkış yap"
+- assertVisible: "Koyu tema"
+- assertVisible: "Sürüm 1.0.0"
+# switch başlangıçta KAPALI
+- assertVisible:
+    below: "Koyu tema"
+    checked: false
+# switch'i AÇ (Koyu tema text'inin altındaki checkable)
+- tapOn:
+    below: "Koyu tema"
+# tek-seferlik efekt Toast
+- assertVisible: "Tema tercihi kaydedildi"
+# switch artık AÇIK
+- assertVisible:
+    below: "Koyu tema"
+    checked: true

@@ -1,0 +1,32 @@
+# Madde 10 (bölüm 2) — EditNameDialog dismiss & result teslimi
+# NOT: dismissOnClickOutside = route.current.isNotBlank() — route ARGÜMANINDAN okunur (açılış anında sabit),
+#      canlı text-field DEĞİL. Profil adı ("Gezgin Kullanıcı") boş olmadığı için dismissOnClickOutside=TRUE:
+#      dışarı tık dialog'u KAPATIR (Canceled). Checklist'in "sil -> kapanmaz" senaryosu sample'da
+#      uygulanmıyor (route yeniden açılmadıkça current değişmez) — bkz. rapor.
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Profil"
+- assertVisible: "Profil: Gezgin Kullanıcı"
+# --- dışarı tık: current non-blank -> dismissOnClickOutside=true -> KAPANIR (Canceled) ---
+- tapOn: "Adı düzenle"
+- assertVisible: "Kaydet"      # dialog açık (dialog'a özgü buton)
+- tapOn:
+    point: "50%,4%"
+- assertNotVisible: "Kaydet"   # dialog kapandı
+- assertVisible: "Profil: Gezgin Kullanıcı"   # ad DEĞİŞMEDİ (Canceled)
+# --- Kaydet ile Value teslimi: ismi değiştir, sonuç akmalı ---
+- tapOn: "Adı düzenle"
+- assertVisible: "Kaydet"
+- tapOn:
+    text: "^Gezgin Kullanıcı$"   # yalnız text-field (regex anchored) — "Profil: ..." eşleşmez
+- eraseText
+- inputText: "Yeni Ad"
+- tapOn: "Kaydet"
+- assertNotVisible: "Kaydet"
+- assertVisible: "Profil: Yeni Ad"   # ad Value ile güncellendi
+- assertVisible: "Ad güncellendi"

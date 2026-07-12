@@ -1,0 +1,12 @@
+# Madde 15 (bölüm B) — @FragmentScreen PD SONRASI (launchApp YOK — runner Activity'yi öldürüp geri getirir).
+# (a) crash/ANR yok; Help aynı derinlikte restore (Login/Dashboard'a sıfırlanma YOK).
+# (b) gezginArgs<HelpScreenRoute>() restore sonrası route'u HÂLÂ doğru decode eder -> "Konu: navigasyon".
+#     (route.toBundle() PD-safe'inin CANLI kanıtı.)
+# (c) gezginNav<HelpNavigator>() re-bind (AndroidFragment.onUpdate -> bindGezgin) çalışır:
+#     "Panoya dön" -> backToDashboard() -> Dashboard. ("bind yok" hatası fırlatmaz.)
+appId: dev.gezgin.sample.app
+---
+- assertVisible: "Konu: navigasyon"
+- assertNotVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Panoya dön"
+- assertVisible: "Panel — sıralama: RELEVANCE"

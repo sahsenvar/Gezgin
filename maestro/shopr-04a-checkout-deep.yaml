@@ -1,0 +1,13 @@
+# Madde 4 (bölüm A) — process-death öncesi derin stack + açık ResultFlow kur.
+# Feed -> Catalog -> Cart -> Payment  (Payment'ta bekleyen quitWith/ResultBus slotu vardır).
+appId: dev.gezgin.sample.shopr
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Kataloğa git"
+- tapOn: "Kataloğa git"
+- assertVisible: "Checkout başlat"
+- tapOn: "Checkout başlat"
+- assertVisible: "Ödemeye geç"
+- tapOn: "Ödemeye geç"
+- assertVisible: "Ödemeyi tamamla"

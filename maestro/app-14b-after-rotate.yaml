@@ -1,0 +1,9 @@
+# Madde 14 (bölüm B) — rotation sonrası state-survival (launchApp YOK — runner döndürdükten sonra çalışır)
+# VM config-change'i sağ kalır: "Koyu tema" switch AÇIK KALMALI (remember değil, VM state).
+appId: dev.gezgin.sample.app
+---
+- assertVisible: "Ayarlar"
+- assertVisible: "Koyu tema"
+- assertVisible:
+    below: "Koyu tema"
+    checked: true

@@ -1,0 +1,21 @@
+# Madde 14 (bölüm C) — MVI'dan logout (launchApp YOK — B'den sonra Settings ekranında çalışır)
+# "Çıkış yap" -> nav.logout() = @ReplaceTo(Login, clearUpTo=Dashboard, inclusive=true).
+#
+# CİHAZ BULGUSU: loginSuccess = @ReplaceTo(Dashboard) olduğu için giriş, seed Login'i TÜKETİR
+# (stack: [Dashboard], [Login,Dashboard] DEĞİL). Bu yüzden logout clearUpTo=Dashboard-inclusive +
+# replaceTo Login => TEK [Login] üretir. Sistem-back Login'den root-back -> app KAPANIR.
+# Birim testi AppNavBehaviorTest.logout...stacksASecondLoginEntry [Login,Login] bekler; ama o test
+# login'i düz navigate(Dashboard) PUSH'u ile kurar — gerçek app'in @ReplaceTo loginSuccess yolunu
+# YANSITMAZ. Cihazda "çift Login" ÜRETİLMEZ. Değişmez güvenlik invariant'ı ("back Dashboard/Settings'e
+# dönmez") yine de KORUNUR — aşağıda o pinlenir. (Detay: rapor Madde 14.)
+appId: dev.gezgin.sample.app
+---
+- assertVisible: "Çıkış yap"
+- tapOn: "Çıkış yap"
+- assertVisible: "Giriş yap"
+- assertNotVisible: "Panel — sıralama: RELEVANCE"
+- assertNotVisible: "Çıkış yap"
+# back-stack guard: geri tuşu Dashboard'a/Settings'e ASLA dönmez (cihazda app kök-back ile kapanır).
+- pressKey: Back
+- assertNotVisible: "Panel — sıralama: RELEVANCE"
+- assertNotVisible: "Çıkış yap"

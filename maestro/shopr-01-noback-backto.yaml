@@ -1,0 +1,31 @@
+# Madde 1 — M5' @NoBack LIFO (sistem-back no-op) + @BackTo (Feed'e dön)
+# shopr: Feed -> Catalog -> Cart -> Payment -> tamamla -> OrderPlaced (@NoBack terminal)
+# Sistem geri tuşu OrderPlaced'ta HİÇBİR ŞEY yapmamalı; "Feed'e dön" (@BackTo) Feed'e döner.
+appId: dev.gezgin.sample.shopr
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Kataloğa git"
+- tapOn: "Kataloğa git"
+- assertVisible: "Checkout başlat"
+- tapOn: "Checkout başlat"
+- assertVisible:
+    text: "Ödemeye geç"
+- tapOn: "Ödemeye geç"
+- assertVisible: "Ödemeyi tamamla"
+- tapOn: "Ödemeyi tamamla"
+# Terminal @NoBack ekranı
+- assertVisible:
+    text: "Order placed:.*"
+- assertVisible: "Feed'e dön"
+# --- @NoBack: sistem geri tuşu no-op olmalı ---
+- pressKey: Back
+- assertVisible:
+    text: "Order placed:.*"
+- assertVisible: "Feed'e dön"
+# ikinci kez de no-op
+- pressKey: Back
+- assertVisible: "Feed'e dön"
+# --- @BackTo: declared geri Feed'e döner ---
+- tapOn: "Feed'e dön"
+- assertVisible: "Kataloğa git"

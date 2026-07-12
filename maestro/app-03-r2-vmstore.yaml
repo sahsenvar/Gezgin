@@ -1,0 +1,22 @@
+# Madde 3 — R2 per-entry ViewModelStore (VM-store yarısı) — KOD DEĞİŞİKLİĞİ GEREKMEDEN.
+# ItemDetail'in @MviViewModel'i route'tan bağımsız her ENTRY için ayrı ViewModelStore alır
+# (rememberViewModelStoreNavEntryDecorator, gerçek Activity LocalViewModelStoreOwner'ı gerekir).
+# "İlgili ürün (aynı id, yeni entry)" = @GoTo(singleTop=false) -> aynı DEĞER (id=item-1) YENİ entry.
+# VM state 'visits' OnAppear'da artar. Ayrı VM store => dizi 1 -> 1 -> 2. Paylaşılan VM olsaydı 1 -> 2 -> 3.
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "item-1"
+# entry #1: taze VM -> visits 0->1
+- assertVisible: "Ürün: item-1"
+- assertVisible: "Bu ekran örneğinde ziyaret sayacı: 1"
+# aynı id ile YENİ entry (#2): kendi taze VM'i -> visits 1 (paylaşılsaydı 2 olurdu)
+- tapOn: "İlgili ürün (aynı id, yeni entry)"
+- assertVisible: "Bu ekran örneğinde ziyaret sayacı: 1"
+# geri -> entry #1 RETAINED VM'iyle yeniden görünür -> re-appear 1->2 (kendi store'u korunmuş, #2'den ayrı)
+- pressKey: Back
+- assertVisible: "Bu ekran örneğinde ziyaret sayacı: 2"

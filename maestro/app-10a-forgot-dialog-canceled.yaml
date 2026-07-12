@@ -1,0 +1,25 @@
+# Madde 10 (bölüm 1) — ForgotPasswordDialog dismiss davranışları
+#  - dismissOnClickOutside = false  -> scrim'e/dışarı tık HİÇBİR ŞEY yapmaz (dialog açık kalır)
+#  - sistem back                    -> kapanır, caller'a NavResult.Canceled -> "Sıfırlama iptal edildi"
+#  - "Gönder" (backWithResult(true))-> "Sıfırlama linki gönderildi" (NavResult.Value=true)
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Şifremi unuttum"
+- assertVisible: "Şifre sıfırlama"
+# dışarı/scrim tık (üst bölge) -> KAPANMAMALI
+- tapOn:
+    point: "50%,6%"
+- assertVisible: "Şifre sıfırlama"
+# back -> Canceled yolu
+- pressKey: Back
+- assertVisible: "Sıfırlama iptal edildi"
+- assertVisible: "Giriş yap"
+# şimdi Value=true yolunu doğrula: tekrar aç, "Gönder"
+- tapOn: "Şifremi unuttum"
+- assertVisible: "Şifre sıfırlama"
+- tapOn: "Gönder"
+- assertNotVisible: "Şifre sıfırlama"
+- assertVisible: "Sıfırlama linki gönderildi"
