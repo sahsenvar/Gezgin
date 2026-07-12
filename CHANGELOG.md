@@ -18,9 +18,13 @@ navigasyon katmanı (Navigation 3 üzerinde). Yayınlanan artefaktlar: `dev.gezg
 - **İleri-gidiş sözlüğü** — `@GoTo` / `@ReplaceTo` (push / replace).
 - **Flow navigasyonu** — `@FlowGraph` + `@StartDestination` / `@BackToStart` / `@Quit` /
   `@QuitAndGoTo`; geri sözlüğü `@BackTo` / `@NoBack` / implicit `back()`.
-- **Result passing** — `ResultRoute<T>` / `ResultFlow<T>` + `@GoForResult`; PD-safe üçlü
+- **Result passing** — `ResultRoute<T>` / `ResultFlow<T>` + `@GoForResult`; üçlü API
   (`launchX` tetik · `xResults` re-attach stream · suspend `goToXForResult` sugar) + tipli
-  `backWithResult`.
+  `backWithResult`. **PD-safety:** `xResults` stream re-attach yüzeyidir — VM recreate'te
+  (config-change VE gerçek process-death) yeniden collect edilip kalıcı slot'tan teslim eder
+  (PD-safe taşıyıcı). suspend `goToXForResult` yalnız process-ömrü içi await'tir (gerçek
+  process-death'te continuation ölür → sonuç düşer); PD sınırını aşacaksan `launchX`+`xResults`
+  kullan (cihazda `am kill` ile doğrulandı; sample tümüyle bu deseni kullanır).
 - **4 entry kind** — `@Screen`, `@Dialog`, `@BottomSheet`, `@FullscreenModal` (modal = render
   varyantı olan normal back-stack entry'si).
 - **MVI add-on** (`gezgin-mvi`, opsiyonel) — `@MviViewModel` / `@ScreenEffect` +

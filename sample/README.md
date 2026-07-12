@@ -89,7 +89,7 @@ supertype'tan gelir (`: AuthGraph` / `: ProfileGraph`, aynı paket). `AvatarFlow
 | `@ReplaceTo` (`clearUpTo`/`inclusive`/`name=logout`) | `SettingsScreenRoute→LoginScreenRoute` | `screen_settings/SettingsViewModel.kt` (VM `onIntent`'ten çağrılır — MVI-mode) |
 | `@GoForResult` — screen×4 (Dialog/Dialog/Sheet/Sheet) | `ForgotPasswordDialogRoute`, `EditNameDialogRoute`, `FilterBottomSheetRoute`, `NotificationsSheetRoute` | `dialog_forgot_password/ForgotPasswordDialog.kt`, `dialog_edit_name/EditNameDialog.kt`, `sheet_filter/FilterBottomSheet.kt`, `sheet_notification/NotificationsBottomSheet.kt` |
 | `@GoForResult` — flow×1, named×3 | `AvatarFlow` (`pickAvatar`), `FilterBottomSheetRoute` (`pickSort`), `NotificationsSheetRoute` (`pickNotifications`) | `screen_profile/ProfileViewModel.kt`, `screen_dashboard/DashboardViewModel.kt` |
-| Üçlü tüketimin İKİ deseni (ikisi de VM `viewModelScope`'ta) | suspend `goToPickSortForResult` (Dashboard) **vs.** `launchPickAvatar()` + `pickAvatarResults.collect` (Profile VM `init`) | `screen_dashboard/DashboardViewModel.kt` / `screen_profile/ProfileViewModel.kt` |
+| Sonuç tüketimi — **PD-safe re-attach deseni** (tüm sample) | `launchX()` (onIntent) + `xResults.collect{}` (VM `init`) — VM recreate'te (config-change VE gerçek process-death) yeniden subscribe → kalıcı slot'tan teslim. Suspend `goToXForResult` sugar'ı yalnız process-ömrü içidir (PD'de düşer, cihazda doğrulandı). | `screen_login/LoginViewModel.kt`, `screen_profile/ProfileViewModel.kt`, `screen_dashboard/DashboardViewModel.kt`, shopr `screen_catalog/CatalogViewModel.kt` |
 | `@QuitAndGoTo` | `TermsScreenRoute` → `WelcomeScreenRoute` | `screen_terms/TermsViewModel.kt` |
 | `@Quit` | `TermsScreenRoute` | `screen_terms/TermsViewModel.kt` |
 | `@BackToStart` | `TermsScreenRoute` → `CredentialsScreenRoute` | `screen_terms/TermsViewModel.kt` |
@@ -274,7 +274,8 @@ yanında bir rol-param'ı olan `controller: GezginSheetController` alır (MVI + 
 VM route verisini enjekte alır (`NotificationsViewModel(route, nav)` → başlangıç `UiState` `route.current`'tan);
 (c) sonuç teslimi hâlâ hide-then-result: composable önce `controller.hide()` (kapanma animasyonu), sonra
 `onIntent(Confirm)` → VM `nav.backWithResult(selected)`. Profile'dan `@GoForResult(..., name = "pickNotifications")`
-ile açılır; sonuç `ProfileViewModel`'de suspend `goToPickNotificationsForResult(...)` ile toplanır.
+ile açılır; sonuç `ProfileViewModel`'de PD-safe re-attach deseniyle (`init { nav.pickNotificationsResults.collect{} }` +
+`onIntent → nav.launchPickNotifications(...)`) toplanır.
 
 **Cihaz-üstü doğrulama:** MVI-mode'un yalnız derlemeden görülemeyen davranışları (VM'in config-change'te
 hayatta kalması, efektin rotation'da tekrar oynamaması, logout'un stack'i doğru temizlemesi)
@@ -456,12 +457,15 @@ tüketir ama yeniden üretmez).
   kanıtı: `nestedZoomFlowQuitWith_deliversValueToProfileTearsDownWholeAvatarFlow`. (Eski el-yazımı
   core fixture'ları zaten ownership semantiğindeydi — `PayAuthFlow : Route` kapsayanı subtype
   etmediği için bug'ı hiç tetiklememişti.)
-- **Dashboard'ın suspend `goToPickSortForResult` çağrısı** — artık `DashboardViewModel.onIntent`'te
-  `viewModelScope.launch` ile toplanır; VM scope'unda çalıştığı için config-change/process-death'te
-  SESSİZCE DÜŞMEZ (eski `rememberCoroutineScope()` composable-scope hazard'ının MVI karşılığı çözülür;
-  bkz. `DashboardViewModel.kt`'deki kod-içi yorum). Birden çok akıştan gelen kalıcı sonuç isteniyorsa
-  `ProfileViewModel`'in `init`'teki launch+collect (stream) deseni tercih edilebilir — yukarıdaki
-  "İki tüketim deseni" karşılaştırmasına bakın.
+- **Sonuç tüketimi — PD-safe re-attach deseni (tüm sample uniform):** Dashboard `pickSort`, Profile
+  `editName`/`pickNotifications`/`pickAvatar`, Login `forgotPassword`, shopr `checkout` — hepsi
+  `init { nav.xResults.collect{} }` + `onIntent → nav.launchX(...)` kullanır. VM recreate'te (config-change
+  VE **gerçek process-death**) collector yeniden subscribe olur → navigator'ın serializable state'indeki
+  kalıcı slot'tan sonuç teslim edilir. **CİHAZ BULGUSU (düzeltildi):** eskiden Dashboard/Profile/Login
+  suspend `goToXForResult()` await'i kullanıyordu; bu config-change'de (VM retained) çalışır ama GERÇEK
+  process-death'te continuation öldüğünden sonuç SESSİZCE DÜŞER (`am kill` ile cihazda kanıtlandı,
+  `maestro/run-18*.sh`). Suspend `goToXForResult` sugar'ı yalnız process-ömrü içi await'ler içindir
+  (üretilen navigator KDoc'unda dokümante); PD sınırını aşan sonuç için daima `launchX`+`xResults` stream'i.
 - **Üretilen API isimleri plan metniyle birebir eşleşmiyor** — bkz.
   `.superpowers/sdd/sample-s2-report.md` "Escalations" bölümü (örn. plandaki varsayılan
   `goToForgotPasswordForResult` yerine gerçek üretilen ad `goToForgotPasswordDialogForResult`).
