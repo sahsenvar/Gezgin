@@ -1,0 +1,65 @@
+# Madde 16 — SignUpFlow + Welcome (en büyük kapsanmamış anotasyon yüzeyi).
+# Login "Kayıt ol" -> @GoTo(SignUpFlow) -> @StartDestination Credentials.
+# İleri yürü: Credentials -@GoTo-> ProfileInfo -@GoTo-> Terms.
+# @BackToStart: Terms "Başa dön" -> AKIŞ BAŞINA (Credentials), önceki (ProfileInfo) DEĞİL.
+# @QuitAndGoTo(WelcomeScreenRoute): Terms "Kaydı tamamla" -> Welcome (akış tüketilir).
+# Welcome @NoBack: sistem-back NO-OP. continueToDashboard @ReplaceTo -> Dashboard;
+#   Dashboard'dan back Welcome'a DÖNMEZ (Welcome @ReplaceTo ile tüketildi).
+# Not: Credentials.Continue boş e-posta'da bloklar; Terms.Complete boş ad'da bloklar -> alanlar doldurulur.
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+
+# 1) Login -> SignUpFlow başlangıcı (Credentials)
+- tapOn: "Kayıt ol"
+- assertVisible: "Kayıt ol — hesap bilgileri"
+
+# 2) İleri: Credentials -> ProfileInfo (e-posta zorunlu)
+- tapOn: "E-posta"
+- eraseText
+- inputText: "test@gezgin.dev"
+- hideKeyboard
+- tapOn: "Devam"
+- assertVisible: "Kayıt ol — profil bilgileri"
+- assertVisible: "E-posta: test@gezgin.dev"
+
+# 3) İleri: ProfileInfo -> Terms
+- tapOn: "Devam"
+- assertVisible: "Kayıt ol — kullanım koşulları"
+
+# 4) @BackToStart: Terms "Başa dön" -> Credentials (BAŞ), ProfileInfo/Terms DEĞİL
+- tapOn: "Başa dön"
+- assertVisible: "Kayıt ol — hesap bilgileri"
+- assertNotVisible: "Kayıt ol — profil bilgileri"
+- assertNotVisible: "Kayıt ol — kullanım koşulları"
+
+# 5) Tekrar ileri yürü Terms'e
+- tapOn: "E-posta"
+- eraseText
+- inputText: "test@gezgin.dev"
+- hideKeyboard
+- tapOn: "Devam"
+- assertVisible: "Kayıt ol — profil bilgileri"
+- tapOn: "Devam"
+- assertVisible: "Kayıt ol — kullanım koşulları"
+
+# 6) @QuitAndGoTo(Welcome): ad gir, "Kaydı tamamla" -> Welcome
+- tapOn: "Adınız (Welcome ekranı için)"
+- inputText: "Gezgin"
+- hideKeyboard
+- tapOn: "Kaydı tamamla"
+- assertVisible: "Hoş geldin, Gezgin"
+
+# 7) Welcome @NoBack: sistem-back iki kez NO-OP (hâlâ Welcome)
+- pressKey: Back
+- assertVisible: "Hoş geldin, Gezgin"
+- pressKey: Back
+- assertVisible: "Hoş geldin, Gezgin"
+
+# 8) continueToDashboard @ReplaceTo -> Dashboard; back Welcome'a DÖNMEZ
+- tapOn: "Panoya devam"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- pressKey: Back
+- assertNotVisible: "Hoş geldin, Gezgin"

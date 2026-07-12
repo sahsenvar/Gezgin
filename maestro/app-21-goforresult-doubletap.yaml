@@ -1,0 +1,21 @@
+# Madde 21 — @GoForResult slot dedupe cihaz kanıtı (RawNavigator slot guard).
+# Login'de "Şifremi unuttum" HIZLI ÇİFT-TIK -> TEK dialog açılmalı (iki değil).
+# Kanıt: TEK sistem-back dialog'u kapatır ve Login tamamen görünür. İki dialog yığılsaydı,
+# tek back ikinci dialog'u bırakırdı -> assertNotVisible "Şifre sıfırlama" BAŞARISIZ olurdu.
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+# hızlı çift-tık: aynı konuma iki kez (repeat, tek çözümleme + delay:0) — gerçek hızlı çift-ateşleme.
+# İki ayrı tapOn kullanılamaz: ilk tık dialog'u açar, scrim butonu örter -> ikinci çözümleme "not found".
+- tapOn:
+    text: "Şifremi unuttum"
+    repeat: 2
+    delay: 0
+# tam olarak TEK dialog açık
+- assertVisible: "Şifre sıfırlama"
+# TEK back -> kapanır; iki yığılsaydı ikincisi kalırdı
+- pressKey: Back
+- assertNotVisible: "Şifre sıfırlama"
+- assertVisible: "Giriş yap"

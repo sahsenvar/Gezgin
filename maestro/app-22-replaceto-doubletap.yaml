@@ -1,0 +1,24 @@
+# Madde 22 (best-effort) — @ReplaceTo logout'ta HIZLI ÇİFT-TIK crash-regresyon smoke'u (K1/K2).
+# Kütüphane-düzeyi fix birim testlerinde deterministik doğrulandı; bu, cihazda "çift-tık crash YOK" duman testi.
+# Settings "Çıkış yap" -> nav.logout() @ReplaceTo(Login). repeat:2 ile aynı konuma hızlı iki tık.
+# Animasyonlar kapalı -> geçiş anlık; fix nedeniyle zamanlama ne olursa olsun crash olmamalı.
+# Sonuç: geçerli ekran (Login "Giriş yap") görünür; ayrıca adb crash buffer harici kontrol edilir.
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Profil"
+- assertVisible: "Profil: Gezgin Kullanıcı"
+- tapOn: "Ayarlar"
+- assertVisible: "Çıkış yap"
+# hızlı çift-tık: aynı konuma iki kez (repeat), tekrar-çözümleme yok -> ekran değişse de hata vermez
+- tapOn:
+    text: "Çıkış yap"
+    repeat: 2
+    delay: 0
+# crash YOK -> logout Login'e indi
+- assertVisible: "Giriş yap"
+- assertNotVisible: "Çıkış yap"

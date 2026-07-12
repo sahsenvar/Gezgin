@@ -1,0 +1,18 @@
+# Madde 19 — @FragmentScreen yaprağından SİSTEM-BACK (app-15b buton kullandı; bu sistem back'i kanıtlar).
+# Login -> Giriş -> Dashboard -> "Yardım (legacy Fragment)" (goToHelp("navigasyon")) -> HelpFragment.
+# HelpFragment yaprağında sistem geri tuşu -> Gezgin pop -> Dashboard (FragmentManager iç-pop DEĞİL, app çıkışı DEĞİL).
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Yardım (legacy Fragment)"
+- assertVisible: "Konu: navigasyon"
+- assertVisible: "Panoya dön"
+- assertNotVisible: "Panel — sıralama: RELEVANCE"
+# sistem-back (buton DEĞİL) -> Gezgin pop -> Dashboard
+- pressKey: Back
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- assertNotVisible: "Konu: navigasyon"

@@ -74,6 +74,12 @@ fi
 
 run "Madde 13 (FullscreenModal occlusion+dismiss)" mt "$DIR/app-13-fullscreen-modal.yaml"
 
+# --- P2 kapsama flow'ları (SignUpFlow/Welcome, fragment-back, double-tap dedupe/regresyon) ---
+run "Madde 16 (SignUpFlow: @BackToStart/@QuitAndGoTo/@NoBack/@ReplaceTo)" mt "$DIR/app-16-signup-flow.yaml"
+run "Madde 19 (fragment yaprağından sistem-back -> Gezgin pop)"          mt "$DIR/app-19-fragment-back.yaml"
+run "Madde 21 (@GoForResult double-tap -> tek dialog, slot dedupe)"      mt "$DIR/app-21-goforresult-doubletap.yaml"
+run "Madde 22 (@ReplaceTo logout double-tap -> crash YOK, K1 regresyon)" mt "$DIR/app-22-replaceto-doubletap.yaml"
+
 # --- Çok-adımlı runner'lar (adb: process-death / rotation / logcat) ---
 run "Madde 4  (shopr process-death round-trip)"    bash "$DIR/run-04-process-death.sh"
 run "Madde 14 (MVI rotation+one-shot-effect+logout)" bash "$DIR/run-14-settings-mvi.sh"
