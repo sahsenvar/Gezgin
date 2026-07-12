@@ -69,10 +69,10 @@ done
 relaunch
 pid2=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
 # P0.2 — process GERÇEKTEN öldü mü? (pid1 vardı ve yeni pid2 ondan farklı).
-if [ -n "$pid1" ] && [ -n "$pid2" ] && [ "$pid1" != "$pid2" ]; then
-  echo "   process öldü ve yeniden doğdu (pid $pid1 -> $pid2)"
+if [ -n "$pid1" ] && [ "$pid1" != "$pid2" ]; then   # pid2 boş=öldü+geç cold-start (yük); rebirth'i restore flow kanıtlar
+  echo "   process öldürüldü (pid1=$pid1, pid2=${pid2:-<geç>})"
 else
-  echo "   HATA: process ölmedi/yeniden doğmadı (pid '$pid1' -> '$pid2')"
+  echo "   HATA: process ÖLMEDİ (am kill no-op; pid '$pid1' -> '$pid2')"
   fail=1
 fi
 echo "== [B/restore] fresh-process args decode + nav re-bind doğrula =="

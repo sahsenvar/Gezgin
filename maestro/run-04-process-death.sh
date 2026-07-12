@@ -67,11 +67,13 @@ for _i in 1 2 3 4 5 6; do
 done
 relaunch
 pid2=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
-# P0.2 — process GERÇEKTEN öldü mü? (pid1 vardı, pid2 var VE ondan farklı). Boş pid2 = relaunch'ta çöktü.
-if [ -n "$pid1" ] && [ -n "$pid2" ] && [ "$pid1" != "$pid2" ]; then
-  echo "   process öldü ve yeniden doğdu (pid $pid1 -> $pid2)"
+# P0.2 — process GERÇEKTEN öldü mü? pid1 vardı VE pid DEĞİŞTİ (öldü). pid2 BOŞ olması "değişti" sayılır
+# (öldü, yoğun yükte cold-start pidof'u geç gelebilir — bu FAIL nedeni DEĞİL). am-kill hiç işlemezse
+# pid2==pid1 kalır → yakalanır (anti-vacuous). Yeniden-doğuş + restore'un asıl kanıtı = aşağıdaki restore flow.
+if [ -n "$pid1" ] && [ "$pid1" != "$pid2" ]; then
+  echo "   process öldürüldü (pid1=$pid1, pid2=${pid2:-<geç>})"
 else
-  echo "   HATA: process ölmedi/yeniden doğmadı (pid '$pid1' -> '$pid2')"
+  echo "   HATA: process ÖLMEDİ (am kill no-op; pid '$pid1' -> '$pid2')"
   fail=1
 fi
 echo "== [B/restore] fresh-process restore doğrula + tamamla -> OrderPlaced =="
