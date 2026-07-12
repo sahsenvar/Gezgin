@@ -11,10 +11,12 @@ fail=0
 
 mt() { if [ -n "${ANDROID_SERIAL:-}" ]; then maestro --device "$ANDROID_SERIAL" test "$@"; else maestro test "$@"; fi; }
 
-# Landscape/portrait tespiti — birden çok dumpsys gösterimini yakalar (rotation=1|3, ROTATION_90|270).
-# Bare 'rotation=1' bazı API'lerde eşleşmez; geniş desen false-negatif (spurious fail) riskini azaltır.
-LANDSCAPE_RE='rotation=(1|3|90|270)|ROTATION_(90|270)'
-PORTRAIT_RE='rotation=0|ROTATION_0'
+# Landscape/portrait tespiti — CANLI durum token'ı `mRotation=N` (cihazda doğrulandı). Statik config
+# satırları (mLandscapeRotation=ROTATION_90, mDemoHdmiRotation=... gibi) HER dumpsys'te bulunur; bu yüzden
+# 'ROTATION_90|270' geniş deseni HER İKİ yönde de eşleşir (vacuous). `mRotation=1` yalnız landscape'te,
+# `mRotation=0` yalnız portrait'te görünür — guard'ın gerçekten koruması için canlı token'a demirle.
+LANDSCAPE_RE='mRotation=(1|3)'
+PORTRAIT_RE='mRotation=0'
 
 # P0.3 — trap cleanup: rotation ayarlarını (user_rotation + accelerometer_rotation) eski haline döndür.
 orig_user_rotation=$(adb shell settings get system user_rotation 2>/dev/null | tr -d '\r')

@@ -12,9 +12,9 @@ appId: dev.gezgin.sample.app
 # --- 1) aşağı swipe ile dismiss -> Canceled, order sabit ---
 - tapOn: "Sırala"
 - assertVisible: "Sırala (şu an: RELEVANCE)"
-# under-overlay pozitif kontrol: sheet AÇIKKEN alttaki panel metni HÂLÂ raporlanıyor (kısmi-overlay).
-# Bu, app-13'ün occlusion proxy'sini de sağlamlaştırır (Maestro kısmi-overlay altını görebiliyor).
-- assertVisible: "Panel — sıralama: RELEVANCE"
+# NOT: sheet AÇIKKEN alttaki panel metnini assert ETMİYORUZ — Compose modal bottom-sheet açık overlay'i
+# semantics ağacından çıkarır (cihazda doğrulandı), Maestro kısmi-overlay altını GÖREMEZ. Alttaki panel
+# yalnız sheet KAPANDIKTAN sonra (aşağıdaki assert'ler) doğrulanır.
 # element-çapalı swipe (hardcoded 50%,70%->50%,98% yerine): kısa sheet'te scrim'e düşüp case(1)'i
 # sessizce case(2)'nin kopyası yapmaz — gövdeden aşağı süpürür.
 - swipe:

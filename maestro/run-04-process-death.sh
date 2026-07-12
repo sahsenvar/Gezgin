@@ -56,8 +56,8 @@ adb shell am kill "$PKG" >/dev/null 2>&1
 sleep 2
 relaunch
 pid2=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
-# P0.2 — process GERÇEKTEN öldü mü? (pid1 vardı ve yeni pid2 ondan farklı).
-if [ -n "$pid1" ] && [ "$pid1" != "$pid2" ]; then
+# P0.2 — process GERÇEKTEN öldü mü? (pid1 vardı, pid2 var VE ondan farklı). Boş pid2 = relaunch'ta çöktü.
+if [ -n "$pid1" ] && [ -n "$pid2" ] && [ "$pid1" != "$pid2" ]; then
   echo "   process öldü ve yeniden doğdu (pid $pid1 -> $pid2)"
 else
   echo "   HATA: process ölmedi/yeniden doğmadı (pid '$pid1' -> '$pid2')"
