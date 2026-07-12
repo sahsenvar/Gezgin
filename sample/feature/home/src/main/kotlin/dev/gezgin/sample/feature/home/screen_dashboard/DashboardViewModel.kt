@@ -26,20 +26,26 @@ class DashboardViewModel(
     private val _effects = GezginEffects<DashboardEffect>()
     override val effects: Flow<DashboardEffect> = _effects.flow
 
-    override fun onIntent(intent: DashboardIntent) {
-        when (intent) {
-            is DashboardIntent.OpenItem -> nav.goToItemDetail(intent.id)
-            DashboardIntent.OpenProfile -> nav.goToProfile()
-            DashboardIntent.OpenHelp -> nav.goToHelp(topic = "navigasyon")
-            // pickSort @GoForResult suspend sonucu VM scope'ta toplanır → config-change/PD'de sessizce
-            // düşmez (eski rememberCoroutineScope hazard'ının MVI karşılığı).
-            DashboardIntent.PickSort -> viewModelScope.launch {
-                val result = nav.goToPickSortForResult(_uiState.value.order.name)
+    // pickSort @GoForResult sonucu init'te Flow olarak toplanır → VM recreate'te (config-change VE gerçek
+    // process-death) yeniden subscribe → kalıcı slot'tan teslim = PD-safe. Cihazda am-kill ile doğrulandı
+    // (bkz. maestro/run-18b-sheet-pd.sh). Suspend goToPickSortForResult sugar'ı yalnız process-ömrü içidir.
+    init {
+        viewModelScope.launch {
+            nav.pickSortResults.collect { result ->
                 if (result is NavResult.Value) {
                     _uiState.update { it.copy(order = result.value) }
                     _effects.send(DashboardEffect.ShowMessage("Sıralama: ${result.value}"))
                 }
             }
+        }
+    }
+
+    override fun onIntent(intent: DashboardIntent) {
+        when (intent) {
+            is DashboardIntent.OpenItem -> nav.goToItemDetail(intent.id)
+            DashboardIntent.OpenProfile -> nav.goToProfile()
+            DashboardIntent.OpenHelp -> nav.goToHelp(topic = "navigasyon")
+            DashboardIntent.PickSort -> nav.launchPickSort(_uiState.value.order.name)
         }
     }
 }

@@ -303,6 +303,12 @@ internal object NavigatorCodegen {
             .build()
 
         val resultsProperty = PropertySpec.builder(lowerFirst(x) + "Results", FLOW.parameterizedBy(navResultOfT))
+            .addKdoc(
+                "PD-safe re-attach result stream. Collect this in your ViewModel init{} — on VM recreation " +
+                    "(config-change AND real process death) the collector re-subscribes and receives the " +
+                    "persisted pending slot's result. Use this (not the suspend goTo${x}ForResult sugar) when " +
+                    "the result must survive process death.",
+            )
             .getter(
                 FunSpec.getterBuilder()
                     .addStatement("return raw.results(entryId, %S)", id)
@@ -311,6 +317,12 @@ internal object NavigatorCodegen {
             .build()
 
         val goToForResultFun = FunSpec.builder("goTo${x}ForResult")
+            .addKdoc(
+                "SUSPEND sugar: launch + await in one coroutine. WITHIN-PROCESS-LIFETIME ONLY — the await is " +
+                    "bound to the calling coroutine; on a REAL process death that coroutine dies and the result " +
+                    "is DROPPED (nothing re-drives the await). For a PD-safe result use launch$x() + collect " +
+                    "${lowerFirst(x)}Results in your ViewModel init{}. Device-verified (maestro run-18).",
+            )
             .addModifiers(KModifier.SUSPEND)
             .addParameters(launchParams)
             .returns(navResultOfT)

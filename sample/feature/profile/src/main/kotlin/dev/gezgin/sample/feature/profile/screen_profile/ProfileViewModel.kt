@@ -26,6 +26,9 @@ class ProfileViewModel(
     private val _effects = GezginEffects<ProfileEffect>()
     override val effects: Flow<ProfileEffect> = _effects.flow
 
+    // @GoForResult sonuçları init'te Flow olarak toplanır: VM recreate'te (config-change VE gerçek
+    // process-death) collector yeniden subscribe olur → kalıcı slot'tan sonuç teslim edilir = PD-safe.
+    // (suspend goToXForResult sugar'ı yalnız process-ömrü içidir, gerçek PD'de düşer — bkz. navigator KDoc.)
     init {
         viewModelScope.launch {
             nav.pickAvatarResults.collect { result ->
@@ -35,26 +38,30 @@ class ProfileViewModel(
                 }
             }
         }
-    }
-
-    override fun onIntent(intent: ProfileIntent) {
-        when (intent) {
-            ProfileIntent.EditName -> viewModelScope.launch {
-                val result = nav.goToEditNameDialogForResult(_uiState.value.name)
+        viewModelScope.launch {
+            nav.editNameDialogResults.collect { result ->
                 if (result is NavResult.Value) {
                     _uiState.update { it.copy(name = result.value) }
                     _effects.send(ProfileEffect.ShowMessage("Ad güncellendi"))
                 }
             }
-            ProfileIntent.OpenSettings -> nav.goToSettings()
-            ProfileIntent.PickAvatar -> nav.launchPickAvatar()
-            ProfileIntent.PickNotifications -> viewModelScope.launch {
-                val result = nav.goToPickNotificationsForResult(_uiState.value.notifications)
+        }
+        viewModelScope.launch {
+            nav.pickNotificationsResults.collect { result ->
                 if (result is NavResult.Value) {
                     _uiState.update { it.copy(notifications = result.value) }
                     _effects.send(ProfileEffect.ShowMessage("Bildirim düzeyi güncellendi"))
                 }
             }
+        }
+    }
+
+    override fun onIntent(intent: ProfileIntent) {
+        when (intent) {
+            ProfileIntent.EditName -> nav.launchEditNameDialog(_uiState.value.name)
+            ProfileIntent.OpenSettings -> nav.goToSettings()
+            ProfileIntent.PickAvatar -> nav.launchPickAvatar()
+            ProfileIntent.PickNotifications -> nav.launchPickNotifications(_uiState.value.notifications)
         }
     }
 }
