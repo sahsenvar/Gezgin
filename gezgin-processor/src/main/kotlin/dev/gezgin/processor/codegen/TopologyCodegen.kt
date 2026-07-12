@@ -109,15 +109,15 @@ internal object TopologyCodegen {
     }
 
     /**
-     * M1 — `GezginRememberNavigator.kt`: a per-graph-package convenience that bundles the generated
-     * `gezginTopology` + a STABLE `Json(gezginSerializersModule)` so app call sites stop hand-assembling
-     * `rememberNavigator(start, gezginTopology, remember { Json { … } }, …)` (and stop leaning on a comment
-     * to keep the `Json` instance stable across PD-restore). Emitted only alongside `GezginSerializers.kt`
-     * (same `emitSerializers` gate) since it references `gezginSerializersModule`.
+     * `GezginRememberNavigator.kt`: emits ONLY the stable `gezginJson` (`Json(gezginSerializersModule)`), a
+     * top-level `val` (one instance per process — the encode/decode symmetry the PD-restore Saver needs) so
+     * app call sites stop hand-assembling `remember { Json { … } }`. Emitted alongside `GezginSerializers.kt`
+     * (same `emitSerializers` gate) since it references `gezginSerializersModule`. Call sites use the core
+     * `rememberNavigator(start, gezginTopology, gezginJson, onRootBack)`.
      *
-     * `gezginJson` is a top-level `val` (one instance per process — stronger than a `remember`d one and
-     * exactly the encode/decode symmetry the PD-restore Saver needs), which also keeps the emitted file free
-     * of inline `@Composable` calls that the compose-plugin-less test compiler can't inline.
+     * NO `@Composable` is generated here: the graph module (§3.3) is plain-JVM in the canonical layout (no
+     * Compose compiler plugin), so a `@Composable` FUNCTION compiled here would lack Compose lowering and
+     * crash Compose consumers at runtime with `NoSuchMethodError` (see the body comment + [generateRememberNavigator]).
      */
     fun generateRememberNavigator(packageName: String): FileSpec {
         // gezginJson — process-wide stable Json(gezginSerializersModule) so app call sites don't hand-assemble
