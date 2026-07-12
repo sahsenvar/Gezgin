@@ -15,13 +15,10 @@ import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
 
 private const val CORE_PKG = "dev.gezgin.core"
-private const val COMPOSE_PKG = "dev.gezgin.core.compose"
-private const val COMPOSE_RUNTIME_PKG = "androidx.compose.runtime"
 private const val JSON_PKG = "kotlinx.serialization.json"
 private const val SERIALIZATION_MODULES_PKG = "kotlinx.serialization.modules"
 
 private val ROUTE = ClassName(CORE_PKG, "Route")
-private val RAW_NAVIGATOR = ClassName(CORE_PKG, "RawNavigator")
 private val GEZGIN_TOPOLOGY = ClassName(CORE_PKG, "GezginTopology")
 private val FLOW_TYPE = ClassName(CORE_PKG, "FlowType")
 private val EDGE_SPEC = ClassName(CORE_PKG, "EdgeSpec")
@@ -29,11 +26,12 @@ private val SERIALIZERS_MODULE = ClassName(SERIALIZATION_MODULES_PKG, "Serialize
 private val POLYMORPHIC = MemberName(SERIALIZATION_MODULES_PKG, "polymorphic")
 private val SUBCLASS = MemberName(SERIALIZATION_MODULES_PKG, "subclass")
 
-// M1 — convenience `rememberGezginNavigator` + stable `gezginJson` references.
-private val COMPOSABLE = ClassName(COMPOSE_RUNTIME_PKG, "Composable")
+// M1 — stable, process-wide `gezginJson` (`Json(gezginSerializersModule)`) references. Deliberately NO
+// generated `@Composable`: the graph module is plain-JVM (no Compose compiler plugin), so a `@Composable`
+// emitted there would compile WITHOUT Compose lowering and crash consumers at runtime (see
+// [TopologyCodegen.generateRememberNavigator]).
 private val JSON = ClassName(JSON_PKG, "Json")
 private val JSON_FUN = MemberName(JSON_PKG, "Json")
-private val REMEMBER_NAVIGATOR = MemberName(COMPOSE_PKG, "rememberNavigator")
 
 /**
  * The reified `kotlinx.serialization.serializer<T>()` lookup — used instead of `T.serializer()` so a

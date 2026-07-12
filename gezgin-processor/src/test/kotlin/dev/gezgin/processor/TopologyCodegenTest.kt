@@ -66,6 +66,12 @@ class TopologyCodegenTest {
             result.generatedSourceFor("GezginSerializers.kt"),
             "gezgin.emitSerializers=false must suppress GezginSerializers.kt",
         )
+        // The M1 GezginRememberNavigator.kt shares the emitSerializers gate (it references
+        // gezginSerializersModule), so =false must suppress it too.
+        assertNull(
+            result.generatedSourceFor("GezginRememberNavigator.kt"),
+            "gezgin.emitSerializers=false must suppress GezginRememberNavigator.kt",
+        )
 
         val loader = result.classLoader
         val generatedFacade = loader.loadClass("dev.gezgin.shop.GezginGeneratedKt")
@@ -258,5 +264,36 @@ class TopologyCodegenTest {
         // a bare `Feed` — which is also the only form that would actually resolve/compile here.
         assertTrue("subclass(HomeGraph.Feed::class)" in text, text)
         assertFalse("BasePicker" in text, text)
+    }
+
+    @Test
+    fun `M1 GezginRememberNavigator emits ONLY the stable gezginJson val — never a @Composable rememberGezginNavigator (crash regression guard)`() {
+        // Regression guard for the on-device NoSuchMethodError crash (fix 1e28f89). GezginRememberNavigator.kt
+        // is emitted into the graph module (§3.3) which — in the canonical layout — is a PLAIN kotlin.jvm
+        // module WITHOUT the Compose compiler plugin. A `@Composable rememberGezginNavigator` compiled there
+        // gets a NON-lowered bytecode signature (no Composer/$changed/$default) → a Compose consumer calling it
+        // crashes at runtime (compiles + unit + assembleDebug all green; only fails when the app RUNS). Only the
+        // plain `gezginJson` val is crash-safe here; call sites use core rememberNavigator(start, gezginTopology,
+        // gezginJson, onRootBack).
+        val result = compileGezgin(
+            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
+            kspArgs = mapOf("gezgin.emitSerializers" to "true"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        val rememberSource = result.generatedSourceFor("GezginRememberNavigator.kt")
+        assertNotNull(rememberSource, "gezgin.emitSerializers=true must generate GezginRememberNavigator.kt")
+        val text = rememberSource.readText()
+
+        // The stable, process-wide Json IS emitted (the encode/decode symmetry the PD-restore Saver needs).
+        assertTrue("val gezginJson" in text, text)
+        assertTrue("serializersModule = gezginSerializersModule" in text, text)
+
+        // …and the crash-prone @Composable convenience is NOT — this is the exact bug the fix removed.
+        assertFalse("@Composable" in text, "generated remember file must not declare a @Composable: $text")
+        assertFalse(
+            "rememberGezginNavigator" in text,
+            "the @Composable rememberGezginNavigator must never be regenerated: $text",
+        )
     }
 }

@@ -42,7 +42,7 @@ dependencies {
 }
 ```
 
-Minimal uçtan-uca örnek — graph → `@Screen` → `rememberGezginNavigator` → `GezginDisplay`:
+Minimal uçtan-uca örnek — graph → `@Screen` → `rememberNavigator` → `GezginDisplay`:
 
 ```kotlin
 // 1) Navigasyon grafiği = sealed route ağacı
@@ -60,14 +60,21 @@ fun HomeScreen() {
     Text("Merhaba Gezgin")
 }
 
-// 3) Host + display. rememberGezginNavigator, graph paketine codegen tarafından üretilir
-//    (gezginTopology + stable Json'u bundle'lar). @FragmentScreen kullanıyorsan Activity
-//    FragmentActivity/AppCompatActivity OLMALI; yalnız @Screen ekranlar için ComponentActivity yeter.
+// 3) Host + display. Codegen graph paketine `gezginTopology` + stable `gezginJson` üretir; kurulum
+//    core `rememberNavigator`'ı çağırır. Graph modülü düz-JVM olduğundan (Compose plugin YOK) oraya
+//    @Composable ÜRETİLMEZ — üretilse Compose-lowering almadan derlenir, tüketici runtime'da çöker.
+//    @FragmentScreen kullanıyorsan Activity FragmentActivity/AppCompatActivity OLMALI; yalnız @Screen
+//    ekranlar için ComponentActivity yeter.
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val navigator = rememberGezginNavigator(start = HomeRoute, onRootBack = { finish() })
+            val navigator = rememberNavigator(
+                start = HomeRoute,
+                topology = gezginTopology,   // codegen üretir (graph paketi)
+                json = gezginJson,           // codegen üretir: process-wide stable Json
+                onRootBack = { finish() },
+            )
             GezginDisplay(navigator = navigator) {
                 appGraphEntries()   // entry bundle'ını SEN yazarsın: @Screen başına üretilen provideXEntry()'leri topla
             }
