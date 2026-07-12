@@ -27,6 +27,6 @@ appId: dev.gezgin.sample.app
 - eraseText
 - inputText: "Yeni Ad"
 - tapOn: "Kaydet"
+- assertVisible: "Ad güncellendi"    # LENGTH_SHORT toast: Kaydet'in HEMEN arkasına al (~2sn ömür yenmesin)
 - assertNotVisible: "Kaydet"
 - assertVisible: "Profil: Yeni Ad"   # ad Value ile güncellendi
-- assertVisible: "Ad güncellendi"

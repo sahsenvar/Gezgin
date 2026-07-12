@@ -23,9 +23,13 @@ appId: dev.gezgin.sample.shopr
 - assertVisible:
     text: "Order placed:.*"
 - assertVisible: "Feed'e dön"
+- assertNotVisible: "Ödemeyi tamamla"   # önceki (Payment) ekrana DÖNMEDİ
 # ikinci kez de no-op
 - pressKey: Back
+- assertVisible:
+    text: "Order placed:.*"
 - assertVisible: "Feed'e dön"
+- assertNotVisible: "Ödemeyi tamamla"
 # --- @BackTo: declared geri Feed'e döner ---
 - tapOn: "Feed'e dön"
 - assertVisible: "Kataloğa git"

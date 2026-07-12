@@ -19,3 +19,11 @@ appId: dev.gezgin.sample.app
 - pressKey: Back
 - assertNotVisible: "Panel — sıralama: RELEVANCE"
 - assertNotVisible: "Çıkış yap"
+# eşlenmemiş negatif deliğini kapat: bozuk clearUpTo Profil'e/Settings'e düşürse yakala
+- assertNotVisible: "Profil: Gezgin Kullanıcı"
+- assertNotVisible: "Koyu tema"
+# pozitif çapa: kalıcı stack GERÇEKTEN [Login] mi? launchApp (clearState YOK) -> saved-state restore.
+# "Giriş yap" görünür + "Çıkış yap" görünmez => stack tek [Login]; root-back-finish davranışına da yaklaşım.
+- launchApp
+- assertVisible: "Giriş yap"
+- assertNotVisible: "Çıkış yap"

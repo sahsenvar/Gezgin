@@ -13,6 +13,9 @@ appId: dev.gezgin.sample.app
 - tapOn: "item-1"
 - assertVisible: "Ürün: item-1"
 - assertVisible: "Görseli tam ekran gör"
+# occlusion proxy'sini SİLAHLANDIR: "Panoya dön" ItemDetail'de GÖRÜNÜR (modal açılınca NotVisible olacak).
+# Bu ön-assert olmadan aşağıdaki assertNotVisible bir label-rename ile kalıcı-vacuous olurdu.
+- assertVisible: "Panoya dön"
 - tapOn: "Görseli tam ekran gör"
 # tam-ekran modal açık
 - assertVisible: "Ürün görseli — tam ekran"

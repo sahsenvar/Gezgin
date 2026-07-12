@@ -1,29 +1,71 @@
 #!/usr/bin/env bash
-# Madde 15 — @FragmentScreen (HelpFragment) process-death round-trip. Madde 4'ün reçetesini Fragment yaprağı
-# için tekrarlar: gezginArgs route-decode + gezginNav re-bind (onUpdate->bindGezgin) gerçek PD'de gözlenir.
+# Madde 15 — @FragmentScreen (HelpFragment) process-death round-trip. Madde 4'ün İKİ reçetesini Fragment
+# yaprağı için tekrarlar: gezginArgs route-decode + gezginNav re-bind (onUpdate->bindGezgin).
+#   CASE A — DKA (activity-recreation): PROCESS yaşar; yalnız FM-restore branch'i (ii) koşar.
+#   CASE B — gerçek process-death (am kill): fresh-process ilk-yaratım re-encode branch'ini İLK KEZ koşturur —
+#            statik gezginFragmentJson (FragmentRouteBundle.android.kt) sıfırdan yeniden doldurulur.
+# P0.1 DKA doğrulanır; P0.2 am-kill pid değişimi asserted; P0.3 trap ile DKA çıkışta eski haline döner.
 set -uo pipefail
 export PATH="$PATH:$HOME/Library/Android/sdk/platform-tools:$HOME/.maestro/bin"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PKG="dev.gezgin.sample.app"
 fail=0
 
-echo "== [A] HelpFragment ekranına git (Login->Dashboard->Yardım) =="
-maestro test "$DIR/app-15a-help-fragment.yaml" || fail=1
+mt() { if [ -n "${ANDROID_SERIAL:-}" ]; then maestro --device "$ANDROID_SERIAL" test "$@"; else maestro test "$@"; fi; }
 
-echo "== 'Etkinlikleri saklama' AÇ + arka plana at (Activity onDestroy) =="
+# P0.3 — trap cleanup: DKA'yı önceki değerine döndür (yarıda kesilse bile); adb yoksa sessiz/idempotent.
+orig_dka=$(adb shell settings get global always_finish_activities 2>/dev/null | tr -d '\r')
+case "$orig_dka" in 0|1) ;; *) orig_dka=0 ;; esac
+trap 'adb shell settings put global always_finish_activities "${orig_dka:-0}" >/dev/null 2>&1 || true' EXIT
+
+relaunch() {  # launcher ile geri getir (FragmentState + Gezgin backstack restore); re-install YOK
+  adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  sleep 2
+}
+
+# =========================== CASE A — DKA (activity-recreation) ===========================
+echo "== [CASE A / DKA] HelpFragment ekranına git (Login->Dashboard->Yardım) =="
+mt "$DIR/app-15a-help-fragment.yaml" || fail=1
+
+echo "== [A] 'Etkinlikleri saklama' AÇ =="
 adb shell settings put global always_finish_activities 1
+# P0.1 — perturbation doğrula: DKA gerçekten etkinleşti mi?
+if [ "$(adb shell settings get global always_finish_activities 2>/dev/null | tr -d '\r')" = "1" ]; then
+  echo "   DKA etkin — arka plana at (Activity onDestroy) + geri getir"
+  adb shell input keyevent KEYCODE_HOME
+  sleep 2
+  relaunch
+  echo "== [A/restore] args decode + nav re-bind doğrula =="
+  mt "$DIR/app-15b-help-after-restore.yaml" || fail=1
+else
+  echo "   HATA: DKA (always_finish_activities) etkinleşmedi — CASE A assert'leri atlanıyor (vacuous-pass önleme)"
+  fail=1
+fi
+# CASE B için temiz zemin: DKA'yı eski haline al (process ölümü TEK perturbation olsun).
+adb shell settings put global always_finish_activities "${orig_dka:-0}"
+
+# =========================== CASE B — gerçek process-death (am kill) ===========================
+# Bu case, Fragment'ın fresh-process restore branch'ini (statik gezginFragmentJson yeniden doldurulur) İLK KEZ koşturur.
+echo "== [CASE B / am kill] HelpFragment ekranına yeniden git =="
+mt "$DIR/app-15a-help-fragment.yaml" || fail=1
+
+echo "== [B] HOME + am kill (gerçek process ölümü) =="
 adb shell input keyevent KEYCODE_HOME
+sleep 1
+pid1=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
+adb shell am kill "$PKG" >/dev/null 2>&1
 sleep 2
-
-echo "== uygulamayı launcher ile geri getir (FragmentState + Gezgin backstack restore) =="
-adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-sleep 2
-
-echo "== [B] args decode + nav re-bind doğrula =="
-maestro test "$DIR/app-15b-help-after-restore.yaml" || fail=1
-
-echo "== 'Etkinlikleri saklama' KAPAT (temizlik) =="
-adb shell settings put global always_finish_activities 0
+relaunch
+pid2=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
+# P0.2 — process GERÇEKTEN öldü mü? (pid1 vardı ve yeni pid2 ondan farklı).
+if [ -n "$pid1" ] && [ "$pid1" != "$pid2" ]; then
+  echo "   process öldü ve yeniden doğdu (pid $pid1 -> $pid2)"
+else
+  echo "   HATA: process ölmedi/yeniden doğmadı (pid '$pid1' -> '$pid2')"
+  fail=1
+fi
+echo "== [B/restore] fresh-process args decode + nav re-bind doğrula =="
+mt "$DIR/app-15b-help-after-restore.yaml" || fail=1
 
 if [ "$fail" = "0" ]; then echo "MADDE 15: PASS"; else echo "MADDE 15: FAIL"; fi
 exit $fail

@@ -16,7 +16,11 @@ appId: dev.gezgin.sample.app
 - assertVisible: "Bu ekran örneğinde ziyaret sayacı: 1"
 # aynı id ile YENİ entry (#2): kendi taze VM'i -> visits 1 (paylaşılsaydı 2 olurdu)
 - tapOn: "İlgili ürün (aynı id, yeni entry)"
+# transition yarışını gider: eski entry'nin ": 1"ine denk gelip bug'ı gizlemesin
+- waitForAnimationToEnd
 - assertVisible: "Bu ekran örneğinde ziyaret sayacı: 1"
+- assertNotVisible: "Bu ekran örneğinde ziyaret sayacı: 2"   # paylaşılan VM olsaydı 2 görünürdü
 # geri -> entry #1 RETAINED VM'iyle yeniden görünür -> re-appear 1->2 (kendi store'u korunmuş, #2'den ayrı)
 - pressKey: Back
 - assertVisible: "Bu ekran örneğinde ziyaret sayacı: 2"
+- assertNotVisible: "Bu ekran örneğinde ziyaret sayacı: 3"   # paylaşılan VM olsaydı 3 görünürdü

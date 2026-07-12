@@ -14,6 +14,13 @@ vs sonuç teslimi, `@FullscreenModal` occlusion, per-entry `ViewModelStore` (R2)
 - Maestro CLI (`~/.maestro/bin/maestro`) ve `adb` (`~/Library/Android/sdk/platform-tools`) PATH'te.
   - Runner script'leri bu iki yolu PATH'e kendisi ekler.
 - Android 13+ (geri jesti/predictive-back için API 34+ ideal; bu suite API 34+ emülatörde doğrulandı).
+- **Gesture navigation (app-11 / Madde 11 zorunlu):** geri-jesti modal testi gesture nav ister; 3-tuş
+  nav'da edge-swipe içerik swipe'ına dönüşüp testi vacuous yapar. `run-all.sh` bunu otomatik yönetir:
+  gestural overlay'i etkinleştirir, gerçekten aktif olduğunu doğrular (değilse Madde 11'i FAIL ile atlar)
+  ve çıkışta cihazın eski nav moduna döner. `app-11-back-gesture-modal.yaml`'ı **tek başına** koşarken
+  cihazın gesture navigation'da olduğundan elle emin olun.
+- **Çoklu cihaz:** birden çok cihaz/emülatör bağlıysa `run-all.sh` `ANDROID_SERIAL`'ı zorunlu kılar
+  (`export ANDROID_SERIAL=emulator-5554`) ve hem adb hem maestro (`--device`) o cihazı hedefler.
 
 Bu suite **gradle çalıştırmaz, app kurmaz/yeniden kurmaz** — yalnız kurulu app'leri sürer.
 

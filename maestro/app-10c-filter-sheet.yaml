@@ -12,9 +12,15 @@ appId: dev.gezgin.sample.app
 # --- 1) aşağı swipe ile dismiss -> Canceled, order sabit ---
 - tapOn: "Sırala"
 - assertVisible: "Sırala (şu an: RELEVANCE)"
+# under-overlay pozitif kontrol: sheet AÇIKKEN alttaki panel metni HÂLÂ raporlanıyor (kısmi-overlay).
+# Bu, app-13'ün occlusion proxy'sini de sağlamlaştırır (Maestro kısmi-overlay altını görebiliyor).
+- assertVisible: "Panel — sıralama: RELEVANCE"
+# element-çapalı swipe (hardcoded 50%,70%->50%,98% yerine): kısa sheet'te scrim'e düşüp case(1)'i
+# sessizce case(2)'nin kopyası yapmaz — gövdeden aşağı süpürür.
 - swipe:
-    start: "50%,70%"
-    end: "50%,98%"
+    from:
+      text: "Sırala (şu an: RELEVANCE)"
+    direction: DOWN
 - assertNotVisible: "Sırala (şu an: RELEVANCE)"
 - assertVisible: "Panel — sıralama: RELEVANCE"
 # --- 2) scrim'e (üst bölge) tık ile dismiss -> Canceled, order sabit ---
@@ -25,6 +31,8 @@ appId: dev.gezgin.sample.app
 - assertNotVisible: "Sırala (şu an: RELEVANCE)"
 - assertVisible: "Panel — sıralama: RELEVANCE"
 # --- 3) seçenek seç -> hide-then-result: sheet kapanır, order PRICE_ASC olur ---
+# NOT (Madde 12): assertion'lar yalnız FİNAL state'i görür (sheet kapalı + order güncel). hide->result
+#      SIRASI burada assert'le ÖLÇÜLMEZ (result-then-hide de aynı final state'i verirdi) — bkz. rapor.
 - tapOn: "Sırala"
 - assertVisible: "Sırala (şu an: RELEVANCE)"
 - tapOn: "PRICE_ASC"

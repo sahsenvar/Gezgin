@@ -10,3 +10,7 @@ appId: dev.gezgin.sample.shopr
 - assertVisible:
     text: "Order placed:.*"
 - assertNotVisible: "Ödeme iptal edildi"
+# restore edilen stack'in ORTA katmanları da sağlam mı? Yalnız top-of-stack (Payment) değil:
+# @BackTo(Feed) restore'lu stack'te Feed'in bulunmasını gerektirir -> "Feed'e dön" -> Feed ("Kataloğa git").
+- tapOn: "Feed'e dön"
+- assertVisible: "Kataloğa git"

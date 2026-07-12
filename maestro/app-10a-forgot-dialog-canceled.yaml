@@ -9,9 +9,15 @@ appId: dev.gezgin.sample.app
 - assertVisible: "Giriş yap"
 - tapOn: "Şifremi unuttum"
 - assertVisible: "Şifre sıfırlama"
-# dışarı/scrim tık (üst bölge) -> KAPANMAMALI
+# dışarı/scrim tık -> KAPANMAMALI (dismissOnClickOutside=false).
+# NOT: 50%,4% noktası app-10b'de (EditName, dismissOnClickOutside=TRUE) scrim'i KANITLI vurup dialog'u
+#      KAPATIYOR -> aynı koordinat burada POZİTİF KONTROLLÜ; dialog açık kalırsa no-op gerçekten test edildi.
 - tapOn:
-    point: "50%,6%"
+    point: "50%,4%"
+- assertVisible: "Şifre sıfırlama"
+# ikinci dış nokta (dialog'un altı) -> yine no-op olmalı
+- tapOn:
+    point: "50%,90%"
 - assertVisible: "Şifre sıfırlama"
 # back -> Canceled yolu
 - pressKey: Back
