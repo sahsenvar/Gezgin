@@ -201,6 +201,13 @@ public class RawNavigator internal constructor(
 
     /** The `@ReplaceTo` runtime: clears up to `clearUpTo` (null = the top only) and pushes `route`; delivers Canceled to the removed pending-targets. */
     public fun replaceTo(route: Route, clearUpTo: KClass<out Route>? = null, inclusive: Boolean = true) {
+        // K1 — clearUpTo hedefi stack'te YOKSA MUTASYONDAN/`require`'dan ÖNCE zarif no-op (backTo'nun
+        // BackToTargetMissing deseni): aksi halde cutIndex'in require(i >= 0)'ı fırlardı → bir @ReplaceTo
+        // edge'ine hızlı çift-tık (ilk çağrı clearUpTo'yu zaten kaldırmış) main-thread'de app'i ÇÖKERTİRDİ.
+        if (!state.hasOnStack(clearUpTo)) {
+            _events.tryEmit(NavEvent.ReplaceToTargetMissing(clearUpTo?.simpleName ?: "?"))
+            return
+        }
         // M4 — modal-kind-at-root reddi MUTASYONDAN ÖNCE: replaceTo kökü temizleyip yerine bir modal
         // koyacaksa (sonuçtaki stack'in dibi = bir modal route) state hiç değiştirilmeden fırlat.
         // Aksi halde eski davranış (state önce `[modal]`'a döner, guard SONRAKİ composition'da patlar)
@@ -388,7 +395,11 @@ public class RawNavigator internal constructor(
             _events.tryEmit(NavEvent.FlowQuit(flowId, canceled = true))
             settleRemoved(removed)
         }
-        navigate(route, singleTop = false)
+        // K2 — singleTop=true: bir @QuitAndGoTo edge'ine çift-tık idempotent olsun. İkinci çağrıda (flow
+        // zaten yıkıldı, top = route) navigate no-op döner → aksi halde ikinci bir (çoğu zaman @NoBack) `route`
+        // entry'si push edilir ve back stale entry'de yutulur → kullanıcı sıkışırdı. Meşru durum (post-quit
+        // top'tan FARKLI bir hedef) top.route != route olduğundan yine normal push'lanır.
+        navigate(route, singleTop = true)
     }
 
     // ---- internal helpers ----

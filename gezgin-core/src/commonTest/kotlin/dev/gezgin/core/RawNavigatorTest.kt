@@ -429,4 +429,62 @@ class RawNavigatorTest {
         assertEquals(listOf<Route>(Feed, Catalog, Product("p")), n.backStack.value)
         assertEquals(Product("p"), n.current)
     }
+
+    // --- K1/K2: @ReplaceTo/@QuitAndGoTo çift-tık dayanıklılığı (gap raporu P1) ---
+
+    // K1 — @ReplaceTo edge'ine hızlı çift-tık: ilk çağrı clearUpTo'yu kaldırdıktan sonra ikinci çağrı onu
+    // stack'te bulamaz. Eskiden cutIndex'in require(i>=0)'ı fırlardı → main-thread crash. Artık zarif no-op
+    // + ReplaceToTargetMissing (backTo'nun BackToTargetMissing deseni).
+    @Test fun replaceToMissingClearUpToIsGracefulNoOp() = runTest {
+        val n = nav()
+        val collected = mutableListOf<NavEvent>()
+        val job = launch { n.events.collect { collected += it } }
+        runCurrent()
+        n.navigate(Catalog)                                          // [Feed, Catalog]
+        n.replaceTo(Product("x"), clearUpTo = Catalog::class, inclusive = true)  // Catalog+ kaldırıldı → [Feed, Product(x)]
+        assertEquals(listOf<Route>(Feed, Product("x")), n.backStack.value)
+
+        n.replaceTo(Product("y"), clearUpTo = Catalog::class, inclusive = true)  // çift-tık: Catalog yok → FIRLATMA yok
+        runCurrent()
+        assertEquals(listOf<Route>(Feed, Product("x")), n.backStack.value)       // değişmedi (no-op)
+        assertTrue(collected.any { it is NavEvent.ReplaceToTargetMissing && it.target == "Catalog" })
+        job.cancel()
+    }
+
+    // K1 pozitif kontrol: clearUpTo hedefi stack'te İKEN replaceTo normal çalışır, missing event YAYILMAZ.
+    @Test fun replaceToPresentClearUpToReplacesWithoutMissingEvent() = runTest {
+        val n = nav()
+        val collected = mutableListOf<NavEvent>()
+        val job = launch { n.events.collect { collected += it } }
+        runCurrent()
+        n.navigate(Catalog)                                          // [Feed, Catalog]
+        n.replaceTo(Product("x"), clearUpTo = Feed::class, inclusive = false)    // Feed korunur → [Feed, Product(x)]
+        assertEquals(listOf<Route>(Feed, Product("x")), n.backStack.value)
+        assertFalse(collected.any { it is NavEvent.ReplaceToTargetMissing })
+        job.cancel()
+    }
+
+    // K2 — @QuitAndGoTo edge'ine çift-tık: ilk çağrı flow'u yıkıp `route`'a gider (route = yeni top). İkinci
+    // çağrıda flow yok → düz navigate; eskiden singleTop=false ikinci bir (çoğu zaman @NoBack) `route` entry'si
+    // push ederdi → kullanıcı sıkışırdı. Artık singleTop=true → aynı-değer top'ta dedup (no-op).
+    @Test fun quitAndGoToTwiceDoesNotPushDuplicate() = runTest {
+        val n = nav()
+        n.navigate(Catalog)
+        n.navigate(Cart)                                             // CheckoutFlow'a gir → [Feed, Catalog, Cart]
+        n.quitAndGoTo(Product("done"))                             // flow yıkıldı → [Feed, Catalog, Product(done)]
+        assertEquals(listOf<Route>(Feed, Catalog, Product("done")), n.backStack.value)
+
+        n.quitAndGoTo(Product("done"))                            // çift-tık: top==Product(done), flow yok → NO-OP
+        assertEquals(listOf<Route>(Feed, Catalog, Product("done")), n.backStack.value)  // tek Product(done)
+        assertEquals(Product("done"), n.current)
+    }
+
+    // K2 pozitif kontrol: post-quit top'tan FARKLI bir hedefe quitAndGoTo yine normal push'lar.
+    @Test fun quitAndGoToDistinctTargetStillPushes() = runTest {
+        val n = nav()
+        n.navigate(Catalog)
+        n.navigate(Cart)                                             // [Feed, Catalog, Cart]
+        n.quitAndGoTo(Product("p"))                                // top (Cart→quit→Catalog) != Product(p) → push
+        assertEquals(listOf<Route>(Feed, Catalog, Product("p")), n.backStack.value)
+    }
 }

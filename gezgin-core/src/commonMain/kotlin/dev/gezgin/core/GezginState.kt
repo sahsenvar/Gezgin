@@ -37,6 +37,14 @@ internal class GezginState(initial: List<GezginKey>, internal var nextId: Long, 
     fun resultingRootAfterReplace(route: Route, clearUpTo: KClass<out Route>?, inclusive: Boolean): Route =
         if (cutIndex(clearUpTo, inclusive) == 0) route else _stack.first().route
 
+    /**
+     * `clearUpTo` hedefi stack'te var mı — [RawNavigator.replaceTo]'nun MUTASYON/`require` YAPMADAN, güvenli
+     * no-op kararı için sorduğu ön-koşul (null hedef = "yalnız top'u değiştir", daima geçerli). [cutIndex]'in
+     * `require(i >= 0)`'ına düşmeden önce bu döner: hedef yoksa çağıran ReplaceToTargetMissing yayıp erken çıkar.
+     */
+    fun hasOnStack(clearUpTo: KClass<out Route>?): Boolean =
+        clearUpTo == null || _stack.any { clearUpTo.isInstance(it.route) }
+
     /** `replaceUpTo`/`resultingRootAfterReplace` ortak kesme-indeksi: dip=0'a kadar korunacak entry sayısı. */
     private fun cutIndex(clearUpTo: KClass<out Route>?, inclusive: Boolean): Int =
         if (clearUpTo == null) _stack.lastIndex else {

@@ -16,6 +16,12 @@ package dev.gezgin.core
  *        override val dismissOnClickOutside get() = cancelable }`. The route is already `@Serializable` →
  *   no extra work, the param is serialized (PD-safe).
  *
+ * **OPEN-TIME CONSTANT (not live state):** these getters are read ONCE when the entry is built and captured
+ * into an immutable `DialogProperties`; they are NOT re-read while the dialog is open. So the getter must
+ * depend only on the ROUTE INSTANCE (ctor params / constants) — a getter reading changing UI state (e.g.
+ * `get() = someTextField.isNotBlank()`) will NOT make the dialog's dismiss behavior react as that state
+ * changes; the value is frozen at the value it had when the dialog opened.
+ *
  * **m5 — `get() =` is REQUIRED (do NOT write an initializer `val`):** writing
  * `override val dismissOnClickOutside = false` (a backing-field initializer) makes kotlinx.serialization
  * include this property in the `@Serializable` route's SERIALIZED SCHEMA → the presentation prop leaks into
