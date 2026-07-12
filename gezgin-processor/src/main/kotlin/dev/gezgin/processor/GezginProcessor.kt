@@ -97,8 +97,9 @@ internal class GezginProcessor(
                     if (emitSerializers) {
                         TopologyCodegen.generateSerializers(model, packageName)
                             .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
-                        // M1 — convenience rememberGezginNavigator/rememberGezginJson; references
-                        // gezginSerializersModule, so it shares the emitSerializers gate.
+                        // M1 — stable process-wide gezginJson (Json(gezginSerializersModule)); references
+                        // gezginSerializersModule, so it shares the emitSerializers gate. No @Composable is
+                        // emitted here: the graph module is plain-JVM (crash-safe val only).
                         TopologyCodegen.generateRememberNavigator(packageName)
                             .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
                     }

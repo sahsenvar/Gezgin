@@ -15,13 +15,10 @@ import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
 
 private const val CORE_PKG = "dev.gezgin.core"
-private const val COMPOSE_PKG = "dev.gezgin.core.compose"
-private const val COMPOSE_RUNTIME_PKG = "androidx.compose.runtime"
 private const val JSON_PKG = "kotlinx.serialization.json"
 private const val SERIALIZATION_MODULES_PKG = "kotlinx.serialization.modules"
 
 private val ROUTE = ClassName(CORE_PKG, "Route")
-private val RAW_NAVIGATOR = ClassName(CORE_PKG, "RawNavigator")
 private val GEZGIN_TOPOLOGY = ClassName(CORE_PKG, "GezginTopology")
 private val FLOW_TYPE = ClassName(CORE_PKG, "FlowType")
 private val EDGE_SPEC = ClassName(CORE_PKG, "EdgeSpec")
@@ -29,11 +26,12 @@ private val SERIALIZERS_MODULE = ClassName(SERIALIZATION_MODULES_PKG, "Serialize
 private val POLYMORPHIC = MemberName(SERIALIZATION_MODULES_PKG, "polymorphic")
 private val SUBCLASS = MemberName(SERIALIZATION_MODULES_PKG, "subclass")
 
-// M1 — convenience `rememberGezginNavigator` + stable `gezginJson` references.
-private val COMPOSABLE = ClassName(COMPOSE_RUNTIME_PKG, "Composable")
+// M1 — stable, process-wide `gezginJson` (`Json(gezginSerializersModule)`) references. Deliberately NO
+// generated `@Composable`: the graph module is plain-JVM (no Compose compiler plugin), so a `@Composable`
+// emitted there would compile WITHOUT Compose lowering and crash consumers at runtime (see
+// [TopologyCodegen.generateRememberNavigator]).
 private val JSON = ClassName(JSON_PKG, "Json")
 private val JSON_FUN = MemberName(JSON_PKG, "Json")
-private val REMEMBER_NAVIGATOR = MemberName(COMPOSE_PKG, "rememberNavigator")
 
 /**
  * The reified `kotlinx.serialization.serializer<T>()` lookup — used instead of `T.serializer()` so a
@@ -122,28 +120,22 @@ internal object TopologyCodegen {
      * of inline `@Composable` calls that the compose-plugin-less test compiler can't inline.
      */
     fun generateRememberNavigator(packageName: String): FileSpec {
+        // gezginJson — process-wide stable Json(gezginSerializersModule) so app call sites don't hand-assemble
+        // a `remember { Json { … } }` (the encode/decode symmetry the PD-restore Saver needs). Call sites use
+        // the core `rememberNavigator(start, gezginTopology, gezginJson, onRootBack)`.
+        //
+        // NO generated `@Composable rememberGezginNavigator` convenience: this file is emitted into the graph
+        // module (§3.3), which in the canonical layout is a plain `kotlin.jvm` module WITHOUT the Compose
+        // compiler plugin. A `@Composable` FUNCTION compiled there gets a NON-lowered bytecode signature (no
+        // `Composer`/`$changed`/`$default` params) → a Compose consumer calling it crashes at runtime with
+        // `NoSuchMethodError` (compiles fine; only fails when the app actually runs). `gezginJson` is a plain
+        // `val`, so it is safe here; the @Composable helper is not.
         val jsonProp = PropertySpec.builder("gezginJson", JSON)
             .initializer("%M { serializersModule = gezginSerializersModule }", JSON_FUN)
             .build()
 
-        val navigator = FunSpec.builder("rememberGezginNavigator")
-            .addAnnotation(COMPOSABLE)
-            .addParameter("start", ROUTE)
-            .addParameter(
-                ParameterSpec.builder("onRootBack", LambdaTypeName.get(returnType = UNIT))
-                    .defaultValue("{ }")
-                    .build(),
-            )
-            .returns(RAW_NAVIGATOR)
-            .addStatement(
-                "return %M(start = start, topology = gezginTopology, json = gezginJson, onRootBack = onRootBack)",
-                REMEMBER_NAVIGATOR,
-            )
-            .build()
-
         return FileSpec.builder(packageName, GENERATED_REMEMBER_FILE)
             .addProperty(jsonProp)
-            .addFunction(navigator)
             .build()
     }
 

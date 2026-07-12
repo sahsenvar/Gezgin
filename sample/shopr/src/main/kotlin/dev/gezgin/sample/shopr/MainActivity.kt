@@ -5,8 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import dev.gezgin.core.compose.GezginDisplay
+import dev.gezgin.core.compose.rememberNavigator
 import dev.gezgin.sample.shopr.nav.HomeGraph.Feed
-import dev.gezgin.sample.shopr.nav.rememberGezginNavigator
+import dev.gezgin.sample.shopr.nav.gezginJson
+import dev.gezgin.sample.shopr.nav.gezginTopology
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,9 +19,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ShoprApp(onRootBack: () -> Unit) {
-    // M1 — generated convenience: bundles gezginTopology + a stable Json(gezginSerializersModule),
-    // so the PD-restore Json-stability contract is handled by generated code, not a hand-written comment.
-    val navigator = rememberGezginNavigator(start = Feed, onRootBack = onRootBack)
+    val navigator = rememberNavigator(
+        start = Feed,
+        topology = gezginTopology,
+        json = gezginJson,
+        onRootBack = onRootBack,
+    )
     GezginDisplay(navigator = navigator) {
         shopGraphEntries()
     }

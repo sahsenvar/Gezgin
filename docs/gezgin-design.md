@@ -314,9 +314,12 @@ Legacy `DialogFragment`/`BottomSheetDialogFragment` için **köprü yok**. Bir d
 ```kotlin
 @Composable
 fun App() {
-    // codegen üretir (core:navigation, §3.3/§14): rememberGezginNavigator (topology + kararlı gezginJson'ı bağlar)
-    val navigator = rememberGezginNavigator(start = HomeRoute)
-    // Elle kurulum da public (özel Json istenirse):
+    // Codegen graph paketine (§3.3/§14) gezginTopology + kararlı, process-wide gezginJson üretir; kurulum
+    // core rememberNavigator'ı çağırır. Graph modülü düz-JVM (Compose compiler plugin YOK) olduğundan oraya
+    // @Composable ÜRETİLMEZ — üretilse Compose-lowering almadan derlenir (bytecode'da Composer/$changed/$default
+    // yok) ve tüketici ilk ekranda runtime'da NoSuchMethodError alır. gezginJson düz bir `val` olduğu için güvenli.
+    val navigator = rememberNavigator(start = HomeRoute, topology = gezginTopology, json = gezginJson)
+    // Özel Json istenirse gezginJson yerine kendi Json'unu geçir:
     //   val json = remember { Json { serializersModule = gezginSerializersModule } }
     //   val navigator = rememberNavigator(start = HomeRoute, topology = gezginTopology, json = json)
 
