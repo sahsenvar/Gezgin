@@ -325,8 +325,17 @@ class HelpFragment : Fragment() {                          // hiçbir Gezgin ara
 }
 ```
 
+> **ZORUNLU kurulum — `Gezgin.initFragmentInterop` (gerçek process-death için):** `@FragmentScreen` kullanan
+> uygulama, `Application.onCreate()`'te BİR KEZ `Gezgin.initFragmentInterop(gezginJson)` çağırmalıdır (bkz.
+> `sample/app/.../ShowcaseApp.kt` + manifest `android:name`). Neden: gerçek process-death sonrası FragmentManager,
+> Fragment'ı `Activity.onCreate`'te — `setContent` kompozisyonundan ÖNCE — `onViewCreated`'a kadar restore eder;
+> o an `gezginArgs`'ın decode edeceği app-Json henüz kaydedilmemiş olur ve fırlatır. Bu çağrı Json'u process
+> açılışında kaydedip pencereyi kapatır (config-change/DKA'da process yaşadığı için zaten çalışırdı — bu yalnız
+> gerçek PD için gerekir). Cihazda `am kill` ile doğrulandı (on-device checklist madde 15).
+
 - **`gezginArgs<HelpScreenRoute>()`** — route Fragment'ın `arguments` Bundle'ından decode edilir (`onUpdate`
-  zamanlamasından bağımsız; `arguments` örnekleme anında kurulur). `onViewCreated`'da güvenle okunur.
+  zamanlamasından bağımsız; `arguments` örnekleme anında kurulur). `onViewCreated`'da güvenle okunur — **yukarıdaki
+  `Gezgin.initFragmentInterop` kurulumu yapıldıysa** (gerçek process-death için; bkz. not).
 - **`gezginNav<HelpNavigator>()`** — bind (= `AndroidFragment.onUpdate`'in ilk çalışması) sonrası canlı
   navigator'ı instance-anahtarlı registry'den okur. `nav` erişimi buton tık lambdasına ERTELENİR — o an bind
   kesinlikle tamamlanmıştır (delege lazy olduğu için erken okunmaz).

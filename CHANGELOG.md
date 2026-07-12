@@ -27,7 +27,9 @@ navigasyon katmanı (Navigation 3 üzerinde). Yayınlanan artefaktlar: `dev.gezg
   `GezginMvi<S, I, E>` + codegen binder (`provideXEntry`) + DI-detection (Hilt/Koin, androidx
   fallback).
 - **Fragment interop** — `@FragmentScreen` ile brownfield Fragment yaprakları
-  (host `FragmentActivity`/`AppCompatActivity` OLMALI).
+  (host `FragmentActivity`/`AppCompatActivity` OLMALI). Gerçek process-death'te `gezginArgs`'ın
+  çalışması için `Application.onCreate()`'te bir kez `Gezgin.initFragmentInterop(gezginJson)`
+  çağrılmalıdır (app-Json'u FragmentManager restore'undan önce kaydeder; cihazda doğrulandı).
 - **State-as-data** — gözlemlenebilir `backStack: StateFlow` + `events: Flow`; process-death
   restore (`@Serializable` route ağacı); UI'sız test (`GezginTestNavigator`, `dev.gezgin:gezgin-test`).
 - **KMP** — Android (stable) + desktop; iOS/Web JetBrains Nav3 portu alpha (§2.2).

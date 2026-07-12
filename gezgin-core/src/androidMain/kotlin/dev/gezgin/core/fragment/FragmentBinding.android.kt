@@ -18,17 +18,22 @@ import kotlin.reflect.KProperty
  *   Gezgin's OWN backstack (§1d), on a fresh-process restore the entry re-renders → `arguments` is
  *   regenerated with the fresh route → decode works.
  *
- *   **Validity window (STRICT contract):** `gezginArgs` is read safely in ALL cases from `onCreateView`/
- *   `onViewCreated` onward. On the FIRST-CREATION instance (`AndroidFragment` instantiates the Fragment
- *   ITSELF: the first composition evaluates `route.toBundle(raw)` BEFORE the Fragment is created →
- *   [gezginFragmentJson] is populated by then) it is safe from `onAttach`/`onCreate` onward too. BUT NOT in
- *   the fresh-process FragmentManager-RESTORE branch: after a real process-death,
- *   `FragmentActivity.onCreate(savedInstanceState)` restores the FM-saved Fragment and dispatches
- *   `onAttach`/`onCreate` to it BEFORE `setContent`'s first composition (hence `route.toBundle` in the NEW
- *   process) runs → at that moment [gezginFragmentJson] is still `null` ([gezginBoundRoute] throws a
- *   descriptive error). So reading in `onAttach`/`onCreate` is NOT guaranteed SPECIFICALLY in this restore
- *   branch; `onCreateView`/`onViewCreated` (container creation is behind the first composition → `toBundle`
- *   has always run first) is safe in both branches. The sample `HelpFragment` already reads in `onViewCreated`.
+ *   **Validity window (STRICT contract):** on the FIRST-CREATION instance (`AndroidFragment` instantiates the
+ *   Fragment ITSELF: the first composition evaluates `route.toBundle(raw)` BEFORE the Fragment is created →
+ *   [gezginFragmentJson] is populated by then) `gezginArgs` is safe from `onAttach`/`onCreate` onward.
+ *
+ *   **REAL process-death caveat (device-verified 2026-07-12, was previously WRONG here):** after a true
+ *   process death, `FragmentActivity.onCreate(savedInstanceState)` restores the FM-saved Fragment and
+ *   dispatches `onAttach`, `onCreate`, `onCreateView` and even `onViewCreated` to it BEFORE `setContent`'s
+ *   first composition (hence before `route.toBundle` in the NEW process) runs. So in the fresh-process restore
+ *   branch [gezginFragmentJson] is still `null` EVEN in `onViewCreated` (the old claim that `onViewCreated`
+ *   is "behind the first composition" is FALSE for FM-restore) → `gezginArgs` would throw. The fix is NOT a
+ *   later lifecycle callback (there is no Fragment callback guaranteed to run after the first composition);
+ *   it is registering the app-Json at PROCESS STARTUP via [Gezgin.initFragmentInterop] in `Application.onCreate`
+ *   (runs before FM restore). With that init done, `gezginArgs` is safe from `onCreateView`/`onViewCreated`
+ *   onward in BOTH branches. The sample `HelpFragment` reads in `onViewCreated`; the sample `Application`
+ *   calls `Gezgin.initFragmentInterop(gezginJson)`. (Config-change/DKA keeps the process alive → static stays
+ *   populated → this only matters for TRUE process death.)
  * - **`gezginNav<Navigator>()` → the [boundRegistry] below** (filled by [bindGezgin] in `onUpdate`). A live
  *   navigator facade has NO serializable form → it must be carried in an instance-keyed registry, not in the
  *   Bundle. That is why `gezginNav` is genuinely invalid until `onUpdate` runs (spec 298).
@@ -177,10 +182,13 @@ public inline fun <reified N> gezginNav(): ReadOnlyProperty<Fragment, N> =
 @PublishedApi
 internal fun gezginBoundRoute(fragment: Fragment): Route {
     val json = gezginFragmentJson ?: error(
-        "No Gezgin route.toBundle() has been evaluated before gezginArgs was read. A @FragmentScreen " +
-            "Fragment is only valid as an entry hosted by Gezgin (GezginDisplay + generated provideXEntry, §11.1). " +
-            "This can also happen after process death when FragmentManager restores the Fragment in onCreate before " +
-            "route.toBundle() has run. Read gezginArgs in onCreateView/onViewCreated, not in onAttach/onCreate (§B4).",
+        "gezginArgs: Gezgin's polymorphic Json is not registered yet. If you use @FragmentScreen, call " +
+            "Gezgin.initFragmentInterop(gezginJson) ONCE in your Application.onCreate() — after a REAL " +
+            "process death, FragmentManager restores the Fragment (up to onViewCreated) during " +
+            "Activity.onCreate BEFORE setContent composes (before route.toBundle() runs), so the app-Json " +
+            "must already be registered at process startup. (Config-change/DKA keeps the process alive, so " +
+            "this only bites true process death.) A @FragmentScreen Fragment is otherwise only valid as an " +
+            "entry hosted by Gezgin (GezginDisplay + generated provideXEntry, §11.1).",
     )
     val bundle = fragment.arguments ?: error(
         "gezginArgs: ${fragment::class.simpleName}.arguments is null; the Fragment does not have arguments " +

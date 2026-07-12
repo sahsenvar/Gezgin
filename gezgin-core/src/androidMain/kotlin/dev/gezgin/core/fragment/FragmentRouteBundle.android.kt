@@ -36,6 +36,33 @@ private const val GEZGIN_FRAGMENT_ROUTE_KEY = "dev.gezgin.fragment.route"
 @Volatile
 internal var gezginFragmentJson: Json? = null
 
+/** `@FragmentScreen` interop için process-genelinde kurulum kancası. */
+public object Gezgin {
+    /**
+     * `@FragmentScreen` interop'unu GERÇEK process-death'e karşı hazırlar: app'in polimorfik [json]'unu
+     * ([gezginFragmentJson]) process açılışında — herhangi bir Activity/FragmentManager restore'undan ÖNCE —
+     * kaydeder. `@FragmentScreen` KULLANAN bir uygulama bunu `Application.onCreate()`'te BİR KEZ çağırmalıdır:
+     * ```
+     * class MyApp : Application() {
+     *     override fun onCreate() {
+     *         super.onCreate()
+     *         Gezgin.initFragmentInterop(gezginJson)   // generated `gezginJson`
+     *     }
+     * }
+     * ```
+     * **Neden gerekli:** taze process'te FragmentManager, `@FragmentScreen` Fragment'ı `Activity.onCreate`'in
+     * `super`'inde — `setContent` kompozisyonundan (dolayısıyla [Route.toBundle]'ın [gezginFragmentJson]'u
+     * doldurmasından) ÖNCE — restore edip `onViewCreated`'a kadar dispatch eder; o an statik `null` olduğundan
+     * `gezginArgs` decode edecek Json'u bulamaz ve fırlatır. Bu çağrı statiği erken doldurup o pencereyi kapatır.
+     * Config-change/DKA'da process yaşadığı için zaten doluydu; bu YALNIZ gerçek process-death için gerekir.
+     * `@FragmentScreen` kullanmayan (yalnız `@Screen`) uygulamalar için gereksizdir. Idempotent — birden çok
+     * çağrı ya da sonraki `toBundle` yeniden-set'i zararsızdır (tek `gezginSerializersModule` → tek etkin Json).
+     */
+    public fun initFragmentInterop(json: Json) {
+        gezginFragmentJson = json
+    }
+}
+
 /**
  * Encodes [this] route polymorphically into a single `String` extra with [nav]'s app-Json and returns a
  * Bundle. Called from the GENERATED `provideXEntry` (`arguments = route.toBundle(raw)`) — NOT a direct

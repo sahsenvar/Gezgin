@@ -357,6 +357,12 @@ public final class dev/gezgin/core/fragment/FragmentBinding {
 	public static final fun gezginBoundRoute (Landroidx/fragment/app/Fragment;)Ldev/gezgin/core/Route;
 }
 
+public final class dev/gezgin/core/fragment/Gezgin {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/gezgin/core/fragment/Gezgin;
+	public final fun initFragmentInterop (Lkotlinx/serialization/json/Json;)V
+}
+
 public final class dev/gezgin/core/fragment/GezginArgsProperty : kotlin/properties/ReadOnlyProperty {
 	public static final field $stable I
 	public fun <init> (Lkotlin/jvm/functions/Function1;)V
