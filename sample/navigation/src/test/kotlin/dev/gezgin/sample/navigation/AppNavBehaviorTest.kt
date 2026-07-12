@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 /**
  * F-MAJOR-2 — the headline UI-less test flow, exercised in the canonical multi-module layout: graphs
@@ -54,7 +55,9 @@ class AppNavBehaviorTest {
 
     // Pinned (README "Tasarım notları"): clearUpTo=Dashboard inclusive purges down to the original
     // Login, then replaceTo always pushes fresh → a STACKED second Login, not a dedup. Left as authored.
-    @Test fun logoutClearUpToDashboardInclusive_stacksASecondLoginEntry() {
+    // This pins the RAW-PUSH topology semantics and deliberately does NOT model the real app login path
+    // (loginSuccess = @ReplaceTo(Dashboard) consumes the seed Login — see the sibling test below).
+    @Test fun logoutFromRawPushedStack_stacksASecondLoginEntry() {
         val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
         nav.raw.navigate(HomeGraph.DashboardScreenRoute)
         nav.raw.navigate(ProfileGraph.ProfileScreenRoute)
@@ -67,6 +70,26 @@ class AppNavBehaviorTest {
         nav.fromSettings().logout()
 
         assertEquals(listOf(AuthGraph.LoginScreenRoute, AuthGraph.LoginScreenRoute), nav.backStack)
+    }
+
+    // Real app login path: loginSuccess = @ReplaceTo(Dashboard) (AuthGraph.kt) CONSUMES the seed Login, so
+    // after logout = @ReplaceTo(Login, clearUpTo=Dashboard, inclusive) the stack holds a SINGLE Login — the
+    // on-device result (checklist item 14), unlike the raw-push sibling above (which never consumes the seed).
+    @Test fun logoutAfterRealLoginSuccess_leavesSingleLoginEntry() {
+        val nav = GezginTestNavigator(start = AuthGraph.LoginScreenRoute, topology = gezginTopology)
+
+        nav.fromLogin().loginSuccess()      // @ReplaceTo(Dashboard) → seed Login consumed → [Dashboard]
+        nav.fromDashboard().goToProfile()   // [Dashboard, Profile]
+        nav.fromProfile().goToSettings()    // [Dashboard, Profile, Settings]
+
+        nav.fromSettings().logout()         // @ReplaceTo(Login, clearUpTo=Dashboard, inclusive) → [Login]
+
+        assertEquals(listOf(AuthGraph.LoginScreenRoute), nav.backStack)
+        // Security invariant: no authed screen survives → a subsequent back hits root (finish), never
+        // returns to Dashboard/Profile/Settings.
+        assertFalse(nav.backStack.contains(HomeGraph.DashboardScreenRoute))
+        assertFalse(nav.backStack.contains(ProfileGraph.ProfileScreenRoute))
+        assertFalse(nav.backStack.contains(ProfileGraph.SettingsScreenRoute))
     }
 
     @Test fun avatarFlowQuitWith_deliversValueToProfilePickAvatarResults() = runTest {
