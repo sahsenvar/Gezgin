@@ -21,7 +21,11 @@ trap 'adb shell settings put global always_finish_activities "${orig_dka:-0}" >/
 
 relaunch() {  # launcher ile geri getir (backstack + flowChain restore); re-install YOK
   adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-  sleep 2
+  for _r in 1 2 3 4 5 6; do
+    sleep 1
+    [ -n "$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')" ] && return 0
+    adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  done
 }
 
 adb logcat -b crash -c >/dev/null 2>&1 || true   # PD öncesi crash buffer temiz

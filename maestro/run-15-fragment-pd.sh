@@ -20,7 +20,11 @@ trap 'adb shell settings put global always_finish_activities "${orig_dka:-0}" >/
 
 relaunch() {  # launcher ile geri getir (FragmentState + Gezgin backstack restore); re-install YOK
   adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-  sleep 2
+  for _r in 1 2 3 4 5 6; do
+    sleep 1
+    [ -n "$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')" ] && return 0
+    adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  done
 }
 
 # =========================== CASE A — DKA (activity-recreation) ===========================
@@ -51,10 +55,17 @@ mt "$DIR/app-15a-help-fragment.yaml" || fail=1
 
 echo "== [B] HOME + am kill (gerçek process ölümü) =="
 adb shell input keyevent KEYCODE_HOME
-sleep 1
-pid1=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
-adb shell am kill "$PKG" >/dev/null 2>&1
 sleep 2
+pid1=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
+# am kill YALNIZ cached/killable process'i öldürür; HOME'dan hemen sonra process henüz cached olmayabilir.
+# Ölene (pid kaybolana/değişene) kadar birkaç kez dene — timing-robust (aksi halde am-kill no-op → flaky).
+adb shell am kill "$PKG" >/dev/null 2>&1
+for _i in 1 2 3 4 5 6; do
+  sleep 1
+  cur=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
+  if [ -z "$cur" ] || [ "$cur" != "$pid1" ]; then break; fi
+  adb shell am kill "$PKG" >/dev/null 2>&1
+done
 relaunch
 pid2=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
 # P0.2 — process GERÇEKTEN öldü mü? (pid1 vardı ve yeni pid2 ondan farklı).
