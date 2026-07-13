@@ -17,17 +17,25 @@ Gezgin **Navigation 3** üzerinde çalışır. Navigasyon grafiğin bir `sealed 
 @NavGraph
 @Serializable
 sealed interface ShopGraph {
-    @GoTo(ProductRoute::class)                              // Catalog'un tek deklare çıkış kenarı
+    @GoTo(ProductRoute::class)                              // Catalog → Product
     @Serializable data object CatalogRoute : ShopGraph
+
+    @GoTo(PaymentResult::class)                             // Product → PaymentResult ("hemen al")
     @Serializable data class ProductRoute(val id: String) : ShopGraph
-    @Serializable data object CheckoutRoute : ShopGraph     // grafikte VAR — ama Catalog'dan ulaşılamaz
+
+    // Başarıda checkout ekranını REPLACE et ve alışveriş hunisini Catalog dahil temizle,
+    // ki sistem/predictive Back kullanıcıyı yeni bitirdiği akışa geri düşüremesin:
+    @ReplaceTo(PaymentResult::class, clearUpTo = CatalogRoute::class, inclusive = true)
+    @Serializable data object CheckoutRoute : ShopGraph
+
+    @Serializable data object PaymentResult : ShopGraph     // terminal — ulaşılır, huniye geri gidilmez
 }
 
 // 2 · ekranın tipli navigator'ı YALNIZ Catalog'un deklare kenarlarının metotlarına sahip
 @Screen(CatalogRoute::class)
 @Composable
 fun CatalogScreen(nav: CatalogNavigator) {
-    ProductGrid(onClick = { product -> nav.goToProduct(product.id) })  // ✅ @GoTo(ProductRoute) yazdın
+    ProductGrid(onClick = { product -> nav.goToProduct(product.id) })  // ✅ @GoTo(ProductRoute) tarafından auto-generated
     // nav.goToCheckout()   // ❌ DERLENMEZ — Catalog, Checkout'a kenar deklare etmedi
 }
 ```
@@ -118,7 +126,16 @@ dependencies {
 | `gezgin-mvi` | Opsiyonel. `@MviViewModel` / `@ScreenEffect` + `GezginMvi<S, I, E>` + DI-detection (Hilt/Koin, androidx fallback). |
 | `gezgin-test` | Opsiyonel (test). UI'sız `GezginTestNavigator` + tipli `fromX()` erişimcileri. |
 
-Doğrulanan sürümler: Kotlin 2.2.20, KSP 2.2.20-2.0.2, Compose Multiplatform 1.11.0, Navigation 3 (Google `navigation3-runtime` 1.1.4 / JetBrains `navigation3` 1.0.0-alpha05), AGP 8.11.0, min SDK 24. Tam tablo + KSP seçenekleri: [docs/gezgin-design.md](docs/gezgin-design.md) §15. ⚠️ Navigation 3 hâlâ **alpha** — sürümler bilinçli pinlenmiştir.
+Doğrulanan sürümler: Kotlin 2.2.20, KSP 2.2.20-2.0.2, Compose Multiplatform 1.11.0, Navigation 3 (Google `navigation3-runtime` 1.1.4 / JetBrains `navigation3` 1.0.0-alpha05), AGP 8.11.0, min SDK 24. Tam uyumluluk tablosu: [docs/gezgin-design.md](docs/gezgin-design.md) §15. ⚠️ Navigation 3 hâlâ **alpha** — sürümler bilinçli pinlenmiştir.
+
+### KSP seçenekleri
+
+`ksp { arg("<ad>", "<değer>") }` ile verilir:
+
+| Seçenek | Default | Ne zaman |
+|---|---|---|
+| `gezgin.emitSerializers` | `true` | Polimorfik `Route` `SerializersModule`'ünü kendin sağlıyorsan `false` ver (opt-out). |
+| `gezgin.emitTestAccessors` | `false` | Tipli `GezginTestNavigator.fromX()` test erişimcilerini üretmek için `true` ver (opt-in). Flag'i modülün **`main`** KSP round'unda (graph'ların olduğu round) aç; erişimciler `main`'e üretilir, böylece `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — çok-modül düzeninde de çalışır. `:gezgin-test`'i `main` compile classpath'ine `compileOnly` ekle (erişimciler derlensin; app runtime'ına sızmaz), `test` için `testImplementation` ile yeniden ekle. |
 
 ---
 
@@ -251,6 +268,7 @@ Back stack `@Serializable` veri olduğundan process-death restore otomatiktir; b
 - **[docs/gezgin-by-example.md](docs/gezgin-by-example.md)** — özellik özellik tam rehber (Türkçe).
 - **[docs/gezgin-design.md](docs/gezgin-design.md)** — tasarım spesifikasyonu.
 - **[sample/](sample/)** — iki çalışabilir örnek app (çok-modüllü showcase + tek-modüllü Shopr).
+- **[CHANGELOG.md](CHANGELOG.md)** — sürüm notları.
 
 ## Lisans
 
