@@ -236,7 +236,7 @@ eski/uyumsuz kalır), app'e geri dön.
 **Beklenen:** crash/ANR YOK — `Feed`'e (fresh `start`) sessizce düşer, kullanıcı stack'i kaybeder ama
 uygulama açılır durumda kalır.
 
-**Durum:** [ ] Otomatikleştirilemez (Maestro kapsamı dışı) — GEÇİCİ kaynak değişikliği + rebuild gerektirir (`navigatorSaver.restore`'a state'i bozan bir satır). Bu suite gradle çalıştırmadığı/yeniden kurmadığı için otomatikleştirilmedi; birim testi `RememberNavigatorSaverTest` ile zaten pinli. Manuel simüle olarak insan-doğrulaması bekliyor.
+**Durum:** [x] Maestro ile OTOMATİK doğrulandı (emülatör; rebuild GEREKMEDEN) — `maestro/run-07-corrupt-state.sh`. Kaynak-hack yerine sample'a **DEBUG-only, intent-tetiklemeli** bir kanca eklendi: `dev.gezgin.sample.shopr.debug.CorruptingSaveableStateRegistry` (delegating `SaveableStateRegistry`; `consumeRestored`'da Gezgin PD-snapshot'ını — `{"keys...` — `{corrupted` ile bozar), `MainActivity`'de yalnız `FLAG_DEBUGGABLE && intent extra "corrupt_state"` iken kurulur (aksi halde prod ile birebir, sıfır etki). Recipe: derin stack (Feed→Catalog→Cart→Payment) → gerçek process-death (am kill) → resume (extra orijinal intent'te olduğundan kancayı silahlı tutar) → snapshot bozulur → `decodeSavedStateOrNull` **null** → adopt atlanır → **fresh Feed** ("Kataloğa git" görünür, "Ödemeyi tamamla" YOK) + `logcat -b crash` boş. **Non-vacuous gate:** `ShoprCorrupt` log'u tam 1 kez fire etmeli (aksi halde snapshot yok = vacuous → FAIL). Cihazda 2/2 PASS. Birim testi `RememberNavigatorSaverTest` de pinli.
 
 ---
 
@@ -629,7 +629,7 @@ KSP `Dependencies`'e kaydetmektir (KSP sürümü izin verince).
 | 4 | PD "Don't keep activities" | Evet | [x] Maestro (stack + pendingSlots restore) |
 | 5 | N8 (stacked dialog) | Evet | [ ] Bkz. madde 9 (kısmi kapsam) |
 | 6 | iOS/Desktop back farkları | Hayır (bilgilendirici) | [ ] Bilgilendirici |
-| 7 | PD restore fallback (bozuk state → fresh) | Evet (simüle) | [ ] Otomatikleştirilemez (kod değişikliği+rebuild) |
+| 7 | PD restore fallback (bozuk state → fresh) | Evet | [x] Maestro OTOMATİK (run-07; DEBUG intent-kancası, rebuild gerekmez) |
 | 8 | Desktop root-back sessiz no-op | Hayır (bilgilendirici) | [ ] Bilgilendirici |
 | 9 | N8 scrim/z-order görsel katman | Evet | [ ] görsel — insan gözü gerekir |
 | 10 | Dialog/sheet dismiss → Canceled + sonuç teslimi | Evet | [x] Maestro (10a/10b/10c) |

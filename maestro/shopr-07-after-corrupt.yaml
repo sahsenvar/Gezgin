@@ -1,0 +1,9 @@
+# Madde 7 — BOZUK PD snapshot SONRASI: app TAZE Feed'e düşmeli (crash-loop YOK).
+# launchApp YOK — runner Activity'yi am kill ile öldürüp `--ez corrupt_state true` ile geri getirir; debug-only
+# CorruptingSaveableStateRegistry restore edilen Gezgin snapshot'ını bozar -> decodeSavedStateOrNull null ->
+# adopt atlanır -> navigator `start` (Feed)'te kalır. (Kontrol: EXTRA'sız aynı PD derin Payment stack'i restore
+# eder — bu zaten run-04 CASE B ile kanıtlı.)
+appId: dev.gezgin.sample.shopr
+---
+- assertVisible: "Kataloğa git"        # TAZE Feed (FeedScreen.kt:14)
+- assertNotVisible: "Ödemeyi tamamla"  # derin Payment stack GİTMİŞ = bozuk snapshot reddedildi, fresh start

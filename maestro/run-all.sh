@@ -83,6 +83,7 @@ run "Madde 17 (nested ResultFlow quitWith sahiplik: Crop+nested Zoom -> Profile)
 
 # --- Çok-adımlı runner'lar (adb: process-death / rotation / logcat) ---
 run "Madde 4  (shopr process-death round-trip)"    bash "$DIR/run-04-process-death.sh"
+run "Madde 7  (bozuk saved-state -> fresh fallback, crash-yok)" bash "$DIR/run-07-corrupt-state.sh"
 run "Madde 14 (MVI rotation+one-shot-effect+logout)" bash "$DIR/run-14-settings-mvi.sh"
 run "Madde 15 (Fragment process-death round-trip)" bash "$DIR/run-15-fragment-pd.sh"
 run "Madde 17b (nested-flow ORTASINDA process-death + slot -> quitWith teslim)" bash "$DIR/run-17b-avatar-flow-pd.sh"

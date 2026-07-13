@@ -1,0 +1,14 @@
+# Madde 7 (bölüm A) — derin stack, ama launchApp YOK. Runner uygulamayı ÖNCEDEN `--ez corrupt_state true`
+# ile başlatır -> extra ORİJİNAL task intent'ine yazılır (PD sonrası launcher-resume onu aynen replay eder;
+# TAZE bir `am start` extra'sı DÜŞÜRÜLÜR). Bu flow sadece foreground app'e bağlanıp Feed->Catalog->Cart->
+# Payment derinliğini kurar (04a ile aynı adımlar, ama launchApp/clearState YOK ki extra'lı intent korunsun).
+# Hook derin-stack kurulurken ATILDIR (taze forward-nav'da bozacak snapshot YOK; yalnız PD-restore'da ısırır).
+appId: dev.gezgin.sample.shopr
+---
+- assertVisible: "Kataloğa git"
+- tapOn: "Kataloğa git"
+- assertVisible: "Checkout başlat"
+- tapOn: "Checkout başlat"
+- assertVisible: "Ödemeye geç"
+- tapOn: "Ödemeye geç"
+- assertVisible: "Ödemeyi tamamla"
