@@ -13,15 +13,26 @@ Gezgin runs on **Navigation 3**. Your navigation graph is a `sealed interface` t
 ## The 10-second example
 
 ```kotlin
+// 1 · the graph is a sealed tree — the edge you declare is the method you get
+@NavGraph
+@Serializable
+sealed interface ShopGraph {
+    @GoTo(ProductRoute::class)                              // Catalog's only declared edge out
+    @Serializable data object CatalogRoute : ShopGraph
+    @Serializable data class ProductRoute(val id: String) : ShopGraph
+    @Serializable data object CheckoutRoute : ShopGraph     // exists in the graph — just not reachable from Catalog
+}
+
+// 2 · the screen's typed navigator has methods ONLY for Catalog's declared edges
 @Screen(CatalogRoute::class)
 @Composable
 fun CatalogScreen(nav: CatalogNavigator) {
     ProductGrid(onClick = { product -> nav.goToProduct(product.id) })  // ✅ you declared @GoTo(ProductRoute)
-    // nav.goToCheckout()   // ❌ WON'T COMPILE — CatalogRoute has no edge to Checkout
+    // nav.goToCheckout()   // ❌ WON'T COMPILE — Catalog declared no edge to Checkout
 }
 ```
 
-`nav.goToProduct(id)` exists because the route declared `@GoTo(ProductRoute::class)`. `nav.goToCheckout()` is a **compile error**. The answer to *"where can I go from here?"* lives in IDE autocomplete — enforced by the **shape of the API**, not a lint rule you can forget.
+`nav.goToProduct(id)` exists because `CatalogRoute` declared `@GoTo(ProductRoute::class)`. `nav.goToCheckout()` is a **compile error** — `CheckoutRoute` is a perfectly valid route, it's just not reachable *from Catalog*. The answer to *"where can I go from here?"* lives in IDE autocomplete — enforced by the **shape of the API**, not a lint rule you can forget.
 
 ---
 

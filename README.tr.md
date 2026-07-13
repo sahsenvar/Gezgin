@@ -13,15 +13,26 @@ Gezgin **Navigation 3** üzerinde çalışır. Navigasyon grafiğin bir `sealed 
 ## 10 saniyelik örnek
 
 ```kotlin
+// 1 · grafik = sealed ağaç — deklare ettiğin kenar = elde ettiğin metot
+@NavGraph
+@Serializable
+sealed interface ShopGraph {
+    @GoTo(ProductRoute::class)                              // Catalog'un tek deklare çıkış kenarı
+    @Serializable data object CatalogRoute : ShopGraph
+    @Serializable data class ProductRoute(val id: String) : ShopGraph
+    @Serializable data object CheckoutRoute : ShopGraph     // grafikte VAR — ama Catalog'dan ulaşılamaz
+}
+
+// 2 · ekranın tipli navigator'ı YALNIZ Catalog'un deklare kenarlarının metotlarına sahip
 @Screen(CatalogRoute::class)
 @Composable
 fun CatalogScreen(nav: CatalogNavigator) {
     ProductGrid(onClick = { product -> nav.goToProduct(product.id) })  // ✅ @GoTo(ProductRoute) yazdın
-    // nav.goToCheckout()   // ❌ DERLENMEZ — CatalogRoute'tan Checkout'a kenar yok
+    // nav.goToCheckout()   // ❌ DERLENMEZ — Catalog, Checkout'a kenar deklare etmedi
 }
 ```
 
-`nav.goToProduct(id)` var, çünkü route `@GoTo(ProductRoute::class)` deklare etti. `nav.goToCheckout()` bir **derleme hatası**. *"Buradan nereye gidebilirim?"* sorusunun cevabı IDE otomatik-tamamlamasında — bir lint kuralıyla değil, **API'nin şekliyle** zorunlu kılınıyor.
+`nav.goToProduct(id)` var, çünkü `CatalogRoute` `@GoTo(ProductRoute::class)` deklare etti. `nav.goToCheckout()` bir **derleme hatası** — `CheckoutRoute` gayet geçerli bir route, sadece *Catalog'dan* ulaşılamıyor. *"Buradan nereye gidebilirim?"* sorusunun cevabı IDE otomatik-tamamlamasında — bir lint kuralıyla değil, **API'nin şekliyle** zorunlu kılınıyor.
 
 ---
 
