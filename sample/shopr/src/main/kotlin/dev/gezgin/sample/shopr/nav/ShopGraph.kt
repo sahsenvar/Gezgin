@@ -1,5 +1,6 @@
 package dev.gezgin.sample.shopr.nav
 
+import dev.gezgin.core.DialogContract
 import dev.gezgin.core.ResultFlow
 import dev.gezgin.core.Route
 import dev.gezgin.core.annotation.BackTo
@@ -33,8 +34,17 @@ sealed interface HomeGraph : Route {
 
     @NoBack
     @BackTo(Feed::class)
+    @GoTo(OrderDetailsDialogRoute::class, name = "showOrderDetails")
     @Serializable
     data class OrderPlaced(val orderId: String) : HomeGraph
+
+    // Modal-over-@NoBack: terminal @NoBack ekranın ÜSTÜne açılan dialog (madde 2). Dialog @NoBack DEĞİL —
+    // adaptör bir modal'ın @NoBack olmasını yasaklar; DialogContract varsayılanı (dismissOnBackPress=true) →
+    // sistem-back önce bu dialog'u kapatır, sonra @NoBack OrderPlaced'ta back'i yutar. @BackTo(OrderPlaced) =
+    // "Kapat" edge'i (navigator'ı hak ettirir; ItemImageViewer emsali).
+    @BackTo(OrderPlaced::class)
+    @Serializable
+    data class OrderDetailsDialogRoute(val orderId: String) : HomeGraph, DialogContract
 }
 
 @FlowGraph

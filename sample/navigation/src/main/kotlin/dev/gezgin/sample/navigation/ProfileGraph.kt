@@ -46,11 +46,17 @@ sealed interface ProfileGraph : Route {
             }
     }
 
+    @GoForResult(ConfirmResetDialogRoute::class, name = "confirmReset")
     @Serializable
     data class EditNameDialogRoute(val current: String) : ProfileGraph, ResultRoute<String>,
         DialogContract {
         override val dismissOnClickOutside: Boolean get() = current.isNotBlank()
     }
+
+    // Dialog-over-dialog: EditName'in ÜSTÜne açılır (N8 stacked LIFO + nested result). Tüm DialogContract
+    // varsayılanları (dismissOnBackPress=true) → sistem-back yalnız bu üst dialog'u kapatır (LIFO).
+    @Serializable
+    data object ConfirmResetDialogRoute : ProfileGraph, ResultRoute<Boolean>, DialogContract
 
     // @MviViewModel/@BottomSheet-content/@ScreenEffect üçlüsü :feature:profile'da olmalı (per-module KSP, §10.1).
     @Serializable

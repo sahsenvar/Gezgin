@@ -31,6 +31,8 @@ class OrderPlacedViewModel(
         when (intent) {
             // @NoBack terminal ekran; deklare edilen @BackTo(Feed) navigator üzerinden yürür.
             OrderPlacedIntent.BackToFeed -> nav.backToFeed()
+            // Modal-over-@NoBack: terminal ekranın üstüne detay dialog'u aç (@GoTo).
+            OrderPlacedIntent.ShowDetails -> nav.showOrderDetails(_uiState.value.orderId)
         }
     }
 }

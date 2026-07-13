@@ -192,7 +192,7 @@ senaryolarıyla (scrim/opacity görsel kontrolü) yapılıyor; gerçek İKİ-dia
 sample'a yeni bir route eklenmesi gerekir (kapsam dışı bırakıldı — mevcut coverage tablosu zaten
 Dialog/BottomSheet contract desenlerini sergiliyor, bkz. `sample/README.md`).
 
-**Durum:** [ ] Bkz. madde 9 (kısmi kapsam — stacked N8 senaryosu sample'da yok)
+**Durum:** [x] Fonksiyonel yarı Maestro ile doğrulandı (emülatör) — `maestro/app-n8-stacked-dialog.yaml` + P3.a sample eklemesi (`ConfirmResetDialogRoute`, EditName'e `@GoForResult(confirmReset)`). Dialog-üstü-dialog: EditName açıkken "Adı sıfırla" → ConfirmReset ÜSTTE ("Adı sıfırla?"); sistem-back yalnız üsttekini kapatır (LIFO — EditName "Kaydet" hâlâ görünür); "Evet" → nested Boolean sonuç PD-safe teslim → ad temizlenir. Görsel scrim/z-order yarısı madde 9 (insan gözü). ESKİ NOT: [ ] Bkz. madde 9 (kısmi kapsam — stacked N8 senaryosu sample'da yok)
 
 ---
 
@@ -624,14 +624,14 @@ KSP `Dependencies`'e kaydetmektir (KSP sürümü izin verince).
 | # | Kalem | Cihaz gerekli mi | Durum |
 |---|---|---|---|
 | 1 | M5′ `@NoBack` LIFO / predictive-back | Evet | [x] Maestro (davranış); predictive-back preview görsel |
-| 2 | Overlay-over-`@NoBack` | Evet (kısmi kapsam) | [x] Maestro (genel dismiss) / Kapsam dışı (spesifik) |
+| 2 | Overlay-over-`@NoBack` | Evet | [x] Maestro — genel dismiss + spesifik (P3.b shopr-02: OrderPlaced @NoBack üstü dialog) |
 | 3 | R2 VM-store yarısı | Evet | [x] Maestro (visits 1→1→2; kod değişikliği gerekmedi) |
 | 4 | PD "Don't keep activities" | Evet | [x] Maestro (stack + pendingSlots restore) |
-| 5 | N8 (stacked dialog) | Evet | [ ] Bkz. madde 9 (kısmi kapsam) |
+| 5 | N8 (stacked dialog) | Evet | [x] Fonksiyonel Maestro (P3.a app-n8: dialog-üstü-dialog LIFO + nested result) / görsel=madde 9 |
 | 6 | iOS/Desktop back farkları | Hayır (bilgilendirici) | [ ] Bilgilendirici |
 | 7 | PD restore fallback (bozuk state → fresh) | Evet | [x] Maestro OTOMATİK (run-07; DEBUG intent-kancası, rebuild gerekmez) |
 | 8 | Desktop root-back sessiz no-op | Hayır (bilgilendirici) | [ ] Bilgilendirici |
-| 9 | N8 scrim/z-order görsel katman | Evet | [ ] görsel — insan gözü gerekir |
+| 9 | N8 scrim/z-order görsel katman | Evet | [ ] görsel — insan gözü (fonksiyonel N8 artık madde 5'te kapsanıyor) |
 | 10 | Dialog/sheet dismiss → Canceled + sonuç teslimi | Evet | [x] Maestro (10a/10b/10c) |
 | 11 | Predictive-back modal üstünde | Evet | [x] Maestro (geri-jesti dismiss); preview görsel |
 | 12 | Sheet swipe-dismiss animasyonu + hide-then-result | Evet | [x] result yarısı Maestro / animasyon görsel |

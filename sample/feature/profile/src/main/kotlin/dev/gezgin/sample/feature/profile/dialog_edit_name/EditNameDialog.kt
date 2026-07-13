@@ -12,12 +12,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.gezgin.core.NavResult
 import dev.gezgin.core.annotation.Dialog
 import dev.gezgin.sample.navigation.EditNameDialogNavigator
 import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialogRoute
@@ -26,6 +28,11 @@ import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialogRoute
 @Composable
 fun EditNameDialog(route: EditNameDialogRoute, nav: EditNameDialogNavigator) {
     var text by remember { mutableStateOf(route.current) }
+    // Nested-dialog sonucu composable içinde PD-safe toplanır: LaunchedEffect recompose/re-attach'te
+    // yeniden subscribe olur (kalıcı slot). "Evet" (true) gelince ad alanı temizlenir.
+    LaunchedEffect(Unit) {
+        nav.confirmResetResults.collect { if (it is NavResult.Value && it.value) text = "" }
+    }
     // Dialog içeriği fillMaxSize DEĞİL — scrim üstünde wrap-content/ortalanmış görünmeli.
     Surface(
         shape = MaterialTheme.shapes.large,
@@ -41,6 +48,7 @@ fun EditNameDialog(route: EditNameDialogRoute, nav: EditNameDialogNavigator) {
             )
             Button(onClick = { nav.backWithResult(text) }) { Text("Kaydet") }
             TextButton(onClick = { nav.back() }) { Text("Vazgeç") }
+            TextButton(onClick = { nav.launchConfirmReset() }) { Text("Adı sıfırla") }
         }
     }
 }

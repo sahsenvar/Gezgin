@@ -81,6 +81,10 @@ run "Madde 21 (@GoForResult double-tap -> tek dialog, slot dedupe)"      mt "$DI
 run "Madde 22 (@ReplaceTo logout double-tap -> crash YOK, K1 regresyon)" mt "$DIR/app-22-replaceto-doubletap.yaml"
 run "Madde 17 (nested ResultFlow quitWith sahiplik: Crop+nested Zoom -> Profile)" mt "$DIR/app-17-avatar-nested-flow.yaml"
 
+# --- P3 kapsama flow'ları (stacked-dialog N8, modal-over-@NoBack) ---
+run "Madde 5/9-fonk (N8 dialog-üstü-dialog LIFO + nested result)" mt "$DIR/app-n8-stacked-dialog.yaml"
+run "Madde 2  (modal-over-@NoBack: OrderPlaced üstü dialog dismiss + @NoBack yutar)" mt "$DIR/shopr-02-noback-modal.yaml"
+
 # --- Çok-adımlı runner'lar (adb: process-death / rotation / logcat) ---
 run "Madde 4  (shopr process-death round-trip)"    bash "$DIR/run-04-process-death.sh"
 run "Madde 7  (bozuk saved-state -> fresh fallback, crash-yok)" bash "$DIR/run-07-corrupt-state.sh"

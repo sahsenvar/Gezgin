@@ -1,0 +1,36 @@
+# N8 — dialog-over-dialog (stacked modal) LIFO back + nested result (checklist 5/9 fonksiyonel yarı)
+# app: EditNameDialog ÜSTÜne ConfirmResetDialog açılır. Kanıtlanan: (a) stacking var (üstteki dialog'un
+# KENDİ metni "Adı sıfırla?" görünür — alttaki EditName a11y ağacından çıkar), (b) LIFO back yalnız üstteki
+# dialog'u kapatır (EditName "Kaydet" ile altta durur), (c) nested result teslimi (üst dialog "Evet" → alttaki
+# EditName'in text alanı temizlenir → "Kaydet" → profil adı boşalır, eski ad kaybolur).
+appId: dev.gezgin.sample.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Giriş yap"
+- tapOn: "Giriş"
+- assertVisible: "Panel — sıralama: RELEVANCE"
+- tapOn: "Profil"
+- assertVisible: "Profil: Gezgin Kullanıcı"
+# --- EditName dialog aç ---
+- tapOn: "Adı düzenle"
+- assertVisible: "Kaydet"          # EditName açık (dialog'a özgü buton)
+# --- ConfirmReset dialog'u EditName'in ÜSTÜne aç (stacking) ---
+- tapOn: "Adı sıfırla"
+- assertVisible: "Adı sıfırla?"    # üstteki confirm dialog'un KENDİ benzersiz başlığı → stacking kanıtı
+# --- LIFO back: yalnız üstteki confirm kapanır, EditName ALTTA durur ---
+# NOT: assertNotVisible için "Evet" (confirm'e özgü buton) seçildi — "Adı sıfırla?" regex'te '?' quantifier'dır
+#      ve kapanınca yeniden görünen EditName "Adı sıfırla" butonunu partial-match'ler (yanlış-pozitif).
+- pressKey: Back
+- assertVisible: "Kaydet"          # EditName hâlâ açık → back yalnız TEPEyi (confirm) pop'ladı = LIFO
+- assertNotVisible: "Evet"         # confirm gerçekten kapandı (butonu yok)
+# --- Nested result: confirm'i tekrar aç, "Evet" → alttaki EditName text alanı temizlenir ---
+- tapOn: "Adı sıfırla"
+- assertVisible: "Adı sıfırla?"
+- tapOn: "Evet"
+- assertVisible: "Kaydet"          # confirm kapandı, EditName yeniden ön planda (alan artık boş)
+- tapOn: "Kaydet"                  # boş adı kaydet → backWithResult("")
+# --- Reset kanıtı: profile döndük, eski ad KAYBOLDU ---
+- assertNotVisible: "Kaydet"       # EditName kapandı
+- assertVisible: "Adı düzenle"     # ProfileScreen ön planda
+- assertNotVisible: "Profil: Gezgin Kullanıcı"   # ad sıfırlandı (eski ad gitti) — non-vacuous: başta görünürdü

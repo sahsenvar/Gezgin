@@ -1,0 +1,42 @@
+# Madde 2 — modal-over-@NoBack: terminal @NoBack ekranın (OrderPlaced) ÜSTÜne dialog aç.
+# Kanıtlanan: (a) modal @NoBack ekranın üstünde açılır, (b) sistem-back önce modal'ı kapatır (dismissOnBackPress),
+# (c) modal kapandıktan sonra @NoBack sistem-back'i YUTAR (OrderPlaced'tan çıkmaz), (d) @BackTo hâlâ Feed'e döner.
+# Huni shopr-01 ile aynı: Feed -> Catalog -> Cart -> Payment -> tamamla -> OrderPlaced.
+appId: dev.gezgin.sample.shopr
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Kataloğa git"
+- tapOn: "Kataloğa git"
+- assertVisible: "Checkout başlat"
+- tapOn: "Checkout başlat"
+- assertVisible:
+    text: "Ödemeye geç"
+- tapOn: "Ödemeye geç"
+- assertVisible: "Ödemeyi tamamla"
+- tapOn: "Ödemeyi tamamla"
+# Terminal @NoBack ekran
+- assertVisible:
+    text: "Order placed:.*"
+- assertVisible: "Detayları göster"
+# --- modal'ı @NoBack ekranın üstüne aç ---
+- tapOn: "Detayları göster"
+- assertVisible: "Sipariş detayı"      # dialog açık (dialog'a özgü benzersiz metin; alttaki ekran a11y'den çıkar)
+# --- sistem-back: önce MODAL'ı kapatır (OrderPlaced'a değil) ---
+- pressKey: Back
+- assertNotVisible: "Sipariş detayı"   # dialog dismissOnBackPress ile kapandı
+- assertVisible:
+    text: "Order placed:.*"            # OrderPlaced hâlâ orada (back @NoBack ekranı bırakmadı)
+- assertVisible: "Detayları göster"
+# --- modal kapalıyken sistem-back @NoBack tarafından YUTULUR ---
+- pressKey: Back
+- assertVisible:
+    text: "Order placed:.*"            # no-op: @NoBack sistem-back'i yuttu
+- assertVisible: "Feed'e dön"
+- pressKey: Back
+- assertVisible:
+    text: "Order placed:.*"            # ikinci kez de no-op
+- assertVisible: "Feed'e dön"
+# --- @BackTo: declared geri hâlâ Feed'e döner ---
+- tapOn: "Feed'e dön"
+- assertVisible: "Kataloğa git"
