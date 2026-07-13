@@ -67,10 +67,15 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 | State-as-data (gözlemlenebilir + serializable back stack) | ✅ | ◑ | ◑ | ◑ | ✅ |
 | Navigasyonun UI'sız testi | ✅ | ◑ | ◑ | ◑ | ✅ |
 | Elle graph wiring yok (codegen) | ✅ | ◑ | ✅ | ❌ | ❌ |
-| Compose Multiplatform | ✅ | ◑ | ◑ | ✅ | ✅ |
+| Compose Multiplatform | ◑ *(Android + desktop; iOS/web derleme-düzeyi)* | ◑ | ◑ | ✅ | ✅ |
 | Brownfield Fragment interop | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Çoklu back stack** (alt-nav sekmeleri, master/detail) | ❌ *(V2)* | ✅ | ✅ | ✅ | ✅ |
+| **Deep link** | ◑ *(yalnız manuel; declarative → V2)* | ✅ | ✅ | ◑ | ◑ |
+| Olgunluk | ⚠️ *alpha* | ✅ stabil | ✅ | ✅ | ✅ |
 
 **Gezgin'in nişi:** *ekran-başına* compile-time kısıtı + entegre **sonuçlu-flow'lar**, **entry-olarak-modallar**, ve **PD-safe-varsayılan** — hepsi Navigation 3 üstünde. Jetpack Nav'ın yeni type-safe route'larını seviyorsan ama derleyicinin *tanımlanmamış* kenarları da reddetmesini ve sonuç/flow/modal/process-death'i kutudan çıkar çıkmaz vermesini istiyorsan, Gezgin tam o boşluğu doldurur.
+
+> 🔮 **Dürüst eksikler — V1'de bilinçli kapsam dışı, V2 yol haritasında:** **çoklu back stack** ve **declarative deep link**. Bugün Gezgin tek-stack; URL↔route tablosu ÜRETMEZ — bir deep link yine de *manuel* ele alınabilir (URL'i kendin ayrıştır, `nav.raw.navigate(route)` çağır), ama ergonomik/üretilmiş hâli V2 kalemi. Ayrıca Gezgin **alpha** ve (yine alpha olan) Navigation 3 üstünde; Jetpack Navigation Compose stabil, Voyager/Decompose ise özellikle iOS'ta daha çok savaş-testinden geçmiş çok-platform deneyimine sahip.
 
 ---
 

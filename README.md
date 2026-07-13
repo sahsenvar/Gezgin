@@ -67,10 +67,15 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 | State-as-data (observable + serializable back stack) | ✅ | ◑ | ◑ | ◑ | ✅ |
 | UI-less testing of navigation | ✅ | ◑ | ◑ | ◑ | ✅ |
 | No manual graph wiring (codegen) | ✅ | ◑ | ✅ | ❌ | ❌ |
-| Compose Multiplatform | ✅ | ◑ | ◑ | ✅ | ✅ |
+| Compose Multiplatform | ◑ *(Android + desktop; iOS/web compile-level)* | ◑ | ◑ | ✅ | ✅ |
 | Brownfield Fragment interop | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Multiple back stacks** (bottom-nav tabs, master/detail) | ❌ *(V2)* | ✅ | ✅ | ✅ | ✅ |
+| **Deep links** | ◑ *(manual only; declarative → V2)* | ✅ | ✅ | ◑ | ◑ |
+| Maturity | ⚠️ *alpha* | ✅ stable | ✅ | ✅ | ✅ |
 
 **Gezgin's niche:** the *per-source* compile-time restriction, plus integrated **flows-with-result**, **modals-as-entries**, and **PD-safe-by-default** — all on Navigation 3. If you already like Jetpack Nav's new type-safe routes but want the compiler to also reject *undeclared* edges and hand you results / flows / modals / process-death out of the box, that's the gap Gezgin fills.
+
+> 🔮 **Honest gaps — deliberately out of V1 scope, on the V2 roadmap:** **multiple back stacks** and **declarative deep links**. Today Gezgin is single-stack, and it does not generate a URL↔route table — a deep link can still be handled *manually* (parse the URL yourself and call `nav.raw.navigate(route)`), but the ergonomic, generated version is a V2 item. Gezgin is also **alpha** and rides Navigation 3 (also alpha), whereas Jetpack Navigation Compose is stable and Voyager/Decompose have more battle-tested multiplatform (esp. iOS) mileage.
 
 ---
 
