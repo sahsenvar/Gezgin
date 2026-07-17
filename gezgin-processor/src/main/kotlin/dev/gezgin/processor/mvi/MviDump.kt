@@ -34,6 +34,7 @@ internal fun dumpMviText(vmModels: List<ViewModelModel>, entries: List<EntryFunc
         lines += "mvientry ${entry.functionSimpleName} pkg=${entry.packageName} route=${entry.routeFq} " +
             "kind=${entry.kind} x=${entry.x} noBack=${entry.noBack} vm=${mvi.vm.vmFq} " +
             "effect=${mvi.effectFunSimpleName ?: "-"} effectNav=${mvi.effectHasNavParam} " +
+            "top=${mvi.topBar?.functionSimpleName ?: "-"} bottom=${mvi.bottomBar?.functionSimpleName ?: "-"} " +
             "role=${mvi.roleExtraParams.joinToString(",") { "${it.name}:${it.typeName}" }.ifEmpty { "-" }} " +
             "resolver=${mvi.resolverExtraParams.joinToString(",") { "${it.name}:${it.typeName}" }.ifEmpty { "-" }}"
     }

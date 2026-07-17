@@ -13,6 +13,12 @@ internal enum class EntryKindModel { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MO
  */
 internal data class MviExtraParam(val name: String, val typeFq: String, val typeName: TypeName)
 
+/** One migration-only route-bound chrome provider resolved before code generation. */
+internal data class MviChromeProviderModel(
+    val functionSimpleName: String,
+    val packageName: String,
+)
+
 /**
  * The MVI-mode (§10.1) descriptor attached to an [EntryFunctionModel] whose content composable is
  * shaped `(state, onIntent[, extras])` (as opposed to core-mode's `(route, nav)`). Present only on
@@ -41,6 +47,8 @@ internal data class MviEntryModel(
     val effectFlowParamName: String?,
     /** The matched effect function declares an optional `nav`-named param (5.2 wires the navigator into it). */
     val effectHasNavParam: Boolean,
+    val topBar: MviChromeProviderModel?,
+    val bottomBar: MviChromeProviderModel?,
     val roleExtraParams: List<MviExtraParam>,
     val resolverExtraParams: List<MviExtraParam>,
 )

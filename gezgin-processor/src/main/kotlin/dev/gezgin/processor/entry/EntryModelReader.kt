@@ -47,6 +47,8 @@ private val ALL_KIND_CONTRACT_FQS = CONTRACT_BY_KIND.values.toSet()
 // MVI-mode (§10.1) FQ constants — read as strings, no compile dep on gezgin-mvi.
 // M3 — the @BottomSheet role extra is Gezgin's own GezginSheetController (not material3 SheetState).
 private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetController"
+private const val TOP_BAR_FQ = "dev.gezgin.mvi.annotation.TopBar"
+private const val BOTTOM_BAR_FQ = "dev.gezgin.mvi.annotation.BottomBar"
 private const val FLOW_FQ = "kotlinx.coroutines.flow.Flow"
 private const val FUNCTION1_FQ = "kotlin.Function1"
 private const val UNIT_FQ = "kotlin.Unit"
@@ -163,6 +165,7 @@ internal class EntryModelReader(
 
     fun read(): Pair<List<EntryFunctionModel>, Boolean> {
         val effectFuns = readEffectFuns()
+        val chromeFuns = readChromeFuns()
 
         val entries = KIND_BY_ANNOTATION_FQ.flatMap { (annotationFq, kind) ->
             val functions = resolver.getSymbolsWithAnnotation(annotationFq)
@@ -200,7 +203,7 @@ internal class EntryModelReader(
                 .flatMap { fn ->
                     fn.annotations
                         .filter { it.fqName() == annotationFq }
-                        .mapNotNull { annotation -> buildEntry(fn, annotation, kind, effectFuns) }
+                        .mapNotNull { annotation -> buildEntry(fn, annotation, kind, effectFuns, chromeFuns) }
                 }
         }
 
@@ -209,6 +212,14 @@ internal class EntryModelReader(
                 "MV15",
                 "@EffectHandler ${effect.simpleName} targets route ${effect.routeFq}, but that route has no " +
                     "@Screen(state, onIntent) declaration in this module",
+            )
+        }
+
+        chromeFuns.filter { it.routeFq !in declaredMviScreenRoutes }.forEach { chrome ->
+            error(
+                "MV21",
+                "@${chrome.kind.annotationName} ${chrome.simpleName} targets route ${chrome.routeFq}, but that " +
+                    "route has no @Screen(state, onIntent) declaration in this module",
             )
         }
 
@@ -232,10 +243,15 @@ internal class EntryModelReader(
         annotation: KSAnnotation,
         kind: EntryKindModel,
         effectFuns: List<EffectFun>,
+        chromeFuns: List<ChromeFun>,
     ): EntryFunctionModel? {
         val paramNames = fn.parameters.mapNotNull { it.name?.asString() }.toSet()
         val isMvi = "state" in paramNames && "onIntent" in paramNames
-        return if (isMvi) buildMviEntry(fn, annotation, kind, effectFuns) else buildCoreEntry(fn, annotation, kind)
+        return if (isMvi) {
+            buildMviEntry(fn, annotation, kind, effectFuns, chromeFuns)
+        } else {
+            buildCoreEntry(fn, annotation, kind)
+        }
     }
 
     // region Core-mode (Task 3.4 — UNCHANGED)
@@ -392,6 +408,7 @@ internal class EntryModelReader(
         annotation: KSAnnotation,
         kind: EntryKindModel,
         effectFuns: List<EffectFun>,
+        chromeFuns: List<ChromeFun>,
     ): EntryFunctionModel? {
         val fnName = fn.simpleName.asString()
         val params = fn.parameters
@@ -562,6 +579,13 @@ internal class EntryModelReader(
             return null
         }
 
+        val topChrome = chromeFuns.firstOrNull { it.routeFq == routeFq && it.kind == ChromeKind.TOP }
+        val topBar = validateChromeProvider(topChrome, routeFq, vm)
+        if (topChrome != null && topBar == null) return null
+        val bottomChrome = chromeFuns.firstOrNull { it.routeFq == routeFq && it.kind == ChromeKind.BOTTOM }
+        val bottomBar = validateChromeProvider(bottomChrome, routeFq, vm)
+        if (bottomChrome != null && bottomBar == null) return null
+
         val packageName = fn.packageName.asString()
         val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
 
@@ -644,6 +668,8 @@ internal class EntryModelReader(
                 effectFunPackageName = effect?.packageName,
                 effectFlowParamName = effect?.flowParamName,
                 effectHasNavParam = effect?.hasNavParam ?: false,
+                topBar = topBar,
+                bottomBar = bottomBar,
                 roleExtraParams = roleExtras,
                 resolverExtraParams = resolverExtras,
             ),
@@ -667,6 +693,115 @@ internal class EntryModelReader(
         val explicit: Boolean,
         val annotationName: String,
     )
+
+    private enum class ChromeKind(val annotationFq: String, val annotationName: String, val duplicateCode: String) {
+        TOP(TOP_BAR_FQ, "TopBar", "MV19"),
+        BOTTOM(BOTTOM_BAR_FQ, "BottomBar", "MV20"),
+    }
+
+    private data class ChromeFun(
+        val simpleName: String,
+        val packageName: String,
+        val routeFq: String,
+        val kind: ChromeKind,
+        val stateTypeName: TypeName,
+        val intentTypeName: TypeName,
+    )
+
+    /** Reads temporary chrome strictly by explicit route; no State/Intent inference is permitted. */
+    private fun readChromeFuns(): List<ChromeFun> {
+        val chrome = ChromeKind.entries.flatMap { kind ->
+            resolver.getSymbolsWithAnnotation(kind.annotationFq)
+                .filterIsInstance<KSFunctionDeclaration>()
+                .distinctBy { it.declarationIdentity() }
+                .flatMap { fn ->
+                    fn.annotations
+                        .filter { it.fqName() == kind.annotationFq }
+                        .mapNotNull { annotation -> readChromeFun(fn, annotation, kind) }
+                }
+                .toList()
+        }
+
+        chrome.groupBy { it.kind to it.routeFq }.forEach { (_, providers) ->
+            if (providers.size > 1) {
+                val first = providers.first()
+                error(
+                    first.kind.duplicateCode,
+                    "route ${first.routeFq} has multiple @${first.kind.annotationName} providers: " +
+                        providers.joinToString { it.simpleName },
+                )
+            }
+        }
+        return chrome
+    }
+
+    private fun readChromeFun(fn: KSFunctionDeclaration, annotation: KSAnnotation, kind: ChromeKind): ChromeFun? {
+        val simpleName = fn.simpleName.asString()
+        val routeFq = annotation.classArg("route")?.declaration?.qualifiedName?.asString()
+        if (routeFq == null) {
+            error("MV21", "@${kind.annotationName} $simpleName has an unresolved route declaration")
+            return null
+        }
+
+        val stateParam = fn.parameters.firstOrNull { it.name?.asString() == "state" }
+        val onIntentParam = fn.parameters.firstOrNull { it.name?.asString() == "onIntent" }
+        val unsupported = fn.parameters.filter { it != stateParam && it != onIntentParam }
+        if (stateParam == null || onIntentParam == null || unsupported.isNotEmpty()) {
+            error(
+                "MV22",
+                "@${kind.annotationName} $simpleName for route $routeFq must declare exactly " +
+                    "(state, onIntent); unsupported parameters: " +
+                    unsupported.joinToString { it.name?.asString().orEmpty() }.ifEmpty { "none" },
+            )
+            return null
+        }
+
+        val onIntentType = onIntentParam.type.resolve()
+        val returnsUnit = onIntentType.arguments.getOrNull(1)?.type?.resolve()?.fqOf() == UNIT_FQ
+        val intentType = onIntentType.arguments.getOrNull(0)?.type?.resolve()
+        if (onIntentType.declaration.qualifiedName?.asString() != FUNCTION1_FQ || !returnsUnit || intentType == null) {
+            error(
+                "MV22",
+                "@${kind.annotationName} $simpleName for route $routeFq has invalid onIntent type " +
+                    "(${onIntentType.fqOf()}); expected (Intent) -> Unit",
+            )
+            return null
+        }
+
+        return ChromeFun(
+            simpleName = simpleName,
+            packageName = fn.packageName.asString(),
+            routeFq = routeFq,
+            kind = kind,
+            stateTypeName = stateParam.type.resolve().toTypeName(),
+            intentTypeName = intentType.toTypeName(),
+        )
+    }
+
+    private fun validateChromeProvider(
+        chrome: ChromeFun?,
+        routeFq: String,
+        vm: ViewModelModel,
+    ): MviChromeProviderModel? {
+        if (chrome == null) return null
+        if (chrome.stateTypeName != vm.stateTypeName) {
+            error(
+                "MV22",
+                "@${chrome.kind.annotationName} ${chrome.simpleName} for route $routeFq has state type " +
+                    "${chrome.stateTypeName}, but ${vm.vmSimpleName} declares ${vm.stateTypeName}",
+            )
+            return null
+        }
+        if (chrome.intentTypeName != vm.intentTypeName) {
+            error(
+                "MV22",
+                "@${chrome.kind.annotationName} ${chrome.simpleName} for route $routeFq has onIntent type " +
+                    "${chrome.intentTypeName}, but ${vm.vmSimpleName} declares ${vm.intentTypeName}",
+            )
+            return null
+        }
+        return MviChromeProviderModel(chrome.simpleName, chrome.packageName)
+    }
 
     /**
      * Reads route-explicit handlers first, then resolves each legacy handler only when its exact

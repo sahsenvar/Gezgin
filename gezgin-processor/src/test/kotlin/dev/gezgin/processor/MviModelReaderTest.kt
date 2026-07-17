@@ -8,6 +8,7 @@ import dev.gezgin.processor.CompileHarness.generatedSourceFor
 import dev.gezgin.processor.fixtures.HILT_STUBS
 import dev.gezgin.processor.fixtures.MV7_NO_NAV_SOURCE
 import dev.gezgin.processor.fixtures.MVI_SOURCE
+import dev.gezgin.processor.fixtures.ROUTE_CHROME_MVI_SOURCE
 import dev.gezgin.processor.fixtures.ROUTE_EXPLICIT_MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
@@ -78,7 +79,7 @@ class MviModelReaderTest {
             dump,
             "mvientry CounterContent pkg=dev.gezgin.mviui route=dev.gezgin.mviui.CounterRoute " +
                 "kind=SCREEN x=Counter noBack=false vm=dev.gezgin.mviui.CounterViewModel " +
-                "effect=CounterEffects effectNav=false role=- resolver=-",
+                "effect=CounterEffects effectNav=false top=- bottom=- role=- resolver=-",
         )
     }
 
@@ -90,14 +91,124 @@ class MviModelReaderTest {
             dump,
             "mvientry SharedContent pkg=dev.gezgin.routeexplicit route=dev.gezgin.routeexplicit.G.A " +
                 "kind=SCREEN x=A noBack=false vm=dev.gezgin.routeexplicit.VmA " +
-                "effect=EffectsA effectNav=true role=- resolver=-",
+                "effect=EffectsA effectNav=true top=- bottom=- role=- resolver=-",
         )
         assertContains(
             dump,
             "mvientry SharedContent pkg=dev.gezgin.routeexplicit route=dev.gezgin.routeexplicit.G.B " +
                 "kind=SCREEN x=B noBack=false vm=dev.gezgin.routeexplicit.VmB " +
-                "effect=EffectsB effectNav=true role=- resolver=-",
+                "effect=EffectsB effectNav=true top=- bottom=- role=- resolver=-",
         )
+    }
+
+    @Test
+    fun `route chrome model supports both providers and a content-only sibling route`() {
+        val dump = dumpOf(SourceFile.kotlin("RouteChrome.kt", ROUTE_CHROME_MVI_SOURCE))
+        val routeA = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routechrome.G.A" in it }
+        val routeB = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routechrome.G.B" in it }
+
+        assertContains(routeA, "top=RouteATopBar bottom=RouteABottomBar", message = routeA)
+        assertContains(routeB, "top=- bottom=-", message = routeB)
+    }
+
+    @Test
+    fun `route chrome model supports top-only and bottom-only bindings`() {
+        val topOnly = dumpOf(
+            SourceFile.kotlin(
+                "TopOnly.kt",
+                ROUTE_CHROME_MVI_SOURCE.replace(
+                    """
+                    @BottomBar(G.A::class)
+                    @Composable
+                    fun RouteABottomBar(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+                    """.trimIndent(),
+                    "",
+                ),
+            ),
+        ).first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routechrome.G.A" in it }
+        val bottomOnly = dumpOf(
+            SourceFile.kotlin(
+                "BottomOnly.kt",
+                ROUTE_CHROME_MVI_SOURCE.replace(
+                    """
+                    @TopBar(G.A::class)
+                    @Composable
+                    fun RouteATopBar(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+                    """.trimIndent(),
+                    "",
+                ),
+            ),
+        ).first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routechrome.G.A" in it }
+
+        assertContains(topOnly, "top=RouteATopBar bottom=-", message = topOnly)
+        assertContains(bottomOnly, "top=- bottom=RouteABottomBar", message = bottomOnly)
+    }
+
+    @Test
+    fun `repeatable TopBar binds one provider independently to two routes`() {
+        val source = ROUTE_CHROME_MVI_SOURCE.replace(
+            "@TopBar(G.A::class)",
+            "@TopBar(G.A::class)\n    @TopBar(G.B::class)",
+        )
+        val dump = dumpOf(SourceFile.kotlin("RepeatableTop.kt", source))
+        val routeA = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routechrome.G.A" in it }
+        val routeB = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routechrome.G.B" in it }
+
+        assertContains(routeA, "top=RouteATopBar", message = routeA)
+        assertContains(routeB, "top=RouteATopBar", message = routeB)
+    }
+
+    @Test
+    fun `duplicate TopBar for one route fails with route and declarations`() {
+        val source = ROUTE_CHROME_MVI_SOURCE + "\n" + """
+
+            @TopBar(G.A::class)
+            @Composable
+            fun DuplicateTop(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+        """.trimIndent()
+
+        assertViolationMentions("MV19", source, "dev.gezgin.routechrome.G.A", "RouteATopBar", "DuplicateTop")
+    }
+
+    @Test
+    fun `duplicate BottomBar for one route fails with route and declarations`() {
+        val source = ROUTE_CHROME_MVI_SOURCE + "\n" + """
+
+            @BottomBar(G.A::class)
+            @Composable
+            fun DuplicateBottom(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+        """.trimIndent()
+
+        assertViolationMentions("MV20", source, "dev.gezgin.routechrome.G.A", "RouteABottomBar", "DuplicateBottom")
+    }
+
+    @Test
+    fun `chrome provider route without MVI Screen fails with route and declaration`() {
+        val source = ROUTE_CHROME_MVI_SOURCE
+            .replace("data object B : G", "data object B : G\n\n        data object C : G") + "\n" + """
+
+            @TopBar(G.C::class)
+            @Composable
+            fun UnknownTop(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+        """.trimIndent()
+
+        assertViolationMentions("MV21", source, "dev.gezgin.routechrome.G.C", "UnknownTop")
+    }
+
+    @Test
+    fun `chrome provider State and Intent must match its route ViewModel`() {
+        val badState = ROUTE_CHROME_MVI_SOURCE
+            .replace("data class SharedState", "data class OtherState(val value: String)\n    data class SharedState")
+            .replace("fun RouteATopBar(state: SharedState", "fun RouteATopBar(state: OtherState")
+        val badIntent = ROUTE_CHROME_MVI_SOURCE
+            .replace("sealed interface SharedIntent", "sealed interface OtherIntent\n    sealed interface SharedIntent")
+            .replace(
+                "fun RouteABottomBar(state: SharedState, onIntent: (SharedIntent) -> Unit)",
+                "fun RouteABottomBar(state: SharedState, onIntent: (OtherIntent) -> Unit)",
+            )
+
+        assertViolationMentions("MV22", badState, "dev.gezgin.routechrome.G.A", "RouteATopBar", "OtherState")
+        assertViolationMentions("MV22", badIntent, "dev.gezgin.routechrome.G.A", "RouteABottomBar", "OtherIntent")
     }
 
     @Test

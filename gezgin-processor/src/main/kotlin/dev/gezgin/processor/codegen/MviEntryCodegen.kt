@@ -25,6 +25,12 @@ private val LOCAL_ENTRY_ID = MemberName(COMPOSE_PKG, "LocalGezginEntryId")
 private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigator")
 private val LOCAL_SHEET_CONTROLLER = MemberName(COMPOSE_PKG, "LocalGezginSheetController")
 private val COMPOSABLE = ClassName(COMPOSE_RUNTIME_PKG, "Composable")
+private val COLUMN = MemberName("androidx.compose.foundation.layout", "Column")
+private val FILL_MAX_WIDTH = MemberName("androidx.compose.foundation.layout", "fillMaxWidth")
+private val IME = MemberName("androidx.compose.foundation.layout", "ime")
+private val WINDOW_INSETS = ClassName("androidx.compose.foundation.layout", "WindowInsets")
+private val MODIFIER = ClassName("androidx.compose.ui", "Modifier")
+private val LOCAL_DENSITY = ClassName("androidx.compose.ui.platform", "LocalDensity")
 
 // State/effect observation — the JB `androidx.lifecycle.*` coordinates pinned in gezgin-mvi (Faz-5.0);
 // emitted as FQ strings only (gezgin-processor gains no dep on them), mirroring EntryCodegen.
@@ -259,9 +265,32 @@ internal object MviEntryCodegen {
             )
         }
 
+        if (mvi.bottomBar != null) {
+            body.add("val imeVisible = %T.%M.getBottom(%T.current) > 0\n", WINDOW_INSETS, IME, LOCAL_DENSITY)
+        }
+
+        // Migration-only ZAD compatibility wrapper. The nested Column preserves a ColumnScope receiver
+        // for existing screen bodies while keeping top/content/bottom ordering route-local.
+        body.add("%M {\n", COLUMN).indent()
+        mvi.topBar?.let { topBar ->
+            body.add("%M(%L)\n", MemberName(topBar.packageName, topBar.functionSimpleName), chromeArgs())
+        }
+        // `weight` is a ColumnScope member extension. Emitting a top-level import resolves Compose's
+        // internal RowColumnParentData property on Android; keep the call literal so the outer Column
+        // receiver supplies the public ColumnScope.weight extension.
+        body.add("%M(%T.%M().weight(1f)) {\n", COLUMN, MODIFIER, FILL_MAX_WIDTH).indent()
         body.add("%M(%L)\n", contentFun, contentArgs(mvi))
+        body.unindent().add("}\n")
+        mvi.bottomBar?.let { bottomBar ->
+            body.add("if (!imeVisible) {\n").indent()
+            body.add("%M(%L)\n", MemberName(bottomBar.packageName, bottomBar.functionSimpleName), chromeArgs())
+            body.unindent().add("}\n")
+        }
+        body.unindent().add("}\n")
         return body.unindent().add("}\n").build()
     }
+
+    private fun chromeArgs(): CodeBlock = CodeBlock.of("state = state, onIntent = vm::onIntent")
 
     /** `state = state, onIntent = vm::onIntent[, <extra> = <value>…]` — ALL NAMED (MN1, order-independent). */
     private fun contentArgs(mvi: MviEntryModel): CodeBlock {

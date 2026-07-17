@@ -15,6 +15,7 @@ import dev.gezgin.processor.fixtures.KOIN_PROBLEM1_MVI_SOURCE
 import dev.gezgin.processor.fixtures.KOIN_STUBS
 import dev.gezgin.processor.fixtures.MVI_NAV_SOURCE
 import dev.gezgin.processor.fixtures.MVI_SOURCE
+import dev.gezgin.processor.fixtures.ROUTE_CHROME_MVI_SOURCE
 import dev.gezgin.processor.fixtures.ROUTE_EXPLICIT_MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHEET_MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
@@ -85,6 +86,76 @@ class MviEntryCodegenTest {
         assertContains(result.messages, "SharedContent", message = result.messages)
         assertContains(result.messages, "dev.gezgin.routeexplicit.G.A", message = result.messages)
         assertContains(result.messages, "dev.gezgin.routeexplicit.G.B", message = result.messages)
+    }
+
+    @Test
+    fun `route-local entries wrap shared ColumnScope content with only their own chrome`() {
+        val text = generateMvi(SourceFile.kotlin("RouteChrome.kt", ROUTE_CHROME_MVI_SOURCE))
+
+        assertContains(text, "provideAEntry(")
+        assertContains(text, "provideBEntry(")
+        assertContains(text, "val vm = viewModel(route)")
+        assertContains(text, "EffectsA(effects = vm.effects, nav = nav)")
+        assertContains(text, "EffectsB(effects = vm.effects, nav = nav)")
+        assertContains(text, "val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0")
+        assertFalse("import androidx.compose.foundation.layout.weight" in text, text)
+        val normalized = text.lineSequence().joinToString("\n") { it.trim() }
+        assertContains(
+            normalized,
+            """
+            Column {
+            RouteATopBar(state = state, onIntent = vm::onIntent)
+            Column(Modifier.fillMaxWidth().weight(1f)) {
+            SharedContent(state = state, onIntent = vm::onIntent)
+            }
+            if (!imeVisible) {
+            RouteABottomBar(state = state, onIntent = vm::onIntent)
+            }
+            }
+            """.trimIndent(),
+        )
+        val routeBBody = text.substringAfter("fun GezginEntryScope.provideBEntry").substringBefore("fun GezginEntryScope.")
+        assertContains(routeBBody, "SharedContent(state = state, onIntent = vm::onIntent)")
+        assertFalse("RouteATopBar" in routeBBody, routeBBody)
+        assertFalse("RouteABottomBar" in routeBBody, routeBBody)
+        assertFalse("imeVisible" in routeBBody, routeBBody)
+    }
+
+    @Test
+    fun `top-only generated entry has no IME observation or imports`() {
+        val source = ROUTE_CHROME_MVI_SOURCE.replace(
+            """
+            @BottomBar(G.A::class)
+            @Composable
+            fun RouteABottomBar(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+            """.trimIndent(),
+            "",
+        )
+        val text = generateMvi(SourceFile.kotlin("TopOnly.kt", source))
+
+        assertContains(text, "RouteATopBar(state = state, onIntent = vm::onIntent)")
+        assertContains(text, "Column(Modifier.fillMaxWidth().weight(1f))")
+        assertFalse("WindowInsets" in text, text)
+        assertFalse("LocalDensity" in text, text)
+        assertFalse("imeVisible" in text, text)
+    }
+
+    @Test
+    fun `bottom-only generated entry observes IME and preserves content-before-bottom order`() {
+        val source = ROUTE_CHROME_MVI_SOURCE.replace(
+            """
+            @TopBar(G.A::class)
+            @Composable
+            fun RouteATopBar(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+            """.trimIndent(),
+            "",
+        )
+        val text = generateMvi(SourceFile.kotlin("BottomOnly.kt", source))
+        val body = text.substringAfter("fun GezginEntryScope.provideAEntry").substringBefore("fun GezginEntryScope.")
+
+        assertTrue(body.indexOf("SharedContent(") < body.indexOf("RouteABottomBar("), body)
+        assertContains(body, "if (!imeVisible)")
+        assertContains(text, "import androidx.compose.foundation.layout.ime")
     }
 
     @Test
