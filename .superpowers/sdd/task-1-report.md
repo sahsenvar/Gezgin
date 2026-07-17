@@ -13,9 +13,11 @@ own Gradle 9.4.1 wrapper, and uses AndroidX Navigation 3 `1.0.0` plus lifecycle 
 
 - `PlatformDisplay.android.kt` now adapts Gezgin's already-decorated entries to AndroidX Navigation
   3 `1.0.0`'s `backStack`/`entryProvider`/singular `sceneStrategy` API. The private route wrapper
-  holds `contentKey: Any` directly: it does not narrow the opaque Nav3 key to `Long`, and preserves
-  the original content-key instance, metadata, entry order, and content resolution. The small
-  internal `adaptAndroidNavDisplayEntries` helper makes that adapter contract directly testable;
+  holds `contentKey: Any` directly and adds a stable per-list occurrence discriminator. Its
+  `mapIndexed` construction preserves duplicate equal opaque keys as distinct, ordered entries
+  without narrowing the Nav3 key to `Long`; every wrapped entry retains the exact original
+  content-key instance, metadata, and content resolution. The small internal
+  `adaptAndroidNavDisplayEntries` helper makes that adapter contract directly testable;
   `entryDecorators = emptyList()` still prevents a second decoration pass.
 - `gezgin-core` and `gezgin-mvi` publish Android release variants to Maven Local. The Android
   source sets export AndroidX Navigation 3/lifecycle artifacts while JVM source sets retain the
@@ -62,7 +64,15 @@ previous Android production call used the newer `NavDisplay(entries = ..., scene
 - `AndroidNavDisplayAdapterTest` is an Android local Robolectric/Compose test run by
   `:gezgin-core:testDebugUnitTest`; it uses a non-`Long` data-class content key and proves the
   adapter preserves that exact key instance, metadata instances, input order, and the original
-  entry's resolved composable content. It adds no application or custom Activity harness.
+  entry's resolved composable content. Its duplicate-key case gives two entries the same opaque
+  key and proves count/order, both original keys, isolated metadata, and both rendered contents.
+  It adds no application or custom Activity harness.
+- Re-review TDD evidence: before the production change,
+  `./gradlew :gezgin-core:testDebugUnitTest --tests dev.gezgin.core.compose.AndroidNavDisplayAdapterTest --rerun-tasks`
+  failed with `adapter preserves duplicate opaque content keys as separate ordered entries` at the
+  `count == 2` assertion, reproducing `associate` collapsing the first equal key. After adding the
+  occurrence discriminator and indexed list construction, the same command exited `0` with
+  `BUILD SUCCESSFUL`.
 - Existing desktop Compose scene tests remain the overlay coverage: `GezginDisplaySceneTest` proves
   dialog/fullscreen overlays retain the underlaid screen and dismiss through back, while
   `GezginBottomSheetSceneTest` covers the bottom-sheet overlay/dismiss path.
@@ -79,7 +89,7 @@ All commands below exited `0` on the final working tree. Android SDK preflight p
 
 | Command | Result |
 |---|---:|
-| `./gradlew :gezgin-core:testDebugUnitTest --tests dev.gezgin.core.compose.AndroidNavDisplayAdapterTest` | `0` (1 test, 0 failures) |
+| `./gradlew :gezgin-core:testDebugUnitTest --tests dev.gezgin.core.compose.AndroidNavDisplayAdapterTest --rerun-tasks` | `0` (2 tests, 0 failures) |
 | `./gradlew :gezgin-processor:test --tests dev.gezgin.processor.Faz8SpikeTest` | `0` |
 | `./gradlew :gezgin-core:publishToMavenLocal :gezgin-mvi:publishToMavenLocal :gezgin-processor:publishToMavenLocal` | `0` |
 | `./compatibility/zad-consumer/gradlew -p compatibility/zad-consumer clean compileDebugKotlin --stacktrace` | `0` |

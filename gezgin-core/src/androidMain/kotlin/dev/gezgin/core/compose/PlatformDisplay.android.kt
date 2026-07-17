@@ -11,7 +11,10 @@ import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.Route
 
-private data class AndroidNavDisplayKey(val contentKey: Any) : Route
+private data class AndroidNavDisplayKey(
+    val contentKey: Any,
+    val occurrence: Int,
+) : Route
 
 internal data class AndroidNavDisplayState(
     val backStack: List<Route>,
@@ -23,8 +26,8 @@ internal data class AndroidNavDisplayState(
  * entry under a private route key while leaving its opaque `contentKey`, metadata, and content intact.
  */
 internal fun adaptAndroidNavDisplayEntries(entries: List<NavEntry<Route>>): AndroidNavDisplayState {
-    val entriesByKey = entries.associate { entry ->
-        val key: Route = AndroidNavDisplayKey(entry.contentKey)
+    val adaptedEntries = entries.mapIndexed { occurrence, entry ->
+        val key: Route = AndroidNavDisplayKey(entry.contentKey, occurrence)
         key to NavEntry(
             key = key,
             contentKey = entry.contentKey,
@@ -32,8 +35,8 @@ internal fun adaptAndroidNavDisplayEntries(entries: List<NavEntry<Route>>): Andr
         ) { entry.Content() }
     }
     return AndroidNavDisplayState(
-        backStack = entriesByKey.keys.toList(),
-        entriesByKey = entriesByKey,
+        backStack = adaptedEntries.map { it.first },
+        entriesByKey = adaptedEntries.toMap(),
     )
 }
 

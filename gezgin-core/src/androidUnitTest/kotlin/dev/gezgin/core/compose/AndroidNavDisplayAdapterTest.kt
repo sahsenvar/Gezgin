@@ -1,6 +1,7 @@
 package dev.gezgin.core.compose
 
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -46,6 +47,42 @@ class AndroidNavDisplayAdapterTest {
 
         composeRule.setContent { adaptedFirst.Content() }
         composeRule.onNodeWithText("first-content").assertIsDisplayed()
+    }
+
+    @Test
+    fun `adapter preserves duplicate opaque content keys as separate ordered entries`() {
+        val opaqueKey = OpaqueContentKey("shared")
+        val firstMetadata = mapOf("owner" to "first")
+        val secondMetadata = mapOf("owner" to "second")
+        val first = NavEntry<Route>(
+            key = FirstRoute,
+            contentKey = opaqueKey,
+            metadata = firstMetadata,
+        ) { BasicText("duplicate-first-content") }
+        val second = NavEntry<Route>(
+            key = SecondRoute,
+            contentKey = opaqueKey,
+            metadata = secondMetadata,
+        ) { BasicText("duplicate-second-content") }
+
+        val adapted = adaptAndroidNavDisplayEntries(listOf(first, second))
+
+        assertEquals(2, adapted.backStack.size)
+        val adaptedFirst = adapted.entriesByKey.getValue(adapted.backStack[0])
+        val adaptedSecond = adapted.entriesByKey.getValue(adapted.backStack[1])
+        assertSame(opaqueKey, adaptedFirst.contentKey)
+        assertSame(opaqueKey, adaptedSecond.contentKey)
+        assertSame(firstMetadata, adaptedFirst.metadata)
+        assertSame(secondMetadata, adaptedSecond.metadata)
+
+        composeRule.setContent {
+            Column {
+                adaptedFirst.Content()
+                adaptedSecond.Content()
+            }
+        }
+        composeRule.onNodeWithText("duplicate-first-content").assertIsDisplayed()
+        composeRule.onNodeWithText("duplicate-second-content").assertIsDisplayed()
     }
 
     private data class OpaqueContentKey(val value: String)
