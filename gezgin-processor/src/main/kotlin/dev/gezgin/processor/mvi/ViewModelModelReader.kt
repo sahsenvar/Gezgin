@@ -15,6 +15,7 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 
 internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.MviViewModel"
 internal const val SCREEN_EFFECT_FQ = "dev.gezgin.mvi.annotation.ScreenEffect"
+internal const val EFFECT_HANDLER_FQ = "dev.gezgin.mvi.annotation.EffectHandler"
 internal const val GEZGIN_MVI_FQ = "dev.gezgin.mvi.GezginMvi"
 
 // DI-detection FQNs (§10.1, Faz-5.0 spike) — read as strings, no compile dep on Hilt/Koin.

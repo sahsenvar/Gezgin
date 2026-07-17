@@ -10,6 +10,7 @@ import kotlin.reflect.KClass
  * without reading generated code. Marks a plain full-screen destination.
  */
 @Target(AnnotationTarget.FUNCTION)
+@Repeatable
 public annotation class Screen(val route: KClass<out Route>)
 
 /**

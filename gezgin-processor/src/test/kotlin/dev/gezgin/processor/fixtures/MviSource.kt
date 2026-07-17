@@ -51,3 +51,59 @@ val MVI_SOURCE = """
     fun CounterEffects(effects: Flow<CounterEffect>) {
     }
 """.trimIndent()
+
+/** Task 3 route-explicit fixture: one composable binds two routes with route-local VM/effect/nav types. */
+val ROUTE_EXPLICIT_MVI_SOURCE = """
+    package dev.gezgin.routeexplicit
+
+    import androidx.compose.runtime.Composable
+    import dev.gezgin.core.Route
+    import dev.gezgin.core.annotation.GoTo
+    import dev.gezgin.core.annotation.NavGraph
+    import dev.gezgin.core.annotation.Screen
+    import dev.gezgin.mvi.GezginMvi
+    import dev.gezgin.mvi.annotation.EffectHandler
+    import dev.gezgin.mvi.annotation.MviViewModel
+    import kotlinx.coroutines.flow.Flow
+    import kotlinx.coroutines.flow.MutableStateFlow
+    import kotlinx.coroutines.flow.StateFlow
+
+    @NavGraph
+    sealed interface G : Route {
+        @GoTo(B::class)
+        data object A : G
+
+        @GoTo(A::class)
+        data object B : G
+    }
+
+    data class SharedState(val value: String)
+    sealed interface SharedIntent { data object Submit : SharedIntent }
+    data class EffectA(val value: String)
+    data class EffectB(val value: Int)
+
+    @MviViewModel(G.A::class)
+    class VmA : GezginMvi<SharedState, SharedIntent, EffectA> {
+        override val uiState: StateFlow<SharedState> = MutableStateFlow(SharedState("a"))
+        override fun onIntent(intent: SharedIntent) {}
+    }
+
+    @MviViewModel(G.B::class)
+    class VmB : GezginMvi<SharedState, SharedIntent, EffectB> {
+        override val uiState: StateFlow<SharedState> = MutableStateFlow(SharedState("b"))
+        override fun onIntent(intent: SharedIntent) {}
+    }
+
+    @Screen(G.A::class)
+    @Screen(G.B::class)
+    @Composable
+    fun SharedContent(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+
+    @EffectHandler(G.A::class)
+    @Composable
+    fun EffectsA(effects: Flow<EffectA>, nav: ANavigator) {}
+
+    @EffectHandler(G.B::class)
+    @Composable
+    fun EffectsB(nav: BNavigator, effects: Flow<EffectB>) {}
+""".trimIndent()

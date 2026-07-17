@@ -29,17 +29,17 @@ internal data class MviExtraParam(val name: String, val typeFq: String, val type
  */
 internal data class MviEntryModel(
     val vm: ViewModelModel,
-    /** Matched `@ScreenEffect` composable's simple name (linked by effect type), or null if none. */
+    /** Matched route-bound effect composable's simple name, or null if none. */
     val effectFunSimpleName: String?,
-    /** The `@ScreenEffect` function's own package (may differ from the content's), if [effectFunSimpleName] != null. */
+    /** The effect function's own package (may differ from the content's), if [effectFunSimpleName] != null. */
     val effectFunPackageName: String?,
     /**
-     * The matched `@ScreenEffect`'s `Flow<E>` parameter NAME (e.g. `effects`), so 5.2 can emit the effect
+     * The matched effect function's `Flow<E>` parameter NAME (e.g. `effects`), so 5.2 can emit the effect
      * call with NAMED args (`XEffects(<flowName> = vm.effects[, nav = nav])`) — MN1: kills the
      * positional-order hazard when a user declares `fun XEffects(nav: …, effects: Flow<E>)`. Null if no effect.
      */
     val effectFlowParamName: String?,
-    /** The matched `@ScreenEffect` declares an optional `nav`-named param (5.2 wires the navigator into it). */
+    /** The matched effect function declares an optional `nav`-named param (5.2 wires the navigator into it). */
     val effectHasNavParam: Boolean,
     val roleExtraParams: List<MviExtraParam>,
     val resolverExtraParams: List<MviExtraParam>,

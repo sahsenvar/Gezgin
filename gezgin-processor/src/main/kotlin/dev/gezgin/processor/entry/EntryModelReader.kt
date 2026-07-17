@@ -16,6 +16,7 @@ import dev.gezgin.processor.codegen.NavigatorProbe
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
+import dev.gezgin.processor.mvi.EFFECT_HANDLER_FQ
 import dev.gezgin.processor.mvi.SCREEN_EFFECT_FQ
 import dev.gezgin.processor.mvi.ViewModelModel
 import dev.gezgin.processor.mvi.VmDiClassifier
@@ -152,16 +153,29 @@ internal class EntryModelReader(
     private val seenRouteFqs = mutableMapOf<String, String>() // routeFq -> first function's simple name
     private val seenProvideNames = mutableMapOf<Pair<String, String>, String>() // (package, x) -> first function's simple name
     private val matchedVmRoutes = mutableSetOf<String>() // routes whose @MviViewModel got a matching content (for MV3)
+    private val declaredMviScreenRoutes = mutableSetOf<String>()
 
     fun read(): Pair<List<EntryFunctionModel>, Boolean> {
-        // Scan @ScreenEffect binders once (also runs MV6); MVI entries wire them by effect type.
-        val effectFuns = readScreenEffectFuns()
+        val effectFuns = readEffectFuns()
 
         val entries = KIND_BY_ANNOTATION_FQ.flatMap { (annotationFq, kind) ->
             resolver.getSymbolsWithAnnotation(annotationFq)
                 .filterIsInstance<KSFunctionDeclaration>()
-                .mapNotNull { fn -> buildEntry(fn, annotationFq, kind, effectFuns) }
+                .distinctBy { it.qualifiedName?.asString() }
+                .flatMap { fn ->
+                    fn.annotations
+                        .filter { it.fqName() == annotationFq }
+                        .mapNotNull { annotation -> buildEntry(fn, annotation, kind, effectFuns) }
+                }
                 .toList()
+        }
+
+        effectFuns.filter { it.explicit && it.routeFq !in declaredMviScreenRoutes }.forEach { effect ->
+            error(
+                "MV15",
+                "@EffectHandler ${effect.simpleName} targets route ${effect.routeFq}, but that route has no " +
+                    "@Screen(state, onIntent) declaration in this module",
+            )
         }
 
         // MV3 — every @MviViewModel must have a matching content in this module (§10.1 same-module triple).
@@ -181,20 +195,19 @@ internal class EntryModelReader(
     /** Dispatches on parameter shape: MVI-mode iff BOTH `state` and `onIntent` params are present. */
     private fun buildEntry(
         fn: KSFunctionDeclaration,
-        annotationFq: String,
+        annotation: KSAnnotation,
         kind: EntryKindModel,
         effectFuns: List<EffectFun>,
     ): EntryFunctionModel? {
         val paramNames = fn.parameters.mapNotNull { it.name?.asString() }.toSet()
         val isMvi = "state" in paramNames && "onIntent" in paramNames
-        return if (isMvi) buildMviEntry(fn, annotationFq, kind, effectFuns) else buildCoreEntry(fn, annotationFq, kind)
+        return if (isMvi) buildMviEntry(fn, annotation, kind, effectFuns) else buildCoreEntry(fn, annotation, kind)
     }
 
     // region Core-mode (Task 3.4 — UNCHANGED)
 
-    private fun buildCoreEntry(fn: KSFunctionDeclaration, annotationFq: String, kind: EntryKindModel): EntryFunctionModel? {
+    private fun buildCoreEntry(fn: KSFunctionDeclaration, annotation: KSAnnotation, kind: EntryKindModel): EntryFunctionModel? {
         val fnName = fn.simpleName.asString()
-        val annotation = fn.annotations.first { it.fqName() == annotationFq }
         val params = fn.parameters
 
         val routeParam = params.firstOrNull { it.name?.asString() == "route" }
@@ -342,12 +355,11 @@ internal class EntryModelReader(
 
     private fun buildMviEntry(
         fn: KSFunctionDeclaration,
-        annotationFq: String,
+        annotation: KSAnnotation,
         kind: EntryKindModel,
         effectFuns: List<EffectFun>,
     ): EntryFunctionModel? {
         val fnName = fn.simpleName.asString()
-        val annotation = fn.annotations.first { it.fqName() == annotationFq }
         val params = fn.parameters
         val stateParam = params.first { it.name?.asString() == "state" }
         val onIntentParam = params.first { it.name?.asString() == "onIntent" }
@@ -370,6 +382,7 @@ internal class EntryModelReader(
 
         val routeFq = requireNotNull(routeDecl?.qualifiedName?.asString())
         val routeModel = routesByFq[routeFq]
+        declaredMviScreenRoutes += routeFq
 
         // SC4 — shared with core-mode: a route may have only ONE content registration.
         val previousOwner = seenRouteFqs[routeFq]
@@ -424,7 +437,11 @@ internal class EntryModelReader(
         // resolves fully (unlike a same-module navigator type — cf. VmCtorParam's FQ-only note).
         val stateTypeName = stateParam.type.resolve().toTypeName()
         if (stateTypeName != vm.stateTypeName) {
-            error("MV5", "$fnName: state parameter type ($stateTypeName) does not match VM ${vm.vmSimpleName}'s state type (${vm.stateTypeName})")
+            error(
+                "MV5",
+                "$fnName for route $routeFq: state parameter type ($stateTypeName) does not match VM " +
+                    "${vm.vmSimpleName}'s state type (${vm.stateTypeName})",
+            )
             return null
         }
         val onIntentType = onIntentParam.type.resolve()
@@ -440,7 +457,11 @@ internal class EntryModelReader(
         }
         val intentArgTypeName = onIntentType.arguments.getOrNull(0)?.type?.resolve()?.toTypeName()
         if (intentArgTypeName != vm.intentTypeName) {
-            error("MV5", "$fnName: onIntent intent type ($intentArgTypeName) does not match VM ${vm.vmSimpleName}'s intent type (${vm.intentTypeName})")
+            error(
+                "MV5",
+                "$fnName for route $routeFq: onIntent intent type ($intentArgTypeName) does not match VM " +
+                    "${vm.vmSimpleName}'s intent type (${vm.intentTypeName})",
+            )
             return null
         }
 
@@ -496,11 +517,15 @@ internal class EntryModelReader(
         }
         if (extrasInvalid) return null
 
-        // @ScreenEffect wiring — the effect binder carries no route (§10.1), so it links by effect
-        // type: its Flow<E> E must equal this VM's effect type. Match by TypeName (see the MV5/MV6 note)
-        // so a generic-arg effect mismatch can't wire the wrong VM. (Its E→VM validity is MV6, and two
-        // binders sharing an E are rejected as MV9 — both run once in readScreenEffectFuns.)
-        val effect = effectFuns.firstOrNull { it.effectTypeName == vm.effectTypeName }
+        val effect = effectFuns.firstOrNull { it.routeFq == routeFq }
+        if (effect != null && effect.effectTypeName != vm.effectTypeName) {
+            error(
+                "MV16",
+                "@EffectHandler ${effect.simpleName} for route $routeFq takes Flow<${effect.effectTypeName}>, " +
+                    "but ${vm.vmSimpleName} declares effect ${vm.effectTypeName}",
+            )
+            return null
+        }
 
         val packageName = fn.packageName.asString()
         val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
@@ -541,7 +566,8 @@ internal class EntryModelReader(
         ) {
             error(
                 "MV11",
-                "@ScreenEffect ${effect.simpleName}'s nav parameter type (${effect.navParamTypeFq}) is not this route's " +
+                "${effect.annotationName} ${effect.simpleName} for route $routeFq has nav parameter type " +
+                    "(${effect.navParamTypeFq}), which is not this route's " +
                     "navigator ($navigatorTypeFq); the generated ${effect.simpleName}(effects = …, nav = nav) " +
                     "call would fail with a type mismatch in GezginMviEntries.kt. Use `nav: ${x}Navigator`",
             )
@@ -584,7 +610,7 @@ internal class EntryModelReader(
         )
     }
 
-    /** A `@ScreenEffect fun XEffects(effects: Flow<E>[, nav])` binder, resolved for MVI-entry wiring. */
+    /** One explicit or legacy effect binder, resolved to a route before MVI-entry wiring. */
     private data class EffectFun(
         val simpleName: String,
         val packageName: String,
@@ -597,92 +623,135 @@ internal class EntryModelReader(
         val navParamTypeFq: String?,
         /** `true` if the `nav` param type failed to resolve (same-module, as-yet-ungenerated navigator). */
         val navParamIsError: Boolean,
+        val routeFq: String?,
+        val explicit: Boolean,
+        val annotationName: String,
     )
 
     /**
-     * Reads every `@ScreenEffect` composable and extracts its `Flow<E>` `E` type. Also runs `MV6` (an
-     * effect binder whose `E` matches no `@MviViewModel`'s effect type — compared by [TypeName], NOT
-     * flattened FQ, so a generic-arg mismatch is caught here rather than downstream — or that has no
-     * `Flow<E>` param at all → dangling/mis-typed) and `MV9` (two binders resolving to the SAME `E`,
-     * symmetric to `MV4`: only one could ever wire to a given VM, the other silently dangles).
+     * Reads route-explicit handlers first, then resolves each legacy handler only when its exact
+     * generic `Flow<E>` type identifies one route not occupied by an explicit handler.
      */
-    private fun readScreenEffectFuns(): List<EffectFun> {
-        val vmEffectTypeNames = vmModels.map { it.effectTypeName }.toSet()
-        val effectFuns = resolver.getSymbolsWithAnnotation(SCREEN_EFFECT_FQ)
+    private fun readEffectFuns(): List<EffectFun> {
+        val explicit = resolver.getSymbolsWithAnnotation(EFFECT_HANDLER_FQ)
             .filterIsInstance<KSFunctionDeclaration>()
-            .map { fn ->
-                val simpleName = fn.simpleName.asString()
-                val flowParam = fn.parameters.firstOrNull { p ->
-                    p.type.resolve().declaration.qualifiedName?.asString() == FLOW_FQ
+            .distinctBy { it.qualifiedName?.asString() }
+            .flatMap { fn ->
+                fn.annotations.filter { it.fqName() == EFFECT_HANDLER_FQ }.mapNotNull { annotation ->
+                    val routeFq = annotation.classArg("route")?.declaration?.qualifiedName?.asString()
+                    if (routeFq == null) {
+                        error("MV15", "@EffectHandler ${fn.simpleName.asString()} has an unresolved route declaration")
+                        null
+                    } else {
+                        readEffectFun(fn, routeFq, explicit = true, annotationName = "@EffectHandler")
+                    }
                 }
-                val effectArgType = flowParam?.type?.resolve()?.arguments?.firstOrNull()?.type?.resolve()
-                val effectTypeFq = effectArgType?.fqOf()
-                val effectTypeName = effectArgType?.toTypeName()
-                val flowParamName = flowParam?.name?.asString()
-                val navParam = fn.parameters.firstOrNull { it.name?.asString() == "nav" }
-                val navParamType = navParam?.type?.resolve()
-                val hasNavParam = navParam != null
-
-                // MV11 (Faz-5 recheck MJ5) — the binder signature must be a SUBSET of {Flow<E>, nav}. An
-                // extra param (e.g. `snackbarHostState: SnackbarHostState`) has no wiring path — codegen
-                // emits `XEffects(effects = vm.effects[, nav = nav])` and the generated file dies with a
-                // cryptic "No value passed for parameter". There is no effect-binder resolver mechanism
-                // (unlike content Problem-2), so reject up front with an actionable message.
-                val extraParams = fn.parameters.filter { it != flowParam && it != navParam }
-                if (extraParams.isNotEmpty()) {
-                    error(
-                        "MV11",
-                        "@ScreenEffect $simpleName has unsupported extra parameter(s): " +
-                            extraParams.joinToString { it.name?.asString().orEmpty() } +
-                            "; binder signature must be only fun XEffects(effects: Flow<E>[, nav: XNavigator]) " +
-                            "(effect binders do not have the content resolver-extra mechanism; provide dependencies " +
-                            "such as SnackbarHostState through a Problem-2 resolver in content)",
-                    )
-                }
-
-                when {
-                    effectTypeName == null -> error(
-                        "MV6",
-                        "@ScreenEffect $simpleName does not take a Flow<E> parameter; binder signature must be " +
-                            "fun XEffects(effects: Flow<E>[, nav])",
-                    )
-                    effectTypeName !in vmEffectTypeNames -> error(
-                        "MV6",
-                        "@ScreenEffect $simpleName's Flow<${effectTypeFq?.substringAfterLast('.')}> type does not " +
-                            "match any @MviViewModel GezginMvi effect (E) type",
-                    )
-                }
-
-                EffectFun(
-                    simpleName = simpleName,
-                    packageName = fn.packageName.asString(),
-                    effectTypeName = effectTypeName,
-                    flowParamName = flowParamName,
-                    hasNavParam = hasNavParam,
-                    navParamTypeFq = navParamType?.fqOf(),
-                    navParamIsError = navParamType?.isError ?: false,
-                )
             }
             .toList()
 
-        // MV9 — two @ScreenEffect binders that resolve to the SAME effect type E both pass MV6, but only
-        // ONE can wire to any given VM (buildMviEntry's firstOrNull, over KSP's non-guaranteed traversal
-        // order) — the other silently dangles with no diagnostic. Symmetric to MV4 (two @MviViewModel per
-        // route): reject the ambiguity up front rather than let a binder be silently dropped.
-        effectFuns
-            .groupBy { it.effectTypeName }
-            .forEach { (typeName, binders) ->
-                if (typeName != null && binders.size > 1) {
-                    error(
-                        "MV9",
-                        "multiple @ScreenEffect binders resolve to the same effect (E) type ($typeName): " +
-                            "${binders.joinToString { it.simpleName }}; only one binder may be connected to one E " +
-                            "(otherwise KSP order decides which one binds to the VM and another is silently dropped)",
-                    )
-                }
+        explicit.groupBy { it.routeFq }.forEach { (routeFq, handlers) ->
+            if (handlers.size > 1) {
+                error(
+                    "MV14",
+                    "route $routeFq has multiple @EffectHandler functions: ${handlers.joinToString { it.simpleName }}",
+                )
             }
+        }
 
-        return effectFuns
+        val explicitByRoute = explicit.groupBy { it.routeFq }
+        val legacy = resolver.getSymbolsWithAnnotation(SCREEN_EFFECT_FQ)
+            .filterIsInstance<KSFunctionDeclaration>()
+            .distinctBy { it.qualifiedName?.asString() }
+            .map { readEffectFun(it, routeFq = null, explicit = false, annotationName = "@ScreenEffect") }
+            .toList()
+
+        val resolvedLegacy = legacy.mapNotNull { handler ->
+            val candidates = vmModels.filter { it.effectTypeName == handler.effectTypeName }
+            val overlaps = candidates.filter { it.routeFq in explicitByRoute }
+            when {
+                handler.effectTypeName == null -> null
+                overlaps.isNotEmpty() -> {
+                    val explicitNames = overlaps
+                        .flatMap { explicitByRoute.getValue(it.routeFq) }
+                        .joinToString { it.simpleName }
+                    error(
+                        "MV18",
+                        "legacy @ScreenEffect ${handler.simpleName} overlaps explicit handler(s) $explicitNames for " +
+                            "route(s) ${overlaps.joinToString { it.routeFq }}",
+                    )
+                    null
+                }
+                candidates.isEmpty() -> {
+                    error(
+                        "MV6",
+                        "legacy @ScreenEffect ${handler.simpleName} has no matching VM effect route; route candidates: none",
+                    )
+                    null
+                }
+                candidates.size > 1 -> {
+                    error(
+                        "MV17",
+                        "legacy @ScreenEffect ${handler.simpleName} is ambiguous across routes " +
+                            candidates.joinToString { it.routeFq },
+                    )
+                    null
+                }
+                else -> handler.copy(routeFq = candidates.single().routeFq)
+            }
+        }
+
+        resolvedLegacy.groupBy { it.routeFq }.forEach { (routeFq, handlers) ->
+            if (handlers.size > 1) {
+                error(
+                    "MV9",
+                    "route $routeFq has multiple legacy @ScreenEffect functions: " +
+                        handlers.joinToString { it.simpleName },
+                )
+            }
+        }
+
+        return explicit + resolvedLegacy
+    }
+
+    private fun readEffectFun(
+        fn: KSFunctionDeclaration,
+        routeFq: String?,
+        explicit: Boolean,
+        annotationName: String,
+    ): EffectFun {
+        val simpleName = fn.simpleName.asString()
+        val flowParam = fn.parameters.firstOrNull { p ->
+            p.type.resolve().declaration.qualifiedName?.asString() == FLOW_FQ
+        }
+        val effectArgType = flowParam?.type?.resolve()?.arguments?.firstOrNull()?.type?.resolve()
+        val navParam = fn.parameters.firstOrNull { it.name?.asString() == "nav" }
+        val navParamType = navParam?.type?.resolve()
+        val extraParams = fn.parameters.filter { it != flowParam && it != navParam }
+        if (extraParams.isNotEmpty()) {
+            error(
+                "MV11",
+                "$annotationName $simpleName for route ${routeFq ?: "<legacy-unresolved>"} has unsupported " +
+                    "extra parameter(s): ${extraParams.joinToString { it.name?.asString().orEmpty() }}",
+            )
+        }
+        if (effectArgType == null) {
+            error(
+                "MV6",
+                "$annotationName $simpleName for route ${routeFq ?: "<legacy-unresolved>"} does not take a Flow<E> parameter",
+            )
+        }
+        return EffectFun(
+            simpleName = simpleName,
+            packageName = fn.packageName.asString(),
+            effectTypeName = effectArgType?.toTypeName(),
+            flowParamName = flowParam?.name?.asString(),
+            hasNavParam = navParam != null,
+            navParamTypeFq = navParamType?.fqOf(),
+            navParamIsError = navParamType?.isError ?: false,
+            routeFq = routeFq,
+            explicit = explicit,
+            annotationName = annotationName,
+        )
     }
 
     // endregion

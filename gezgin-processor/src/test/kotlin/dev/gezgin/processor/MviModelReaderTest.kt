@@ -8,6 +8,7 @@ import dev.gezgin.processor.CompileHarness.generatedSourceFor
 import dev.gezgin.processor.fixtures.HILT_STUBS
 import dev.gezgin.processor.fixtures.MV7_NO_NAV_SOURCE
 import dev.gezgin.processor.fixtures.MVI_SOURCE
+import dev.gezgin.processor.fixtures.ROUTE_EXPLICIT_MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -51,6 +52,13 @@ class MviModelReaderTest {
         assertContains(result.messages, "[$code]", message = result.messages)
     }
 
+    private fun assertViolationMentions(code: String, source: String, vararg expected: String) {
+        val result = compileGezgin(SourceFile.kotlin("Bad.kt", source))
+        assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        assertContains(result.messages, "[$code]", message = result.messages)
+        expected.forEach { assertContains(result.messages, it, message = result.messages) }
+    }
+
     // region Positive — dump
 
     @Test
@@ -72,6 +80,138 @@ class MviModelReaderTest {
                 "kind=SCREEN x=Counter noBack=false vm=dev.gezgin.mviui.CounterViewModel " +
                 "effect=CounterEffects effectNav=false role=- resolver=-",
         )
+    }
+
+    @Test
+    fun `repeatable Screen emits one route-local model per route with explicit handlers`() {
+        val dump = dumpOf(SourceFile.kotlin("RouteExplicit.kt", ROUTE_EXPLICIT_MVI_SOURCE))
+
+        assertContains(
+            dump,
+            "mvientry SharedContent pkg=dev.gezgin.routeexplicit route=dev.gezgin.routeexplicit.G.A " +
+                "kind=SCREEN x=A noBack=false vm=dev.gezgin.routeexplicit.VmA " +
+                "effect=EffectsA effectNav=true role=- resolver=-",
+        )
+        assertContains(
+            dump,
+            "mvientry SharedContent pkg=dev.gezgin.routeexplicit route=dev.gezgin.routeexplicit.G.B " +
+                "kind=SCREEN x=B noBack=false vm=dev.gezgin.routeexplicit.VmB " +
+                "effect=EffectsB effectNav=true role=- resolver=-",
+        )
+    }
+
+    @Test
+    fun `duplicate explicit handlers for one route name route and both functions`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE + """
+
+            @EffectHandler(G.A::class)
+            @Composable
+            fun DuplicateEffectsA(effects: Flow<EffectA>) {}
+        """.trimIndent()
+
+        assertViolationMentions("MV14", source, "G.A", "EffectsA", "DuplicateEffectsA")
+    }
+
+    @Test
+    fun `explicit handler route without a Screen names route and function`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
+            "data object B : G",
+            "data object B : G\n\n        data object Orphan : G",
+        ) + """
+
+            @EffectHandler(G.Orphan::class)
+            @Composable
+            fun OrphanEffects(effects: Flow<EffectA>) {}
+        """.trimIndent()
+
+        assertViolationMentions("MV15", source, "G.Orphan", "OrphanEffects")
+    }
+
+    @Test
+    fun `explicit handler effect mismatch names route and function`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
+            "fun EffectsA(effects: Flow<EffectA>, nav: ANavigator)",
+            "fun EffectsA(effects: Flow<EffectB>, nav: ANavigator)",
+        )
+
+        assertViolationMentions("MV16", source, "G.A", "EffectsA", "EffectA", "EffectB")
+    }
+
+    @Test
+    fun `explicit handler navigator mismatch names route and function`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
+            "fun EffectsA(effects: Flow<EffectA>, nav: ANavigator)",
+            "fun EffectsA(effects: Flow<EffectA>, nav: String)",
+        )
+
+        assertViolationMentions("MV11", source, "G.A", "EffectsA", "ANavigator")
+    }
+
+    @Test
+    fun `legacy handler with zero matching routes names function and candidate routes`() {
+        val source = MVI_SOURCE
+            .replace("sealed interface CounterEffect {", "data class OtherEffect(val value: String)\n\n    sealed interface CounterEffect {")
+            .replace("Flow<CounterEffect>)", "Flow<OtherEffect>)")
+
+        assertViolationMentions("MV6", source, "CounterEffects", "route candidates: none")
+    }
+
+    @Test
+    fun `legacy handler with multiple matching routes names every route and function`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE
+            .replace("import dev.gezgin.mvi.annotation.EffectHandler", "import dev.gezgin.mvi.annotation.ScreenEffect")
+            .replace("EffectA(val value: String)", "SharedEffect(val value: String)")
+            .replace("EffectB(val value: Int)", "EffectB(val value: Int)")
+            .replace("GezginMvi<SharedState, SharedIntent, EffectA>", "GezginMvi<SharedState, SharedIntent, SharedEffect>")
+            .replace("GezginMvi<SharedState, SharedIntent, EffectB>", "GezginMvi<SharedState, SharedIntent, SharedEffect>")
+            .substringBefore("    @EffectHandler(G.A::class)") + """
+                @ScreenEffect
+                @Composable
+                fun LegacyEffects(effects: Flow<SharedEffect>) {}
+            """.trimIndent()
+
+        assertViolationMentions("MV17", source, "LegacyEffects", "G.A", "G.B")
+    }
+
+    @Test
+    fun `legacy and explicit handler overlap names route and both functions`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE + """
+
+            @dev.gezgin.mvi.annotation.ScreenEffect
+            @Composable
+            fun LegacyEffectsA(effects: Flow<EffectA>) {}
+        """.trimIndent()
+
+        assertViolationMentions("MV18", source, "G.A", "EffectsA", "LegacyEffectsA")
+    }
+
+    @Test
+    fun `per-route state mismatch names route and shared content function`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE
+            .replace("data class SharedState(val value: String)", "data class SharedState(val value: String)\n    data class OtherState(val value: String)")
+            .replace(
+                "class VmB : GezginMvi<SharedState, SharedIntent, EffectB>",
+                "class VmB : GezginMvi<OtherState, SharedIntent, EffectB>",
+            )
+            .replace(
+                "override val uiState: StateFlow<SharedState> = MutableStateFlow(SharedState(\"b\"))",
+                "override val uiState: StateFlow<OtherState> = MutableStateFlow(OtherState(\"b\"))",
+            )
+
+        assertViolationMentions("MV5", source, "G.B", "SharedContent", "OtherState")
+    }
+
+    @Test
+    fun `per-route intent mismatch names route and shared content function`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE
+            .replace("data class EffectA", "sealed interface OtherIntent { data object Submit : OtherIntent }\n    data class EffectA")
+            .replace(
+                "class VmB : GezginMvi<SharedState, SharedIntent, EffectB>",
+                "class VmB : GezginMvi<SharedState, OtherIntent, EffectB>",
+            )
+            .replace("override fun onIntent(intent: SharedIntent) {}\n    }\n\n    @Screen(G.A::class)", "override fun onIntent(intent: OtherIntent) {}\n    }\n\n    @Screen(G.A::class)")
+
+        assertViolationMentions("MV5", source, "G.B", "SharedContent", "OtherIntent")
     }
 
     @Test

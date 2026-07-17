@@ -38,6 +38,36 @@ class ValidationTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
     }
 
+    @Test
+    fun `repeatable Screen binds one composable to two routes`() {
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "Source.kt",
+                """
+            package dev.gezgin.repeatablescreen
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.NavGraph
+            import dev.gezgin.core.annotation.Screen
+
+            @NavGraph
+            sealed interface G : Route {
+                data object A : G
+                data object B : G
+            }
+
+            @Screen(G.A::class)
+            @Screen(G.B::class)
+            @Composable
+            fun SharedContent() {}
+                """.trimIndent(),
+            ),
+            kspArgs = mapOf("gezgin.emitEntries" to "false", "gezgin.emitSerializers" to "false"),
+        )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    }
+
     // endregion
 
     // region Rule-boundary positives (spec §8.1/§4.2 adjudication — each must compile clean)
