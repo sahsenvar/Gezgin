@@ -1,31 +1,30 @@
-package dev.gezgin.sample.app
+package dev.gezgin.sample.shopr
 
 import java.io.File
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ShowcaseRestoreKeyTest {
+class ShoprRestoreKeyTest {
     @Test
-    fun `showcase host uses one explicit stable restore namespace`() {
-        assertEquals("sample-showcase", SHOWCASE_RESTORE_KEY)
-    }
-
-    @Test
-    fun `showcase rememberNavigator host wires the stable restore namespace`() {
+    fun `shopr rememberNavigator host wires its stable restore namespace`() {
         val source = mainActivitySource()
-        val arguments = callArguments(source, "val navigator = rememberNavigator(")
-
         assertTrue(
-            Regex("""\brestoreKey\s*=\s*SHOWCASE_RESTORE_KEY\b""").containsMatchIn(arguments),
-            "GezginShowcaseApp must pass SHOWCASE_RESTORE_KEY to its rememberNavigator host call",
+            Regex("""private\s+const\s+val\s+SHOPR_RESTORE_KEY\s*=\s*"shopr-main"""")
+                .containsMatchIn(source),
+            "Shopr host must retain its explicit stable restore namespace",
+        )
+
+        val arguments = callArguments(source, "val navigator = rememberNavigator(")
+        assertTrue(
+            Regex("""\brestoreKey\s*=\s*SHOPR_RESTORE_KEY\b""").containsMatchIn(arguments),
+            "Shopr host must pass SHOPR_RESTORE_KEY to its rememberNavigator call",
         )
     }
 }
 
 private fun mainActivitySource(): String = sequenceOf(
-    File("sample/app/src/main/kotlin/dev/gezgin/sample/app/MainActivity.kt"),
-    File("src/main/kotlin/dev/gezgin/sample/app/MainActivity.kt"),
+    File("sample/shopr/src/main/kotlin/dev/gezgin/sample/shopr/MainActivity.kt"),
+    File("src/main/kotlin/dev/gezgin/sample/shopr/MainActivity.kt"),
 ).firstOrNull(File::isFile)?.readText()
     ?: error("MainActivity.kt was not found from ${File(".").absolutePath}")
 

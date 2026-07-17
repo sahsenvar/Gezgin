@@ -23,7 +23,6 @@ import dev.gezgin.sample.shopr.screen_catalog.CatalogEffect
 import dev.gezgin.sample.shopr.screen_catalog.CatalogIntent
 import dev.gezgin.sample.shopr.screen_catalog.CatalogViewModel
 import dev.gezgin.sample.shopr.screen_catalog.handleCatalogEffect
-import dev.gezgin.sample.shopr.screen_catalog.handleCatalogResult
 import dev.gezgin.sample.shopr.screen_featured_feed.FeaturedFeedEffect
 import dev.gezgin.sample.shopr.screen_featured_feed.FeaturedFeedViewModel
 import dev.gezgin.sample.shopr.screen_featured_feed.handleFeaturedFeedEffect
@@ -142,6 +141,22 @@ class ShopGraphTopologyTest {
         checkoutViewModel.onIntent(CatalogIntent.StartCheckout)
 
         assertEquals(CatalogEffect.LaunchCheckout, checkoutViewModel.effects.first())
+
+        val completedViewModel = CatalogViewModel()
+        completedViewModel.onIntent(
+            CatalogIntent.CheckoutResult(NavResult.Value(OrderId(value = "ORD-1001"))),
+        )
+        assertEquals(
+            CatalogEffect.CheckoutCompleted(OrderId(value = "ORD-1001")),
+            completedViewModel.effects.first(),
+        )
+
+        val canceledViewModel = CatalogViewModel()
+        canceledViewModel.onIntent(CatalogIntent.CheckoutResult(NavResult.Canceled))
+        assertEquals(
+            CatalogEffect.ShowMessage("Ödeme iptal edildi"),
+            canceledViewModel.effects.first(),
+        )
     }
 
     @Test
@@ -190,7 +205,9 @@ class ShopGraphTopologyTest {
             raw.paymentNavigator(entryId = 3L),
             messages::add,
         )
-        handleCatalogResult(result.await(), catalogNav, messages::add)
+        val viewModel = CatalogViewModel()
+        viewModel.onIntent(CatalogIntent.CheckoutResult(result.await()))
+        handleCatalogEffect(viewModel.effects.first(), catalogNav, messages::add)
 
         assertTrue(messages.isEmpty())
         assertEquals(
@@ -200,12 +217,14 @@ class ShopGraphTopologyTest {
     }
 
     @Test
-    fun `iptal edilen checkout Catalog stackini korur ve mesaji gosterir`() {
+    fun `iptal edilen checkout ViewModel effectiyle Catalog stackini korur ve mesaji gosterir`() = runBlocking {
         val raw = RawNavigator(start = HomeGraph.Catalog, topology = gezginTopology)
         val messages = mutableListOf<String>()
+        val viewModel = CatalogViewModel()
 
-        handleCatalogResult(
-            NavResult.Canceled,
+        viewModel.onIntent(CatalogIntent.CheckoutResult(NavResult.Canceled))
+        handleCatalogEffect(
+            viewModel.effects.first(),
             raw.catalogNavigator(entryId = 1L),
             messages::add,
         )

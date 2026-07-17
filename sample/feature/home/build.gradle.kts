@@ -16,6 +16,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
 kotlin {
@@ -40,5 +41,7 @@ dependencies {
     // `AndroidFragment` composable'ı hem transitively `androidx.fragment.app.Fragment`).
     implementation(libs.androidx.fragment.compose)
 
-    testImplementation(kotlin("test"))
+    testImplementation(kotlin("test-junit"))
+    testImplementation(libs.androidx.activity.compose)
+    testImplementation("org.robolectric:robolectric:4.14")
 }

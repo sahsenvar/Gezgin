@@ -213,13 +213,13 @@ sealed interface CheckoutFlow : ShopGraph, ResultFlow<OrderId> {   // tüm flow 
     // … PaymentRoute … ; nav.quitWith(OrderId(...)) flow'u bitirir ve sonucu teslim eder
 }
 
-// Çağıran flow'u başlatır ve sonucu toplar — gerçek process-death sonrası re-attach eder:
+// Çağıran result edge'ini deklare eder; route-bound handler başlatır ve sonucu toplar:
 @GoForResult(CheckoutFlow::class)
 @Serializable data object CatalogRoute : HomeGraph
 // → nav.launchCheckout()  +  nav.checkoutResults: Flow<NavResult<OrderId>>
 ```
 
-`xResults`'ı view-model'in `init {}`'inde (ya da bir composable `LaunchedEffect`'te) topla; OS process'i flow ortasında öldürüp restore etse bile sonuç teslim edilir.
+Maintained strict-MVI deseninde generated navigator route-bound `@EffectHandler`'a aittir: handler `launchX()` çağırır, `xResults`'ı `LaunchedEffect` içinde toplar ve her `NavResult`'ı typed Intent olarak VM'e iletir. Restore sonrası caller route/handler yeniden composition'a girince collector re-attach olur; navigator'ın kaydedilen result-bus slotu in-flight veya teslim edilmiş ama tüketilmemiş sonucu korur. Navigator'ı VM'e koyma; suspend `goToXForResult()` process-ömrü convenience'ıdır, PD-safe strict-MVI ownership modeli değildir.
 
 ### 5 · Modallar özel state değil, back-stack entry'leri
 

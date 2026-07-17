@@ -24,6 +24,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
 kotlin {
@@ -46,5 +47,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.kotlinx.serialization.json)
 
-    testImplementation(kotlin("test"))
+    testImplementation(kotlin("test-junit"))
+    testImplementation("org.robolectric:robolectric:4.14")
 }

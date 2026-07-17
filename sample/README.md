@@ -72,7 +72,21 @@ fun SettingsEffectHandler(
 }
 ```
 
-Result bekleyen akışlarda gerçek process-death güvenli pattern `launchX()` + VM recreation'da yeniden kurulan `xResults.collect { ... }` collector'ıdır. Suspend `goToXForResult()` yalnız process ömrü içi convenience yüzeyidir.
+Result bekleyen maintained strict MVI route'larında collector VM'ye taşınmaz. Route-bound `@EffectHandler(route)`, generated `nav.*Results` akışını `LaunchedEffect` içinde toplar ve her `NavResult`'ı typed bir `*Intent` olarak `resultIntentSink` üzerinden VM'in `onIntent`'ine aktarır. Akışı açmak da aynı yönde kalır: VM Effect emit eder, handler `nav.launchX()` çağırır. Güncel örnekler `sample/feature/auth/src/main/kotlin/dev/gezgin/sample/feature/auth/screen_login/LoginEffectHandler.kt`, `sample/feature/home/src/main/kotlin/dev/gezgin/sample/feature/home/screen_dashboard/DashboardEffectHandler.kt` ve `sample/feature/profile/src/main/kotlin/dev/gezgin/sample/feature/profile/screen_profile/ProfileEffectHandler.kt` dosyalarındadır.
+
+Process-death sonrası re-attach, VM'in navigator tutmasına değil, restore edilen caller route entry'sinin route-bound handler'ı yeniden composition'a sokmasına bağlıdır. Generated navigator aynı caller entry kimliğine bağlıdır; mevcut navigator snapshot'ı in-flight veya teslim edilmiş ama tüketilmemiş `ResultBus` slotunu korur ve yeniden kurulan collector sonucu tüketir. Navigator handler'da kalır, VM yalnız Intent görür. Suspend `goToXForResult()` process ömrü içi convenience yüzeyidir; strict MVI için navigator'ı VM'e koyma gerekçesi değildir.
+
+## Maintained capability matrix
+
+| Capability | Güncel kanıt |
+|---|---|
+| Nested / result flows | `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/AvatarFlow.kt`: `AvatarFlow : ResultFlow<AvatarChoice>` ve nested `AvatarFlow.ZoomFlow`; `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/SignUpFlow.kt`: result'suz sibling `SignUpFlow`. |
+| Typed result edges | `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/ProfileGraph.kt`: `ProfileScreenRoute` üzerindeki `@GoForResult(AvatarFlow::class, name = "pickAvatar")` generated `launchPickAvatar()` + `pickAvatarResults` üretir; `sample/feature/profile/src/main/kotlin/dev/gezgin/sample/feature/profile/screen_profile/ProfileEffectHandler.kt` sonucu `ProfileIntent.AvatarResult` olarak VM'e iletir. |
+| Quit / back | `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/SignUpFlow.kt`: `TermsScreenRoute` üzerindeki `@BackToStart`, `@Quit`, `@QuitAndGoTo`; `sample/feature/auth/src/main/kotlin/dev/gezgin/sample/feature/auth/screen_terms/TermsEffectHandler.kt`: `nav.backToStart()`, `nav.quit()`, `nav.quitAndGoToWelcome(...)`. `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/HomeGraph.kt` + `sample/feature/home/src/main/kotlin/dev/gezgin/sample/feature/home/screen_item_detail/ItemDetailEffectHandler.kt`: typed `backToDashboard()`. |
+| Fullscreen modals | `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/HomeGraph.kt`: `ItemImageViewerRoute : FullscreenModalContract`; `sample/feature/home/src/main/kotlin/dev/gezgin/sample/feature/home/modal_image_viewer/ItemImageViewerModal.kt`: `@FullscreenModal(ItemImageViewerRoute::class)` ve typed `backToItemDetail()`. |
+| Transition cascading | `sample/app/src/main/kotlin/dev/gezgin/sample/app/MainActivity.kt`: host `navTransitions`; `sample/navigation/src/main/kotlin/dev/gezgin/sample/navigation/ProfileGraph.kt`: graph-level `ProfileGraph.transition` ve route-level `SettingsScreenRoute.transition` override'ları. |
+| Observability | `sample/app/src/main/kotlin/dev/gezgin/sample/app/MainActivity.kt`: `navigator.events.collect { event -> Log.d("GezginNav", event.toString()) }`. |
+| UI'sız typed test API | `sample/navigation/src/test/kotlin/dev/gezgin/sample/navigation/AppNavBehaviorTest.kt`: `GezginTestNavigator` ile generated `nav.fromLogin()`, `nav.fromTerms()`, `nav.fromZoom()` ve diğer `fromX()` accessors. |
 
 ## Repeatable screen ve route-specific binding
 

@@ -213,13 +213,13 @@ sealed interface CheckoutFlow : ShopGraph, ResultFlow<OrderId> {   // the whole 
     // … PaymentRoute … ; nav.quitWith(OrderId(...)) finishes the flow and delivers the result
 }
 
-// The caller launches the flow and collects the result — re-attaches after a real process death:
+// The caller declares the result edge; its route-bound handler launches and collects it:
 @GoForResult(CheckoutFlow::class)
 @Serializable data object CatalogRoute : HomeGraph
 // → nav.launchCheckout()  +  nav.checkoutResults: Flow<NavResult<OrderId>>
 ```
 
-Collect `xResults` in your view-model's `init {}` (or a composable `LaunchedEffect`) and the result is delivered even if the OS killed and restored the process mid-flow.
+In the maintained strict-MVI pattern, the route-bound `@EffectHandler` owns the generated navigator: it calls `launchX()`, collects `xResults` in `LaunchedEffect`, and forwards each `NavResult` into the VM as a typed Intent. After restore, re-composition of that caller route/handler re-attaches the collector, while the navigator's saved result-bus slot preserves the in-flight or delivered-but-unconsumed result. Keep the navigator out of the VM; suspend `goToXForResult()` is process-lifetime convenience, not the PD-safe strict-MVI ownership model.
 
 ### 5 · Modals are back-stack entries, not special state
 

@@ -1,6 +1,7 @@
 package dev.gezgin.sample.shopr.screen_catalog
 
 import androidx.lifecycle.ViewModel
+import dev.gezgin.core.NavResult
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
@@ -17,7 +18,7 @@ class CatalogViewModel : ViewModel(), GezginMvi<CatalogUiState, CatalogIntent, C
     override val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
 
     private val _effects = GezginEffects<CatalogEffect>()
-    override val effects: Flow<CatalogEffect> = _effects.flow
+    override val effects: Flow<CatalogEffect> = catalogResultIntentEffectFlow(_effects.flow, ::onIntent)
 
     override fun onIntent(intent: CatalogIntent) {
         when (intent) {
@@ -25,6 +26,10 @@ class CatalogViewModel : ViewModel(), GezginMvi<CatalogUiState, CatalogIntent, C
                 CatalogEffect.NavigateToProduct(productId = _uiState.value.featuredSku),
             )
             CatalogIntent.StartCheckout -> _effects.send(CatalogEffect.LaunchCheckout)
+            is CatalogIntent.CheckoutResult -> when (val result = intent.result) {
+                is NavResult.Value -> _effects.send(CatalogEffect.CheckoutCompleted(result.value))
+                NavResult.Canceled -> _effects.send(CatalogEffect.ShowMessage("Ödeme iptal edildi"))
+            }
         }
     }
 }

@@ -4,12 +4,10 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
-import dev.gezgin.core.NavResult
 import dev.gezgin.mvi.ObserveEffects
 import dev.gezgin.mvi.annotation.EffectHandler
 import dev.gezgin.sample.shopr.nav.CatalogNavigator
 import dev.gezgin.sample.shopr.nav.HomeGraph
-import dev.gezgin.sample.shopr.nav.OrderId
 import kotlinx.coroutines.flow.Flow
 
 @EffectHandler(HomeGraph.Catalog::class)
@@ -19,13 +17,14 @@ fun CatalogEffectHandler(effects: Flow<CatalogEffect>, nav: CatalogNavigator) {
     val showMessage: (String) -> Unit = { message ->
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
+    val resultIntents = effects.catalogResultIntentSink()
 
     ObserveEffects(effects) { effect ->
         handleCatalogEffect(effect, nav, showMessage)
     }
     LaunchedEffect(effects) {
         nav.checkoutResults.collect { result ->
-            handleCatalogResult(result, nav, showMessage)
+            resultIntents.send(CatalogIntent.CheckoutResult(result))
         }
     }
 }
@@ -39,16 +38,6 @@ internal fun handleCatalogEffect(
         is CatalogEffect.ShowMessage -> onMessage(effect.text)
         is CatalogEffect.NavigateToProduct -> nav.goToProduct(effect.productId)
         CatalogEffect.LaunchCheckout -> nav.launchCheckout()
-    }
-}
-
-internal fun handleCatalogResult(
-    result: NavResult<OrderId>,
-    nav: CatalogNavigator,
-    onMessage: (String) -> Unit,
-) {
-    when (result) {
-        is NavResult.Value -> nav.replaceToOrderPlaced(result.value.value)
-        NavResult.Canceled -> onMessage("Ödeme iptal edildi")
+        is CatalogEffect.CheckoutCompleted -> nav.replaceToOrderPlaced(effect.orderId.value)
     }
 }

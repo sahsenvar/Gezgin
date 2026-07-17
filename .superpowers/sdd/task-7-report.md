@@ -43,3 +43,16 @@
 - General Gezgin ViewModel-navigation capability remains available for compatibility, but maintained
   strict-MVI samples deliberately do not exercise it.
 - Historical design notes retain their historical proposals and must not be treated as current guidance.
+
+## Independent review fixes
+
+- Real route-bound Compose handler tests now prove persisted result delivery; the profile proof also
+  detaches and reattaches the handler and asserts one active collector. Removing the production collector
+  makes these tests fail.
+- Shopr checkout results re-enter `CatalogViewModel` as an explicit Intent and produce a VM Effect before
+  the handler performs replacement or emits the exact cancellation message.
+- Showcase and Shopr restore-key tests inspect the actual balanced `rememberNavigator(...)` call and fail
+  when host wiring drops the stable key.
+- Maintained result guidance now assigns collection to the route-bound handler, which forwards an Intent
+  into the ViewModel; the concise capability matrix again points to nested/results, typed edges,
+  quit/back, fullscreen modals, transition cascading, observability, and test-navigator examples.
