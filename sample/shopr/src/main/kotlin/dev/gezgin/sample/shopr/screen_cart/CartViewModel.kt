@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
-import dev.gezgin.sample.shopr.nav.CartNavigator
 import dev.gezgin.sample.shopr.nav.CheckoutFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,9 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @MviViewModel(CheckoutFlow.Cart::class)
-class CartViewModel(
-    private val nav: CartNavigator,
-) : ViewModel(), GezginMvi<CartUiState, CartIntent, CartEffect> {
+class CartViewModel : ViewModel(), GezginMvi<CartUiState, CartIntent, CartEffect> {
 
     private val _uiState = MutableStateFlow(CartUiState())
     override val uiState: StateFlow<CartUiState> = _uiState.asStateFlow()
@@ -28,7 +25,7 @@ class CartViewModel(
 
     override fun onIntent(intent: CartIntent) {
         when (intent) {
-            CartIntent.Checkout -> nav.goToPayment()
+            CartIntent.Checkout -> _effects.send(CartEffect.NavigateToPayment)
         }
     }
 }

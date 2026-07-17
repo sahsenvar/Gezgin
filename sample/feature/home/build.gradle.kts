@@ -39,4 +39,6 @@ dependencies {
     // @FragmentScreen barındıran bu feature modülü kendi fragment-compose'unu AÇIKÇA getirir (hem
     // `AndroidFragment` composable'ı hem transitively `androidx.fragment.app.Fragment`).
     implementation(libs.androidx.fragment.compose)
+
+    testImplementation(kotlin("test"))
 }

@@ -1,15 +1,29 @@
 package dev.gezgin.sample.shopr
 
+import dev.gezgin.core.NavResult
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
 import dev.gezgin.sample.shopr.nav.CheckoutFlow
+import dev.gezgin.sample.shopr.nav.OrderId
 import dev.gezgin.sample.shopr.nav.FeaturedFeedNavigator
 import dev.gezgin.sample.shopr.nav.FeedNavigator
 import dev.gezgin.sample.shopr.nav.HomeGraph
+import dev.gezgin.sample.shopr.nav.cartNavigator
+import dev.gezgin.sample.shopr.nav.catalogNavigator
 import dev.gezgin.sample.shopr.nav.featuredFeedNavigator
 import dev.gezgin.sample.shopr.nav.feedNavigator
 import dev.gezgin.sample.shopr.nav.gezginTopology
 import dev.gezgin.sample.shopr.nav.orderPlacedNavigator
+import dev.gezgin.sample.shopr.nav.paymentNavigator
+import dev.gezgin.sample.shopr.screen_cart.CartEffect
+import dev.gezgin.sample.shopr.screen_cart.CartIntent
+import dev.gezgin.sample.shopr.screen_cart.CartViewModel
+import dev.gezgin.sample.shopr.screen_cart.handleCartEffect
+import dev.gezgin.sample.shopr.screen_catalog.CatalogEffect
+import dev.gezgin.sample.shopr.screen_catalog.CatalogIntent
+import dev.gezgin.sample.shopr.screen_catalog.CatalogViewModel
+import dev.gezgin.sample.shopr.screen_catalog.handleCatalogEffect
+import dev.gezgin.sample.shopr.screen_catalog.handleCatalogResult
 import dev.gezgin.sample.shopr.screen_featured_feed.FeaturedFeedEffect
 import dev.gezgin.sample.shopr.screen_featured_feed.FeaturedFeedViewModel
 import dev.gezgin.sample.shopr.screen_featured_feed.handleFeaturedFeedEffect
@@ -17,6 +31,16 @@ import dev.gezgin.sample.shopr.screen_feed.FeedEffect
 import dev.gezgin.sample.shopr.screen_feed.FeedIntent
 import dev.gezgin.sample.shopr.screen_feed.FeedViewModel
 import dev.gezgin.sample.shopr.screen_feed.handleFeedEffect
+import dev.gezgin.sample.shopr.screen_order_placed.OrderPlacedEffect
+import dev.gezgin.sample.shopr.screen_order_placed.OrderPlacedIntent
+import dev.gezgin.sample.shopr.screen_order_placed.OrderPlacedViewModel
+import dev.gezgin.sample.shopr.screen_order_placed.handleOrderPlacedEffect
+import dev.gezgin.sample.shopr.screen_payment.PaymentEffect
+import dev.gezgin.sample.shopr.screen_payment.PaymentIntent
+import dev.gezgin.sample.shopr.screen_payment.PaymentViewModel
+import dev.gezgin.sample.shopr.screen_payment.handlePaymentEffect
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -93,6 +117,128 @@ class ShopGraphTopologyTest {
             listOf<Route>(HomeGraph.FeaturedFeed, HomeGraph.Product("featured")),
             featuredRaw.backStack.value,
         )
+    }
+
+    @Test
+    fun `Cart intent payment navigation effectine donusur`() = runBlocking {
+        val viewModel = CartViewModel()
+
+        viewModel.onIntent(CartIntent.Checkout)
+
+        assertEquals(CartEffect.NavigateToPayment, viewModel.effects.drop(1).first())
+    }
+
+    @Test
+    fun `Catalog intentleri route verisini navigation effectlerine tasir`() = runBlocking {
+        val productViewModel = CatalogViewModel()
+        productViewModel.onIntent(CatalogIntent.OpenProduct)
+
+        assertEquals(
+            CatalogEffect.NavigateToProduct(productId = "sku-42"),
+            productViewModel.effects.first(),
+        )
+
+        val checkoutViewModel = CatalogViewModel()
+        checkoutViewModel.onIntent(CatalogIntent.StartCheckout)
+
+        assertEquals(CatalogEffect.LaunchCheckout, checkoutViewModel.effects.first())
+    }
+
+    @Test
+    fun `OrderPlaced intentleri route-local navigation effectlerine donusur`() = runBlocking {
+        val detailsViewModel = OrderPlacedViewModel(HomeGraph.OrderPlaced(orderId = "order-42"))
+        detailsViewModel.onIntent(OrderPlacedIntent.ShowDetails)
+
+        assertEquals(
+            OrderPlacedEffect.ShowDetails(orderId = "order-42"),
+            detailsViewModel.effects.drop(1).first(),
+        )
+
+        val feedViewModel = OrderPlacedViewModel(HomeGraph.OrderPlaced(orderId = "order-42"))
+        feedViewModel.onIntent(OrderPlacedIntent.BackToFeed)
+
+        assertEquals(OrderPlacedEffect.BackToFeed, feedViewModel.effects.drop(1).first())
+    }
+
+    @Test
+    fun `Payment intent flow sonucunu navigation effectine tasir`() = runBlocking {
+        val viewModel = PaymentViewModel()
+
+        viewModel.onIntent(PaymentIntent.Pay)
+
+        assertEquals(
+            PaymentEffect.CompletePayment(OrderId(value = "ORD-1001")),
+            viewModel.effects.drop(1).first(),
+        )
+    }
+
+    @Test
+    fun `typed handlerlar checkout result ve replace semantigini korur`() = runBlocking {
+        val raw = RawNavigator(start = HomeGraph.Catalog, topology = gezginTopology)
+        val catalogNav = raw.catalogNavigator(entryId = 1L)
+        val messages = mutableListOf<String>()
+
+        handleCatalogEffect(CatalogEffect.LaunchCheckout, catalogNav, messages::add)
+        handleCartEffect(
+            CartEffect.NavigateToPayment,
+            raw.cartNavigator(entryId = 2L),
+            messages::add,
+        )
+        val result = async { catalogNav.checkoutResults.first() }
+        handlePaymentEffect(
+            PaymentEffect.CompletePayment(OrderId(value = "ORD-1001")),
+            raw.paymentNavigator(entryId = 3L),
+            messages::add,
+        )
+        handleCatalogResult(result.await(), catalogNav, messages::add)
+
+        assertTrue(messages.isEmpty())
+        assertEquals(
+            listOf<Route>(HomeGraph.OrderPlaced(orderId = "ORD-1001")),
+            raw.backStack.value,
+        )
+    }
+
+    @Test
+    fun `iptal edilen checkout Catalog stackini korur ve mesaji gosterir`() {
+        val raw = RawNavigator(start = HomeGraph.Catalog, topology = gezginTopology)
+        val messages = mutableListOf<String>()
+
+        handleCatalogResult(
+            NavResult.Canceled,
+            raw.catalogNavigator(entryId = 1L),
+            messages::add,
+        )
+
+        assertEquals(listOf("Ödeme iptal edildi"), messages)
+        assertEquals(listOf<Route>(HomeGraph.Catalog), raw.backStack.value)
+    }
+
+    @Test
+    fun `OrderPlaced typed handler back ve modal semantigini korur`() {
+        val raw = RawNavigator(start = HomeGraph.Feed, topology = gezginTopology)
+        raw.feedNavigator(entryId = 1L).goToCatalog()
+        raw.catalogNavigator(entryId = 2L).replaceToOrderPlaced(orderId = "order-42")
+        val orderPlacedNav = raw.orderPlacedNavigator(entryId = 3L)
+
+        handleOrderPlacedEffect(
+            OrderPlacedEffect.ShowDetails(orderId = "order-42"),
+            orderPlacedNav,
+            onMessage = {},
+        )
+        assertEquals(
+            listOf<Route>(
+                HomeGraph.Feed,
+                HomeGraph.OrderPlaced(orderId = "order-42"),
+                HomeGraph.OrderDetailsDialogRoute(orderId = "order-42"),
+            ),
+            raw.backStack.value,
+        )
+
+        raw.back()
+        handleOrderPlacedEffect(OrderPlacedEffect.BackToFeed, orderPlacedNav, onMessage = {})
+
+        assertEquals(listOf<Route>(HomeGraph.Feed), raw.backStack.value)
     }
 
     @Test

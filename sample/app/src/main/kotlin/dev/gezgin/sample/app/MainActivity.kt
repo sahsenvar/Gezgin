@@ -22,6 +22,8 @@ import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
 import dev.gezgin.sample.navigation.gezginJson
 import dev.gezgin.sample.navigation.gezginTopology
 
+internal const val SHOWCASE_RESTORE_KEY = "sample-showcase"
+
 // @FragmentScreen yaprakları AndroidFragment ile host edilir → host bir AppCompatActivity/FragmentActivity
 // OLMALI (aksi halde runtime'da fırlatır) ve AppCompat teması gerektirir (bkz. res/values/themes.xml).
 class MainActivity : AppCompatActivity() {
@@ -40,6 +42,7 @@ private fun GezginShowcaseApp(onRootBack: () -> Unit) {
         start = LoginScreenRoute,
         topology = gezginTopology,
         json = gezginJson,
+        restoreKey = SHOWCASE_RESTORE_KEY,
         onRootBack = onRootBack,
     )
 

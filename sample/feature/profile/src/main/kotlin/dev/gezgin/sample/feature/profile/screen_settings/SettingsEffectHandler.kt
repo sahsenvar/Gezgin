@@ -5,12 +5,14 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import dev.gezgin.mvi.ObserveEffects
-import dev.gezgin.mvi.annotation.ScreenEffect
+import dev.gezgin.mvi.annotation.EffectHandler
+import dev.gezgin.sample.navigation.ProfileGraph.SettingsScreenRoute
+import dev.gezgin.sample.navigation.SettingsNavigator
 import kotlinx.coroutines.flow.Flow
 
-@ScreenEffect
+@EffectHandler(SettingsScreenRoute::class)
 @Composable
-fun SettingsEffectHandler(effects: Flow<SettingsEffect>) {
+fun SettingsEffectHandler(effects: Flow<SettingsEffect>, nav: SettingsNavigator) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
@@ -18,6 +20,7 @@ fun SettingsEffectHandler(effects: Flow<SettingsEffect>) {
                 Log.d("SettingsMvi", "effect: ${effect.text}")
                 Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
             }
+            SettingsEffect.Logout -> nav.logout()
         }
     }
 }

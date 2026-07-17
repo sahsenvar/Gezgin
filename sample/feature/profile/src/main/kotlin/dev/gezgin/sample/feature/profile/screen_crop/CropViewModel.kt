@@ -6,7 +6,6 @@ import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.sample.domain.model.AvatarChoice
 import dev.gezgin.sample.navigation.AvatarFlow.CropScreenRoute
-import dev.gezgin.sample.navigation.CropNavigator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(CropScreenRoute::class)
 class CropViewModel(
     route: CropScreenRoute,
-    private val nav: CropNavigator,
 ) : ViewModel(), GezginMvi<CropUiState, CropIntent, CropEffect> {
 
     private val _uiState = MutableStateFlow(CropUiState(route.source))
@@ -31,9 +29,10 @@ class CropViewModel(
 
     override fun onIntent(intent: CropIntent) {
         when (intent) {
-            CropIntent.Zoom -> nav.goToZoom()
-            CropIntent.Use -> nav.quitWith(AvatarChoice(uri = "avatar://${_uiState.value.source}"))
-            CropIntent.Cancel -> nav.back()
+            CropIntent.Zoom -> _effects.send(CropEffect.OpenZoom)
+            CropIntent.Use ->
+                _effects.send(CropEffect.Complete(AvatarChoice(uri = "avatar://${_uiState.value.source}")))
+            CropIntent.Cancel -> _effects.send(CropEffect.Back)
         }
     }
 }

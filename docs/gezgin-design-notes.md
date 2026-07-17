@@ -1,5 +1,7 @@
 # Gezgin — Tasarım Notları (çalışan taslak)
 
+> **Tarihsel kayıt — current kullanım rehberi değildir.** Bu dosya eski brainstorm ve karar evrimini olduğu gibi korur. Güncel public sözleşme için [gezgin-design.md](gezgin-design.md), ZAD Phase A sınırı için [gezgin-zad-root-integration-spec.md](gezgin-zad-root-integration-spec.md) kullanılmalıdır. Eski deep-link, raw dispatch, MVI effect ve sürüm ifadeleri mevcut özellik iddiası sayılmaz.
+
 Durum: beyin fırtınası sürüyor. Bu dosya kilitlenen kararları, parkedilenleri ve sıradaki konuları tutar.
 Yöntem: **tümden gelim** — önce developer-facing yüzey ("nasıl görünür"), sonra çekirdek.
 

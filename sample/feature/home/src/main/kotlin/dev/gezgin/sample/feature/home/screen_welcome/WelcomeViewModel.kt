@@ -5,7 +5,6 @@ import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.sample.navigation.HomeGraph
-import dev.gezgin.sample.navigation.WelcomeNavigator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(HomeGraph.WelcomeScreenRoute::class)
 class WelcomeViewModel(
     route: HomeGraph.WelcomeScreenRoute,
-    private val nav: WelcomeNavigator,
 ) : ViewModel(), GezginMvi<WelcomeUiState, WelcomeIntent, WelcomeEffect> {
 
     private val _uiState = MutableStateFlow(WelcomeUiState(name = route.name))
@@ -29,7 +27,7 @@ class WelcomeViewModel(
             // gönderilen efekti hiçbir observer toplayamadan ekran yok olur (kayıp toast).
             WelcomeIntent.OnAppear ->
                 _effects.send(WelcomeEffect.ShowMessage(_uiState.value.name?.let { "Merhaba $it" } ?: "Merhaba"))
-            WelcomeIntent.Continue -> nav.continueToDashboard()
+            WelcomeIntent.Continue -> _effects.send(WelcomeEffect.ContinueToDashboard)
         }
     }
 }

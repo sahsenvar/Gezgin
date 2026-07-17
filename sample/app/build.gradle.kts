@@ -48,4 +48,6 @@ dependencies {
     // SIZMAZ → host modülü (bu :app) kendi appcompat'ını AÇIKÇA getirir. appcompat, `AppCompatActivity`
     // + `Theme.AppCompat.*` + transitively `androidx.fragment`'ı sağlar.
     implementation(libs.androidx.appcompat)
+
+    testImplementation(kotlin("test"))
 }

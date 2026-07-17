@@ -4,16 +4,19 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import dev.gezgin.mvi.ObserveEffects
-import dev.gezgin.mvi.annotation.ScreenEffect
+import dev.gezgin.mvi.annotation.EffectHandler
+import dev.gezgin.sample.navigation.ProfileInfoNavigator
+import dev.gezgin.sample.navigation.SignUpFlow.ProfileInfoScreenRoute
 import kotlinx.coroutines.flow.Flow
 
-@ScreenEffect
+@EffectHandler(ProfileInfoScreenRoute::class)
 @Composable
-fun ProfileInfoEffectHandler(effects: Flow<ProfileInfoEffect>) {
+fun ProfileInfoEffectHandler(effects: Flow<ProfileInfoEffect>, nav: ProfileInfoNavigator) {
     val context = LocalContext.current
     ObserveEffects(effects) { effect ->
         when (effect) {
             is ProfileInfoEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+            ProfileInfoEffect.OpenTerms -> nav.goToTerms()
         }
     }
 }

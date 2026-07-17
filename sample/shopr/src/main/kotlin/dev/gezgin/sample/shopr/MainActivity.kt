@@ -14,6 +14,8 @@ import dev.gezgin.sample.shopr.nav.HomeGraph.Feed
 import dev.gezgin.sample.shopr.nav.gezginJson
 import dev.gezgin.sample.shopr.nav.gezginTopology
 
+private const val SHOPR_RESTORE_KEY = "shopr-main"
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +45,7 @@ private fun ShoprApp(onRootBack: () -> Unit) {
         start = Feed,
         topology = gezginTopology,
         json = gezginJson,
+        restoreKey = SHOPR_RESTORE_KEY,
         onRootBack = onRootBack,
     )
     GezginDisplay(navigator = navigator) {

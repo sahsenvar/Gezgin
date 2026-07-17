@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
-import dev.gezgin.sample.navigation.ProfileInfoNavigator
 import dev.gezgin.sample.navigation.SignUpFlow.ProfileInfoScreenRoute
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(ProfileInfoScreenRoute::class)
 class ProfileInfoViewModel(
     route: ProfileInfoScreenRoute,
-    private val nav: ProfileInfoNavigator,
 ) : ViewModel(), GezginMvi<ProfileInfoUiState, ProfileInfoIntent, ProfileInfoEffect> {
 
     private val _uiState = MutableStateFlow(ProfileInfoUiState(route.email))
@@ -30,7 +28,7 @@ class ProfileInfoViewModel(
 
     override fun onIntent(intent: ProfileInfoIntent) {
         when (intent) {
-            ProfileInfoIntent.Continue -> nav.goToTerms()
+            ProfileInfoIntent.Continue -> _effects.send(ProfileInfoEffect.OpenTerms)
         }
     }
 }

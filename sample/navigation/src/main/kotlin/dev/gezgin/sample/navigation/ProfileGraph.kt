@@ -58,7 +58,7 @@ sealed interface ProfileGraph : Route {
     @Serializable
     data object ConfirmResetDialogRoute : ProfileGraph, ResultRoute<Boolean>, DialogContract
 
-    // @MviViewModel/@BottomSheet-content/@ScreenEffect üçlüsü :feature:profile'da olmalı (per-module KSP, §10.1).
+    // @MviViewModel/@BottomSheet-content/@EffectHandler üçlüsü :feature:profile'da olmalı (per-module KSP, §10.1).
     @Serializable
     data class NotificationsSheetRoute(
         val current: NotificationLevel

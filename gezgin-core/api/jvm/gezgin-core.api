@@ -1,6 +1,7 @@
 public abstract interface class dev/gezgin/core/BottomSheetContract {
 	public fun getDismissOnBackPress ()Z
 	public fun getDismissOnClickOutside ()Z
+	public fun getSheetGesturesEnabled ()Z
 	public fun getSkipPartiallyExpanded ()Z
 }
 
@@ -282,6 +283,10 @@ public abstract interface annotation class dev/gezgin/core/annotation/Screen : j
 	public abstract fun route ()Ljava/lang/Class;
 }
 
+public abstract interface annotation class dev/gezgin/core/annotation/Screen$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/Screen;
+}
+
 public abstract interface annotation class dev/gezgin/core/annotation/StartDestination : java/lang/annotation/Annotation {
 }
 
@@ -349,6 +354,7 @@ public final class dev/gezgin/core/compose/RegisteredEntry {
 }
 
 public final class dev/gezgin/core/compose/RememberNavigatorKt {
+	public static final fun rememberNavigator (Ldev/gezgin/core/Route;Ldev/gezgin/core/GezginTopology;Lkotlinx/serialization/json/Json;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)Ldev/gezgin/core/RawNavigator;
 	public static final fun rememberNavigator (Ldev/gezgin/core/Route;Ldev/gezgin/core/GezginTopology;Lkotlinx/serialization/json/Json;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)Ldev/gezgin/core/RawNavigator;
 }
 

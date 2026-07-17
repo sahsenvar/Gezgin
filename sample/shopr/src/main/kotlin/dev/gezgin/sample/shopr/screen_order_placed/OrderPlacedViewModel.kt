@@ -5,7 +5,6 @@ import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.sample.shopr.nav.HomeGraph
-import dev.gezgin.sample.shopr.nav.OrderPlacedNavigator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(HomeGraph.OrderPlaced::class)
 class OrderPlacedViewModel(
     route: HomeGraph.OrderPlaced,
-    private val nav: OrderPlacedNavigator,
 ) : ViewModel(), GezginMvi<OrderPlacedUiState, OrderPlacedIntent, OrderPlacedEffect> {
 
     private val _uiState = MutableStateFlow(OrderPlacedUiState(route.orderId))
@@ -29,10 +27,10 @@ class OrderPlacedViewModel(
 
     override fun onIntent(intent: OrderPlacedIntent) {
         when (intent) {
-            // @NoBack terminal ekran; deklare edilen @BackTo(Feed) navigator üzerinden yürür.
-            OrderPlacedIntent.BackToFeed -> nav.backToFeed()
-            // Modal-over-@NoBack: terminal ekranın üstüne detay dialog'u aç (@GoTo).
-            OrderPlacedIntent.ShowDetails -> nav.showOrderDetails(_uiState.value.orderId)
+            OrderPlacedIntent.BackToFeed -> _effects.send(OrderPlacedEffect.BackToFeed)
+            OrderPlacedIntent.ShowDetails -> _effects.send(
+                OrderPlacedEffect.ShowDetails(orderId = _uiState.value.orderId),
+            )
         }
     }
 }

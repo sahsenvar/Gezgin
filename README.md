@@ -2,7 +2,7 @@
 
 **Type-safe, annotation-driven navigation for Compose Multiplatform.** The destination is a *type*, not a string — and navigating somewhere you didn't declare **doesn't compile**.
 
-![License](https://img.shields.io/badge/license-Apache--2.0-blue) ![Kotlin](https://img.shields.io/badge/Kotlin-2.2.20-7F52FF) ![Compose Multiplatform](https://img.shields.io/badge/Compose%20MP-1.11.0-4285F4) ![Status](https://img.shields.io/badge/status-alpha-orange)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue) ![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF) ![Compose Multiplatform](https://img.shields.io/badge/Compose%20MP-1.11.0-4285F4) ![Status](https://img.shields.io/badge/status-alpha-orange)
 
 > 🇹🇷 **Türkçe:** Bu README'nin Türkçesi için → **[README.tr.md](README.tr.md)**
 
@@ -89,12 +89,12 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 | Compose Multiplatform | ◑ *(Android + desktop; iOS/web compile-level)* | ◑ | ◑ | ✅ | ✅ |
 | Brownfield Fragment interop | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Multiple back stacks** (bottom-nav tabs, master/detail) | ❌ *(V2)* | ✅ | ✅ | ✅ | ✅ |
-| **Deep links** | ◑ *(manual only; declarative → V2)* | ✅ | ✅ | ◑ | ◑ |
+| **Deep links** | ❌ *(V2)* | ✅ | ✅ | ◑ | ◑ |
 | Maturity | ⚠️ *alpha* | ✅ stable | ✅ | ✅ | ✅ |
 
 **Gezgin's niche:** the *per-source* compile-time restriction, plus integrated **flows-with-result**, **modals-as-entries**, and **PD-safe-by-default** — all on Navigation 3. If you already like Jetpack Nav's new type-safe routes but want the compiler to also reject *undeclared* edges and hand you results / flows / modals / process-death out of the box, that's the gap Gezgin fills.
 
-> 🔮 **Honest gaps — deliberately out of V1 scope, on the V2 roadmap:** **multiple back stacks** and **declarative deep links**. Today Gezgin is single-stack, and it does not generate a URL↔route table — a deep link can still be handled *manually* (parse the URL yourself and call `nav.raw.navigate(route)`), but the ergonomic, generated version is a V2 item. Gezgin is also **alpha** and rides Navigation 3 (also alpha), whereas Jetpack Navigation Compose is stable and Voyager/Decompose have more battle-tested multiplatform (esp. iOS) mileage.
+> 🔮 **Honest gaps — deliberately out of this artifact, on the V2 roadmap:** **multiple back stacks** and **deep-link route dispatch**. Gezgin is single-stack and does not expose or generate a URL↔route dispatch contract in this release. Generic `Throwable` serialization, permanent screen-container/chrome APIs, and Fragment modal interop are also outside this artifact. Gezgin is **alpha**; its Android Navigation 3 family is stable while the desktop JetBrains port remains alpha.
 
 ---
 
@@ -123,10 +123,17 @@ dependencies {
 |---|---|
 | `gezgin-core` | Required. Annotations, runtime, `GezginDisplay` (the Compose layer), modal scene strategies. DI-agnostic. |
 | `gezgin-processor` | Required. The KSP2 processor that generates the typed navigators + entry providers. |
-| `gezgin-mvi` | Optional. `@MviViewModel` / `@ScreenEffect` + `GezginMvi<S, I, E>` + DI-detection (Hilt/Koin, androidx fallback). |
+| `gezgin-mvi` | Optional. `@MviViewModel` / route-bound `@EffectHandler` + `GezginMvi<S, I, E>` + DI-detection (Hilt/Koin, androidx fallback). |
 | `gezgin-test` | Optional (test). UI-less `GezginTestNavigator` with typed `fromX()` accessors. |
 
-Verified against Kotlin 2.2.20, KSP 2.2.20-2.0.2, Compose Multiplatform 1.11.0, Navigation 3 (Google `navigation3-runtime` 1.1.4 / JetBrains `navigation3` 1.0.0-alpha05), AGP 8.11.0, min SDK 24. Full compatibility table: [docs/gezgin-design.md](docs/gezgin-design.md) §15. ⚠️ Navigation 3 is still **alpha** — versions are pinned deliberately.
+The two build boundaries are intentionally separate:
+
+| Boundary | Verified versions |
+|---|---|
+| Gezgin root | Gradle 8.14, Kotlin 2.3.21, KSP 2.3.9, AGP 8.11.0, Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0 on Android; JetBrains Navigation 3 1.0.0-alpha05 + lifecycle Navigation 3 2.10.0-alpha05 on desktop; min SDK 24. |
+| Independent ZAD-shaped consumer | Its own Gradle 9.4.1 wrapper, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0. It resolves pinned Maven Local artifacts and does not use a composite/source substitution. |
+
+These are different build roles, not interchangeable upgrade instructions. Full contracts: [docs/gezgin-design.md](docs/gezgin-design.md) §15.
 
 ### KSP options
 
@@ -172,7 +179,7 @@ fun CatalogScreen(nav: CatalogNavigator) {          // typed navigator generated
 }
 ```
 
-The classic alternative — `navController.navigate("product/$id")` — fails at *runtime* on a typo. Here a wrong target or a wrong argument type is a **compile error**. Need a rare dynamic target? A deliberate escape hatch: `nav.raw.navigate(route)`.
+The classic alternative — `navController.navigate("product/$id")` — fails at *runtime* on a typo. Here a wrong target or a wrong argument type is a **compile error**.
 
 ### 3 · Forward & back are a declarative vocabulary
 
@@ -226,6 +233,17 @@ fun ConfirmDialog(route: ConfirmRoute, nav: ConfirmNavigator) {
 
 A dialog / sheet / fullscreen modal is the same entry as a screen with a different render — it's on the back stack, it survives process death, and it can return a result exactly like any other route.
 
+Sheets expose three independent dismissal switches. A route that must not be dismissed by the user disables all three; `sheetGesturesEnabled` defaults to `true` for source compatibility:
+
+```kotlin
+@Serializable
+data object LockedSheetRoute : ShopGraph, BottomSheetContract {
+    override val dismissOnBackPress: Boolean get() = false
+    override val dismissOnClickOutside: Boolean get() = false
+    override val sheetGesturesEnabled: Boolean get() = false
+}
+```
+
 ### 6 · Host wiring
 
 ```kotlin
@@ -234,6 +252,7 @@ setContent {
         start = FeedRoute,
         topology = gezginTopology,    // generated into the graph package
         json = gezginJson,            // generated: a process-wide stable Json
+        restoreKey = "$sessionGeneration:$appMode",
         onRootBack = { finish() },
     )
     GezginDisplay(navigator = navigator) {
@@ -241,6 +260,8 @@ setContent {
     }
 }
 ```
+
+`restoreKey` namespaces both the saved snapshot and Android navigator-holder identity. Recreating with the same non-blank key restores the same stack; changing the key creates a fresh navigator at `start`. The original overload remains source-compatible and uses a stable legacy namespace, but session/account/mode-aware apps should pass an explicit persistent key.
 
 ### 7 · State-as-data → observe, restore, test without a UI
 
@@ -256,10 +277,51 @@ assertEquals(listOf(CatalogRoute, ProductRoute("sku-42")), nav.backStack)
 
 Because the back stack is `@Serializable` data, process-death restore is automatic; a corrupted / incompatible snapshot falls back to a fresh start instead of crash-looping.
 
-### Optional add-ons
+### Strict MVI add-on
 
-- **`gezgin-mvi`** — annotate a `ViewModel` with `@MviViewModel(XRoute::class)`, implement `GezginMvi<State, Intent, Effect>`, and the codegen binds it to the screen (with one-shot, loss-free effects via `@ScreenEffect`).
-- **`@FragmentScreen`** — host a legacy View-based `Fragment` as an entry, injecting the route (`gezginArgs`) and a typed navigator (`gezginNav`) — for incremental brownfield migration to Compose.
+Maintained MVI examples use one direction only:
+
+`intent -> onIntent -> effect -> @EffectHandler(route) -> typed navigator`
+
+The ViewModel owns state and emits effects; it does not hold a navigator. The route-bound handler observes the effect and owns the typed navigation call:
+
+```kotlin
+@Screen(HomeRoute::class)
+@Screen(FeaturedRoute::class)
+@Composable
+fun ColumnScope.SharedContent(
+    state: SharedState,
+    onIntent: (SharedIntent) -> Unit,
+) { /* render state; emit intents */ }
+
+@MviViewModel(HomeRoute::class)
+class HomeViewModel : ViewModel(), GezginMvi<SharedState, SharedIntent, HomeEffect> {
+    private val effectSink = GezginEffects<HomeEffect>()
+    override val effects: Flow<HomeEffect> = effectSink.flow
+    // uiState omitted
+    override fun onIntent(intent: SharedIntent) {
+        if (intent == SharedIntent.OpenNext) effectSink.send(HomeEffect.OpenFeatured)
+    }
+}
+
+@EffectHandler(HomeRoute::class)
+@Composable
+fun HomeEffectHandler(effects: Flow<HomeEffect>, nav: HomeNavigator) {
+    ObserveEffects(effects) { effect ->
+        if (effect == HomeEffect.OpenFeatured) nav.goToFeatured()
+    }
+}
+```
+
+`@Screen` is repeatable. Every bound route has its own `@MviViewModel(route)` and route-bound handler. A shared content function must use State and Intent types compatible with every route; Effect and typed Navigator types may differ per route.
+
+`@TopBar(route)` and `@BottomBar(route)` are repeatable, migration-only `gezgin-mvi` APIs. Generated content is an outer `Column`, then top bar, a `Column(Modifier.fillMaxWidth().weight(1f))` preserving the content's `ColumnScope`, and the bottom bar only while the IME is hidden. They exist only to preserve the current ZAD screen shape and must be removed when the migration adopts its permanent app-owned container.
+
+Compatibility only: deprecated `@ScreenEffect` has no route argument. The processor accepts it only when its exact `Flow<E>` type identifies exactly one `@MviViewModel` route that is not already occupied by an explicit handler. Zero candidates, multiple unoccupied candidates, duplicate legacy handlers, or overlap with an explicit handler fail compilation. New code must use `@EffectHandler(Route::class)`.
+
+### Fragment interop
+
+`@FragmentScreen` hosts a legacy View-based `Fragment` as a **screen entry only**, injecting the route (`gezginArgs`) and typed navigator (`gezginNav`). Apps using it must call `Gezgin.initFragmentInterop(gezginJson)` in `Application.onCreate()` before Fragment restoration. Real screen restoration after process death is already supported; this artifact adds no `DialogFragment` or `BottomSheetDialogFragment` bridge.
 
 ---
 
