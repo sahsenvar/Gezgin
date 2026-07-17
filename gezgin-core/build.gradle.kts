@@ -34,7 +34,9 @@ kotlin {
     // jvm() = desktop Compose hedefi (Faz 3 GezginDisplay); compose.desktop.currentOs çalıştırma zamanı
     // yalnız desktop uiTest'te gerekebilir (Faz 3.2+), burada eklenmedi.
     jvm()
-    androidTarget()
+    androidTarget {
+        publishLibraryVariants("release")
+    }
     sourceSets {
         commonMain.dependencies {
             api(libs.kotlinx.coroutines.core)
@@ -49,17 +51,11 @@ kotlin {
             // `sheetState: SheetState` Local'i public yüzeyde (@BottomSheet content'i okur). Sürüm
             // composeVersion'dan AYRI (1.9.0) — bkz. libs.versions.toml `compose-material3` notu.
             api("org.jetbrains.compose.material3:material3:${libs.versions.compose.material3.get()}")
-            // Nav3 üç ayrı koordinat/sürüm ailesi: `androidx.navigation3:navigation3-runtime` (Google,
-            // gerçekten çok-platformlu, 1.1.4 — android sürüm çizgisi) vs. `org.jetbrains.androidx.
-            // navigation3:navigation3-ui`/`lifecycle-viewmodel-navigation3` (JetBrains fork/uyarlaması,
-            // 1.0.0-alpha05 — desktop/diğer target'lar için Google'ın Android-only `-ui`'ının yerine
-            // geçer). Kritik: bu iki ailenin `NavDisplay`/decorator imzaları PLATFORMLAR ARASI BİREBİR
-            // AYNI DEĞİL — `GezginDisplay`/`PlatformDisplay` yalnız HER İKİSİNDE de ORTAK olan (public,
-            // aynı-imzalı) alt-kümeyi kullanacak şekilde yazılmalı (bkz. `GezginDisplay.kt` KDoc'undaki
-            // "decompile bulgusu" notu — üç transition-metadata sarmalayıcısı bu ortak alt-kümeye örnek).
+            // Runtime is the only shared Navigation 3 surface. UI/lifecycle are compiled against the
+            // desktop family here but exported from their actual Android/JVM source sets below.
             api(libs.androidx.navigation3.runtime)
-            api(libs.jb.navigation3.ui)
-            api(libs.jb.lifecycle.viewmodel.navigation3)
+            compileOnly(libs.jb.navigation3.ui)
+            compileOnly(libs.jb.lifecycle.viewmodel.navigation3)
         }
         // Faz 6 (Fragment interop, §11) — androidMain-only runtime (`dev.gezgin.core.fragment`):
         // gezginArgs/gezginNav delege'leri + bind-registry + route.toBundle. `androidx.fragment.app.Fragment`
@@ -68,11 +64,18 @@ kotlin {
         // modülünde üretilen `provideXEntry` içinde geçer, kullanıcı kendi fragment-compose sürümünü ekler.
         androidMain.dependencies {
             implementation(libs.androidx.fragment.compose)
+            api(libs.androidx.navigation3.ui)
+            api(libs.androidx.lifecycle.viewmodel.navigation3)
             // C1 (spec §225) — host ViewModel-scope'lu kimlik-stabil navigator holder'ı için
             // `viewModel {}`/`viewModelFactory`/`initializer`. Yalnız androidMain: config-change'i atlayan
             // retention SADECE Android'de gerekli (desktop actual `rememberSaveable` kullanır). gezgin-mvi
             // ile AYNI KMP artefaktı (org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose).
-            implementation(libs.jb.lifecycle.viewmodel.compose)
+            api(libs.androidx.lifecycle.viewmodel.compose)
+        }
+        jvmMain.dependencies {
+            api(libs.jb.navigation3.ui)
+            api(libs.jb.lifecycle.viewmodel.navigation3)
+            api(libs.jb.lifecycle.viewmodel.compose)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

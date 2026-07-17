@@ -28,7 +28,9 @@ kotlin {
     // Hilt Android-only olduğundan Hilt default resolver'ı yalnız androidTarget'ta anlamlı (spike task-5.0);
     // gezgin-mvi'nin KENDİSİ DI-agnostik (§15) — Hilt/Koin RUNTIME dep'i YOK, codegen string-FQN okur.
     jvm()
-    androidTarget()
+    androidTarget {
+        publishLibraryVariants("release")
+    }
     sourceSets {
         commonMain.dependencies {
             // gezgin-core: Route/annotation'lar (@Screen) + GezginEntryScope.register + navigator seam'i.
@@ -36,9 +38,18 @@ kotlin {
             api(project(":gezgin-core"))
             // compose.runtime (@Composable/LaunchedEffect/remember) gezgin-core'dan transitively `api` gelir;
             // yine de compose plugin'in compile classpath'i için gezgin-core api yeterli.
-            // JB lifecycle-compose — codegen'li provideXEntry + ObserveEffects bunları KULLANIR → `api`.
-            api(libs.jb.lifecycle.viewmodel.compose)   // viewModel()/viewModelFactory{} (androidx-fallback resolver)
-            api(libs.jb.lifecycle.runtime.compose)     // collectAsStateWithLifecycle()/LocalLifecycleOwner (state/effect gözleme)
+            // Common sources compile against AndroidX's KMP lifecycle surface. Android/JVM export
+            // their own runtime family below, keeping JetBrains lifecycle artifacts off Android.
+            compileOnly(libs.androidx.lifecycle.viewmodel.compose)
+            compileOnly(libs.androidx.lifecycle.runtime.compose)
+        }
+        androidMain.dependencies {
+            api(libs.androidx.lifecycle.viewmodel.compose)
+            api(libs.androidx.lifecycle.runtime.compose)
+        }
+        jvmMain.dependencies {
+            api(libs.jb.lifecycle.viewmodel.compose)
+            api(libs.jb.lifecycle.runtime.compose)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -60,8 +71,7 @@ android { namespace = "dev.gezgin.mvi"; compileSdk = 36; defaultConfig { minSdk 
 // İskelet — gerçek bir Maven repository/credentials YOK; `./gradlew publish` çalıştırılmaz, yalnız
 // `assemble`/`build`'in bu bloktan etkilenmediği doğrulanır. KMP publication'ları `maven-publish` ile
 // otomatik kurulur; yalnız POM metadata'sı tembel (`configureEach`) eklenir. Repository/signing YOK.
-// NOT (gerçek yayın günü için): `android { publishLibraryVariants("release") }` HENÜZ eklenmedi — bkz.
-// gezgin-core/build.gradle.kts'teki aynı not; V1 sonrası gerçek yayın kontrol listesine eklenmeli.
+// Android release varyantı Maven Local tüketicilerinin JVM varyantına düşmemesi için yayınlanır.
 publishing {
     publications.withType<MavenPublication>().configureEach {
         pom {

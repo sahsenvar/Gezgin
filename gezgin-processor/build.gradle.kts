@@ -28,6 +28,9 @@ dependencies {
     // (all its annotations are read as string FQNs), only this test sourceset does.
     testImplementation(project(":gezgin-mvi"))
     testImplementation(libs.kctfork.ksp)
+    // Compile-testing resolves the same KSP 2.3.9 API as production; keep it explicit so a
+    // transitive fork dependency cannot silently move the processor test toolchain.
+    testImplementation(libs.ksp.api)
     testImplementation(kotlin("test-junit5"))
     testImplementation(libs.kotlinx.coroutines.test)
 }
