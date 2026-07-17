@@ -43,7 +43,9 @@ fun ZadCompatibilityEffectHandler(
 fun FeaturedCompatibilityEffectHandler(
     nav: FeaturedCompatibilityNavigator,
     effects: Flow<FeaturedCompatibilityEffect>,
+    onIntent: (ZadCompatibilityIntent) -> Unit,
 ) {
+    onIntent.hashCode()
     ObserveEffects(effects) { effect ->
         when (effect) {
             FeaturedCompatibilityEffect.NavigateToHome -> nav.goToZadCompatibility()

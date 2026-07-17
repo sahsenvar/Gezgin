@@ -100,6 +100,10 @@ ZAD navigation follows exactly:
 - ViewModels do not hold navigators.
 - A screen emits intents and renders state.
 - A route-bound effect handler observes effects and owns typed navigation calls.
+- A route-explicit `@EffectHandler(route)` may additionally declare `onIntent: (I) -> Unit`.
+  Gezgin binds it to that route's owner `ViewModel::onIntent` after exact Intent-type validation.
+  This is the generic return seam for `typed result -> owner Intent -> effect`; it does not expose a
+  Navigator to the ViewModel and is not available through the deprecated inferred `@ScreenEffect` path.
 - `RawNavigator` is limited in ZAD to `AppEffectHandler` and the temporary `FragmentNavigation` adapter.
 - The adapter is deleted after feature migration. It is not permitted in the final dependency graph.
 
@@ -231,7 +235,10 @@ Add `restoreKey` to `rememberNavigator` and all platform implementations. Preser
 
 ### A3. Make route binding explicit and repeatable
 
-Implement repeatable `@Screen`, route-bound repeatable `@EffectHandler`, the deprecated unambiguous `@ScreenEffect` bridge, per-route MVI validation, and per-route code generation. Diagnostics must cover duplicate, missing, ambiguous, and incompatible bindings.
+Implement repeatable `@Screen`, route-bound repeatable `@EffectHandler` (including its optional,
+exactly typed owner-`onIntent` dispatch seam), the deprecated unambiguous `@ScreenEffect` bridge,
+per-route MVI validation, and per-route code generation. Diagnostics must cover duplicate, missing,
+ambiguous, and incompatible bindings.
 
 ### A4. Add temporary MVI chrome
 

@@ -180,6 +180,23 @@ class MviEntryCodegenTest {
     }
 
     @Test
+    fun `route-explicit EffectHandler may dispatch owner intents`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
+            "fun EffectsA(effects: Flow<EffectA>, nav: ANavigator) {}",
+            "fun EffectsA(effects: Flow<EffectA>, nav: ANavigator, onIntent: (SharedIntent) -> Unit) {}",
+        )
+
+        val text = generateMvi(SourceFile.kotlin("EffectIntent.kt", source))
+        val routeABody = text.substringAfter("fun GezginEntryScope.provideAEntry")
+            .substringBefore("fun GezginEntryScope.provideBEntry")
+
+        assertContains(
+            routeABody,
+            "EffectsA(effects = vm.effects, nav = nav, onIntent = vm::onIntent)",
+        )
+    }
+
+    @Test
     fun `androidx-fallback with nav — nav wired, resolver nav param, ctor order preserved`() {
         val text = generateMvi(SourceFile.kotlin("Nav.kt", MVI_NAV_SOURCE))
 

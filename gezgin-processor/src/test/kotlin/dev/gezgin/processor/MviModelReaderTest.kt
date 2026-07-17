@@ -557,6 +557,16 @@ class MviModelReaderTest {
     }
 
     @Test
+    fun `MV23 — EffectHandler onIntent type must match owner ViewModel intent`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
+            "fun EffectsA(effects: Flow<EffectA>, nav: ANavigator) {}",
+            "fun EffectsA(effects: Flow<EffectA>, nav: ANavigator, onIntent: (String) -> Unit) {}",
+        )
+
+        assertViolates("MV23", source)
+    }
+
+    @Test
     fun `MV3 — @MviViewModel with no matching content is rejected`() {
         assertViolates(
             "MV3",

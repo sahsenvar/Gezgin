@@ -47,6 +47,8 @@ internal data class MviEntryModel(
     val effectFlowParamName: String?,
     /** The matched effect function declares an optional `nav`-named param (5.2 wires the navigator into it). */
     val effectHasNavParam: Boolean,
+    /** The route-explicit handler declares `onIntent: (I) -> Unit`; codegen wires `vm::onIntent`. */
+    val effectHasIntentParam: Boolean,
     val topBar: MviChromeProviderModel?,
     val bottomBar: MviChromeProviderModel?,
     val roleExtraParams: List<MviExtraParam>,

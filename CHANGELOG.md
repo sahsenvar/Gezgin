@@ -5,7 +5,16 @@ Bu projenin tüm kayda değer değişiklikleri bu dosyada belgelenir.
 Biçim [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/)'e,
 sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
-## [0.1.0-alpha03] - Unreleased
+## [0.1.0-alpha04] - Unreleased
+
+### Added
+
+- Route-explicit `@EffectHandler` artık opsiyonel `onIntent: (I) -> Unit` parametresi alabilir.
+  Codegen bunu aynı route'un owner ViewModel'ındaki `vm::onIntent` ile bağlar; yanlış Intent tipi
+  `MV23` ile derleme zamanında reddedilir. Böylece navigation result akışları Navigator'ı ViewModel'a
+  vermeden strict MVI `result -> Intent -> effect` zincirine dönebilir.
+
+## [0.1.0-alpha03] - 2026-07-17
 
 ### Fixed
 
@@ -70,6 +79,7 @@ navigasyon katmanı (Navigation 3 üzerinde). Yayınlanan artefaktlar: `dev.gezg
   round-trip, predictive-back, modal iptal) gerçek cihaz/emülatörde henüz doğrulanmadı;
   bkz. [docs/gezgin-on-device-checklist.md](docs/gezgin-on-device-checklist.md).
 
+[0.1.0-alpha04]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha03...v0.1.0-alpha04
 [0.1.0-alpha03]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha02...v0.1.0-alpha03
 [0.1.0-alpha02]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha01...v0.1.0-alpha02
 [0.1.0-alpha01]: https://github.com/sahsenvar/Gezgin/releases/tag/v0.1.0-alpha01

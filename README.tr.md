@@ -102,7 +102,7 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 > ⚠️ **Henüz Maven Central'da değil.** `maven-publish` yapılandırması şimdilik iskelet (uzak repository / signing YOK). Kaynaktan `./gradlew publishToMavenLocal` ile derleyip `mavenLocal()`'den tüketin. Aşağıdaki koordinatlar release günü için doğrudur.
 
-KSP + serialization plugin'lerini uygulayıp artefaktları ekle (`group = dev.gezgin`, `version = 0.1.0-alpha03`):
+KSP + serialization plugin'lerini uygulayıp artefaktları ekle (`group = dev.gezgin`, `version = 0.1.0-alpha04`):
 
 ```kotlin
 plugins {
@@ -111,11 +111,11 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.gezgin:gezgin-core:0.1.0-alpha03")
-    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha03")
+    implementation("dev.gezgin:gezgin-core:0.1.0-alpha04")
+    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha04")
 
-    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha03")        // opsiyonel MVI add-on
-    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha03")   // UI'sız test: GezginTestNavigator + tipli fromX()
+    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha04")        // opsiyonel MVI add-on
+    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha04")   // UI'sız test: GezginTestNavigator + tipli fromX()
 }
 ```
 

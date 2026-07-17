@@ -578,6 +578,16 @@ internal class EntryModelReader(
             )
             return null
         }
+        if (effect?.hasIntentParam == true) {
+            if (!effect.explicit || effect.intentTypeName != vm.intentTypeName) {
+                error(
+                    "MV23",
+                    "@EffectHandler ${effect.simpleName} for route $routeFq has onIntent type " +
+                        "${effect.intentTypeName}, but ${vm.vmSimpleName} declares intent ${vm.intentTypeName}",
+                )
+                return null
+            }
+        }
 
         val topChrome = chromeFuns.firstOrNull { it.routeFq == routeFq && it.kind == ChromeKind.TOP }
         val topBar = validateChromeProvider(topChrome, routeFq, vm)
@@ -669,6 +679,7 @@ internal class EntryModelReader(
                 effectFunPackageName = effect?.packageName,
                 effectFlowParamName = effect?.flowParamName,
                 effectHasNavParam = effect?.hasNavParam ?: false,
+                effectHasIntentParam = effect?.hasIntentParam ?: false,
                 topBar = topBar,
                 bottomBar = bottomBar,
                 roleExtraParams = roleExtras,
@@ -686,6 +697,8 @@ internal class EntryModelReader(
         /** The `Flow<E>` param's NAME — 5.2 emits the effect call named (MN1). Null if the binder has none. */
         val flowParamName: String?,
         val hasNavParam: Boolean,
+        val hasIntentParam: Boolean,
+        val intentTypeName: TypeName?,
         /** Resolved nav FQ, or the declared simple name for a same-round error type. */
         val navParamTypeFq: String?,
         /** `true` when [navParamTypeFq] is a same-module declared name rather than a resolved FQ. */
@@ -902,7 +915,22 @@ internal class EntryModelReader(
         val effectArgType = flowParam?.type?.resolve()?.arguments?.firstOrNull()?.type?.resolve()
         val navParam = fn.parameters.firstOrNull { it.name?.asString() == "nav" }
         val navParamType = navParam?.type?.resolve()
-        val extraParams = fn.parameters.filter { it != flowParam && it != navParam }
+        val intentParam = fn.parameters.firstOrNull { it.name?.asString() == "onIntent" }
+        val intentParamType = intentParam?.type?.resolve()
+        val intentReturnsUnit = intentParamType?.arguments?.getOrNull(1)?.type?.resolve()?.fqOf() == UNIT_FQ
+        val intentArgType = intentParamType?.arguments?.getOrNull(0)?.type?.resolve()
+        val validIntentParam = intentParam == null ||
+            (intentParamType?.declaration?.qualifiedName?.asString() == FUNCTION1_FQ &&
+                intentReturnsUnit &&
+                intentArgType != null)
+        if (!validIntentParam) {
+            error(
+                "MV23",
+                "$annotationName $simpleName for route ${routeFq ?: "<legacy-unresolved>"} has invalid onIntent " +
+                    "parameter; expected (Intent) -> Unit",
+            )
+        }
+        val extraParams = fn.parameters.filter { it != flowParam && it != navParam && it != intentParam }
         if (extraParams.isNotEmpty()) {
             error(
                 "MV11",
@@ -922,6 +950,8 @@ internal class EntryModelReader(
             effectTypeName = effectArgType?.toTypeName(),
             flowParamName = flowParam?.name?.asString(),
             hasNavParam = navParam != null,
+            hasIntentParam = intentParam != null,
+            intentTypeName = intentArgType?.toTypeName(),
             navParamTypeFq = if (navParamType?.isError == true) {
                 navParamType.toString().removeSurrounding("<ERROR TYPE: ", ">")
             } else {

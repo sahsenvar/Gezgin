@@ -57,9 +57,9 @@ configurations.configureEach {
 }
 
 dependencies {
-    implementation("dev.gezgin:gezgin-core:0.1.0-alpha03")
-    implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha03")
-    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha03")
+    implementation("dev.gezgin:gezgin-core:0.1.0-alpha04")
+    implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha04")
+    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha04")
 
     implementation("androidx.navigation3:navigation3-runtime:1.0.0")
     implementation("androidx.navigation3:navigation3-ui:1.0.0")

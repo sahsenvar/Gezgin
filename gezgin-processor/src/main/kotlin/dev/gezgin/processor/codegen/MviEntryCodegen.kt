@@ -259,10 +259,10 @@ internal object MviEntryCodegen {
             // MN1 — NAMED args so a `fun XEffects(nav: …, effects: Flow<E>)` (nav-first) binder wires
             // correctly regardless of declared order. Flow param name is captured off the binder.
             val flowName = requireNotNull(mvi.effectFlowParamName)
-            body.add(
-                if (effectWantsNav) "%M(%L = vm.effects, nav = nav)\n" else "%M(%L = vm.effects)\n",
-                effectFun, flowName,
-            )
+            val effectArgs = CodeBlock.builder().add("%L = vm.effects", flowName)
+            if (effectWantsNav) effectArgs.add(", nav = nav")
+            if (mvi.effectHasIntentParam) effectArgs.add(", onIntent = vm::onIntent")
+            body.add("%M(%L)\n", effectFun, effectArgs.build())
         }
 
         if (mvi.bottomBar != null) {

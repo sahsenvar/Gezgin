@@ -102,7 +102,7 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 
 > ⚠️ **Not on Maven Central yet.** The `maven-publish` config is currently a skeleton (no remote repository / signing). Build from source with `./gradlew publishToMavenLocal` and consume from `mavenLocal()`. The coordinates below are correct for release day.
 
-Apply the KSP + serialization plugins and add the artifacts (`group = dev.gezgin`, `version = 0.1.0-alpha03`):
+Apply the KSP + serialization plugins and add the artifacts (`group = dev.gezgin`, `version = 0.1.0-alpha04`):
 
 ```kotlin
 plugins {
@@ -111,11 +111,11 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.gezgin:gezgin-core:0.1.0-alpha03")
-    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha03")
+    implementation("dev.gezgin:gezgin-core:0.1.0-alpha04")
+    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha04")
 
-    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha03")        // optional MVI add-on
-    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha03")   // UI-less testing: GezginTestNavigator + typed fromX()
+    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha04")        // optional MVI add-on
+    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha04")   // UI-less testing: GezginTestNavigator + typed fromX()
 }
 ```
 
