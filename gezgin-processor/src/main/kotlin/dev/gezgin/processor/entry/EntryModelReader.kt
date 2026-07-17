@@ -951,14 +951,11 @@ internal class EntryModelReader(
      * SILENTLY dropped to type-defaults, with no diagnostic. A route may also implement TWO kind
      * contracts (only the kind's is ever read); every non-matching one is a mismatch.
      *
-     * **`SC7`** — `@NoBack` is statically incompatible with certain modal kinds → a GUARANTEED runtime
-     * crash (`EntryAdapter`'s `require`), which repo precedent (MV8) promotes to a KSP rejection:
-     * - (a) `@BottomSheet` + `@NoBack` is UNCONDITIONALLY banned (swipe-to-dismiss can't be disabled by
-     *   any prop; `@NoBack`'s back-swallow leaves the sheet visually hidden but on-stack — desync).
-     * - (b) `@Dialog`/`@FullscreenModal` + `@NoBack` crashes ONLY when the route does NOT implement its
-     *   contract: the default `dismissOnBackPress=true` is statically known → `requireBackDismissCompatible`
-     *   always fails. A route that DOES implement the contract may set `dismissOnBackPress=false` (a
-     *   runtime route-instance value KSP can't read), so it keeps the runtime check rather than a KSP reject.
+     * **`SC7`** — a `@NoBack` modal without its matching contract is guaranteed to fail the runtime guard:
+     * dialog kinds default `dismissOnBackPress=true`; bottom sheets additionally default
+     * `sheetGesturesEnabled=true`. This statically known missing-contract case is rejected by KSP. A route
+     * that implements its matching contract is accepted structurally because getter results are runtime
+     * route-instance values; `EntryAdapter` validates the resolved values when the entry is built.
      */
     private fun checkKindContractAndNoBack(fnName: String, routeDecl: KSClassDeclaration, kind: EntryKindModel): Boolean {
         val routeSimple = routeDecl.simpleName.asString()
@@ -987,14 +984,17 @@ internal class EntryModelReader(
         if (routeDecl.hasAnnotation(NO_BACK_FQ)) {
             when (kind) {
                 EntryKindModel.BOTTOM_SHEET -> {
-                    error(
-                        "SC7",
-                        "$fnName: @NoBack + @BottomSheet is inconsistent (route $routeSimple); swipe-to-dismiss " +
-                            "cannot be disabled by any prop, so @NoBack would leave the sheet hidden while keeping " +
-                            "the entry on the stack (visual/state desync). Do not use @NoBack on @BottomSheet; " +
-                            "the first navigation would definitely crash at runtime (§7, EntryAdapter guard)",
-                    )
-                    return false
+                    if (expectedContract !in implementedContracts) {
+                        error(
+                            "SC7",
+                            "$fnName: @NoBack + @BottomSheet, but route $routeSimple BottomSheetContract is not " +
+                                "implemented; dismissOnBackPress and sheetGesturesEnabled both default to TRUE " +
+                                "(statically known), so the first navigation would definitely fail the runtime " +
+                                "guard. Implement BottomSheetContract with getter-only overrides for both values, " +
+                                "or remove @NoBack (§7)",
+                        )
+                        return false
+                    }
                 }
                 EntryKindModel.DIALOG, EntryKindModel.FULLSCREEN_MODAL -> {
                     if (expectedContract !in implementedContracts) {

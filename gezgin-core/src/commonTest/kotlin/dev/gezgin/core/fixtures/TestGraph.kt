@@ -64,24 +64,35 @@ data object FullModal : ShopGraph, dev.gezgin.core.FullscreenModalContract {
  *  dismissOnBackPress=true, dismissOnClickOutside=true). */
 @Serializable data class SheetDefault(val id: String) : ShopGraph
 
-/** BottomSheetContract'lı sheet route: üçünü de ezer (skipPartiallyExpanded=true, dismissOnBackPress=false,
- *  dismissOnClickOutside=false). */
+/** BottomSheetContract'lı sheet route: tüm property'leri ezer. */
 @Serializable
 data class SheetCustom(val id: String) : ShopGraph, dev.gezgin.core.BottomSheetContract {
     override val skipPartiallyExpanded: Boolean get() = true
     override val dismissOnBackPress: Boolean get() = false
     override val dismissOnClickOutside: Boolean get() = false
+    override val sheetGesturesEnabled: Boolean get() = false
+}
+
+/** @NoBack sheet guard matrisini route-instance runtime getter değerleriyle süren fixture. */
+@Serializable
+data class SheetDismissConfig(
+    val backDismiss: Boolean,
+    val outsideDismiss: Boolean,
+    val gesturesEnabled: Boolean,
+) : ShopGraph, dev.gezgin.core.BottomSheetContract {
+    override val dismissOnBackPress: Boolean get() = backDismiss
+    override val dismissOnClickOutside: Boolean get() = outsideDismiss
+    override val sheetGesturesEnabled: Boolean get() = gesturesEnabled
 }
 
 /** @NoBack + dismissOnBackPress=true (default) çelişkisi guard testi için sheet route. */
 @Serializable data object SheetBackDismissable : ShopGraph, dev.gezgin.core.BottomSheetContract
 
-/** @NoBack + BOTTOM_SHEET route — dismissOnBackPress=false OLSA BİLE artık YASAK (§7: swipe-to-dismiss
- *  hiçbir prop'la kapatılamaz → görsel/state desync). Guard'ın kind==BOTTOM_SHEET dalının dismiss'ten
- *  BAĞIMSIZ fırlattığını pinlemek için (eskiden "legal" varsayılıyordu — Faz4 final-review'da yasaklandı). */
+/** @NoBack ile uyumlu sheet: kullanıcı back'i ve sheet gesture'ları kapalıdır. */
 @Serializable
 data object SheetNoBackCompatible : ShopGraph, dev.gezgin.core.BottomSheetContract {
     override val dismissOnBackPress: Boolean get() = false
+    override val sheetGesturesEnabled: Boolean get() = false
 }
 
 interface Pick                                                     // AÇIK polimorfizm — module ŞART

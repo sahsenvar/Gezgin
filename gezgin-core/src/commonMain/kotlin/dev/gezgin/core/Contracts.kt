@@ -73,8 +73,8 @@ public interface FullscreenModalContract {
  * Overrides must use the `get() =` form ([DialogContract]'s m5 warning — an initializer `val` leaks into the
  * serialized schema).
  *
- * **Prop set — three fields mapping to the REAL knobs of material3 `ModalBottomSheet`** (the dismiss pair
- * symmetric with [DialogContract] + a sheet-specific layout knob):
+ * **Prop set — four fields mapping to the REAL knobs of material3 `ModalBottomSheet`** (the dismiss pair
+ * symmetric with [DialogContract] + sheet-specific state/gesture knobs):
  * - [skipPartiallyExpanded] → `rememberModalBottomSheetState(skipPartiallyExpanded = ...)`. When `true` the
  *   sheet skips the intermediate (half-expanded) stop; it goes straight to fully expanded or hidden (for
  *   short-content sheets).
@@ -85,6 +85,11 @@ public interface FullscreenModalContract {
  * - [dismissOnClickOutside] → `ModalBottomSheetProperties(shouldDismissOnClickOutside = ...)`. Whether a
  *   scrim-tap (outside tap) dismisses the sheet; default `true`. `false` → tap-outside does not dismiss, but
  *   swipe-down and the back button (if allowed) STILL work. Parallel to [DialogContract.dismissOnClickOutside].
+ * - [sheetGesturesEnabled] → `ModalBottomSheet(sheetGesturesEnabled = ...)`. Whether user drag/swipe
+ *   gestures can move or dismiss the sheet; default `true`. This is independent from outside dismissal.
+ *   For a `@NoBack` sheet, both [dismissOnBackPress] and this property must be `false` so user back/swipe
+ *   cannot hide the sheet while its route remains on the stack. Programmatic navigator back and
+ *   [dev.gezgin.core.compose.GezginSheetController.hideAndBack] remain available.
  *
  * dismiss (swipe-down / scrim-tap / when back is allowed) → the sheet's `onDismissRequest = onBack` →
  * `navigator.back()` → pop; if the route is a `ResultRoute`, the caller receives `Canceled` (the existing
@@ -95,4 +100,5 @@ public interface BottomSheetContract {
     public val skipPartiallyExpanded: Boolean get() = false
     public val dismissOnBackPress: Boolean get() = true
     public val dismissOnClickOutside: Boolean get() = true
+    public val sheetGesturesEnabled: Boolean get() = true
 }

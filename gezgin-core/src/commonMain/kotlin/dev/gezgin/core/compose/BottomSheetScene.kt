@@ -81,6 +81,7 @@ internal data class GezginBottomSheetProps(
     val skipPartiallyExpanded: Boolean,
     val dismissOnBackPress: Boolean,
     val dismissOnClickOutside: Boolean,
+    val sheetGesturesEnabled: Boolean,
 )
 
 /**
@@ -131,6 +132,7 @@ internal class GezginBottomSheetScene(
         ModalBottomSheet(
             onDismissRequest = onBack,
             sheetState = sheetState,
+            sheetGesturesEnabled = props.sheetGesturesEnabled,
             properties = ModalBottomSheetProperties(
                 shouldDismissOnBackPress = props.dismissOnBackPress,
                 shouldDismissOnClickOutside = props.dismissOnClickOutside,

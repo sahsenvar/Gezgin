@@ -68,6 +68,59 @@ class ValidationTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
     }
 
+    @Test
+    fun `SC7 rejects no-back bottom sheet when structural contract is missing`() {
+        assertViolates(
+            "SC7",
+            """
+            package dev.gezgin.validation.sheetmissing
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BottomSheet
+            import dev.gezgin.core.annotation.NoBack
+
+            @NoBack
+            data object LockedSheet : Route
+
+            @BottomSheet(LockedSheet::class)
+            @Composable
+            fun LockedSheetContent() {}
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `SC7 accepts no-back bottom sheet with runtime-valued structural contract`() {
+        val result = compileGezgin(
+            SourceFile.kotlin(
+                "Source.kt",
+                """
+                package dev.gezgin.validation.sheetcontract
+
+                import androidx.compose.runtime.Composable
+                import dev.gezgin.core.BottomSheetContract
+                import dev.gezgin.core.Route
+                import dev.gezgin.core.annotation.BottomSheet
+                import dev.gezgin.core.annotation.NoBack
+
+                @NoBack
+                data object LockedSheet : Route, BottomSheetContract {
+                    override val dismissOnBackPress get() = false
+                    override val sheetGesturesEnabled get() = false
+                }
+
+                @BottomSheet(LockedSheet::class)
+                @Composable
+                fun LockedSheetContent() {}
+                """.trimIndent(),
+            ),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+        assertEquals(false, result.messages.contains("[SC7]"), result.messages)
+        assertEquals(false, result.messages.contains("[SC8]"), result.messages)
+    }
+
     // endregion
 
     // region Rule-boundary positives (spec §8.1/§4.2 adjudication — each must compile clean)

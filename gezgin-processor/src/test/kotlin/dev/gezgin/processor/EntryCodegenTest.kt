@@ -401,9 +401,8 @@ class EntryCodegenTest {
         compileGezgin(SourceFile.kotlin("Bad.kt", source), kspArgs = mapOf("gezgin.emitSerializers" to "false")).messages
 
     @Test
-    fun `SC7 — @NoBack + @BottomSheet is unconditionally rejected at KSP`() {
-        // Runtime EntryAdapter would crash on first navigation (require(kind != BOTTOM_SHEET)); the ban is
-        // unconditional (contract-independent) so it is statically decidable → promote to a KSP reject.
+    fun `SC7 — @NoBack + @BottomSheet without BottomSheetContract is rejected at KSP`() {
+        // No contract means both runtime values use their unsafe true defaults, which is statically known.
         val msg = messagesOf(
             """
             package dev.gezgin.sc7bs
@@ -423,6 +422,35 @@ class EntryCodegenTest {
             """.trimIndent(),
         )
         assertTrue(msg.contains("[SC7]"), msg)
+    }
+
+    @Test
+    fun `SC7 allow — @NoBack + @BottomSheet WITH BottomSheetContract reaches runtime value guard`() {
+        // Getter results are route-instance runtime values. KSP may validate only the structural presence
+        // of BottomSheetContract; EntryAdapter validates both resolved values when the entry is built.
+        val msg = messagesOf(
+            """
+            package dev.gezgin.sc7bsok
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.BottomSheetContract
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.BottomSheet
+            import dev.gezgin.core.annotation.NoBack
+
+            @NoBack
+            data class LockedSheet(val x: Int = 0) : Route, BottomSheetContract {
+                override val dismissOnBackPress get() = false
+                override val sheetGesturesEnabled get() = false
+            }
+
+            @BottomSheet(LockedSheet::class)
+            @Composable
+            fun LockedSheetContent(route: LockedSheet) {
+            }
+            """.trimIndent(),
+        )
+        assertTrue(!msg.contains("[SC7]") && !msg.contains("[SC8]"), msg)
     }
 
     @Test

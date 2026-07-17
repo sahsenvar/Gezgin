@@ -6,6 +6,7 @@ import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.SheetBackDismissable
 import dev.gezgin.core.fixtures.SheetCustom
 import dev.gezgin.core.fixtures.SheetDefault
+import dev.gezgin.core.fixtures.SheetDismissConfig
 import dev.gezgin.core.fixtures.SheetNoBackCompatible
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
@@ -27,6 +28,7 @@ class GezginBottomSheetContractTest {
         register<Feed> { }
         register<SheetDefault>(kind = EntryKind.BOTTOM_SHEET) { }
         register<SheetCustom>(kind = EntryKind.BOTTOM_SHEET) { }
+        register<SheetDismissConfig>(kind = EntryKind.BOTTOM_SHEET, noBack = true) { }
         register<SheetBackDismissable>(kind = EntryKind.BOTTOM_SHEET, noBack = true) { }
         register<SheetNoBackCompatible>(kind = EntryKind.BOTTOM_SHEET, noBack = true) { }
     }
@@ -50,6 +52,7 @@ class GezginBottomSheetContractTest {
                 skipPartiallyExpanded = false,
                 dismissOnBackPress = true,
                 dismissOnClickOutside = true,
+                sheetGesturesEnabled = true,
             ),
             props,
         )
@@ -66,6 +69,7 @@ class GezginBottomSheetContractTest {
                 skipPartiallyExpanded = allDefault.skipPartiallyExpanded,
                 dismissOnBackPress = allDefault.dismissOnBackPress,
                 dismissOnClickOutside = allDefault.dismissOnClickOutside,
+                sheetGesturesEnabled = allDefault.sheetGesturesEnabled,
             ),
             sheetPropsOf(SheetDefault("x"), 20L),
         )
@@ -79,6 +83,7 @@ class GezginBottomSheetContractTest {
                 skipPartiallyExpanded = true,
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false,
+                sheetGesturesEnabled = false,
             ),
             props,
         )
@@ -91,23 +96,73 @@ class GezginBottomSheetContractTest {
         assertTrue(sheetPropsOf(SheetDefault("x"), 32L).dismissOnClickOutside, "contract'sız → default true")
     }
 
-    // Faz4 final-review (§7): @NoBack × BOTTOM_SHEET NET YASAK — dismissOnBackPress ne olursa olsun
-    // (swipe-to-dismiss hiçbir prop'la kapatılamaz → görsel/state desync). Hem default-dismiss (=true)
-    // hem override-dismiss=false sheet route'u kuruluşta fırlatır. (Dialog için @NoBack hâlâ legal —
-    // bkz. GezginDialogContractTest `DialogNoBackCompatible GECER`.)
     @Test
-    fun `guard - @NoBack + BOTTOM_SHEET yasak (dismissOnBackPress=true default) require firlatir`() {
-        val ex = assertFailsWith<IllegalArgumentException> {
-            scope().toNavEntry(GezginKey(route = SheetBackDismissable, id = 4L), navigator, navTransitions {})
-        }
-        assertTrue(ex.message?.contains("BottomSheet") == true, "guard mesaji: ${ex.message}")
+    fun `sheetGesturesEnabled default true ve route getter false metadata'ya iner`() {
+        val allDefault = object : dev.gezgin.core.BottomSheetContract {}
+        assertTrue(allDefault.sheetGesturesEnabled, "contract default true olmalı")
+        assertTrue(sheetPropsOf(SheetDefault("x"), 33L).sheetGesturesEnabled, "contract'sız default true")
+        assertTrue(!sheetPropsOf(SheetCustom("x"), 34L).sheetGesturesEnabled, "getter false metadata'ya inmeli")
     }
 
     @Test
-    fun `guard - @NoBack + BOTTOM_SHEET yasak (dismissOnBackPress=false override) da require firlatir`() {
-        val ex = assertFailsWith<IllegalArgumentException> {
-            scope().toNavEntry(GezginKey(route = SheetNoBackCompatible, id = 5L), navigator, navTransitions {})
+    fun `guard - @NoBack contract'siz sheet tip default'lariyla require firlatir`() {
+        val noContractScope = GezginEntryScope().apply {
+            register<Feed> { }
+            register<SheetDefault>(kind = EntryKind.BOTTOM_SHEET, noBack = true) { }
         }
-        assertTrue(ex.message?.contains("BottomSheet") == true, "guard mesaji: ${ex.message}")
+        val ex = assertFailsWith<IllegalArgumentException> {
+            noContractScope.toNavEntry(
+                GezginKey(route = SheetDefault("x"), id = 4L),
+                navigator,
+                navTransitions {},
+            )
+        }
+        assertTrue(ex.message?.contains("dismissOnBackPress") == true, "guard mesaji: ${ex.message}")
+    }
+
+    @Test
+    fun `guard - @NoBack + default BottomSheetContract require firlatir`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            scope().toNavEntry(GezginKey(route = SheetBackDismissable, id = 5L), navigator, navTransitions {})
+        }
+        assertTrue(ex.message?.contains("dismissOnBackPress") == true, "guard mesaji: ${ex.message}")
+    }
+
+    @Test
+    fun `guard - back false gestures true require firlatir`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            sheetPropsOf(
+                SheetDismissConfig(backDismiss = false, outsideDismiss = false, gesturesEnabled = true),
+                6L,
+            )
+        }
+        assertTrue(ex.message?.contains("sheetGesturesEnabled") == true, "guard mesaji: ${ex.message}")
+    }
+
+    @Test
+    fun `guard - back true gestures false require firlatir`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            sheetPropsOf(
+                SheetDismissConfig(backDismiss = true, outsideDismiss = false, gesturesEnabled = false),
+                7L,
+            )
+        }
+        assertTrue(ex.message?.contains("dismissOnBackPress") == true, "guard mesaji: ${ex.message}")
+    }
+
+    @Test
+    fun `guard - back false gestures false GECER ve outside predicate'e katilmaz`() {
+        val outsideEnabled = sheetPropsOf(
+            SheetDismissConfig(backDismiss = false, outsideDismiss = true, gesturesEnabled = false),
+            8L,
+        )
+        val outsideDisabled = sheetPropsOf(
+            SheetDismissConfig(backDismiss = false, outsideDismiss = false, gesturesEnabled = false),
+            9L,
+        )
+
+        assertTrue(outsideEnabled.dismissOnClickOutside)
+        assertTrue(!outsideDisabled.dismissOnClickOutside)
+        assertTrue(!sheetPropsOf(SheetNoBackCompatible, 10L).sheetGesturesEnabled)
     }
 }

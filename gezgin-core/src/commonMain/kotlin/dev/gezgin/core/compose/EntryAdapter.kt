@@ -31,11 +31,10 @@ import dev.gezgin.core.Route
  * `usePlatformDefaultWidth=false` = tam-ekran) kurulur. `BOTTOM_SHEET` (Faz 4.2) [GEZGIN_BOTTOM_SHEET_KEY]
  * işaretiyle [GezginBottomSheetSceneStrategy]'e bağlanır → `ModalBottomSheet` overlay (el-yazımı OverlayScene).
  *
- * **Guard — `dismissOnBackPress + @NoBack` çelişkisi (§7, kuruluş-zamanı RUNTIME):** `@NoBack` geri'yi
- * YUTAR ([gezginOnBack]/[GezginNoBackHandler]) ama `dismissOnBackPress=true` "geri dialog'u kapatsın"
- * der — ikisi bir arada tezat. `dismissOnBackPress` runtime değer (KSP okuyamaz) → derleme yerine
- * entry kuruluşunda `require` ile reddedilir (spec §7 "derleme hatası" bu yüzden runtime guard'a
- * çevrildi — bkz. §7 metni + 4.1 raporu).
+ * **Guard — modal dismissal + `@NoBack` çelişkisi (§7, kuruluş-zamanı RUNTIME):** modal back dismissal
+ * kapalı olmalıdır. Bottom sheet ayrıca kullanıcı drag/swipe gesture'larını da kapatmalıdır; outside
+ * dismissal bağımsızdır ve guard predicate'ine katılmaz. Route getter değerlerini KSP okuyamadığı için
+ * contract-bearing route'lar entry kuruluşunda `require` ile doğrulanır.
  *
  * Task 3.2 devri — **top-entry-drive** (§10.1/§12): [navigator] parametresi eklendi (additive,
  * Task 3.1'in tek-parametreli imzasının yerini alır); content [LocalGezginEntryId]/
@@ -84,21 +83,18 @@ internal fun GezginEntryScope.toNavEntry(
     // SCREEN kind'a yazılır (aşağıda, display mn-1).
     val dialogProperties = resolveDialogProperties(registered.kind, key.route)
     val sheetProps = resolveBottomSheetProps(registered.kind, key.route)
-    // §7 guard (kuruluş-zamanı runtime): @NoBack geri'yi yutar; dismissOnBackPress geri'yle kapat der.
-    // İki tezat birlikte olamaz. DIALOG/FULLSCREEN_MODAL ve BOTTOM_SHEET için AYNI mantık (ortak yardımcı).
+    // §7 guard (kuruluş-zamanı runtime): @NoBack geri'yi yutar; modal back dismissal kapalı olmalıdır.
+    // Bottom sheet'te gesture'lar da kapalı olmalıdır. Outside dismissal bağımsız bir switch'tir.
     if (registered.noBack) {
-        // §7 — @NoBack × BOTTOM_SHEET NET YASAK (dismissOnBackPress ne olursa olsun): swipe-to-dismiss
-        // hiçbir prop'la kapatılamaz → @NoBack geri-yutması sheet'i GÖRSEL olarak Hidden'a animasyonlar
-        // ama entry'yi stack'te top'ta tutar (görsel/state desync). Dialog için @NoBack HÂLÂ legal
-        // (dismissOnBackPress=false ile, aşağıdaki requireBackDismissCompatible) — yalnız sheet yasak.
-        require(registered.kind != EntryKind.BOTTOM_SHEET) {
-            "@NoBack + @BottomSheet is inconsistent (${key.route::class.simpleName}): swipe-to-dismiss " +
-                "cannot be disabled by any prop, so @NoBack would leave the sheet hidden while keeping " +
-                "the entry on the stack (visual/state desync). Do not use @NoBack for BottomSheet; " +
-                "@NoBack is legal for Dialog with dismissOnBackPress=false (§7)."
-        }
         if (dialogProperties != null) requireBackDismissCompatible(key.route, dialogProperties.dismissOnBackPress)
-        if (sheetProps != null) requireBackDismissCompatible(key.route, sheetProps.dismissOnBackPress)
+        if (sheetProps != null) {
+            requireBackDismissCompatible(key.route, sheetProps.dismissOnBackPress)
+            require(!sheetProps.sheetGesturesEnabled) {
+                "Bottom sheet setup conflict (${key.route::class.simpleName}): @NoBack requires " +
+                    "sheetGesturesEnabled=false so user drag/swipe cannot hide the sheet while keeping its " +
+                    "route on the stack. dismissOnClickOutside is independent and is not part of this guard (§7)."
+            }
+        }
     }
     // Display mn-1 — transition metadata YALNIZ SCREEN kind'a: modal (DIALOG/FULLSCREEN_MODAL/BOTTOM_SHEET)
     // entry'sine transition anahtarları yazmak on-device'da ya etkisiz ya arka-plan SCREEN'i yanlış
@@ -163,7 +159,8 @@ private fun resolveDialogProperties(kind: EntryKind, route: Route): DialogProper
 /**
  * Kind + route-instance → BottomSheet scene [GezginBottomSheetProps] (§7), yoksa `null` (sheet-dışı entry).
  * Property'ler route'un opsiyonel [BottomSheetContract]'ından (runtime değer, §2.4) okunur; route implement
- * etmemişse tip-varsayılan (`skipPartiallyExpanded=false`, `dismissOnBackPress=true`, `dismissOnClickOutside=true`).
+ * etmemişse tip-varsayılan (`skipPartiallyExpanded=false`, `dismissOnBackPress=true`,
+ * `dismissOnClickOutside=true`, `sheetGesturesEnabled=true`).
  */
 private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottomSheetProps? = when (kind) {
     EntryKind.BOTTOM_SHEET -> {
@@ -172,6 +169,7 @@ private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottom
             skipPartiallyExpanded = contract?.skipPartiallyExpanded ?: false,
             dismissOnBackPress = contract?.dismissOnBackPress ?: true,
             dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
+            sheetGesturesEnabled = contract?.sheetGesturesEnabled ?: true,
         )
     }
     EntryKind.SCREEN, EntryKind.DIALOG, EntryKind.FULLSCREEN_MODAL -> null

@@ -6,6 +6,7 @@ import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.ScreenBackOnlyTransition
 import dev.gezgin.core.fixtures.ScreenOwnTransition
+import dev.gezgin.core.fixtures.SheetDismissConfig
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -31,6 +32,7 @@ class GezginEntryMetadataTest {
         register<Feed> { }
         register<ScreenBackOnlyTransition> { }
         register<ScreenOwnTransition> { }
+        register<SheetDismissConfig>(kind = EntryKind.BOTTOM_SHEET) { }
     }
 
     @Test
@@ -76,5 +78,20 @@ class GezginEntryMetadataTest {
             navTransitions { forward { error("spec cagirilmadan sadece anahtar kontrolu") } },
         )
         assertTrue(forwardKey in entry.metadata, "app-default forward anahtari bekleniyordu; actual: ${entry.metadata.keys}")
+    }
+
+    @Test
+    fun `bottom sheet metadata yalniz sheetGesturesEnabled degisince esit degildir`() {
+        fun props(gesturesEnabled: Boolean): GezginBottomSheetProps {
+            val route = SheetDismissConfig(
+                backDismiss = false,
+                outsideDismiss = true,
+                gesturesEnabled = gesturesEnabled,
+            )
+            val entry = scope().toNavEntry(GezginKey(route = route, id = 10L), navigator, navTransitions {})
+            return entry.metadata.getValue(GEZGIN_BOTTOM_SHEET_KEY) as GezginBottomSheetProps
+        }
+
+        assertTrue(props(true) != props(false), "gesture alanı metadata props equality'sine katılmalı")
     }
 }
