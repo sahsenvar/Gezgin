@@ -89,9 +89,20 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation("org.jetbrains.compose.ui:ui-test-junit4:${libs.versions.compose.multiplatform.get()}")
         }
+        androidUnitTest.dependencies {
+            implementation(kotlin("test-junit"))
+            implementation("org.robolectric:robolectric:4.14")
+            implementation("androidx.compose.ui:ui-test-junit4:1.7.8")
+            implementation("androidx.compose.ui:ui-test-manifest:1.7.8")
+        }
     }
 }
-android { namespace = "dev.gezgin.core"; compileSdk = 36; defaultConfig { minSdk = 24 } }
+android {
+    namespace = "dev.gezgin.core"
+    compileSdk = 36
+    defaultConfig { minSdk = 24 }
+    testOptions { unitTests.isIncludeAndroidResources = true }
+}
 
 // İskelet — gerçek bir Maven repository/credentials YOK; `./gradlew publish` çalıştırılmaz, yalnız
 // `assemble`/`build`'in bu bloktan etkilenmediği doğrulanır. Kotlin-multiplatform plugin'i `maven-publish`
@@ -99,9 +110,8 @@ android { namespace = "dev.gezgin.core"; compileSdk = 36; defaultConfig { minSdk
 // burada yalnız POM metadata'sı (group=dev.gezgin project'ten gelir) `configureEach` ile tembel eklenir.
 // Repository/signing bilinçle EKLENMEDİ → yalnız `publishToMavenLocal`/`generatePomFile*` görevleri mümkün,
 // gerçek uzak yayın yolu yok.
-// NOT (gerçek yayın günü için): `android { publishLibraryVariants("release") }` HENÜZ eklenmedi — güncel
-// Kotlin Gradle Plugin bunu vermeden Android varyantını publish etmez; bu iskelet bugün hiçbir şeyi
-// publish etmediği için zararsız, ama V1 sonrası gerçek yayın adımının kontrol listesine eklenmeli.
+// Android release publication is enabled above with `publishLibraryVariants("release")`; remote repository
+// and signing configuration intentionally remain absent, so only local publication is supported here.
 publishing {
     publications.withType<MavenPublication>().configureEach {
         pom {

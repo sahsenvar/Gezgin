@@ -12,9 +12,11 @@ own Gradle 9.4.1 wrapper, and uses AndroidX Navigation 3 `1.0.0` plus lifecycle 
 ## Production and publication alignment
 
 - `PlatformDisplay.android.kt` now adapts Gezgin's already-decorated entries to AndroidX Navigation
-  3 `1.0.0`'s `backStack`/`entryProvider`/singular `sceneStrategy` API. Stable private route keys
-  preserve entry identity, metadata, the dialog/bottom-sheet strategy chain, and back behavior;
-  `entryDecorators = emptyList()` prevents a second decoration pass.
+  3 `1.0.0`'s `backStack`/`entryProvider`/singular `sceneStrategy` API. The private route wrapper
+  holds `contentKey: Any` directly: it does not narrow the opaque Nav3 key to `Long`, and preserves
+  the original content-key instance, metadata, entry order, and content resolution. The small
+  internal `adaptAndroidNavDisplayEntries` helper makes that adapter contract directly testable;
+  `entryDecorators = emptyList()` still prevents a second decoration pass.
 - `gezgin-core` and `gezgin-mvi` publish Android release variants to Maven Local. The Android
   source sets export AndroidX Navigation 3/lifecycle artifacts while JVM source sets retain the
   JetBrains desktop family.
@@ -30,6 +32,7 @@ own Gradle 9.4.1 wrapper, and uses AndroidX Navigation 3 `1.0.0` plus lifecycle 
 - `gradle/libs.versions.toml`
 - `gezgin-core/build.gradle.kts`
 - `gezgin-core/src/androidMain/kotlin/dev/gezgin/core/compose/PlatformDisplay.android.kt`
+- `gezgin-core/src/androidUnitTest/kotlin/dev/gezgin/core/compose/AndroidNavDisplayAdapterTest.kt`
 - `gezgin-mvi/build.gradle.kts`
 - `gezgin-processor/build.gradle.kts`
 - `compatibility/zad-consumer/settings.gradle.kts`
@@ -54,6 +57,21 @@ previous Android production call used the newer `NavDisplay(entries = ..., scene
 ` API. The exact 1.0.0 source exposes `backStack`, `entryProvider`, singular `sceneStrategy`, and
 `onBack`; the targeted production adaptation above is the required green fix.
 
+## Review-fix coverage
+
+- `AndroidNavDisplayAdapterTest` is an Android local Robolectric/Compose test run by
+  `:gezgin-core:testDebugUnitTest`; it uses a non-`Long` data-class content key and proves the
+  adapter preserves that exact key instance, metadata instances, input order, and the original
+  entry's resolved composable content. It adds no application or custom Activity harness.
+- Existing desktop Compose scene tests remain the overlay coverage: `GezginDisplaySceneTest` proves
+  dialog/fullscreen overlays retain the underlaid screen and dismiss through back, while
+  `GezginBottomSheetSceneTest` covers the bottom-sheet overlay/dismiss path.
+- Residual integration risk: this focused Android local test exercises the Android adapter and its
+  content resolution, but it does not execute a device/instrumentation end-to-end overlay scene
+  through AndroidX Navigation 3 `NavDisplay`. Task 1's Android compile, Maven Local publication,
+  independent consumer compile, and runtime dependency inspections cover the remaining binary and
+  dependency-family boundary; the existing desktop scene tests cover overlay behavior.
+
 ## Fresh verification
 
 All commands below exited `0` on the final working tree. Android SDK preflight passed with
@@ -61,6 +79,7 @@ All commands below exited `0` on the final working tree. Android SDK preflight p
 
 | Command | Result |
 |---|---:|
+| `./gradlew :gezgin-core:testDebugUnitTest --tests dev.gezgin.core.compose.AndroidNavDisplayAdapterTest` | `0` (1 test, 0 failures) |
 | `./gradlew :gezgin-processor:test --tests dev.gezgin.processor.Faz8SpikeTest` | `0` |
 | `./gradlew :gezgin-core:publishToMavenLocal :gezgin-mvi:publishToMavenLocal :gezgin-processor:publishToMavenLocal` | `0` |
 | `./compatibility/zad-consumer/gradlew -p compatibility/zad-consumer clean compileDebugKotlin --stacktrace` | `0` |
@@ -88,4 +107,5 @@ independent consumer ran both `:kspDebugKotlin` and `:compileDebugKotlin` succes
 
 `git diff --check` passes. The consumer's AGP 9 compatibility settings emit deprecation warnings
 for the temporary built-in Kotlin opt-out and legacy variant API; they do not affect compilation.
-No unresolved Task 1 compatibility blocker remains.
+The Android adapter's remaining end-to-end scene-runtime risk is documented above; no unresolved
+Task 1 compilation, publication, or dependency-family compatibility blocker remains.

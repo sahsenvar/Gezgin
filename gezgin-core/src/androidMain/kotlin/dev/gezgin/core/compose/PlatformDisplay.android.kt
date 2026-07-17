@@ -11,12 +11,31 @@ import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.Route
 
-private data class AndroidNavDisplayKey(val id: Long) : Route
+private data class AndroidNavDisplayKey(val contentKey: Any) : Route
 
-private data class AndroidNavDisplayState(
+internal data class AndroidNavDisplayState(
     val backStack: List<Route>,
     val entriesByKey: Map<Route, NavEntry<Route>>,
 )
+
+/**
+ * Navigation 3 1.0.0's `NavDisplay` has no `entries` overload. Preserve each already-decorated
+ * entry under a private route key while leaving its opaque `contentKey`, metadata, and content intact.
+ */
+internal fun adaptAndroidNavDisplayEntries(entries: List<NavEntry<Route>>): AndroidNavDisplayState {
+    val entriesByKey = entries.associate { entry ->
+        val key: Route = AndroidNavDisplayKey(entry.contentKey)
+        key to NavEntry(
+            key = key,
+            contentKey = entry.contentKey,
+            metadata = entry.metadata,
+        ) { entry.Content() }
+    }
+    return AndroidNavDisplayState(
+        backStack = entriesByKey.keys.toList(),
+        entriesByKey = entriesByKey,
+    )
+}
 
 /**
  * Android: per-entry `ViewModelStore` decorator'ı (host `ComponentActivity`
@@ -61,20 +80,7 @@ internal actual fun GezginNavDisplay(
     // Navigation 3 1.0.0 has no `entries` overload. Entries arrive here already decorated by
     // GezginDisplay, so wrap their content under stable Route keys and explicitly disable Nav3's
     // default decorator to preserve the original per-entry state and ViewModel ownership.
-    val navDisplayState = remember(entries) {
-        val entriesByKey = entries.associate { entry ->
-            val key: Route = AndroidNavDisplayKey(entry.contentKey as Long)
-            key to NavEntry(
-                key = key,
-                contentKey = entry.contentKey,
-                metadata = entry.metadata,
-            ) { entry.Content() }
-        }
-        AndroidNavDisplayState(
-            backStack = entriesByKey.keys.toList(),
-            entriesByKey = entriesByKey,
-        )
-    }
+    val navDisplayState = remember(entries) { adaptAndroidNavDisplayEntries(entries) }
     NavDisplay(
         backStack = navDisplayState.backStack,
         modifier = modifier,
