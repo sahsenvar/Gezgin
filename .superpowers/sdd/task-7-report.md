@@ -21,8 +21,8 @@
 
 - Initial `apiCheck` failed on the expected accumulated public additions.
 - `apiDump` updated only the four maintained API files; final `apiCheck` passed.
-- Auth/home/profile strict-MVI migration tests: 7 tests, 0 failures.
-- Shopr topology/strict-MVI tests: 14 tests, 0 failures.
+- Auth/home/profile strict-MVI migration tests: 9 tests, 0 failures.
+- Shopr topology/route-bound collector tests: 14 tests, 0 failures.
 - Shopr result regressions: 44 tests, 0 failures.
 - `:sample:app:assembleDebug`, owned feature tests, Shopr compile/tests, core/MVI/processor checks,
   and the independent Gradle 9.4.1 ZAD consumer compile passed.
@@ -46,13 +46,22 @@
 
 ## Independent review fixes
 
-- Real route-bound Compose handler tests now prove persisted result delivery; the profile proof also
-  detaches and reattaches the handler and asserts one active collector. Removing the production collector
-  makes these tests fail.
-- Shopr checkout results re-enter `CatalogViewModel` as an explicit Intent and produce a VM Effect before
-  the handler performs replacement or emits the exact cancellation message.
+- Real route-bound Compose handler tests now prove persisted result delivery. The profile proof uses
+  distinct disposed and reattached sinks across two deliveries: the disposed sink must receive zero, while
+  the active sink receives each result exactly once. A surviving old collector therefore fails the test.
+- Shopr cancellation mounts the real `CatalogEffectHandler`, cancels through the checkout navigator result
+  bus, and asserts one ViewModel re-entry, the exact `Ödeme iptal edildi` toast, and the Catalog-only stack.
 - Showcase and Shopr restore-key tests inspect the actual balanced `rememberNavigator(...)` call and fail
   when host wiring drops the stable key.
 - Maintained result guidance now assigns collection to the route-bound handler, which forwards an Intent
   into the ViewModel; the concise capability matrix again points to nested/results, typed edges,
   quit/back, fullscreen modals, transition cascading, observability, and test-navigator examples.
+
+## Final test-proof follow-up
+
+- The profile test was mutation-checked by temporarily retaining the disposed handler generation. It failed
+  with `disposed collector must not steal the persisted result` (`expected 0`, `was 1`); the mutation was
+  removed before the final green run.
+- Fresh focused validation: auth/home/profile strict-MVI tests (9), Shopr topology plus the real
+  success-and-cancellation collector proof (14), and core `RawNavigator`/`ResultBus`/`NavResult`/
+  `SavedState` result regressions (52) all passed with zero failures or errors.

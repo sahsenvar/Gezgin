@@ -217,23 +217,6 @@ class ShopGraphTopologyTest {
     }
 
     @Test
-    fun `iptal edilen checkout ViewModel effectiyle Catalog stackini korur ve mesaji gosterir`() = runBlocking {
-        val raw = RawNavigator(start = HomeGraph.Catalog, topology = gezginTopology)
-        val messages = mutableListOf<String>()
-        val viewModel = CatalogViewModel()
-
-        viewModel.onIntent(CatalogIntent.CheckoutResult(NavResult.Canceled))
-        handleCatalogEffect(
-            viewModel.effects.first(),
-            raw.catalogNavigator(entryId = 1L),
-            messages::add,
-        )
-
-        assertEquals(listOf("Ödeme iptal edildi"), messages)
-        assertEquals(listOf<Route>(HomeGraph.Catalog), raw.backStack.value)
-    }
-
-    @Test
     fun `OrderPlaced typed handler back ve modal semantigini korur`() {
         val raw = RawNavigator(start = HomeGraph.Feed, topology = gezginTopology)
         raw.feedNavigator(entryId = 1L).goToCatalog()

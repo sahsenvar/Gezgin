@@ -61,21 +61,32 @@ class StrictMviMigrationTest {
 
     @OptIn(GezginInternalApi::class)
     @Test
-    fun `route-bound profile collector detaches and reattaches once to a persisted result`() {
+    fun `route-bound profile collector leaves its disposed generation unable to steal later results`() {
         val viewModel = ProfileViewModel()
-        var deliveredIntents = 0
-        val routedEffects = resultIntentEffectFlow<ProfileEffect, ProfileIntent>(viewModel.effects) { intent ->
-            deliveredIntents += 1
+        var disposedGenerationIntents = 0
+        val disposedGenerationEffects = resultIntentEffectFlow<ProfileEffect, ProfileIntent>(viewModel.effects) { intent ->
+            disposedGenerationIntents += 1
+            viewModel.onIntent(intent)
+        }
+        var activeGenerationIntents = 0
+        val activeGenerationEffects = resultIntentEffectFlow<ProfileEffect, ProfileIntent>(viewModel.effects) { intent ->
+            activeGenerationIntents += 1
             viewModel.onIntent(intent)
         }
         val raw = RawNavigator(start = ProfileScreenRoute, topology = gezginTopology)
         val nav = raw.profileNavigator(entryId = requireNotNull(raw.entryIdOf(ProfileScreenRoute::class)))
         val attached = mutableStateOf(true)
+        val useActiveGeneration = mutableStateOf(false)
         val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
 
         try {
             controller.get().setContent {
-                if (attached.value) ProfileEffectHandler(routedEffects, nav)
+                if (attached.value) {
+                    ProfileEffectHandler(
+                        if (useActiveGeneration.value) activeGenerationEffects else disposedGenerationEffects,
+                        nav,
+                    )
+                }
             }
             shadowOf(Looper.getMainLooper()).idle()
 
@@ -87,13 +98,27 @@ class StrictMviMigrationTest {
                 entryId = requireNotNull(raw.entryIdOf(EditNameDialogRoute::class)),
             ).backWithResult("Ada Lovelace")
             shadowOf(Looper.getMainLooper()).idle()
-            assertEquals(0, deliveredIntents, "detached collector must not receive results")
+            assertEquals(0, disposedGenerationIntents, "detached collector must not receive results")
 
-            controller.get().runOnUiThread { attached.value = true }
+            controller.get().runOnUiThread {
+                useActiveGeneration.value = true
+                attached.value = true
+            }
             awaitComposeCondition("reattached collector did not receive the persisted result") {
                 viewModel.uiState.value.name == "Ada Lovelace"
             }
-            assertEquals(1, deliveredIntents, "reattach must leave exactly one active result collector")
+            assertEquals(0, disposedGenerationIntents, "disposed collector must not steal the persisted result")
+            assertEquals(1, activeGenerationIntents, "reattached collector must receive the persisted result once")
+
+            nav.launchEditNameDialog(current = viewModel.uiState.value.name)
+            raw.editNameDialogNavigator(
+                entryId = requireNotNull(raw.entryIdOf(EditNameDialogRoute::class)),
+            ).backWithResult("Grace Hopper")
+            awaitComposeCondition("active collector did not receive the later result") {
+                viewModel.uiState.value.name == "Grace Hopper"
+            }
+            assertEquals(0, disposedGenerationIntents, "disposed collector must not consume later results")
+            assertEquals(2, activeGenerationIntents, "active collector must receive each result exactly once")
         } finally {
             controller.pause().stop().destroy()
         }

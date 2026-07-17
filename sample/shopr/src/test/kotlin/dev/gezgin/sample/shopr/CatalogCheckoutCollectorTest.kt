@@ -1,5 +1,6 @@
 package dev.gezgin.sample.shopr
 
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import dev.gezgin.core.GezginInternalApi
@@ -25,8 +26,9 @@ import kotlin.test.assertTrue
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowLooper
+import org.robolectric.shadows.ShadowToast
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -34,7 +36,7 @@ class CatalogCheckoutCollectorTest {
 
     @OptIn(GezginInternalApi::class)
     @Test
-    fun `checkout success re-enters CatalogViewModel before handler replaces the route`() {
+    fun `checkout success and cancellation re-enter CatalogViewModel through the route-bound handler`() {
         val viewModel = CatalogViewModel()
         var deliveredIntents = 0
         val effects = catalogResultIntentEffectFlow(viewModel.effects) { intent ->
@@ -47,7 +49,7 @@ class CatalogCheckoutCollectorTest {
 
         try {
             controller.get().setContent { CatalogEffectHandler(effects, nav) }
-            ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+            shadowOf(Looper.getMainLooper()).idle()
 
             nav.launchCheckout()
             handleCartEffect(
@@ -65,7 +67,41 @@ class CatalogCheckoutCollectorTest {
                 raw.current == HomeGraph.OrderPlaced(orderId = "ORD-1001")
             }
             assertEquals(1, deliveredIntents)
+
+            ShadowToast.reset()
+            val canceledViewModel = CatalogViewModel()
+            var canceledDeliveredIntents = 0
+            val canceledEffects = catalogResultIntentEffectFlow(canceledViewModel.effects) { intent ->
+                canceledDeliveredIntents += 1
+                canceledViewModel.onIntent(intent)
+            }
+            val canceledRaw = RawNavigator(start = HomeGraph.Catalog, topology = gezginTopology)
+            val canceledNav = canceledRaw.catalogNavigator(
+                entryId = requireNotNull(canceledRaw.entryIdOf(HomeGraph.Catalog::class)),
+            )
+            controller.get().runOnUiThread {
+                controller.get().setContent { CatalogEffectHandler(canceledEffects, canceledNav) }
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.get().runOnUiThread {
+                canceledNav.launchCheckout()
+                canceledRaw.cartNavigator(
+                    entryId = requireNotNull(canceledRaw.entryIdOf(CheckoutFlow.Cart::class)),
+                ).back()
+            }
+
+            awaitComposeCondition("checkout cancellation did not re-enter CatalogViewModel") {
+                canceledDeliveredIntents == 1
+            }
+            awaitComposeCondition("checkout cancellation did not show the exact toast") {
+                ShadowToast.getTextOfLatestToast() == "Ödeme iptal edildi"
+            }
+            assertEquals(1, canceledDeliveredIntents, "the route-bound collector must re-enter the ViewModel once")
+            assertEquals("Ödeme iptal edildi", ShadowToast.getTextOfLatestToast())
+            assertEquals(listOf(HomeGraph.Catalog), canceledRaw.backStack.value)
         } finally {
+            controller.get().runOnUiThread { controller.get().setContent {} }
+            shadowOf(Looper.getMainLooper()).idle()
             controller.pause().stop().destroy()
         }
     }
@@ -74,7 +110,7 @@ class CatalogCheckoutCollectorTest {
 
 private fun awaitComposeCondition(message: String, condition: () -> Boolean) {
     repeat(100) {
-        ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+        shadowOf(Looper.getMainLooper()).idle()
         if (condition()) return
         Thread.sleep(10)
     }
