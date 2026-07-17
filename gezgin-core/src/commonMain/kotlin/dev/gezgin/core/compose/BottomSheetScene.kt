@@ -18,6 +18,7 @@ import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneStrategy
 import androidx.navigation3.scene.SceneStrategyScope
 import dev.gezgin.core.Route
+import dev.gezgin.core.BottomSheetDragHandleMode
 
 /**
  * Gezgin-owned handle a `@BottomSheet` content uses to dismiss its sheet (§7) — read from
@@ -82,6 +83,7 @@ internal data class GezginBottomSheetProps(
     val dismissOnBackPress: Boolean,
     val dismissOnClickOutside: Boolean,
     val sheetGesturesEnabled: Boolean,
+    val dragHandleMode: BottomSheetDragHandleMode,
 )
 
 /**
@@ -129,17 +131,31 @@ internal class GezginBottomSheetScene(
     override val content: @Composable () -> Unit = {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = props.skipPartiallyExpanded)
         val controller = remember(sheetState) { MaterialSheetController(sheetState, onBack) }
-        ModalBottomSheet(
-            onDismissRequest = onBack,
-            sheetState = sheetState,
-            sheetGesturesEnabled = props.sheetGesturesEnabled,
-            properties = ModalBottomSheetProperties(
-                shouldDismissOnBackPress = props.dismissOnBackPress,
-                shouldDismissOnClickOutside = props.dismissOnClickOutside,
-            ),
-        ) {
-            CompositionLocalProvider(LocalGezginSheetController provides controller) {
-                entry.Content()
+        val properties = ModalBottomSheetProperties(
+            shouldDismissOnBackPress = props.dismissOnBackPress,
+            shouldDismissOnClickOutside = props.dismissOnClickOutside,
+        )
+        when (props.dragHandleMode) {
+            BottomSheetDragHandleMode.Default -> ModalBottomSheet(
+                onDismissRequest = onBack,
+                sheetState = sheetState,
+                sheetGesturesEnabled = props.sheetGesturesEnabled,
+                properties = properties,
+            ) {
+                CompositionLocalProvider(LocalGezginSheetController provides controller) {
+                    entry.Content()
+                }
+            }
+            BottomSheetDragHandleMode.None -> ModalBottomSheet(
+                onDismissRequest = onBack,
+                sheetState = sheetState,
+                sheetGesturesEnabled = props.sheetGesturesEnabled,
+                dragHandle = null,
+                properties = properties,
+            ) {
+                CompositionLocalProvider(LocalGezginSheetController provides controller) {
+                    entry.Content()
+                }
             }
         }
     }

@@ -66,6 +66,15 @@ public interface FullscreenModalContract {
 }
 
 /**
+ * Migration-only switch for Material's built-in bottom-sheet handle.
+ * This is not Gezgin's permanent route-bound presentation/slot API.
+ */
+public enum class BottomSheetDragHandleMode {
+    Default,
+    None,
+}
+
+/**
  * The **optional** typed home for BottomSheet presentation properties (§7) — a `@BottomSheet` route
  * implements this interface to carry the modal sheet's behavior as a **runtime value** off the route
  * instance (same pattern as [DialogContract]; the adapter reads it via `route as? BottomSheetContract`). If
@@ -73,7 +82,7 @@ public interface FullscreenModalContract {
  * Overrides must use the `get() =` form ([DialogContract]'s m5 warning — an initializer `val` leaks into the
  * serialized schema).
  *
- * **Prop set — four fields mapping to the REAL knobs of material3 `ModalBottomSheet`** (the dismiss pair
+ * **Prop set — five fields mapping to the REAL knobs of material3 `ModalBottomSheet`** (the dismiss pair
  * symmetric with [DialogContract] + sheet-specific state/gesture knobs):
  * - [skipPartiallyExpanded] → `rememberModalBottomSheetState(skipPartiallyExpanded = ...)`. When `true` the
  *   sheet skips the intermediate (half-expanded) stop; it goes straight to fully expanded or hidden (for
@@ -90,6 +99,9 @@ public interface FullscreenModalContract {
  *   For a `@NoBack` sheet, both [dismissOnBackPress] and this property must be `false` so user back/swipe
  *   cannot hide the sheet while its route remains on the stack. Programmatic navigator back and
  *   [dev.gezgin.core.compose.GezginSheetController.hideAndBack] remain available.
+ * - [dragHandleMode] is a migration-only bridge. [BottomSheetDragHandleMode.Default] preserves Material's
+ *   default handle; [BottomSheetDragHandleMode.None] passes `dragHandle = null` so a consumer may render
+ *   its own handle in sheet content. It is not the permanent presentation-slot API.
  *
  * dismiss (swipe-down / scrim-tap / when back is allowed) → the sheet's `onDismissRequest = onBack` →
  * `navigator.back()` → pop; if the route is a `ResultRoute`, the caller receives `Canceled` (the existing
@@ -101,4 +113,5 @@ public interface BottomSheetContract {
     public val dismissOnBackPress: Boolean get() = true
     public val dismissOnClickOutside: Boolean get() = true
     public val sheetGesturesEnabled: Boolean get() = true
+    public val dragHandleMode: BottomSheetDragHandleMode get() = BottomSheetDragHandleMode.Default
 }

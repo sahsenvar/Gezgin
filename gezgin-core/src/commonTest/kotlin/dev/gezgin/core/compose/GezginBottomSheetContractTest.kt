@@ -2,11 +2,13 @@ package dev.gezgin.core.compose
 
 import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
+import dev.gezgin.core.BottomSheetDragHandleMode
 import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.SheetBackDismissable
 import dev.gezgin.core.fixtures.SheetCustom
 import dev.gezgin.core.fixtures.SheetDefault
 import dev.gezgin.core.fixtures.SheetDismissConfig
+import dev.gezgin.core.fixtures.SheetDragHandleConfig
 import dev.gezgin.core.fixtures.SheetNoBackCompatible
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
@@ -29,6 +31,7 @@ class GezginBottomSheetContractTest {
         register<SheetDefault>(kind = EntryKind.BOTTOM_SHEET) { }
         register<SheetCustom>(kind = EntryKind.BOTTOM_SHEET) { }
         register<SheetDismissConfig>(kind = EntryKind.BOTTOM_SHEET, noBack = true) { }
+        register<SheetDragHandleConfig>(kind = EntryKind.BOTTOM_SHEET) { }
         register<SheetBackDismissable>(kind = EntryKind.BOTTOM_SHEET, noBack = true) { }
         register<SheetNoBackCompatible>(kind = EntryKind.BOTTOM_SHEET, noBack = true) { }
     }
@@ -53,6 +56,7 @@ class GezginBottomSheetContractTest {
                 dismissOnBackPress = true,
                 dismissOnClickOutside = true,
                 sheetGesturesEnabled = true,
+                dragHandleMode = BottomSheetDragHandleMode.Default,
             ),
             props,
         )
@@ -70,6 +74,7 @@ class GezginBottomSheetContractTest {
                 dismissOnBackPress = allDefault.dismissOnBackPress,
                 dismissOnClickOutside = allDefault.dismissOnClickOutside,
                 sheetGesturesEnabled = allDefault.sheetGesturesEnabled,
+                dragHandleMode = allDefault.dragHandleMode,
             ),
             sheetPropsOf(SheetDefault("x"), 20L),
         )
@@ -84,6 +89,7 @@ class GezginBottomSheetContractTest {
                 dismissOnBackPress = false,
                 dismissOnClickOutside = false,
                 sheetGesturesEnabled = false,
+                dragHandleMode = BottomSheetDragHandleMode.None,
             ),
             props,
         )
@@ -102,6 +108,17 @@ class GezginBottomSheetContractTest {
         assertTrue(allDefault.sheetGesturesEnabled, "contract default true olmalı")
         assertTrue(sheetPropsOf(SheetDefault("x"), 33L).sheetGesturesEnabled, "contract'sız default true")
         assertTrue(!sheetPropsOf(SheetCustom("x"), 34L).sheetGesturesEnabled, "getter false metadata'ya inmeli")
+    }
+
+    @Test
+    fun `drag handle default korunur ve getter None metadata'ya iner`() {
+        val allDefault = object : dev.gezgin.core.BottomSheetContract {}
+        assertEquals(BottomSheetDragHandleMode.Default, allDefault.dragHandleMode)
+        assertEquals(BottomSheetDragHandleMode.Default, sheetPropsOf(SheetDefault("x"), 35L).dragHandleMode)
+        assertEquals(
+            BottomSheetDragHandleMode.None,
+            sheetPropsOf(SheetDragHandleConfig(BottomSheetDragHandleMode.None), 36L).dragHandleMode,
+        )
     }
 
     @Test

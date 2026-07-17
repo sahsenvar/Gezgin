@@ -17,10 +17,12 @@ import androidx.compose.ui.test.runComposeUiTest
 import androidx.navigation3.runtime.NavEntry
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
+import dev.gezgin.core.BottomSheetDragHandleMode
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.SheetCustom
 import dev.gezgin.core.fixtures.SheetDefault
 import dev.gezgin.core.fixtures.SheetDismissConfig
+import dev.gezgin.core.fixtures.SheetDragHandleConfig
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,6 +50,7 @@ class GezginBottomSheetSceneTest {
                     dismissOnBackPress = true,
                     dismissOnClickOutside = true,
                     sheetGesturesEnabled = true,
+                    dragHandleMode = BottomSheetDragHandleMode.Default,
                 ),
                 onBack = {},
             )
@@ -71,6 +74,7 @@ class GezginBottomSheetSceneTest {
                 dismissOnBackPress = false,
                 dismissOnClickOutside = true,
                 sheetGesturesEnabled = gesturesEnabled,
+                dragHandleMode = BottomSheetDragHandleMode.Default,
             ),
             onBack = {},
         )
@@ -144,6 +148,28 @@ class GezginBottomSheetSceneTest {
             onAllNodes(dismissAction, useUnmergedTree = true).fetchSemanticsNodes().isEmpty(),
             "gesture=false Material3 drag handle dismiss semantics sağlamamalı",
         )
+    }
+
+    @Test
+    fun `drag handle Default render olur None ise host handle render etmez`() = runComposeUiTest {
+        val nav = RawNavigator(start = Catalog, topology = testTopology)
+        setContent {
+            GezginDisplay(navigator = nav) {
+                register<Catalog> { BasicText("home-screen") }
+                register<SheetDragHandleConfig>(kind = EntryKind.BOTTOM_SHEET) { BasicText("handle-sheet") }
+            }
+        }
+        val dismissAction = SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)
+
+        nav.navigate(SheetDragHandleConfig(BottomSheetDragHandleMode.Default))
+        waitForIdle()
+        assertTrue(onAllNodes(dismissAction, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+
+        nav.back()
+        nav.navigate(SheetDragHandleConfig(BottomSheetDragHandleMode.None))
+        waitForIdle()
+        onNodeWithText("handle-sheet").assertIsDisplayed()
+        assertTrue(onAllNodes(dismissAction, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
     }
 
     @Test

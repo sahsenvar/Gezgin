@@ -5,7 +5,15 @@ Bu projenin tüm kayda değer değişiklikleri bu dosyada belgelenir.
 Biçim [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/)'e,
 sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
-## [0.1.0-alpha01] - Unreleased
+## [0.1.0-alpha02] - Unreleased
+
+### Added
+
+- ZAD geçişi için migration-only `BottomSheetDragHandleMode.Default/None`; `None` Material 3 host'a
+  `dragHandle = null` iletir, özel handle consumer içeriğinde kalır. Kalıcı route-bound presentation/slot
+  API'si V2'ye bırakılmıştır ve bu enum ileride değiştirilebilir veya kaldırılabilir.
+
+## [0.1.0-alpha01] - 2026-07-17
 
 İlk alpha. Compose Multiplatform için type-safe, annotation + KSP-codegen, state-as-data
 navigasyon katmanı (Navigation 3 üzerinde). Yayınlanan artefaktlar: `dev.gezgin:gezgin-core`,
@@ -54,4 +62,5 @@ navigasyon katmanı (Navigation 3 üzerinde). Yayınlanan artefaktlar: `dev.gezg
   round-trip, predictive-back, modal iptal) gerçek cihaz/emülatörde henüz doğrulanmadı;
   bkz. [docs/gezgin-on-device-checklist.md](docs/gezgin-on-device-checklist.md).
 
+[0.1.0-alpha02]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha01...v0.1.0-alpha02
 [0.1.0-alpha01]: https://github.com/sahsenvar/Gezgin/releases/tag/v0.1.0-alpha01

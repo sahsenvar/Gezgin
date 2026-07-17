@@ -102,7 +102,7 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 > ⚠️ **Henüz Maven Central'da değil.** `maven-publish` yapılandırması şimdilik iskelet (uzak repository / signing YOK). Kaynaktan `./gradlew publishToMavenLocal` ile derleyip `mavenLocal()`'den tüketin. Aşağıdaki koordinatlar release günü için doğrudur.
 
-KSP + serialization plugin'lerini uygulayıp artefaktları ekle (`group = dev.gezgin`, `version = 0.1.0-alpha01`):
+KSP + serialization plugin'lerini uygulayıp artefaktları ekle (`group = dev.gezgin`, `version = 0.1.0-alpha02`):
 
 ```kotlin
 plugins {
@@ -111,13 +111,22 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.gezgin:gezgin-core:0.1.0-alpha01")
-    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha01")
+    implementation("dev.gezgin:gezgin-core:0.1.0-alpha02")
+    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha02")
 
-    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha01")        // opsiyonel MVI add-on
-    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha01")   // UI'sız test: GezginTestNavigator + tipli fromX()
+    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha02")        // opsiyonel MVI add-on
+    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha02")   // UI'sız test: GezginTestNavigator + tipli fromX()
 }
 ```
+
+ZAD geçişi sırasında bir sheet route üzerinden composable taşımadan Material'ın varsayılan handle'ını geçici olarak kaldırabilir:
+
+```kotlin
+override val dragHandleMode: BottomSheetDragHandleMode
+    get() = BottomSheetDragHandleMode.None
+```
+
+`Default` Material handle'ını korur; `None`, host'a `dragHandle = null` verir ve özel handle consumer-owned sheet içeriğinde kalır. Bu enum kalıcı presentation-slot API'si değil, migration köprüsüdür; V2 tasarımında deprecated edilebilir, değiştirilebilir veya kaldırılabilir.
 
 | Modül | Rol |
 |---|---|

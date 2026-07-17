@@ -3,10 +3,12 @@ package dev.gezgin.core.compose
 import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.GezginKey
 import dev.gezgin.core.RawNavigator
+import dev.gezgin.core.BottomSheetDragHandleMode
 import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.ScreenBackOnlyTransition
 import dev.gezgin.core.fixtures.ScreenOwnTransition
 import dev.gezgin.core.fixtures.SheetDismissConfig
+import dev.gezgin.core.fixtures.SheetDragHandleConfig
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -33,6 +35,7 @@ class GezginEntryMetadataTest {
         register<ScreenBackOnlyTransition> { }
         register<ScreenOwnTransition> { }
         register<SheetDismissConfig>(kind = EntryKind.BOTTOM_SHEET) { }
+        register<SheetDragHandleConfig>(kind = EntryKind.BOTTOM_SHEET) { }
     }
 
     @Test
@@ -93,5 +96,19 @@ class GezginEntryMetadataTest {
         }
 
         assertTrue(props(true) != props(false), "gesture alanı metadata props equality'sine katılmalı")
+    }
+
+    @Test
+    fun `bottom sheet metadata yalniz dragHandleMode degisince esit degildir`() {
+        fun props(mode: BottomSheetDragHandleMode): GezginBottomSheetProps {
+            val entry = scope().toNavEntry(
+                GezginKey(route = SheetDragHandleConfig(mode), id = 11L),
+                navigator,
+                navTransitions {},
+            )
+            return entry.metadata.getValue(GEZGIN_BOTTOM_SHEET_KEY) as GezginBottomSheetProps
+        }
+
+        assertTrue(props(BottomSheetDragHandleMode.Default) != props(BottomSheetDragHandleMode.None))
     }
 }

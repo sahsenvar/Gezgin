@@ -6,6 +6,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation3.runtime.NavEntry
 import dev.gezgin.core.BottomSheetContract
+import dev.gezgin.core.BottomSheetDragHandleMode
 import dev.gezgin.core.DialogContract
 import dev.gezgin.core.FullscreenModalContract
 import dev.gezgin.core.GezginInternalApi
@@ -160,7 +161,7 @@ private fun resolveDialogProperties(kind: EntryKind, route: Route): DialogProper
  * Kind + route-instance → BottomSheet scene [GezginBottomSheetProps] (§7), yoksa `null` (sheet-dışı entry).
  * Property'ler route'un opsiyonel [BottomSheetContract]'ından (runtime değer, §2.4) okunur; route implement
  * etmemişse tip-varsayılan (`skipPartiallyExpanded=false`, `dismissOnBackPress=true`,
- * `dismissOnClickOutside=true`, `sheetGesturesEnabled=true`).
+ * `dismissOnClickOutside=true`, `sheetGesturesEnabled=true`, `dragHandleMode=Default`).
  */
 private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottomSheetProps? = when (kind) {
     EntryKind.BOTTOM_SHEET -> {
@@ -170,6 +171,7 @@ private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottom
             dismissOnBackPress = contract?.dismissOnBackPress ?: true,
             dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
             sheetGesturesEnabled = contract?.sheetGesturesEnabled ?: true,
+            dragHandleMode = contract?.dragHandleMode ?: BottomSheetDragHandleMode.Default,
         )
     }
     EntryKind.SCREEN, EntryKind.DIALOG, EntryKind.FULLSCREEN_MODAL -> null

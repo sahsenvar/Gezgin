@@ -1,8 +1,17 @@
 public abstract interface class dev/gezgin/core/BottomSheetContract {
 	public fun getDismissOnBackPress ()Z
 	public fun getDismissOnClickOutside ()Z
+	public fun getDragHandleMode ()Ldev/gezgin/core/BottomSheetDragHandleMode;
 	public fun getSheetGesturesEnabled ()Z
 	public fun getSkipPartiallyExpanded ()Z
+}
+
+public final class dev/gezgin/core/BottomSheetDragHandleMode : java/lang/Enum {
+	public static final field Default Ldev/gezgin/core/BottomSheetDragHandleMode;
+	public static final field None Ldev/gezgin/core/BottomSheetDragHandleMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/gezgin/core/BottomSheetDragHandleMode;
+	public static fun values ()[Ldev/gezgin/core/BottomSheetDragHandleMode;
 }
 
 public abstract interface class dev/gezgin/core/DialogContract {

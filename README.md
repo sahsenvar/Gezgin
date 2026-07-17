@@ -102,7 +102,7 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 
 > ⚠️ **Not on Maven Central yet.** The `maven-publish` config is currently a skeleton (no remote repository / signing). Build from source with `./gradlew publishToMavenLocal` and consume from `mavenLocal()`. The coordinates below are correct for release day.
 
-Apply the KSP + serialization plugins and add the artifacts (`group = dev.gezgin`, `version = 0.1.0-alpha01`):
+Apply the KSP + serialization plugins and add the artifacts (`group = dev.gezgin`, `version = 0.1.0-alpha02`):
 
 ```kotlin
 plugins {
@@ -111,11 +111,11 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.gezgin:gezgin-core:0.1.0-alpha01")
-    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha01")
+    implementation("dev.gezgin:gezgin-core:0.1.0-alpha02")
+    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha02")
 
-    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha01")        // optional MVI add-on
-    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha01")   // UI-less testing: GezginTestNavigator + typed fromX()
+    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha02")        // optional MVI add-on
+    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha02")   // UI-less testing: GezginTestNavigator + typed fromX()
 }
 ```
 
@@ -243,6 +243,15 @@ data object LockedSheetRoute : ShopGraph, BottomSheetContract {
     override val sheetGesturesEnabled: Boolean get() = false
 }
 ```
+
+During the ZAD migration, a sheet may temporarily suppress Material's default handle without passing a composable through its route:
+
+```kotlin
+override val dragHandleMode: BottomSheetDragHandleMode
+    get() = BottomSheetDragHandleMode.None
+```
+
+`Default` preserves Material's handle; `None` passes `dragHandle = null`, leaving any custom handle in consumer-owned sheet content. This enum is a migration bridge, not the permanent presentation-slot API, and may be deprecated, replaced, or removed by the V2 design.
 
 ### 6 · Host wiring
 

@@ -71,6 +71,15 @@ data class SheetCustom(val id: String) : ShopGraph, dev.gezgin.core.BottomSheetC
     override val dismissOnBackPress: Boolean get() = false
     override val dismissOnClickOutside: Boolean get() = false
     override val sheetGesturesEnabled: Boolean get() = false
+    override val dragHandleMode: dev.gezgin.core.BottomSheetDragHandleMode
+        get() = dev.gezgin.core.BottomSheetDragHandleMode.None
+}
+
+@Serializable
+data class SheetDragHandleConfig(
+    val mode: dev.gezgin.core.BottomSheetDragHandleMode,
+) : ShopGraph, dev.gezgin.core.BottomSheetContract {
+    override val dragHandleMode: dev.gezgin.core.BottomSheetDragHandleMode get() = mode
 }
 
 /** @NoBack sheet guard matrisini route-instance runtime getter değerleriyle süren fixture. */

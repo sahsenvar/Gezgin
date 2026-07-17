@@ -14,7 +14,7 @@ Her ikisi de public Gezgin API'sini gerçek Compose/KSP derlemesinde kullanır. 
 | Gezgin root ve sample'lar | Gradle 8.14, Kotlin 2.3.21, KSP 2.3.9, AGP 8.11.0, Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; min SDK 24. |
 | `compatibility/zad-consumer` | Kendi Gradle 9.4.1 wrapper'ı, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle 2.10.0. |
 
-Consumer fixture `includeBuild`, composite substitution, `projectDir` veya başka source dependency kullanmaz. Gezgin root exact `0.1.0-alpha01` artefaktını önce Maven Local'a publish eder; fixture yalnız bu pinli koordinatı çözer.
+Consumer fixture `includeBuild`, composite substitution, `projectDir` veya başka source dependency kullanmaz. Gezgin root exact `0.1.0-alpha02` artefaktını önce Maven Local'a publish eder; fixture yalnız bu pinli koordinatı çözer.
 
 ## Multi-module yerleşim
 
@@ -158,6 +158,8 @@ data object LockedSheetRoute : AppGraph, BottomSheetContract {
 ```
 
 `dismissOnBackPress`, `dismissOnClickOutside` ve drag/swipe gesture kontrolü birbirinden bağımsızdır. `@NoBack` sheet için back dismissal ve gestures mutlaka `false` olmalıdır. Programatik seçim/result kapanışında sample önce `GezginSheetController.hide()` ile animasyonu bitirir, sonra typed result/back çağrısını yapar.
+
+Geçici ZAD uyumluluğu için `BottomSheetDragHandleMode.None`, Material host'a `dragHandle = null` iletir; özel handle consumer içeriğinde kalır. Varsayılan `Default` mevcut davranışı korur. Bu enum V2 route-bound presentation/slot tasarımı değildir ve ileride kaldırılabilir.
 
 ## Fragment interop
 
