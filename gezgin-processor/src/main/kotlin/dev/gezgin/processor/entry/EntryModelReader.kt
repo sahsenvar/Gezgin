@@ -3,6 +3,7 @@ package dev.gezgin.processor.entry
 import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.symbol.FileLocation
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
@@ -161,7 +162,7 @@ internal class EntryModelReader(
         val entries = KIND_BY_ANNOTATION_FQ.flatMap { (annotationFq, kind) ->
             resolver.getSymbolsWithAnnotation(annotationFq)
                 .filterIsInstance<KSFunctionDeclaration>()
-                .distinctBy { it.qualifiedName?.asString() }
+                .distinctBy { it.declarationIdentity() }
                 .flatMap { fn ->
                     fn.annotations
                         .filter { it.fqName() == annotationFq }
@@ -450,7 +451,8 @@ internal class EntryModelReader(
         if (onIntentDeclFq != FUNCTION1_FQ || !returnsUnit) {
             error(
                 "MV5",
-                "$fnName: onIntent parameter is not a (${vm.intentTypeFq.substringAfterLast('.')}) -> Unit function " +
+                "$fnName for route $routeFq: onIntent parameter is not a " +
+                    "(${vm.intentTypeFq.substringAfterLast('.')}) -> Unit function " +
                     "(type: ${onIntentType.fqOf()})",
             )
             return null
@@ -558,12 +560,17 @@ internal class EntryModelReader(
 
         // MV11 (Faz-5 recheck MJ5) — a matched @ScreenEffect's `nav` param TYPE must be THIS route's own
         // `${x}Navigator`; otherwise the generated `XEffects(effects = …, nav = nav)` call type-mismatches
-        // inside GezginMviEntries.kt. Same isError-tolerant technique as the core `nav:` check: a
-        // same-module navigator isn't generated yet in this round (its type is an error type) → accept by
-        // the `nav` NAME; reject only a RESOLVED, wrong-typed nav param.
-        if (effectWantsNav && effect!!.navParamTypeFq != null && !effect.navParamIsError &&
-            effect.navParamTypeFq != navigatorTypeFq
-        ) {
+        // inside GezginMviEntries.kt. A same-module navigator isn't generated yet in this round, so KSP
+        // exposes its type as `<ERROR TYPE: XNavigator>`; compare that declared name instead of skipping
+        // validation. This accepts the expected same-round navigator and still rejects a different route's.
+        val effectNavigatorMatches = effect?.navParamTypeFq?.let { actual ->
+            if (effect.navParamIsError) {
+                actual.substringAfterLast('.') == navigatorTypeFq.substringAfterLast('.')
+            } else {
+                actual == navigatorTypeFq
+            }
+        } ?: false
+        if (effectWantsNav && !effectNavigatorMatches) {
             error(
                 "MV11",
                 "${effect.annotationName} ${effect.simpleName} for route $routeFq has nav parameter type " +
@@ -619,9 +626,9 @@ internal class EntryModelReader(
         /** The `Flow<E>` param's NAME — 5.2 emits the effect call named (MN1). Null if the binder has none. */
         val flowParamName: String?,
         val hasNavParam: Boolean,
-        /** The `nav` param's flattened type FQ (if any) — MJ5 validates it against the matched route's navigator. */
+        /** Resolved nav FQ, or the declared simple name for a same-round error type. */
         val navParamTypeFq: String?,
-        /** `true` if the `nav` param type failed to resolve (same-module, as-yet-ungenerated navigator). */
+        /** `true` when [navParamTypeFq] is a same-module declared name rather than a resolved FQ. */
         val navParamIsError: Boolean,
         val routeFq: String?,
         val explicit: Boolean,
@@ -635,7 +642,7 @@ internal class EntryModelReader(
     private fun readEffectFuns(): List<EffectFun> {
         val explicit = resolver.getSymbolsWithAnnotation(EFFECT_HANDLER_FQ)
             .filterIsInstance<KSFunctionDeclaration>()
-            .distinctBy { it.qualifiedName?.asString() }
+            .distinctBy { it.declarationIdentity() }
             .flatMap { fn ->
                 fn.annotations.filter { it.fqName() == EFFECT_HANDLER_FQ }.mapNotNull { annotation ->
                     val routeFq = annotation.classArg("route")?.declaration?.qualifiedName?.asString()
@@ -661,26 +668,15 @@ internal class EntryModelReader(
         val explicitByRoute = explicit.groupBy { it.routeFq }
         val legacy = resolver.getSymbolsWithAnnotation(SCREEN_EFFECT_FQ)
             .filterIsInstance<KSFunctionDeclaration>()
-            .distinctBy { it.qualifiedName?.asString() }
+            .distinctBy { it.declarationIdentity() }
             .map { readEffectFun(it, routeFq = null, explicit = false, annotationName = "@ScreenEffect") }
             .toList()
 
         val resolvedLegacy = legacy.mapNotNull { handler ->
             val candidates = vmModels.filter { it.effectTypeName == handler.effectTypeName }
-            val overlaps = candidates.filter { it.routeFq in explicitByRoute }
+            val unoccupied = candidates.filter { it.routeFq !in explicitByRoute }
             when {
                 handler.effectTypeName == null -> null
-                overlaps.isNotEmpty() -> {
-                    val explicitNames = overlaps
-                        .flatMap { explicitByRoute.getValue(it.routeFq) }
-                        .joinToString { it.simpleName }
-                    error(
-                        "MV18",
-                        "legacy @ScreenEffect ${handler.simpleName} overlaps explicit handler(s) $explicitNames for " +
-                            "route(s) ${overlaps.joinToString { it.routeFq }}",
-                    )
-                    null
-                }
                 candidates.isEmpty() -> {
                     error(
                         "MV6",
@@ -688,15 +684,26 @@ internal class EntryModelReader(
                     )
                     null
                 }
-                candidates.size > 1 -> {
+                unoccupied.size == 1 -> handler.copy(routeFq = unoccupied.single().routeFq)
+                unoccupied.isEmpty() -> {
+                    val explicitNames = candidates
+                        .flatMap { explicitByRoute.getValue(it.routeFq) }
+                        .joinToString { it.simpleName }
                     error(
-                        "MV17",
-                        "legacy @ScreenEffect ${handler.simpleName} is ambiguous across routes " +
-                            candidates.joinToString { it.routeFq },
+                        "MV18",
+                        "legacy @ScreenEffect ${handler.simpleName} overlaps explicit handler(s) $explicitNames for " +
+                            "route(s) ${candidates.joinToString { it.routeFq }}",
                     )
                     null
                 }
-                else -> handler.copy(routeFq = candidates.single().routeFq)
+                else -> {
+                    error(
+                        "MV17",
+                        "legacy @ScreenEffect ${handler.simpleName} is ambiguous across routes " +
+                            unoccupied.joinToString { it.routeFq },
+                    )
+                    null
+                }
             }
         }
 
@@ -746,7 +753,11 @@ internal class EntryModelReader(
             effectTypeName = effectArgType?.toTypeName(),
             flowParamName = flowParam?.name?.asString(),
             hasNavParam = navParam != null,
-            navParamTypeFq = navParamType?.fqOf(),
+            navParamTypeFq = if (navParamType?.isError == true) {
+                navParamType.toString().removeSurrounding("<ERROR TYPE: ", ">")
+            } else {
+                navParamType?.fqOf()
+            },
             navParamIsError = navParamType?.isError ?: false,
             routeFq = routeFq,
             explicit = explicit,
@@ -838,6 +849,20 @@ internal class EntryModelReader(
     }
 
     private fun KSType.fqOf(): String = declaration.qualifiedName?.asString() ?: toString()
+
+    /** Deduplicates repeated resolver emissions without collapsing distinct overload declarations. */
+    private fun KSFunctionDeclaration.declarationIdentity(): String {
+        val signature = buildString {
+            append(qualifiedName?.asString() ?: simpleName.asString())
+            append(parameters.joinToString(prefix = "(", postfix = ")") { it.type.toString() })
+        }
+        val fileLocation = location as? FileLocation
+        return if (fileLocation != null) {
+            "${fileLocation.filePath}:${fileLocation.lineNumber}:$signature"
+        } else {
+            signature
+        }
+    }
 
     private fun KSAnnotated.hasAnnotation(fq: String): Boolean = annotations.any { it.fqName() == fq }
 

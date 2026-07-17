@@ -76,6 +76,42 @@ BUILD SUCCESSFUL in 37s
 The focused suite retains `MVI_SOURCE` as an unambiguous no-argument `@ScreenEffect` compile fixture; it
 passes with the expected deprecation warning. `git diff --check` was clean before the report was written.
 
+## Review fix evidence
+
+The Task 3 review regressions were added before the production fix and run fresh with the focused command:
+
+```bash
+./gradlew :gezgin-processor:test \
+  --tests dev.gezgin.processor.MviModelReaderTest \
+  --tests dev.gezgin.processor.ValidationTest \
+  --rerun-tasks
+```
+
+The red run completed 82 tests with 6 failures. The failures proved that:
+
+- same-round `BNavigator` on `@EffectHandler(G.A)` escaped `MV11` and failed later in generated code;
+- `qualifiedName` dedup dropped overloaded effect handlers and overloaded screen declarations, including
+  the same-route pair that must report `MV14`;
+- a legacy handler matching A and B reported `MV18` even when only A was explicitly occupied and B was free;
+- the `MV5` Function1/non-Unit diagnostic named the composable but omitted its route.
+
+After the minimal reader fix, the same focused command passed all 82 tests. A fresh full processor run also
+passed:
+
+```bash
+./gradlew :gezgin-processor:test --rerun-tasks
+```
+
+```text
+16 suites, 189 tests, 0 failures, 0 errors, 0 skipped
+BUILD SUCCESSFUL in 41s
+```
+
+The fix deduplicates resolver emissions by source declaration identity instead of qualified name, validates
+the declared name inside same-round KSP error types, assigns legacy handlers from the unoccupied matching
+routes before diagnosing real overlap, and includes both route and composable in the Function1/Unit `MV5`
+message. `git diff --check` was clean after these review fixes.
+
 ## Files changed
 
 - `.superpowers/sdd/task-3-report.md`

@@ -101,6 +101,53 @@ class MviModelReaderTest {
     }
 
     @Test
+    fun `overloaded EffectHandler declarations for different routes are both retained`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE
+            .replace("fun EffectsA(", "fun SharedEffects(")
+            .replace("fun EffectsB(", "fun SharedEffects(")
+
+        val dump = dumpOf(SourceFile.kotlin("OverloadedHandlers.kt", source))
+        val routeA = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.A" in it }
+        val routeB = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.B" in it }
+        assertContains(routeA, "effect=SharedEffects", message = routeA)
+        assertContains(routeB, "effect=SharedEffects", message = routeB)
+    }
+
+    @Test
+    fun `overloaded EffectHandler declarations for one route are duplicate bindings`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE
+            .replace("@EffectHandler(G.B::class)", "@EffectHandler(G.A::class)")
+            .replace("fun EffectsB(", "fun EffectsA(")
+
+        assertViolationMentions("MV14", source, "G.A", "EffectsA")
+    }
+
+    @Test
+    fun `overloaded Screen declarations are both retained by entry scan`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
+            """
+            @Screen(G.A::class)
+            @Screen(G.B::class)
+            @Composable
+            fun SharedContent(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+            """.trimIndent(),
+            """
+            @Screen(G.A::class)
+            @Composable
+            fun SharedContent(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+
+            @Screen(G.B::class)
+            @Composable
+            fun SharedContent(state: SharedState, onIntent: (SharedIntent) -> Unit, tag: String = "") {}
+            """.trimIndent(),
+        )
+
+        val dump = dumpOf(SourceFile.kotlin("OverloadedScreens.kt", source))
+        assertTrue(dump.any { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.A" in it })
+        assertTrue(dump.any { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.B" in it })
+    }
+
+    @Test
     fun `duplicate explicit handlers for one route name route and both functions`() {
         val source = ROUTE_EXPLICIT_MVI_SOURCE + """
 
@@ -148,6 +195,16 @@ class MviModelReaderTest {
     }
 
     @Test
+    fun `same-round wrong generated navigator name is rejected`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
+            "fun EffectsA(effects: Flow<EffectA>, nav: ANavigator)",
+            "fun EffectsA(effects: Flow<EffectA>, nav: BNavigator)",
+        )
+
+        assertViolationMentions("MV11", source, "G.A", "EffectsA", "ANavigator", "BNavigator")
+    }
+
+    @Test
     fun `legacy handler with zero matching routes names function and candidate routes`() {
         val source = MVI_SOURCE
             .replace("sealed interface CounterEffect {", "data class OtherEffect(val value: String)\n\n    sealed interface CounterEffect {")
@@ -183,6 +240,24 @@ class MviModelReaderTest {
         """.trimIndent()
 
         assertViolationMentions("MV18", source, "G.A", "EffectsA", "LegacyEffectsA")
+    }
+
+    @Test
+    fun `legacy handler binds the one unoccupied route when another matching route is explicit`() {
+        val source = ROUTE_EXPLICIT_MVI_SOURCE
+            .replace("data class EffectB(val value: Int)\n", "")
+            .replace("EffectB", "EffectA")
+            .substringBefore("@EffectHandler(G.B::class)") + """
+                @dev.gezgin.mvi.annotation.ScreenEffect
+                @Composable
+                fun LegacyEffects(effects: Flow<EffectA>) {}
+            """.trimIndent()
+
+        val dump = dumpOf(SourceFile.kotlin("PartialLegacy.kt", source))
+        val routeA = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.A" in it }
+        val routeB = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.B" in it }
+        assertContains(routeA, "effect=EffectsA", message = routeA)
+        assertContains(routeB, "effect=LegacyEffects", message = routeB)
     }
 
     @Test
@@ -472,6 +547,38 @@ class MviModelReaderTest {
             }
             """.trimIndent(),
         )
+    }
+
+    @Test
+    fun `MV5 — Function1 with non-Unit return names route and composable`() {
+        val source = """
+            package dev.gezgin.mv5unit
+
+            import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.Screen
+            import dev.gezgin.mvi.GezginMvi
+            import dev.gezgin.mvi.annotation.MviViewModel
+            import kotlinx.coroutines.flow.MutableStateFlow
+            import kotlinx.coroutines.flow.StateFlow
+
+            data class R(val x: Int = 0) : Route
+            data class S(val n: Int)
+            sealed interface I { data object Go : I }
+            data class E(val m: String)
+
+            @MviViewModel(R::class)
+            class Vm : GezginMvi<S, I, E> {
+                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
+                override fun onIntent(intent: I) {}
+            }
+
+            @Screen(R::class)
+            @Composable
+            fun Content(state: S, onIntent: (I) -> String) {}
+        """.trimIndent()
+
+        assertViolationMentions("MV5", source, "dev.gezgin.mv5unit.R", "Content")
     }
 
     @Test
