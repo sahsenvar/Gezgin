@@ -193,21 +193,23 @@ class EntryCodegenTest {
     @Test
     fun `SC2 — nav requested but target route has no navigator`() {
         val source = """
-            package dev.gezgin.shopui
+            package dev.gezgin.lockedui
 
             import androidx.compose.runtime.Composable
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.NoBack
             import dev.gezgin.core.annotation.Screen
-            import dev.gezgin.shop.HomeGraph.About
-            import dev.gezgin.shop.AboutNavigator
 
-            @Screen(About::class)
+            @NoBack
+            data object LockedRoute : Route
+
+            @Screen(LockedRoute::class)
             @Composable
-            fun AboutScreen(route: About, nav: AboutNavigator) {
+            fun LockedScreen(route: LockedRoute, nav: LockedNavigator) {
             }
         """.trimIndent()
 
         val result = compileGezgin(
-            SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
             SourceFile.kotlin("Bad.kt", source),
         )
         assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode)

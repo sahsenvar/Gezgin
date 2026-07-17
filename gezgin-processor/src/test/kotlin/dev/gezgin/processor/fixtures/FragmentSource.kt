@@ -108,20 +108,25 @@ val FRAGMENT_DISPLAY_ONLY_SOURCE = """
  * cross-module-optimistic fallback):
  * - `FeedFragment` → `HomeGraph.Feed`, which earns a `FeedNavigator` (has `@GoTo`/`@GoForResult` edges) →
  *   nav wiring MUST be emitted exactly as before (regression pin for the WITH-navigator case).
- * - `AboutFragment` → `HomeGraph.About`, [SHOP_SOURCE]'s deliberately-bare route (no edges/back-edges/
- *   result-contract) → earns NO navigator → nav wiring MUST be SUPPRESSED (no `val nav`, no `aboutNavigator`
+ * - `LockedFragment` → a deliberately-bare `@NoBack` route (no edges/back-edges/result-contract) →
+ *   earns NO navigator → nav wiring MUST be SUPPRESSED (no `val nav`, no `lockedNavigator`
  *   import, 2-arg `bindGezgin(fragment, route)`), the edge-less-leaf display-only case.
  */
 val FRAGMENT_NAV_SPLIT_SOURCE = """
     package dev.gezgin.shopfrag
 
     import androidx.fragment.app.Fragment
+    import dev.gezgin.core.Route
     import dev.gezgin.core.annotation.FragmentScreen
+    import dev.gezgin.core.annotation.NoBack
     import dev.gezgin.shop.HomeGraph
+
+    @NoBack
+    data object LockedRoute : Route
 
     @FragmentScreen(HomeGraph.Feed::class)
     class FeedFragment : Fragment()
 
-    @FragmentScreen(HomeGraph.About::class)
-    class AboutFragment : Fragment()
+    @FragmentScreen(LockedRoute::class)
+    class LockedFragment : Fragment()
 """.trimIndent()

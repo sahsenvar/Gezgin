@@ -8,7 +8,7 @@ plugins {
 // F-MAJOR-2 — versiyonlama: yayınlanan diğer 3 modülle aynı koordinat. Modül-başına açık `version`
 // (root gradle.properties'e konmaz ki sample'a sızmasın — bkz. gezgin-core/mvi build.gradle.kts gerekçesi).
 group = "dev.gezgin"
-version = "0.1.0-alpha02"
+version = "0.1.0-alpha03"
 
 kotlin {
     // F-MAJOR-2 — gezgin-test artık yayına-komşu bir artefakt (POM iskeleti aşağıda): manşet "UI'sız test"

@@ -149,17 +149,36 @@ class NavigatorCodegenTest {
     }
 
     @Test
-    fun `bare route with no edges, back-annotations, or result contract gets no navigator`() {
+    fun `bare route gets the implicit single-step back navigator`() {
         val result = compileGezgin(
             SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
             kspArgs = mapOf("gezgin.emitSerializers" to "false"),
         )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
-        assertNull(
-            result.generatedSourceFor("AboutNavigator.kt"),
-            "About declares no edges/back-annotations/result-contract — no navigator should be generated",
+        val source = result.generatedSourceFor("AboutNavigator.kt")
+        assertNotNull(source, "Every route without @NoBack must expose the implicit back navigator")
+        val text = source.readText()
+        assertTrue("fun back()" in text, text)
+    }
+
+    @Test
+    fun `bare NoBack route gets no navigator`() {
+        val source = """
+            package dev.gezgin.locked
+
+            import dev.gezgin.core.Route
+            import dev.gezgin.core.annotation.NoBack
+
+            @NoBack
+            data object LockedRoute : Route
+        """.trimIndent()
+        val result = compileGezgin(
+            SourceFile.kotlin("LockedRoute.kt", source),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
         )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        assertNull(result.generatedSourceFor("LockedNavigator.kt"))
     }
 
     @Test

@@ -46,7 +46,7 @@ class TestApiCodegenTest {
     }
 
     @Test
-    fun `fromX golden — emitted for Feed and Catalog, NOT for bare About`() {
+    fun `fromX golden — emitted for Feed Catalog and bare About`() {
         val result = compileGezgin(
             SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
             kspArgs = mapOf("gezgin.emitSerializers" to "false", "gezgin.emitTestAccessors" to "true"),
@@ -58,7 +58,7 @@ class TestApiCodegenTest {
         val text = accessorsSource.readText()
         assertTrue("fromFeed()" in text, text)
         assertTrue("fromCatalog()" in text, text)
-        assertFalse("fromAbout" in text, text)
+        assertTrue("fromAbout()" in text, text)
     }
 
     /**

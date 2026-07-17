@@ -122,7 +122,7 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  *   `(I) -> Unit` function type.
  * - `MV6` — a `@ScreenEffect`'s `Flow<E>` `E` (by [TypeName]) matches no `@MviViewModel`'s effect type (`E`).
  * - `MV7` — MVI-mode `SC2` parity: nav is wired (the matched VM's ctor wants `nav`, or the matched
- *   `@ScreenEffect` takes a `nav` param) but the route earns no navigator ([NavigatorCodegen.hasNavigator]
+ *   `@ScreenEffect` takes a `nav` param) but an `@NoBack` route earns no navigator ([NavigatorCodegen.hasNavigator]
  *   false) — otherwise codegen would emit an unresolved `<x>Navigator()` factory call.
  *
  * **MVI guardrails (Faz 5 final review):**
@@ -332,7 +332,7 @@ internal class EntryModelReader(
                 error(
                     "SC2",
                     "$fnName: nav: parameter was requested, but target route (${routeFq.substringAfterLast('.')}) " +
-                        "has no navigator (no edge, back-edge, or result contract)",
+                        "has no navigator (@NoBack and no declared navigation/result operation)",
                 )
                 return null
             }
@@ -609,7 +609,8 @@ internal class EntryModelReader(
                 error(
                     "MV7",
                     "$fnName: nav is being wired (VM constructor or @ScreenEffect requests nav), but target route " +
-                        "(${routeFq.substringAfterLast('.')}) has no navigator (no edge, back-edge, or result contract)",
+                        "(${routeFq.substringAfterLast('.')}) has no navigator " +
+                            "(@NoBack and no declared navigation/result operation)",
                 )
                 return null
             }

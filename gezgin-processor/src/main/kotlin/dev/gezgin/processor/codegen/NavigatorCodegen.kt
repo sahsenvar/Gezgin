@@ -31,17 +31,17 @@ private val FLOW = ClassName(FLOW_PKG, "Flow")
 private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavigatorFor")
 
 /**
- * Task 2.5: emits a typed per-source `<X>Navigator` for every route that declares at least one
+ * Task 2.5: emits a typed per-source `<X>Navigator` for every route that permits implicit back
+ * navigation, or declares at least one
  * forward edge (`@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo`), back-navigation annotation
  * (`@BackTo`/`@BackToStart`/`@Quit`), result contract (`ResultRoute<T>`), or membership in a
  * `ResultFlow`'s chain (which earns a `quitWith`) — this is the "çekirdek değer önermesi": an
  * undeclared edge simply has no corresponding method, so calling it is an unresolved reference
  * (a compile error), not a runtime failure.
  *
- * A bare route with NONE of the above (e.g. `Catalog` in the shop fixture — no edges, no back
- * annotations, no result contract, not itself inside a `ResultFlow`) gets no navigator at all:
- * generating a class whose only possible member would be the unconditional `back()` isn't useful
- * on its own, and would just be dead API surface every source pays for.
+ * A bare route still gets a navigator whose single operation is `back()`. This is the uniform
+ * one-step dismissal API used by screens and modal routes. `@NoBack` is the explicit opt-out; an
+ * `@NoBack` route with no other declared operation gets no navigator at all.
  *
  * `X` is the route's simple name with a trailing `Route` stripped first, then a trailing
  * `Screen`/`Flow` kind token stripped; `Dialog`/`BottomSheet` tokens are retained (applied uniformly
@@ -69,11 +69,11 @@ internal object NavigatorCodegen {
     /**
      * Task 2.6 hook (`TestApiCodegen`): the exact same "does this route earn a navigator at all"
      * predicate [buildNavigatorFile] uses for its early-return, exposed so a SEPARATE codegen pass
-     * can decide whether a `fromX()` test accessor is even meaningful — a bare route (no navigator
-     * class) has nothing for `fromX()` to return.
+     * can decide whether a `fromX()` test accessor is meaningful.
      */
     internal fun hasNavigator(route: RouteModel, graphsByFq: Map<String, GraphModelNode>): Boolean =
-        route.edges.isNotEmpty() ||
+        !route.noBack ||
+            route.edges.isNotEmpty() ||
             route.backEdges.isNotEmpty() ||
             innermostResultFlowResultTypeFq(route, graphsByFq) != null ||
             route.resultTypeFq != null
@@ -122,13 +122,11 @@ internal object NavigatorCodegen {
             members += backWithResultFun(resultTypeFq)
         }
 
-        // A route generates a navigator only if it NEEDS one (see [hasNavigator]) — a bare route
-        // with no declared edge, back-annotation, or result-contract would otherwise get an empty
-        // (or back()-only) class that's pure dead API surface. `back()` itself is added below as a
-        // bonus member on TOP of an already-justified generation, never as the sole justification.
-        if (members.isEmpty() && properties.isEmpty()) return null
-
         if (!route.noBack) members += backFun()
+
+        // @NoBack is the only opt-out from the implicit one-step back operation. Such a route still
+        // earns a navigator when it declares another typed navigation or result operation.
+        if (members.isEmpty() && properties.isEmpty()) return null
 
         val x = stripSuffix(route.simpleName)
         val navigatorClassName = "${x}Navigator"

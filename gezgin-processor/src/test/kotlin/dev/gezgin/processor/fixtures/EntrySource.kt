@@ -13,7 +13,7 @@ package dev.gezgin.processor.fixtures
  * - `CatalogScreen(nav: CatalogNavigator)` — no `route:` param at all (Catalog is a bare `data
  *   object`, nothing to pass) — route type comes from the explicit `@Screen(Catalog::class)`.
  * - `AboutScreen(route: About)` — no `nav:` param — `About` has NO navigator ([SHOP_SOURCE]'s
- *   deliberately-bare route); pins that a `route`-only composable never needs one.
+ *   bare `@NoBack` route); pins that a `route`-only composable never needs one.
  * - `PromoDialog(route: Promo, nav: PromoNavigator)` — `@Dialog` kind mapping.
  * - `ProductScreen(route: Product)` — `Product` is [SHOP_SOURCE]'s `@NoBack` route; pins that the
  *   generated `register` call carries `noBack = true` (M5′ flag, read from the route model).

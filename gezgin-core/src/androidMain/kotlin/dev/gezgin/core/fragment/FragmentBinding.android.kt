@@ -165,7 +165,7 @@ internal fun gezginBoundNav(fragment: Fragment): Any {
 /**
  * The Fragment counterpart of `@Screen`'s `nav` param (§11.1). `by gezginNav<XNavigator>()` — returns the
  * post-bind live navigator cast to the reified type. [gezginBoundNav] separates two cases with distinct
- * errors: if not bound yet, "not bound"; if the route has no navigator (an edge-less leaf, bound via the
+ * errors: if not bound yet, "not bound"; if the route has no navigator (a bare `@NoBack` leaf, bound via the
  * nav-less [bindGezgin]), `[FS5]` "NO navigator". (Usually the second is already caught at compile time: a
  * route without a navigator has NO `XNavigator` type generated → `gezginNav<XNavigator>()` cannot resolve;
  * FS5 is a residual runtime net.)

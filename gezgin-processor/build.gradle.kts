@@ -6,7 +6,7 @@ plugins {
 // Faz 7.4 — versiyonlama: proje ilk sürümü (bkz. gezgin-core/build.gradle.kts gerekçesi — modül-başına
 // açık `version`, root gradle.properties'e konmaz ki gezgin-test/sample'a sızmasın).
 group = "dev.gezgin"
-version = "0.1.0-alpha02"
+version = "0.1.0-alpha03"
 
 kotlin {
     // Faz 9.1 — açık API yüzeyi. Processor'ın yayınlanan tek public tipi KSP giriş noktası

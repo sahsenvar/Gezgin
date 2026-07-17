@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-// Product bare route — navigator yok; VM yalnız route verisini (id) tutar.
+// Product navigation-free VM — strict MVI keeps the typed navigator in the effect handler.
 @MviViewModel(HomeGraph.Product::class)
 class ProductViewModel(
     route: HomeGraph.Product,

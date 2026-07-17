@@ -71,7 +71,7 @@ private val MODAL_CONTRACT_FQS = setOf(
  *   `(packageName, x)` uniqueness key `EntryModelReader`'s `SC6` uses, cross-checked against the same
  *   materialized [entries] plus previously-seen Fragments. → no model emitted for the colliding Fragment.
  * - **`FS5` — nav-wiring guard (dispatch-site + RUNTIME, NOT a KSP rejection here).** Core-mode's `SC2` and
- *   MVI-mode's `MV7` REJECT a nav-wanting entry whose route earns no navigator. A `@FragmentScreen` can't be
+ *   MVI-mode's `MV7` REJECT a nav-wanting entry whose `@NoBack` route earns no navigator. A `@FragmentScreen` can't be
  *   rejected the same way: an edge-less leaf (a display-only brownfield screen that only reads `gezginArgs`
  *   and never navigates) is LEGITIMATE. So `FS5` is split and lives OUTSIDE this graph-unaware reader: the
  *   whether-the-route-earns-a-navigator predicate (`NavigatorCodegen.hasNavigator` for a same-module route —

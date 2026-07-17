@@ -5,7 +5,15 @@ Bu projenin tüm kayda değer değişiklikleri bu dosyada belgelenir.
 Biçim [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/)'e,
 sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
-## [0.1.0-alpha02] - Unreleased
+## [0.1.0-alpha03] - Unreleased
+
+### Fixed
+
+- Her `@NoBack` olmayan route için, başka declared edge bulunmasa bile tek-adımlık typed `back()`
+  navigator'ı üretilir. `@NoBack` açık opt-out'tur; başka operation tanımlamayan `@NoBack` route
+  navigator üretmez.
+
+## [0.1.0-alpha02] - 2026-07-17
 
 ### Added
 
@@ -62,5 +70,6 @@ navigasyon katmanı (Navigation 3 üzerinde). Yayınlanan artefaktlar: `dev.gezg
   round-trip, predictive-back, modal iptal) gerçek cihaz/emülatörde henüz doğrulanmadı;
   bkz. [docs/gezgin-on-device-checklist.md](docs/gezgin-on-device-checklist.md).
 
+[0.1.0-alpha03]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha02...v0.1.0-alpha03
 [0.1.0-alpha02]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha01...v0.1.0-alpha02
 [0.1.0-alpha01]: https://github.com/sahsenvar/Gezgin/releases/tag/v0.1.0-alpha01

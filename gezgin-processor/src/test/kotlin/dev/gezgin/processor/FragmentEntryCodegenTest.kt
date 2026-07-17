@@ -116,17 +116,16 @@ class FragmentEntryCodegenTest {
         assertContains(text, "val nav = raw.feedNavigator(LocalGezginEntryId.current)")
         assertContains(text, "onUpdate = { fragment -> bindGezgin(fragment, route, nav) },")
 
-        // (a) NO navigator — About is a bare @NavGraph member: nav wiring SUPPRESSED. No `val nav`, no
-        // `aboutNavigator` factory reference/import anywhere; binds via the 2-arg no-nav bindGezgin overload.
-        assertContains(text, "public fun GezginEntryScope.provideAboutEntry()")
-        assertContains(text, "register<HomeGraph.About>(kind = EntryKind.SCREEN, noBack = false) { route ->")
-        assertContains(text, "AndroidFragment<AboutFragment>(")
+        // (a) NO navigator — LockedRoute is an explicit bare @NoBack route: nav wiring SUPPRESSED.
+        assertContains(text, "public fun GezginEntryScope.provideLockedEntry()")
+        assertContains(text, "register<LockedRoute>(kind = EntryKind.SCREEN, noBack = true) { route ->")
+        assertContains(text, "AndroidFragment<LockedFragment>(")
         assertContains(text, "onUpdate = { fragment -> bindGezgin(fragment, route) },")
         assertFalse(
-            text.contains("aboutNavigator"),
-            "edge-less About must NOT wire a navigator (no `val nav`, no aboutNavigator factory): $text",
+            text.contains("lockedNavigator"),
+            "bare @NoBack route must NOT wire a navigator: $text",
         )
-        // The register body still emits sensibly for About: `raw` is still bound (route.toBundle needs it).
+        // The register body still emits sensibly: `raw` is bound because route.toBundle needs it.
         assertContains(text, "arguments = remember(route) { route.toBundle(raw) },")
     }
 

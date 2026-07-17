@@ -80,7 +80,7 @@ val SHOP_SOURCE = """
         data object Catalog : HomeGraph
 
         // Deliberately bare: no edges, no back-annotations, no result contract, no ResultFlow
-        // membership — pins that Task 2.5 generates NO navigator for such a route.
+        // membership — pins that Task 2.5 generates the uniform back()-only navigator.
         data object About : HomeGraph
 
         @NoBack

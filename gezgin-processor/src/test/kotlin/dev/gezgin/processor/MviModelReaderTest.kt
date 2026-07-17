@@ -735,10 +735,8 @@ class MviModelReaderTest {
 
     @Test
     fun `MV7 — nav wired (VM ctor wants nav) but target route has no navigator`() {
-        // MVI-mode SC2 parity: the VM ctor declares `nav: AboutNavigator` but `HomeGraph.About` is a
-        // bare @NavGraph member (in the model, earns no navigator) — codegen would otherwise emit an
-        // unresolved `aboutNavigator()` call. Compiled with SHOP_SOURCE exactly like the SC2 test.
-        assertViolates("MV7", MV7_NO_NAV_SOURCE, SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE))
+        // MVI-mode SC2 parity: a bare @NoBack route is the explicit no-navigator case.
+        assertViolates("MV7", MV7_NO_NAV_SOURCE)
     }
 
     // endregion

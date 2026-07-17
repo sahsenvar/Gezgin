@@ -70,7 +70,7 @@ val MVI_NAV_SOURCE = """
 
     @NavGraph
     sealed interface G : Route {
-        // `Detail` earns a `DetailNavigator` via its forward edge; `Other` is bare (no navigator).
+        // `Detail` earns a `DetailNavigator` via its forward edge; `Other` gets implicit back().
         @GoTo(Other::class)
         data class Detail(val id: String) : G
 
@@ -364,39 +364,38 @@ val DUP_ROUTE_MVI_SOURCE = """
 """.trimIndent()
 
 /**
- * MV7 (Important 1) — MVI-mode SC2 parity. Mirrors the core-mode `SC2` test: reuse [SHOP_SOURCE]'s bare
- * `HomeGraph.About` (a @NavGraph member that IS in the model but earns NO navigator — no edges/back-
- * edges/result-contract). The `@MviViewModel`'s ctor wants a `nav` (by name convention), so codegen would
- * otherwise emit an unresolved `aboutNavigator()` factory call. Must be rejected with `[MV7]` instead.
- * Compile alongside `SHOP_SOURCE` (like the SC2 test).
+ * MV7 — MVI-mode SC2 parity. A bare `@NoBack` route earns no navigator. The ViewModel constructor
+ * still requests one, so the processor must reject the binding instead of emitting an unresolved
+ * factory call.
  */
 val MV7_NO_NAV_SOURCE = """
     package dev.gezgin.mv7
 
     import androidx.compose.runtime.Composable
+    import dev.gezgin.core.Route
+    import dev.gezgin.core.annotation.NoBack
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
     import dev.gezgin.mvi.annotation.MviViewModel
-    import dev.gezgin.shop.AboutNavigator
-    import dev.gezgin.shop.HomeGraph.About
     import kotlinx.coroutines.flow.MutableStateFlow
     import kotlinx.coroutines.flow.StateFlow
 
-    data class AboutState(val n: Int)
-    sealed interface AboutIntent { data object Go : AboutIntent }
-    data class AboutEffect(val m: String)
+    @NoBack
+    data object LockedRoute : Route
 
-    // `About` is a bare @NavGraph member — no navigator is generated for it. The VM ctor wants a `nav`
-    // (matched by name), so MV7 must fire (else an unresolved `aboutNavigator()` call is emitted).
-    @MviViewModel(About::class)
-    class AboutViewModel(route: About, nav: AboutNavigator) :
-        GezginMvi<AboutState, AboutIntent, AboutEffect> {
-        override val uiState: StateFlow<AboutState> = MutableStateFlow(AboutState(0))
-        override fun onIntent(intent: AboutIntent) {}
+    data class LockedState(val n: Int)
+    sealed interface LockedIntent { data object Go : LockedIntent }
+    data class LockedEffect(val m: String)
+
+    @MviViewModel(LockedRoute::class)
+    class LockedViewModel(route: LockedRoute, nav: LockedNavigator) :
+        GezginMvi<LockedState, LockedIntent, LockedEffect> {
+        override val uiState: StateFlow<LockedState> = MutableStateFlow(LockedState(0))
+        override fun onIntent(intent: LockedIntent) {}
     }
 
-    @Screen(About::class)
+    @Screen(LockedRoute::class)
     @Composable
-    fun AboutMviContent(state: AboutState, onIntent: (AboutIntent) -> Unit) {
+    fun LockedMviContent(state: LockedState, onIntent: (LockedIntent) -> Unit) {
     }
 """.trimIndent()
