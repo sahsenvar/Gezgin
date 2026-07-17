@@ -106,6 +106,11 @@ private val KIND_BY_ANNOTATION_FQ = mapOf(
  * kind-annotated functions resolving to the same route (`SC4`), or to the same `provideXEntry` name in
  * one package (`SC6`), is rejected.
  *
+ * **Annotated `@Screen` overloads (`SC11`):** repeated `@Screen` annotations belong on one composable
+ * declaration. Multiple annotated declarations with the same package and function name are rejected,
+ * because MVI entry codegen calls content by simple name and Kotlin cannot select an overload from the
+ * generated `(state, onIntent[, extras])` call.
+ *
  * **MVI guardrails (Faz 5.1):**
  * - `MV2` — an MVI-mode content whose route has no `@MviViewModel` in THIS module (route-linked, not
  *   state/onIntent-type-matched).
@@ -160,15 +165,43 @@ internal class EntryModelReader(
         val effectFuns = readEffectFuns()
 
         val entries = KIND_BY_ANNOTATION_FQ.flatMap { (annotationFq, kind) ->
-            resolver.getSymbolsWithAnnotation(annotationFq)
+            val functions = resolver.getSymbolsWithAnnotation(annotationFq)
                 .filterIsInstance<KSFunctionDeclaration>()
                 .distinctBy { it.declarationIdentity() }
+                .toList()
+            val overloadedScreenNames = if (annotationFq == SCREEN_FQ) {
+                functions.groupBy { it.packageName.asString() to it.simpleName.asString() }
+                    .filterValues { it.size > 1 }
+                    .also { overloaded ->
+                        overloaded.forEach { (key, declarations) ->
+                            val (packageName, functionName) = key
+                            val routes = declarations.flatMap { fn ->
+                                fn.annotations
+                                    .filter { it.fqName() == SCREEN_FQ }
+                                    .map { annotation ->
+                                        annotation.classArg("route")?.declaration?.qualifiedName?.asString()
+                                            ?: "<unresolved>"
+                                    }
+                            }.distinct()
+                            error(
+                                "SC11",
+                                "@Screen function overloads are unsupported: $packageName.$functionName is annotated " +
+                                    "for route(s) ${routes.joinToString()}; declare one @Screen composable and repeat " +
+                                    "@Screen on that declaration instead",
+                            )
+                        }
+                    }
+                    .keys
+            } else {
+                emptySet()
+            }
+            functions
+                .filterNot { it.packageName.asString() to it.simpleName.asString() in overloadedScreenNames }
                 .flatMap { fn ->
                     fn.annotations
                         .filter { it.fqName() == annotationFq }
                         .mapNotNull { annotation -> buildEntry(fn, annotation, kind, effectFuns) }
                 }
-                .toList()
         }
 
         effectFuns.filter { it.explicit && it.routeFq !in declaredMviScreenRoutes }.forEach { effect ->

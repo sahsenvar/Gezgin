@@ -123,7 +123,7 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `overloaded Screen declarations are both retained by entry scan`() {
+    fun `overloaded Screen declarations are rejected with routes and function name`() {
         val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
             """
             @Screen(G.A::class)
@@ -142,9 +142,7 @@ class MviModelReaderTest {
             """.trimIndent(),
         )
 
-        val dump = dumpOf(SourceFile.kotlin("OverloadedScreens.kt", source))
-        assertTrue(dump.any { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.A" in it })
-        assertTrue(dump.any { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.B" in it })
+        assertViolationMentions("SC11", source, "SharedContent", "dev.gezgin.routeexplicit.G.A", "dev.gezgin.routeexplicit.G.B")
     }
 
     @Test

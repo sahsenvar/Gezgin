@@ -15,6 +15,7 @@ import dev.gezgin.processor.fixtures.KOIN_PROBLEM1_MVI_SOURCE
 import dev.gezgin.processor.fixtures.KOIN_STUBS
 import dev.gezgin.processor.fixtures.MVI_NAV_SOURCE
 import dev.gezgin.processor.fixtures.MVI_SOURCE
+import dev.gezgin.processor.fixtures.ROUTE_EXPLICIT_MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHEET_MVI_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
@@ -50,6 +51,40 @@ class MviEntryCodegenTest {
         val gen = result.generatedSourceFor("GezginMviEntries.kt")
         assertNotNull(gen, "GezginMviEntries.kt not generated: ${result.messages}")
         return gen.readText()
+    }
+
+    @Test
+    fun `codegen-enabled overloaded Screen declarations fail with routes and function name`() {
+        // This deliberately leaves entry codegen ENABLED: the regression is that MviEntryCodegen calls
+        // content by simple name, which makes these two otherwise-valid overloads ambiguous in generated code.
+        val source = ROUTE_EXPLICIT_MVI_SOURCE.replace(
+            """
+            @Screen(G.A::class)
+            @Screen(G.B::class)
+            @Composable
+            fun SharedContent(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+            """.trimIndent(),
+            """
+            @Screen(G.A::class)
+            @Composable
+            fun SharedContent(state: SharedState, onIntent: (SharedIntent) -> Unit) {}
+
+            @Screen(G.B::class)
+            @Composable
+            fun SharedContent(state: SharedState, onIntent: (SharedIntent) -> Unit, tag: String = "") {}
+            """.trimIndent(),
+        )
+
+        val result = compileGezgin(
+            SourceFile.kotlin("OverloadedScreens.kt", source),
+            kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        )
+
+        assertEquals(KotlinCompilation.ExitCode.COMPILATION_ERROR, result.exitCode, result.messages)
+        assertContains(result.messages, "[SC11]", message = result.messages)
+        assertContains(result.messages, "SharedContent", message = result.messages)
+        assertContains(result.messages, "dev.gezgin.routeexplicit.G.A", message = result.messages)
+        assertContains(result.messages, "dev.gezgin.routeexplicit.G.B", message = result.messages)
     }
 
     @Test
