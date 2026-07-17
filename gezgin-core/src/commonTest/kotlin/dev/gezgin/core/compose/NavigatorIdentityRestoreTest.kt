@@ -31,6 +31,18 @@ private val testJson = Json { serializersModule = testSerializersModule }
 class NavigatorIdentityRestoreTest {
 
     @Test
+    fun `legacy callers use one stable restore namespace`() {
+        assertEquals(
+            "dev.gezgin.core.rememberNavigator.legacy",
+            LEGACY_REMEMBER_NAVIGATOR_RESTORE_KEY,
+        )
+        assertEquals(
+            LEGACY_REMEMBER_NAVIGATOR_RESTORE_KEY,
+            restoreNamespace(LEGACY_REMEMBER_NAVIGATOR_RESTORE_KEY),
+        )
+    }
+
+    @Test
     fun `adoptRestored AYNI instance state'i re-point eder - VM referansi restore edilen state'i surer`() {
         // `navigator` = hem VM'in ctor'da yakaladığı referans, hem display'in keysState'ini collect ettiği
         // kaynak — TEK instance. Config-change'te (Android holder) korunur; PD'de taze instance snapshot'ı

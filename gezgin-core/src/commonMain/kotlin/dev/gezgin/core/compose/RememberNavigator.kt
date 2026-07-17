@@ -12,6 +12,20 @@ import dev.gezgin.core.SavedState
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
+/** Stable namespace retained for callers using the original overload. */
+internal const val LEGACY_REMEMBER_NAVIGATOR_RESTORE_KEY: String = "dev.gezgin.core.rememberNavigator.legacy"
+
+/**
+ * Validates the caller-provided restoration namespace. The value itself is intentionally preserved so apps
+ * can use a stable, meaningful session-generation and mode key across process recreation.
+ */
+internal fun restoreNamespace(restoreKey: String): String {
+    require(restoreKey.isNotBlank()) {
+        "rememberNavigator: restoreKey must not be blank."
+    }
+    return restoreKey
+}
+
 /**
  * Sets up `RawNavigator` in a platform-appropriate, IDENTITY-STABLE holder — the PD (process death)
  * simulation of §1.10/§12: the saved type is `String` (json-encoded [SavedState], [navigatorSaver]/
@@ -42,14 +56,34 @@ public fun rememberNavigator(
     topology: GezginTopology,
     json: Json,
     onRootBack: () -> Unit = platformDefaultRootBack(),
+): RawNavigator = rememberNavigator(
+    start = start,
+    topology = topology,
+    json = json,
+    restoreKey = LEGACY_REMEMBER_NAVIGATOR_RESTORE_KEY,
+    onRootBack = onRootBack,
+)
+
+/**
+ * Sets up a navigator in the caller's [restoreKey] namespace. The same key restores its saved navigation
+ * stack; a different key creates an independent holder and saved snapshot.
+ */
+@Composable
+public fun rememberNavigator(
+    start: Route,
+    topology: GezginTopology,
+    json: Json,
+    restoreKey: String,
+    onRootBack: () -> Unit = platformDefaultRootBack(),
 ): RawNavigator {
+    val namespace = restoreNamespace(restoreKey)
     require(topology.flowChain(start::class).none { it.isResultFlow }) {
         "rememberNavigator: start cannot be a ResultFlow member; there is no pending caller (§8.1/§12). " +
             "route: ${start::class.simpleName}"
     }
     val latestOnRootBack by rememberUpdatedState(onRootBack)
-    val stableOnRootBack = remember { { latestOnRootBack() } }
-    return rememberRawNavigatorInstance(start, topology, json, stableOnRootBack)
+    val stableOnRootBack = remember(namespace) { { latestOnRootBack() } }
+    return rememberRawNavigatorInstance(start, topology, json, namespace, stableOnRootBack)
 }
 
 /**
@@ -64,6 +98,7 @@ internal expect fun rememberRawNavigatorInstance(
     start: Route,
     topology: GezginTopology,
     json: Json,
+    restoreKey: String,
     onRootBack: () -> Unit,
 ): RawNavigator
 

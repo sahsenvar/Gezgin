@@ -1,6 +1,7 @@
 package dev.gezgin.core.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import dev.gezgin.core.GezginTopology
@@ -20,10 +21,11 @@ internal actual fun rememberRawNavigatorInstance(
     start: Route,
     topology: GezginTopology,
     json: Json,
+    restoreKey: String,
     onRootBack: () -> Unit,
-): RawNavigator {
-    val saver = remember { navigatorSaver(start, topology, json, onRootBack) }
-    return rememberSaveable(saver = saver) {
+): RawNavigator = key(restoreKey) {
+    val saver = remember(restoreKey) { navigatorSaver(start, topology, json, onRootBack) }
+    rememberSaveable(restoreKey, saver = saver) {
         RawNavigator(start = start, topology = topology, onRootBack = onRootBack, json = json)
     }
 }

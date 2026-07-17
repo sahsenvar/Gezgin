@@ -1,6 +1,7 @@
 package dev.gezgin.core.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.ViewModel
@@ -50,9 +51,13 @@ internal actual fun rememberRawNavigatorInstance(
     start: Route,
     topology: GezginTopology,
     json: Json,
+    restoreKey: String,
     onRootBack: () -> Unit,
-): RawNavigator {
-    val holderKey = rememberSaveable { "dev.gezgin.core.NavigatorHolder#${UUID.randomUUID()}" }
+): RawNavigator = key(restoreKey) {
+    // The token remains call-site-specific so two navigators in one owner can share a business namespace
+    // without sharing a holder. Both the Compose group and input invalidate it when restoreKey changes.
+    val callSiteToken = rememberSaveable(restoreKey) { UUID.randomUUID().toString() }
+    val holderKey = "dev.gezgin.core.NavigatorHolder#$restoreKey#$callSiteToken"
     val holder = viewModel<NavigatorHolder>(
         key = holderKey,
         factory = viewModelFactory {
@@ -65,6 +70,7 @@ internal actual fun rememberRawNavigatorInstance(
     )
     val navigator = holder.navigator
     val pdSnapshot = rememberSaveable(
+        restoreKey,
         saver = Saver<String, String>(
             save = { encodeNavigatorState(navigator, json) },   // held değer değil, CANLI navigator encode edilir
             restore = { it },
@@ -92,7 +98,7 @@ internal actual fun rememberRawNavigatorInstance(
             }
         }
     }
-    return navigator
+    navigator
 }
 
 /**

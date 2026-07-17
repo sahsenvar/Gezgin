@@ -6,6 +6,7 @@ import dev.gezgin.core.SavedState
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.Feed
 import dev.gezgin.core.fixtures.Otp
+import dev.gezgin.core.fixtures.Product
 import dev.gezgin.core.fixtures.testSerializersModule
 import dev.gezgin.core.fixtures.testTopology
 import kotlinx.serialization.json.Json
@@ -16,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 private val testJson = Json { serializersModule = testSerializersModule }
 
@@ -28,6 +30,40 @@ private val testJson = Json { serializersModule = testSerializersModule }
  * binary metadata üzerinden extension-member olarak çağrılması bu ortamda unresolved çıktı).
  */
 class RememberNavigatorSaverTest {
+
+    @Test
+    fun `same restoreKey restores its pushed snapshot while changed restoreKey starts fresh`() {
+        val signedIn = RawNavigator(start = Feed, topology = testTopology)
+        signedIn.navigate(Catalog)
+        val snapshots = mapOf(
+            restoreNamespace("account-42") to encodeNavigatorState(signedIn, testJson),
+        )
+
+        val restored = decodeNavigatorState(
+            encoded = snapshots.getValue(restoreNamespace("account-42")),
+            start = Feed,
+            topology = testTopology,
+            json = testJson,
+            onRootBack = {},
+        )
+        val changedKeyNavigator = snapshots[restoreNamespace("account-99")]
+            ?.let { decodeNavigatorState(it, Product("fresh"), testTopology, testJson, onRootBack = {}) }
+            ?: RawNavigator(start = Product("fresh"), topology = testTopology)
+
+        assertEquals(listOf(Feed, Catalog), restored.keys.map { it.route })
+        assertEquals(Product("fresh"), changedKeyNavigator.current)
+        assertEquals(1, changedKeyNavigator.keys.size)
+    }
+
+    @Test
+    fun `blank restoreKey is rejected with rememberNavigator guidance`() {
+        val failure = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            restoreNamespace("   ")
+        }
+
+        assertTrue(failure.message.orEmpty().contains("rememberNavigator"))
+        assertTrue(failure.message.orEmpty().contains("restoreKey"))
+    }
 
     @Test
     fun `encode-decode stack'i ve nextId'yi korur`() {
