@@ -24,7 +24,15 @@ internal actual fun rememberRawNavigatorInstance(
     restoreKey: String,
     onRootBack: () -> Unit,
 ): RawNavigator = key(restoreKey) {
-    val saver = remember(restoreKey) { navigatorSaver(start, topology, json, onRootBack) }
+    val saver = remember(restoreKey) {
+        navigatorSaver(
+            start = start,
+            topology = topology,
+            json = json,
+            restoreKey = restoreKey,
+            onRootBack = onRootBack,
+        )
+    }
     rememberSaveable(restoreKey, saver = saver) {
         RawNavigator(start = start, topology = topology, onRootBack = onRootBack, json = json)
     }

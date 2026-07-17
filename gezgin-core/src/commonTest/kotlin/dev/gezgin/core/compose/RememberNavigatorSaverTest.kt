@@ -66,6 +66,16 @@ class RememberNavigatorSaverTest {
     }
 
     @Test
+    fun `corrupt namespaced payload length resets instead of throwing`() {
+        assertNull(
+            decodeNamespacedNavigatorPayloadOrNull(
+                encoded = "gezgin-navigator-v1:2147483647:Aasnapshot",
+                expectedRestoreKey = "Aa",
+            ),
+        )
+    }
+
+    @Test
     fun `encode-decode stack'i ve nextId'yi korur`() {
         val nav = RawNavigator(start = Feed, topology = testTopology)
         nav.navigate(Catalog)

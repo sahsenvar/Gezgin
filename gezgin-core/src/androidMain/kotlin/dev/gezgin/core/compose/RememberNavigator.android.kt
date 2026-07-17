@@ -56,7 +56,13 @@ internal actual fun rememberRawNavigatorInstance(
 ): RawNavigator = key(restoreKey) {
     // The token remains call-site-specific so two navigators in one owner can share a business namespace
     // without sharing a holder. Both the Compose group and input invalidate it when restoreKey changes.
-    val callSiteToken = rememberSaveable(restoreKey) { UUID.randomUUID().toString() }
+    val callSiteToken = rememberSaveable(
+        restoreKey,
+        saver = Saver<String, String>(
+            save = { token -> encodeNamespacedNavigatorPayload(restoreKey, token) },
+            restore = { encoded -> decodeNamespacedNavigatorPayloadOrNull(encoded, restoreKey) },
+        ),
+    ) { UUID.randomUUID().toString() }
     val holderKey = "dev.gezgin.core.NavigatorHolder#$restoreKey#$callSiteToken"
     val holder = viewModel<NavigatorHolder>(
         key = holderKey,
@@ -72,8 +78,13 @@ internal actual fun rememberRawNavigatorInstance(
     val pdSnapshot = rememberSaveable(
         restoreKey,
         saver = Saver<String, String>(
-            save = { encodeNavigatorState(navigator, json) },   // held değer değil, CANLI navigator encode edilir
-            restore = { it },
+            save = {
+                encodeNamespacedNavigatorPayload(
+                    restoreKey = restoreKey,
+                    value = encodeNavigatorState(navigator, json),
+                )
+            }, // held değer değil, CANLI navigator encode edilir
+            restore = { encoded -> decodeNamespacedNavigatorPayloadOrNull(encoded, restoreKey) },
         ),
     ) { "" }
     if (!holder.adoptChecked) {

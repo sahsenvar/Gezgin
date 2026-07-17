@@ -15,6 +15,42 @@ import kotlinx.serialization.json.Json
 /** Stable namespace retained for callers using the original overload. */
 internal const val LEGACY_REMEMBER_NAVIGATOR_RESTORE_KEY: String = "dev.gezgin.core.rememberNavigator.legacy"
 
+private const val NAVIGATOR_PAYLOAD_PREFIX: String = "gezgin-navigator-v1:"
+
+/** Internal saveable envelope carrying the exact namespace alongside an otherwise opaque value. */
+internal data class NamespacedNavigatorPayload(
+    val restoreKey: String,
+    val value: String,
+)
+
+internal fun encodeNamespacedNavigatorPayload(restoreKey: String, value: String): String = buildString {
+    append(NAVIGATOR_PAYLOAD_PREFIX)
+    append(restoreKey.length)
+    append(':')
+    append(restoreKey)
+    append(value)
+}
+
+internal fun decodeNamespacedNavigatorPayloadOrNull(
+    encoded: String,
+    expectedRestoreKey: String,
+): String? {
+    if (!encoded.startsWith(NAVIGATOR_PAYLOAD_PREFIX)) return null
+    val lengthStart = NAVIGATOR_PAYLOAD_PREFIX.length
+    val lengthEnd = encoded.indexOf(':', startIndex = lengthStart)
+    if (lengthEnd < 0) return null
+    val restoreKeyLength = encoded.substring(lengthStart, lengthEnd).toIntOrNull() ?: return null
+    if (restoreKeyLength < 0) return null
+    val restoreKeyStart = lengthEnd + 1
+    if (restoreKeyLength > encoded.length - restoreKeyStart) return null
+    val valueStart = restoreKeyStart + restoreKeyLength
+    val payload = NamespacedNavigatorPayload(
+        restoreKey = encoded.substring(restoreKeyStart, valueStart),
+        value = encoded.substring(valueStart),
+    )
+    return payload.value.takeIf { payload.restoreKey == expectedRestoreKey }
+}
+
 /**
  * Validates the caller-provided restoration namespace. The value itself is intentionally preserved so apps
  * can use a stable, meaningful session-generation and mode key across process recreation.
@@ -116,9 +152,32 @@ internal fun navigatorSaver(
     topology: GezginTopology,
     json: Json,
     onRootBack: () -> Unit,
+): Saver<RawNavigator, String> = navigatorSaver(
+    start = start,
+    topology = topology,
+    json = json,
+    restoreKey = LEGACY_REMEMBER_NAVIGATOR_RESTORE_KEY,
+    onRootBack = onRootBack,
+)
+
+internal fun navigatorSaver(
+    start: Route,
+    topology: GezginTopology,
+    json: Json,
+    restoreKey: String,
+    onRootBack: () -> Unit,
 ): Saver<RawNavigator, String> = Saver(
-    save = { nav -> encodeNavigatorState(nav, json) },
-    restore = { encoded -> decodeNavigatorStateOrNull(encoded, start, topology, json, onRootBack) },
+    save = { nav ->
+        encodeNamespacedNavigatorPayload(
+            restoreKey = restoreKey,
+            value = encodeNavigatorState(nav, json),
+        )
+    },
+    restore = { encoded ->
+        decodeNamespacedNavigatorPayloadOrNull(encoded, restoreKey)?.let { snapshot ->
+            decodeNavigatorStateOrNull(snapshot, start, topology, json, onRootBack)
+        }
+    },
 )
 
 /** `nav.save(): SavedState` → json-encoded `String` (the encode half, see the [navigatorSaver] KDoc). */
