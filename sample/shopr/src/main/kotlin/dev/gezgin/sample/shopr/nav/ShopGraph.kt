@@ -1,5 +1,6 @@
 package dev.gezgin.sample.shopr.nav
 
+import dev.gezgin.core.BottomSheetContract
 import dev.gezgin.core.DialogContract
 import dev.gezgin.core.ResultFlow
 import dev.gezgin.core.Route
@@ -20,8 +21,13 @@ data class OrderId(val value: String)
 sealed interface HomeGraph : Route {
 
     @GoTo(Catalog::class)
+    @GoTo(FeaturedFeed::class)
     @Serializable
     data object Feed : HomeGraph
+
+    @GoTo(Product::class)
+    @Serializable
+    data object FeaturedFeed : HomeGraph
 
     @GoTo(Product::class)
     @GoForResult(CheckoutFlow::class)
@@ -35,8 +41,17 @@ sealed interface HomeGraph : Route {
     @NoBack
     @BackTo(Feed::class)
     @GoTo(OrderDetailsDialogRoute::class, name = "showOrderDetails")
+    @GoTo(OrderLockSheetRoute::class, name = "showOrderLock")
     @Serializable
     data class OrderPlaced(val orderId: String) : HomeGraph
+
+    @NoBack
+    @Serializable
+    data class OrderLockSheetRoute(val orderId: String) : HomeGraph, BottomSheetContract {
+        override val dismissOnBackPress: Boolean get() = false
+        override val dismissOnClickOutside: Boolean get() = false
+        override val sheetGesturesEnabled: Boolean get() = false
+    }
 
     // Modal-over-@NoBack: terminal @NoBack ekranın ÜSTÜne açılan dialog (madde 2). Dialog @NoBack DEĞİL —
     // adaptör bir modal'ın @NoBack olmasını yasaklar; DialogContract varsayılanı (dismissOnBackPress=true) →
