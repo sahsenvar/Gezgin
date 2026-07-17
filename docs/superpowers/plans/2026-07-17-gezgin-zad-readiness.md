@@ -631,6 +631,91 @@ test -z "$(git status --porcelain)"
 
 - [ ] Stop after reporting the tested/publishable Gezgin artifact, immutable source commit, handoff commit, handoff path, and final clean-worktree result. Do not open or edit the ZAD repository.
 
+## Task 9: Publish the temporary bottom-sheet drag-handle compatibility extension
+
+**Execution checkpoint:** Tasks 1–8 are complete and handed off as `0.1.0-alpha01` from source commit `1aff450304fa592d67a9cfa735b5bafd614ac28f`. This is a Phase A.1 delta; do not repeat completed tasks.
+
+**Files:**
+- Modify: `gezgin-core/src/commonMain/kotlin/dev/gezgin/core/Contracts.kt`
+- Modify: `gezgin-core/src/commonMain/kotlin/dev/gezgin/core/compose/BottomSheetScene.kt`
+- Modify: `gezgin-core/src/commonMain/kotlin/dev/gezgin/core/compose/EntryAdapter.kt`
+- Modify: `gezgin-core/src/commonTest/kotlin/dev/gezgin/core/fixtures/TestGraph.kt`
+- Modify: `gezgin-core/src/commonTest/kotlin/dev/gezgin/core/compose/GezginBottomSheetContractTest.kt`
+- Modify: `gezgin-core/src/commonTest/kotlin/dev/gezgin/core/compose/GezginEntryMetadataTest.kt`
+- Modify: `gezgin-core/src/jvmTest/kotlin/dev/gezgin/core/compose/GezginBottomSheetSceneTest.kt`
+- Modify: `gezgin-core/api/android/gezgin-core.api`
+- Modify: `gezgin-core/api/jvm/gezgin-core.api`
+- Modify: `gezgin-core/build.gradle.kts`, `gezgin-mvi/build.gradle.kts`, `gezgin-processor/build.gradle.kts`, `gezgin-test/build.gradle.kts`
+- Modify: `compatibility/zad-consumer/build.gradle.kts`
+- Modify: `README.md`, `README.tr.md`, `sample/README.md`, `CHANGELOG.md`
+- Modify: `docs/gezgin-zad-readiness-handoff.md`
+
+**Interfaces:**
+- Consumes: existing `BottomSheetContract`, `GezginBottomSheetProps`, `resolveBottomSheetProps`, and Material 3 `ModalBottomSheet`.
+- Produces: temporary `BottomSheetDragHandleMode.Default/None`, getter-only `BottomSheetContract.dragHandleMode`, immutable `0.1.0-alpha02` artifacts, and a refreshed handoff.
+
+- [ ] **Step 1: Write failing contract and metadata tests**
+
+Extend the existing fixtures and tests to require `BottomSheetDragHandleMode.Default/None`. Prove contract-less and all-default routes resolve to `Default`, a getter-only override resolves to `None`, and metadata equality changes when only this mode changes.
+
+```kotlin
+override val dragHandleMode: BottomSheetDragHandleMode
+    get() = BottomSheetDragHandleMode.None
+```
+
+Run `./gradlew :gezgin-core:jvmTest --tests '*GezginBottomSheetContractTest*' --tests '*GezginEntryMetadataTest*'`. Expected RED: the new enum/property is unresolved.
+
+- [ ] **Step 2: Add the minimal public contract and metadata propagation**
+
+```kotlin
+/** Migration-only bridge; replace with the future route-bound presentation API. */
+public enum class BottomSheetDragHandleMode { Default, None }
+
+public interface BottomSheetContract {
+    public val skipPartiallyExpanded: Boolean get() = false
+    public val dismissOnBackPress: Boolean get() = true
+    public val dismissOnClickOutside: Boolean get() = true
+    public val sheetGesturesEnabled: Boolean get() = true
+    public val dragHandleMode: BottomSheetDragHandleMode get() = BottomSheetDragHandleMode.Default
+}
+```
+
+Add the mode to `GezginBottomSheetProps` and resolve it with `contract?.dragHandleMode ?: BottomSheetDragHandleMode.Default`. Re-run the focused tests; expected GREEN.
+
+- [ ] **Step 3: Write the failing actual-host test**
+
+Add a `SheetDragHandleConfig(mode)` fixture. In `GezginBottomSheetSceneTest`, navigate once with `Default` and once with `None`, keeping gestures enabled, and prove Material drag-handle dismiss semantics exist only for `Default`. Run `./gradlew :gezgin-core:jvmTest --tests '*GezginBottomSheetSceneTest*'`. Expected RED: both routes still render the default handle.
+
+- [ ] **Step 4: Wire the mode to Material 3**
+
+Pass this to the existing `ModalBottomSheet`:
+
+```kotlin
+dragHandle = when (props.dragHandleMode) {
+    BottomSheetDragHandleMode.Default -> @Composable { BottomSheetDefaults.DragHandle() }
+    BottomSheetDragHandleMode.None -> null
+}
+```
+
+Do not add a route composable lambda, processor feature, ZAD dependency, or global host override. Run focused scene tests and `:gezgin-core:jvmTest`; expected GREEN.
+
+- [ ] **Step 5: Refresh API/docs/version**
+
+Run `./gradlew apiDump`; both API dumps must expose the enum and getter. Document that `Default` preserves current behavior, `None` passes `dragHandle = null`, custom handles remain consumer content, and the enum may be deprecated/replaced/removed by the V2 route-bound presentation design. Change all four published module versions and the independent consumer pin to `0.1.0-alpha02`.
+
+- [ ] **Step 6: Verify, source-commit, publish, and hand off**
+
+Run without Detekt:
+
+```bash
+export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+test -d "$ANDROID_HOME"
+./gradlew :gezgin-core:jvmTest :gezgin-core:testDebugUnitTest :gezgin-core:check :gezgin-mvi:check :gezgin-processor:test apiCheck
+git diff --check
+```
+
+Create the source commit with `git commit --no-verify`. Publish `0.1.0-alpha02` to Maven Local, compile the independent Gradle 9.4.1 consumer, inspect both Navigation 3 dependency families, and calculate SHA-256 for every published core/MVI/processor root and platform artifact. Refresh `docs/gezgin-zad-readiness-handoff.md` with the immutable source commit, checksums, verification commands, temporary semantics, and removal boundary. Commit the handoff separately with `--no-verify` and require a clean worktree.
+
 ## Future ZAD handoff boundary — not Gezgin implementation tasks
 
 The later ZAD session starts only after Task 8 is green. It must use local baseline 8e02471e1, move all graph/route declarations into one package in core:navigation, keep feature bindings in feature modules, create App/AppViewModel/AppUiState/AppIntent/AppEffect/AppEffectBus/AppEffectHandler, and create Gezgin only in Ready(startRoute, restoreKey).
