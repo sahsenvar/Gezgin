@@ -160,7 +160,34 @@ override val sheetGesturesEnabled: Boolean get() = false
 
 The current `@NoBack` plus `@BottomSheet` guard is re-evaluated now that swipe can be disabled. A modal over a no-back route must not claim full back prevention unless back dismissal and sheet gestures are both disabled. Outside dismissal remains independently governed by `dismissOnClickOutside`; ZAD's `preventDismiss` disables it as well.
 
-### 3.7 Fragment interop boundary
+### 3.7 Temporary bottom-sheet drag-handle compatibility
+
+ZAD must preserve Design-owned sheets that intentionally omit Material 3's default drag handle and render a custom handle inside the sheet content. Gezgin must not force the Material default in those routes. Phase A therefore adds this migration-only compatibility contract:
+
+```kotlin
+enum class BottomSheetDragHandleMode {
+    Default,
+    None,
+}
+
+interface BottomSheetContract {
+    val dragHandleMode: BottomSheetDragHandleMode
+        get() = BottomSheetDragHandleMode.Default
+}
+```
+
+The temporary contract has these locked semantics:
+
+- `Default` preserves Gezgin's current Material 3 behavior.
+- `None` reaches the actual host call as `ModalBottomSheet(dragHandle = null)`.
+- The property is a getter-only presentation override. It does not add serialized route state or require constructor parameters.
+- A custom handle remains consumer-owned content. Gezgin does not gain a ZAD component, theme dependency, arbitrary composable lambda, or global host override.
+- A ZAD custom handle's close action follows strict MVI: `CloseClicked intent -> handleIntent -> effect -> EffectHandler -> typed navigator`. It does not call a navigator or Fragment controller directly from screen content.
+- No route-bound `@BottomSheetDragHandle` provider and no unrestricted `ModalBottomSheet` host replacement are introduced in V1.
+
+`BottomSheetDragHandleMode` is explicitly temporary. It exists only to remove the ZAD migration blocker without prematurely designing Gezgin's permanent bottom-sheet presentation API. Its public documentation and API declaration must carry a migration/debt marker. It may be deprecated, replaced, or removed when the future route-bound presentation/slot design is approved; consumers must not treat the enum as the V2 customization model.
+
+### 3.8 Fragment interop boundary
 
 - Fragment interop remains screen-only.
 - No `DialogFragment` or `BottomSheetDialogFragment` adapter is added.
@@ -230,6 +257,17 @@ Update Android/JVM API dumps, README files, focused docs, and samples. The sampl
 
 Run full tests, API validation, Android/JVM publication checks, and the real consumer fixture. After those validations pass, request explicit permission for the implementation/source commit; create it only after permission is granted. The handoff records that immutable source commit, exact artifact version, checksums or repository coordinates, required consumer plugin versions, and the successful commands. Request a second explicit permission before creating the separate handoff commit. Only after that handoff commit exists, run the final clean-worktree verification. No commit is implicit in a successful verification run.
 
+### A8. Publish the temporary drag-handle compatibility extension
+
+The existing Phase A handoff artifact predates section 3.7. Before affected ZAD bottom sheets migrate, Gezgin publishes a new immutable compatibility artifact that:
+
+- adds `BottomSheetDragHandleMode.Default/None` to `gezgin-core` without changing the root Gradle/toolchain boundary;
+- propagates the mode through route metadata, equality, adapter resolution, runtime scene properties, API dumps, docs, and samples;
+- proves `Default` is source/behavior compatible and `None` reaches Material 3 as `dragHandle = null`;
+- proves a consumer may render its own handle inside sheet content without a captured route lambda;
+- marks the API migration-only and records its future replacement/removal boundary;
+- updates the immutable handoff version, source commit, checksums, and verification evidence before ZAD consumes it.
+
 ## 5. Phase A acceptance gates
 
 ZAD work must not begin until every row is green.
@@ -242,6 +280,7 @@ ZAD work must not begin until every row is green.
 | Route binding | Processor tests prove repeatable screens, route-explicit handlers, distinct route codegen, and fail-loud legacy ambiguity/conflicts. |
 | MVI chrome | Golden/codegen tests prove the exact `ColumnScope` wrapper and IME-aware bottom behavior. |
 | Bottom sheet | Contract, metadata, runtime wiring, guard, equality, and default compatibility tests pass. |
+| Temporary sheet handle | `Default` preserves current output, `None` wires `dragHandle = null`, consumer-owned custom content compiles without route lambdas, and the removal boundary is documented. |
 | Fragment regression | Existing true process-death Fragment screen suite remains green; no modal interop has been added. |
 | Public API | API dumps, docs, and samples match the implementation and contain no stale `@ScreenEffect` recommendation. |
 | Publication | Android and JVM artifacts publish to a local test repository and the fixture resolves those artifacts successfully. |
@@ -271,14 +310,17 @@ This section is a handoff contract, not a list of Gezgin implementation tasks. I
 
 Use this order:
 
-1. existing Compose/Nav3 modal bindings to `@Dialog`/`@BottomSheet`;
-2. wrapper-based Compose sheets to real serializable `@BottomSheet` routes;
-3. ViewBinding sheets to Compose;
-4. `FragmentResult` and lambda callbacks to typed result APIs;
-5. `LoadingDialogFragment` to the App-level loading overlay;
-6. all production Fragment modal APIs and call sites to zero.
+1. consume and verify the immutable Phase A extension that contains the temporary drag-handle mode;
+2. existing Compose/Nav3 modal bindings to `@Dialog`/`@BottomSheet`;
+3. wrapper-based Compose sheets to real serializable `@BottomSheet` routes;
+4. ViewBinding sheets to Compose;
+5. migrate each callback-owning caller, modal leaf, and typed result route as one coherent unit, then remove that unit's `FragmentResult` or constructor lambda;
+6. `LoadingDialogFragment` to the App-level loading overlay;
+7. all production Fragment modal APIs and call sites to zero.
 
 `ComposeBottomSheetFragment` and its nonserialized content lambda cannot survive the gate.
+
+ZAD routes that use a Design-owned custom handle set `dragHandleMode = BottomSheetDragHandleMode.None` and render that handle inside their own content. This is not permission to move ZAD visual components into Gezgin. Callback removal must not precede ownership migration, and no process-wide callback bus, singleton relay, or untyped result bridge may replace the old callback.
 
 ### B4. Hoist eligible Fragment navigation and preserve marked leaves
 
@@ -305,7 +347,7 @@ Use this order:
 
 - Move every feature to `Intent -> handleIntent -> effect -> EffectHandler -> typed navigator`.
 - Remove navigator fields from ViewModels.
-- Migrate constructor lambdas and Fragment callbacks to typed result APIs.
+- Finish any constructor-lambda and Fragment-callback migrations not already completed with their modal caller/leaf units in B3. Constructor-lambda zero remains a hard gate before root swap; it is not a precondition that forces callbacks to be deleted before their owners are migrated.
 - Delete the temporary `FragmentNavigation` adapter after its last consumer.
 - Remove the ZAD `@SaveState` processor after navigation process-death coverage is proven.
 
@@ -323,6 +365,7 @@ The ZAD root swap is forbidden until all of the following are true:
 - production `DialogFragment` and `BottomSheetDialogFragment` navigation APIs are zero;
 - modal arguments and results are serializable typed routes/results;
 - `preventDismiss` routes set back, outside, and gesture dismissal to false;
+- routes with Design-owned custom handles set the temporary mode to `None`, render their handle as consumer content, and preserve the approved visual and close behavior;
 - process-death tests cover restored modal routes without captured lambdas or Fragment result callbacks.
 
 ## 8. Global unexpected-error contract for future ZAD
@@ -349,6 +392,7 @@ The future ZAD work creates `docs/technical-debt/unexpected-error-dialog.md` for
 
 - ViewPager wizard hoisting;
 - removal/replacement of temporary MVI chrome;
+- replacement/removal of temporary `BottomSheetDragHandleMode.Default/None` after a permanent route-bound presentation/slot design is approved;
 - declarative deep-link navigation, while retaining the UPayments boundary callback;
 - permanent outer-container/screen scope and scroll/`bringIntoView` access.
 
@@ -364,6 +408,7 @@ The following are not part of Gezgin Phase A or ZAD V1:
 - step-count back-navigation APIs;
 - `DialogFragment` or `BottomSheetDialogFragment` interop;
 - permanent chrome/container APIs;
+- permanent route-bound bottom-sheet presentation and drag-handle slot APIs;
 - deep-link route dispatch;
 - retained inactive-tab stacks.
 
@@ -379,6 +424,7 @@ Phase A hands the future ZAD session one immutable compatibility statement conta
 - restore-key semantics and the default-compatibility behavior;
 - processor diagnostics and legacy `@ScreenEffect` compatibility limits;
 - temporary chrome removal boundary;
+- temporary bottom-sheet drag-handle semantics, default compatibility, and explicit replacement/removal boundary;
 - confirmation that Fragment interop remains screen-only and existing real process-death support is unchanged;
 - confirmation that Phase B remains blocked by the Fragment mapping and modal gates.
 
