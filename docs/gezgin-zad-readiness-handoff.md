@@ -2,9 +2,9 @@
 
 Status: **GREEN**  
 Generated: 2026-07-17  
-Immutable source commit: `1aff450304fa592d67a9cfa735b5bafd614ac28f`  
+Immutable source commit: `57b10f29a5e413b2c4b36e3ab960d478b02f75f9`
 Source branch: `codex/zad-integration-readiness`  
-Artifact version: `0.1.0-alpha01`  
+Artifact version: `0.1.0-alpha02`
 Repository: Maven Local (`~/.m2/repository`)
 
 The source worktree was clean at the source checkpoint. The coordinates below were republished from the exact source commit above, consumed by the independent ZAD-shaped fixture, and integrity-locked by SHA-256. ZAD must resolve this pinned artifact set and must not use `includeBuild`, composite substitution, `projectDir`, or a moving Gezgin checkout.
@@ -13,21 +13,21 @@ The source worktree was clean at the source checkpoint. The coordinates below we
 
 Production coordinates:
 
-- `dev.gezgin:gezgin-core:0.1.0-alpha01`
-- `dev.gezgin:gezgin-mvi:0.1.0-alpha01`
-- `dev.gezgin:gezgin-processor:0.1.0-alpha01`
+- `dev.gezgin:gezgin-core:0.1.0-alpha02`
+- `dev.gezgin:gezgin-mvi:0.1.0-alpha02`
+- `dev.gezgin:gezgin-processor:0.1.0-alpha02`
 
 Published platform variants are part of the Gradle module metadata resolution. `gezgin-test` is excluded from the ZAD production handoff.
 
 | Coordinate | Primary artifact SHA-256 | `.module` SHA-256 | `.pom` SHA-256 |
 |---|---|---|---|
-| `gezgin-core` | `95dcca081810286e130fadade6b423a354f7270749128a52f97bfa16b7fd7a86` | `8aebd7abfff70367bc32762e5d18d9010948a786ba976a5463d22d8f570028a2` | `6d70ce252a306f476b40edcd78c012a863ed4cb1ccdaa96a17a480273d19ed68` |
-| `gezgin-core-android` | `671ebec8a45a13f98991a67cc6faf8c58d82d4ac17e0a5db192fb01014c1de65` | `1eec24bf072657355b6e530338803194d565bad8c1bd168001e30316104ebadd` | `b73ba5726d09b8afcf42671c23edf9699618f6f55bd2b009e6e404b5c9f72b90` |
-| `gezgin-core-jvm` | `6a40ca8b0c25bb0f18eae834f2c38ec59d7e9e9335d761d3c623cb0f520050f5` | `f8b2c48a4b488b3c930c547a8eccc73d1fe81df2cabd58e0b35ffb999adab17e` | `b83b914f7b907dc65b0d8c559d5864b2e989b50e97c2752b78307183ee7d45e7` |
-| `gezgin-mvi` | `595cb09d92b20dcf22b55fe6e48d5f2b28e3b202c3da7f1e0c2cadb7339b340f` | `c35c1a24c849522f6ae681fb89eec97ac58e768a63887f835a015707c53bc660` | `5b13ab89dc62cc5503d6887227dbac57a4c5e6b1a2b3ca336556556c6f822ee0` |
-| `gezgin-mvi-android` | `e8622d0a82f39b113b99b1bfda4734548850f301b579e9219ccf9f73460ce4ea` | `395a153994ab67b0589cffb52433b94ec7ad3235359ef13f2bb7afe7e78b2dff` | `8ab41a940c00ecccb78a04977a88c9246acf3624ae08c80c274798a9556db925` |
-| `gezgin-mvi-jvm` | `15771436eef603ee2590ce5b3f0a403f247d88a9d359469ec87c7e949f9f4e86` | `6dbec3d67a9a89ab1d168ae0632b49889e3624cc09870be2d0dfceaa15c411b9` | `37592cf230d4232169c442f057883e3fb3dbcf5e0a0ea3dca992913a3a6cd303` |
-| `gezgin-processor` | `d9b30026a22caff0754b13266f86be30abd45eea5e77986b85c32615f6a507ca` | `fd20f3079f2013c0e780cdacdd3f61440a4b08461713d6a64de3d0166d23ce84` | `c02392665150d5ddc468bef5d453bdd5b42c903b2d8c54fb03bfe55692dc4680` |
+| `gezgin-core` | `95dcca081810286e130fadade6b423a354f7270749128a52f97bfa16b7fd7a86` | `8eb384d09b65e4e33b7d8c315e3a2d2beabc59ee623d706e86c510441ef9fe07` | `f81910a9ed7beb5d9d05f3ac15ff0063116809d1d8e791a8a8378f5976ad6d61` |
+| `gezgin-core-android` | `5557b3a9c34f90a7439cdeea5bb5fda2792bbb682b3c91ddbe52a993d9f4505b` | `a26195b2c9d08c8e5065c31df12553227e53ea2a669cda25f6256ec587a7a43e` | `16d611b355bc22a0b7d16e0e1d762bb2bd45537bd4bcd98addce4dad00c273e2` |
+| `gezgin-core-jvm` | `84e7d687882688ef600c919a5fea63c577a1582bca1b4ec0770fba53b2d7910f` | `46e4fc92e53458fc9dea2c43e6c1413134c3fab39b6cca0e57035ee42c3d821b` | `a2de16951d17e9f6b581ebc8e7a6b1bc68b938ab9ee230a96995cdd2db3e583f` |
+| `gezgin-mvi` | `595cb09d92b20dcf22b55fe6e48d5f2b28e3b202c3da7f1e0c2cadb7339b340f` | `c30d450c9e1bb954c4167e285703ba4bdd07ed7a9cde8c16fb127da46ccbc4fb` | `65c0e52a4cb0d963fbcdb5a48f3d95c97db1e1e897abd16beb8bc1950ed281d6` |
+| `gezgin-mvi-android` | `e8622d0a82f39b113b99b1bfda4734548850f301b579e9219ccf9f73460ce4ea` | `77f6cab81247767a6f3fb998dc2fbe0b667ad7f4e7300448e12c794b491b06c7` | `36166e2392828525f3b3d2a229acd2fcd6fc218dae3fe211c56495dfddaafd55` |
+| `gezgin-mvi-jvm` | `15771436eef603ee2590ce5b3f0a403f247d88a9d359469ec87c7e949f9f4e86` | `927e6a66d70309b4146387e3b6132f3e1dc195794f80d3f11dc31a5025ab94df` | `8b4ac1bef417bfd5da065d8aabd8f1dd77b2d4279a4d8d413e805acd606eb031` |
+| `gezgin-processor` | `f4684087d05fb96f97a60f9920a21c0cdd017784904cc71c0ce0b48a4efbe47e` | `5f3e966507cd03c461325a64c0eb9abd9de1909874d0861c67fb3d29c63b638b` | `f2a038e1d46ce3f8c369251399b8da2bb46ecf2895be92a33e6babb7b37848a1` |
 
 ## Verified toolchain
 
@@ -94,27 +94,27 @@ The published integrity table was generated from the exact primary artifact, Gra
 
 ```bash
 artifacts=(
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha01/gezgin-core-0.1.0-alpha01.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha01/gezgin-core-0.1.0-alpha01.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha01/gezgin-core-0.1.0-alpha01.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha01/gezgin-core-android-0.1.0-alpha01.aar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha01/gezgin-core-android-0.1.0-alpha01.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha01/gezgin-core-android-0.1.0-alpha01.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha01/gezgin-core-jvm-0.1.0-alpha01.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha01/gezgin-core-jvm-0.1.0-alpha01.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha01/gezgin-core-jvm-0.1.0-alpha01.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha01/gezgin-mvi-0.1.0-alpha01.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha01/gezgin-mvi-0.1.0-alpha01.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha01/gezgin-mvi-0.1.0-alpha01.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha01/gezgin-mvi-android-0.1.0-alpha01.aar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha01/gezgin-mvi-android-0.1.0-alpha01.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha01/gezgin-mvi-android-0.1.0-alpha01.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha01/gezgin-mvi-jvm-0.1.0-alpha01.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha01/gezgin-mvi-jvm-0.1.0-alpha01.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha01/gezgin-mvi-jvm-0.1.0-alpha01.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha01/gezgin-processor-0.1.0-alpha01.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha01/gezgin-processor-0.1.0-alpha01.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha01/gezgin-processor-0.1.0-alpha01.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha02/gezgin-core-0.1.0-alpha02.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha02/gezgin-core-0.1.0-alpha02.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha02/gezgin-core-0.1.0-alpha02.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha02/gezgin-core-android-0.1.0-alpha02.aar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha02/gezgin-core-android-0.1.0-alpha02.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha02/gezgin-core-android-0.1.0-alpha02.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha02/gezgin-core-jvm-0.1.0-alpha02.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha02/gezgin-core-jvm-0.1.0-alpha02.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha02/gezgin-core-jvm-0.1.0-alpha02.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha02/gezgin-mvi-0.1.0-alpha02.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha02/gezgin-mvi-0.1.0-alpha02.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha02/gezgin-mvi-0.1.0-alpha02.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha02/gezgin-mvi-android-0.1.0-alpha02.aar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha02/gezgin-mvi-android-0.1.0-alpha02.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha02/gezgin-mvi-android-0.1.0-alpha02.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha02/gezgin-mvi-jvm-0.1.0-alpha02.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha02/gezgin-mvi-jvm-0.1.0-alpha02.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha02/gezgin-mvi-jvm-0.1.0-alpha02.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha02/gezgin-processor-0.1.0-alpha02.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha02/gezgin-processor-0.1.0-alpha02.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha02/gezgin-processor-0.1.0-alpha02.pom"
 )
 shasum -a 256 "${artifacts[@]}"
 ```
@@ -130,10 +130,12 @@ git -c core.fsmonitor=false rev-parse HEAD
 test -z "$(git -c core.fsmonitor=false status --porcelain)"
 ```
 
-Every dependency-report and boundary command above succeeded; each negated `rg` succeeded because the forbidden search returned no matches. All 21 checksum paths existed and produced the values recorded in the integrity table. The source-checkpoint porcelain was empty at `1aff450304fa592d67a9cfa735b5bafd614ac28f`. Final clean-worktree evidence is re-run after the separate handoff commit, as required by the two-checkpoint sequence.
+Every dependency-report and boundary command above succeeded; each negated `rg` succeeded because the forbidden search returned no matches. All 21 checksum paths existed and produced the values recorded in the integrity table. The source-checkpoint porcelain was empty at `57b10f29a5e413b2c4b36e3ab960d478b02f75f9`. Final clean-worktree evidence is re-run after the separate handoff commit, as required by the two-checkpoint sequence.
 
 Key results:
 
+- Phase A.1 drag-handle contract/metadata/Material-host tests, Android unit tests, core/MVI checks, processor tests, and API checks completed with `BUILD SUCCESSFUL` from source commit `57b10f29a5e413b2c4b36e3ab960d478b02f75f9`.
+- Independent Gradle 9.4.1 consumer resolved and compiled `0.1.0-alpha02`; forbidden JetBrains Navigation 3/lifecycle-navigation3 matches remained zero.
 - Main processor/core/MVI/API gate: 147 tasks, `BUILD SUCCESSFUL`.
 - Clean repository gate: 668 tasks, 650 executed, `BUILD SUCCESSFUL`.
 - Independent consumer clean and refresh builds: 8 tasks each, `BUILD SUCCESSFUL`.
@@ -178,6 +180,8 @@ Repeatable route-bound `@TopBar(route)` and `@BottomBar(route)` exist only to pr
 ### Bottom sheets and modal dismissal
 
 `BottomSheetContract` exposes independent `dismissOnBackPress`, `dismissOnClickOutside`, and `sheetGesturesEnabled` values; gesture support defaults to `true`. A non-dismissible sheet sets all three to `false`. `@NoBack` with a bottom sheet is valid only when back dismissal and sheet gestures are both disabled; invalid combinations fail loudly at entry creation. Dismissal produces `Canceled`, and typed result routes remain serializable back-stack entries.
+
+`BottomSheetDragHandleMode.Default/None` is a migration-only compatibility bridge. `Default` preserves Material 3's built-in handle; `None` reaches the real host as `dragHandle = null` while consumer-owned sheet content remains rendered. It adds no serialized route field, composable route lambda, processor feature, ZAD component, or global host override. It is not the permanent V2 presentation/slot API and may be deprecated, replaced, or removed after that design is approved.
 
 ### Fragment boundary
 
