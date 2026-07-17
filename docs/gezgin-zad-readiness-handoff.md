@@ -138,7 +138,7 @@ Key results:
   independent consumer compiles this binding and wrong Intent types fail with `MV23`.
 - Every route not annotated with `@NoBack` now receives a typed navigator with one-step `back()`,
   even when it declares no other edge. A bare `@NoBack` route remains the explicit no-navigator case.
-- Phase A.1 drag-handle contract/metadata/Material-host tests, Android unit tests, core/MVI checks, processor tests, and API checks completed with `BUILD SUCCESSFUL` from source commit `9402fb6f2d0d0d3e8b6f32b20e2fd4f437a4da1d`.
+- Phase A.1 drag-handle contract/metadata/Material-host tests, Android unit tests, core/MVI checks, processor tests, and API checks completed with `BUILD SUCCESSFUL` from source commit `9402fb631bc14cc49a055637bdaf8055f332d7e0`.
 - Independent Gradle 9.4.1 consumer resolved and compiled `0.1.0-alpha04`; forbidden JetBrains Navigation 3/lifecycle-navigation3 matches remained zero.
 - Main processor/core/MVI/API gate: 147 tasks, `BUILD SUCCESSFUL`.
 - Clean repository gate: 668 tasks, 650 executed, `BUILD SUCCESSFUL`.
