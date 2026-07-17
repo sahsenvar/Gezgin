@@ -2,9 +2,9 @@
 
 Status: **GREEN**  
 Generated: 2026-07-17  
-Immutable source commit: `624c3e4567241a2914198c13fc20c905ece01e0a`
+Immutable source commit: `9402fb631bc14cc49a055637bdaf8055f332d7e0`
 Source branch: `codex/zad-integration-readiness`  
-Artifact version: `0.1.0-alpha03`
+Artifact version: `0.1.0-alpha04`
 Repository: Maven Local (`~/.m2/repository`)
 
 The source worktree was clean at the source checkpoint. The coordinates below were republished from the exact source commit above, consumed by the independent ZAD-shaped fixture, and integrity-locked by SHA-256. ZAD must resolve this pinned artifact set and must not use `includeBuild`, composite substitution, `projectDir`, or a moving Gezgin checkout.
@@ -13,21 +13,21 @@ The source worktree was clean at the source checkpoint. The coordinates below we
 
 Production coordinates:
 
-- `dev.gezgin:gezgin-core:0.1.0-alpha03`
-- `dev.gezgin:gezgin-mvi:0.1.0-alpha03`
-- `dev.gezgin:gezgin-processor:0.1.0-alpha03`
+- `dev.gezgin:gezgin-core:0.1.0-alpha04`
+- `dev.gezgin:gezgin-mvi:0.1.0-alpha04`
+- `dev.gezgin:gezgin-processor:0.1.0-alpha04`
 
 Published platform variants are part of the Gradle module metadata resolution. `gezgin-test` is excluded from the ZAD production handoff.
 
 | Coordinate | Primary artifact SHA-256 | `.module` SHA-256 | `.pom` SHA-256 |
 |---|---|---|---|
-| `gezgin-core` | `95dcca081810286e130fadade6b423a354f7270749128a52f97bfa16b7fd7a86` | `8c2c70e5a552181bee00afb0e0b85c7c41c0cd2a78b4b03cb6152f4ad5ef6315` | `6214697265babe5467591e14d5918e31e9995b048534878658a7a62fd687bf26` |
-| `gezgin-core-android` | `5557b3a9c34f90a7439cdeea5bb5fda2792bbb682b3c91ddbe52a993d9f4505b` | `253ec42ee4677be36e3c179af37e8aed171c3909fdd370da8b77bdd96125fe71` | `7913a96b17cb1c3c23c142d9749e794a01fb4b6e96a57d96a0eee65f05fc1366` |
-| `gezgin-core-jvm` | `84e7d687882688ef600c919a5fea63c577a1582bca1b4ec0770fba53b2d7910f` | `63e98624fdc50b0f3a051cf7498acec2c5ab6f06c2d92c93f3fdf791f7a5a37a` | `f5bd03384dcd8dc56fe3f08be678995026094b214b5919ae467ebcde6962a0cb` |
-| `gezgin-mvi` | `595cb09d92b20dcf22b55fe6e48d5f2b28e3b202c3da7f1e0c2cadb7339b340f` | `dba37c1f4fccda1281e3326f62ceec67074c1a7c9601e1f40d522bb1c1b6a5cc` | `9e388dfd3319614c266358270da3bda5a3793a74e0a2082e03212ef9e1650651` |
-| `gezgin-mvi-android` | `e8622d0a82f39b113b99b1bfda4734548850f301b579e9219ccf9f73460ce4ea` | `d9a683087014b78512bf235052894f4834d519e3e8d309e2142501efb84e566a` | `f878b934c582d343247c7189d9282a38b61b388265128318517250f4726379a8` |
-| `gezgin-mvi-jvm` | `15771436eef603ee2590ce5b3f0a403f247d88a9d359469ec87c7e949f9f4e86` | `27e6b4c47c2a9ff8ce09fba1dbd6e9cc666fd8eccac14f14a60db05aa513651b` | `92441fbec7e9dc9a3f0a8f1c6a4bb0cae3a4be22c1473105fe569a4056345784` |
-| `gezgin-processor` | `95c8e62066cff7fd90ffa38b0ff9d8c316125567ec6a9ffd1872abd65d46477f` | `fe314331d758054bb7e9ff2ebcbae72578b4bef0ec91a67d8293c3e4851d23f1` | `9e6fb3d27a239b9f7114daa9322036f3e144570f0ed88015a8039f5e15ccb0ce` |
+| `gezgin-core` | `95dcca081810286e130fadade6b423a354f7270749128a52f97bfa16b7fd7a86` | `bc7f7b08386db4058d0cd82d08b830574e894dfefd0bd7b48ac97abcc6ce53c9` | `4be01d74f8f29b5477ecc9f05bcef9c9e85f20ccf7237d25a6cd0425074da293` |
+| `gezgin-core-android` | `5557b3a9c34f90a7439cdeea5bb5fda2792bbb682b3c91ddbe52a993d9f4505b` | `d0bc27aaed03e72300947f653a0ffb692d4628f4fb1ed8bdf67e252f619a2cce` | `75b0f2e55afcee810619b88af4f60d350bbb233f124dea24cd9c2796758be648` |
+| `gezgin-core-jvm` | `84e7d687882688ef600c919a5fea63c577a1582bca1b4ec0770fba53b2d7910f` | `cfddb50b6d1e1a5687c2670424e37366efdf3d0146aff77b8dae82d2e6d0bd6b` | `605591cf9752888d8ed6d60e4b57847ae54bca076babd4d6108be917c1903849` |
+| `gezgin-mvi` | `595cb09d92b20dcf22b55fe6e48d5f2b28e3b202c3da7f1e0c2cadb7339b340f` | `dca0ba6b2a667c08631d4eedc5608db5f1fa59de27f6cb0ed8da8533b7ce93b6` | `5f3e38f1652a1c4a2d382b193f44b3adc74386f33c9e916875a2e8e5524f06e3` |
+| `gezgin-mvi-android` | `e8622d0a82f39b113b99b1bfda4734548850f301b579e9219ccf9f73460ce4ea` | `cccc3b44f3f6c4084eb1cb283267bb971e507ad6cce2f506651dc662c7ab69e2` | `4ddc585a655df9e2225940e7d6763ce28930553e00df264b4f18e761e19bcec5` |
+| `gezgin-mvi-jvm` | `15771436eef603ee2590ce5b3f0a403f247d88a9d359469ec87c7e949f9f4e86` | `554b65356900aa0705c5fc3c2b7b931b8f0078b20e0bedac1c31d55e20f1998f` | `d956a55339bc6e8434d6ac5cd3a3b5dc5a1f28341c9ff7eba3611abc3aaba41c` |
+| `gezgin-processor` | `0450bffbb8756d0827e340568e792e5f7319f6a37d91b45afb3c3d8e2d7c9b5a` | `ac965476d193d36fd5176ab4d9b8b634d381569d265041dd1c0a42cc6081b9a0` | `306d29aac594254682c58f98cc07d88957a06201b48b4e2c7adb617922d707c5` |
 
 ## Verified toolchain
 
@@ -94,27 +94,27 @@ The published integrity table was generated from the exact primary artifact, Gra
 
 ```bash
 artifacts=(
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha03/gezgin-core-0.1.0-alpha03.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha03/gezgin-core-0.1.0-alpha03.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha03/gezgin-core-0.1.0-alpha03.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha03/gezgin-core-android-0.1.0-alpha03.aar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha03/gezgin-core-android-0.1.0-alpha03.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha03/gezgin-core-android-0.1.0-alpha03.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha03/gezgin-core-jvm-0.1.0-alpha03.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha03/gezgin-core-jvm-0.1.0-alpha03.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha03/gezgin-core-jvm-0.1.0-alpha03.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha03/gezgin-mvi-0.1.0-alpha03.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha03/gezgin-mvi-0.1.0-alpha03.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha03/gezgin-mvi-0.1.0-alpha03.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha03/gezgin-mvi-android-0.1.0-alpha03.aar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha03/gezgin-mvi-android-0.1.0-alpha03.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha03/gezgin-mvi-android-0.1.0-alpha03.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha03/gezgin-mvi-jvm-0.1.0-alpha03.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha03/gezgin-mvi-jvm-0.1.0-alpha03.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha03/gezgin-mvi-jvm-0.1.0-alpha03.pom"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha03/gezgin-processor-0.1.0-alpha03.jar"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha03/gezgin-processor-0.1.0-alpha03.module"
-  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha03/gezgin-processor-0.1.0-alpha03.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha04/gezgin-core-0.1.0-alpha04.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha04/gezgin-core-0.1.0-alpha04.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core/0.1.0-alpha04/gezgin-core-0.1.0-alpha04.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha04/gezgin-core-android-0.1.0-alpha04.aar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha04/gezgin-core-android-0.1.0-alpha04.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-android/0.1.0-alpha04/gezgin-core-android-0.1.0-alpha04.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha04/gezgin-core-jvm-0.1.0-alpha04.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha04/gezgin-core-jvm-0.1.0-alpha04.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-core-jvm/0.1.0-alpha04/gezgin-core-jvm-0.1.0-alpha04.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha04/gezgin-mvi-0.1.0-alpha04.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha04/gezgin-mvi-0.1.0-alpha04.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi/0.1.0-alpha04/gezgin-mvi-0.1.0-alpha04.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha04/gezgin-mvi-android-0.1.0-alpha04.aar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha04/gezgin-mvi-android-0.1.0-alpha04.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-android/0.1.0-alpha04/gezgin-mvi-android-0.1.0-alpha04.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha04/gezgin-mvi-jvm-0.1.0-alpha04.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha04/gezgin-mvi-jvm-0.1.0-alpha04.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-mvi-jvm/0.1.0-alpha04/gezgin-mvi-jvm-0.1.0-alpha04.pom"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha04/gezgin-processor-0.1.0-alpha04.jar"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha04/gezgin-processor-0.1.0-alpha04.module"
+  "$HOME/.m2/repository/dev/gezgin/gezgin-processor/0.1.0-alpha04/gezgin-processor-0.1.0-alpha04.pom"
 )
 shasum -a 256 "${artifacts[@]}"
 ```
@@ -130,14 +130,16 @@ git -c core.fsmonitor=false rev-parse HEAD
 test -z "$(git -c core.fsmonitor=false status --porcelain)"
 ```
 
-Every dependency-report and boundary command above succeeded; each negated `rg` succeeded because the forbidden search returned no matches. All 21 checksum paths existed and produced the values recorded in the integrity table. The source-checkpoint porcelain was empty at `624c3e4567241a2914198c13fc20c905ece01e0a`. Final clean-worktree evidence is re-run after the separate handoff commit, as required by the two-checkpoint sequence.
+Every dependency-report and boundary command above succeeded; each negated `rg` succeeded because the forbidden search returned no matches. All 21 checksum paths existed and produced the values recorded in the integrity table. The source-checkpoint porcelain was empty at `9402fb631bc14cc49a055637bdaf8055f332d7e0`. Final clean-worktree evidence is re-run after the separate handoff commit, as required by the two-checkpoint sequence.
 
 Key results:
 
+- Route-explicit `@EffectHandler` may receive an exactly typed owner `onIntent` dispatcher; the
+  independent consumer compiles this binding and wrong Intent types fail with `MV23`.
 - Every route not annotated with `@NoBack` now receives a typed navigator with one-step `back()`,
   even when it declares no other edge. A bare `@NoBack` route remains the explicit no-navigator case.
-- Phase A.1 drag-handle contract/metadata/Material-host tests, Android unit tests, core/MVI checks, processor tests, and API checks completed with `BUILD SUCCESSFUL` from source commit `624c3e4567241a2914198c13fc20c905ece01e0a`.
-- Independent Gradle 9.4.1 consumer resolved and compiled `0.1.0-alpha03`; forbidden JetBrains Navigation 3/lifecycle-navigation3 matches remained zero.
+- Phase A.1 drag-handle contract/metadata/Material-host tests, Android unit tests, core/MVI checks, processor tests, and API checks completed with `BUILD SUCCESSFUL` from source commit `9402fb6f2d0d0d3e8b6f32b20e2fd4f437a4da1d`.
+- Independent Gradle 9.4.1 consumer resolved and compiled `0.1.0-alpha04`; forbidden JetBrains Navigation 3/lifecycle-navigation3 matches remained zero.
 - Main processor/core/MVI/API gate: 147 tasks, `BUILD SUCCESSFUL`.
 - Clean repository gate: 668 tasks, 650 executed, `BUILD SUCCESSFUL`.
 - Independent consumer clean and refresh builds: 8 tasks each, `BUILD SUCCESSFUL`.
@@ -170,6 +172,11 @@ The maintained direction is:
 `Intent -> onIntent -> effect -> @EffectHandler(route) -> typed navigator`
 
 `@Screen` is repeatable. Each bound route owns its own `@MviViewModel(route)` and route-explicit `@EffectHandler(route)`. A shared content function must use State and Intent types compatible with every route; Effect and generated Navigator types may differ by route. ViewModels do not own `Navigator` or `RawNavigator`.
+
+An explicit handler may declare `onIntent: (I) -> Unit`. Generated entry code binds it to
+`vm::onIntent` only when `I` exactly matches that route's owner ViewModel Intent type. This lets a
+handler collect a typed navigator result and return it through `result -> Intent -> ViewModel`
+without placing a Navigator in the ViewModel or introducing a process-wide callback relay.
 
 Deprecated `@ScreenEffect` has no route argument and is compatibility-only. Its exact `Flow<E>` type must identify exactly one `@MviViewModel` route not occupied by an explicit handler. Zero candidates, multiple unoccupied candidates, duplicate legacy handlers, or explicit-handler overlap fail compilation. New ZAD code must use `@EffectHandler(Route::class)`.
 
