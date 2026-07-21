@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 /**
- * Standard helper that collects an effect flow SAFELY, only while STARTED (§10.1). A `@ScreenEffect`
- * composable calls it: `ObserveEffects(vm.effects) { effect -> ... }`.
+ * Standard helper that collects an effect flow SAFELY, only while STARTED (§10.1). A route-explicit
+ * effect handler calls it: `ObserveEffects(vm.effects) { effect -> ... }`.
  *
  * **Collection window (honest contract):** the [repeatOnLifecycle]`(STARTED)` collect is open ONLY while
  * STARTED — when the entry is covered (Nav3 removes a covered entry from composition entirely) or the app

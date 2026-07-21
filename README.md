@@ -251,7 +251,7 @@ override val dragHandleMode: BottomSheetDragHandleMode
     get() = BottomSheetDragHandleMode.None
 ```
 
-`Default` preserves Material's handle; `None` passes `dragHandle = null`, leaving any custom handle in consumer-owned sheet content. This enum is a migration bridge, not the permanent presentation-slot API, and may be deprecated, replaced, or removed by the V2 design.
+`Default` preserves Material's handle; `None` passes `dragHandle = null`, leaving any custom handle in consumer-owned sheet content. This enum and `BottomSheetContract.dragHandleMode` require `@OptIn(ExperimentalGezginMigrationApi::class)`. They are migration bridges, not the permanent presentation-slot API, and may be deprecated, replaced, or removed by the V2 design.
 
 ### 6 · Host wiring
 
@@ -324,9 +324,7 @@ fun HomeEffectHandler(effects: Flow<HomeEffect>, nav: HomeNavigator) {
 
 `@Screen` is repeatable. Every bound route has its own `@MviViewModel(route)` and route-bound handler. A shared content function must use State and Intent types compatible with every route; Effect and typed Navigator types may differ per route.
 
-`@TopBar(route)` and `@BottomBar(route)` are repeatable, migration-only `gezgin-mvi` APIs. Generated content is an outer `Column`, then top bar, a `Column(Modifier.fillMaxWidth().weight(1f))` preserving the content's `ColumnScope`, and the bottom bar only while the IME is hidden. They exist only to preserve the current ZAD screen shape and must be removed when the migration adopts its permanent app-owned container.
-
-Compatibility only: deprecated `@ScreenEffect` has no route argument. The processor accepts it only when its exact `Flow<E>` type identifies exactly one `@MviViewModel` route that is not already occupied by an explicit handler. Zero candidates, multiple unoccupied candidates, duplicate legacy handlers, or overlap with an explicit handler fail compilation. New code must use `@EffectHandler(Route::class)`.
+`@TopBar(route)` and `@BottomBar(route)` are repeatable, migration-only `gezgin-mvi` APIs guarded by `@ExperimentalGezginMigrationApi`. Generated content is an outer `Column`, then top bar, a `Column(Modifier.fillMaxWidth().weight(1f))` preserving the content's `ColumnScope`, and the bottom bar only while the IME is hidden. They exist only to preserve the current ZAD screen shape and must be removed when the migration adopts its permanent app-owned container. Consumers must declare `@OptIn(ExperimentalGezginMigrationApi::class)` explicitly.
 
 ### Fragment interop
 

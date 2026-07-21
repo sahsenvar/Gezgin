@@ -126,7 +126,7 @@ override val dragHandleMode: BottomSheetDragHandleMode
     get() = BottomSheetDragHandleMode.None
 ```
 
-`Default` Material handle'ını korur; `None`, host'a `dragHandle = null` verir ve özel handle consumer-owned sheet içeriğinde kalır. Bu enum kalıcı presentation-slot API'si değil, migration köprüsüdür; V2 tasarımında deprecated edilebilir, değiştirilebilir veya kaldırılabilir.
+`Default` Material handle'ını korur; `None`, host'a `dragHandle = null` verir ve özel handle consumer-owned sheet içeriğinde kalır. Bu enum ve `BottomSheetContract.dragHandleMode`, `@OptIn(ExperimentalGezginMigrationApi::class)` gerektirir. Kalıcı presentation-slot API'si değil, migration köprüsüdür; V2 tasarımında deprecated edilebilir, değiştirilebilir veya kaldırılabilir.
 
 | Modül | Rol |
 |---|---|
@@ -324,9 +324,7 @@ fun HomeEffectHandler(effects: Flow<HomeEffect>, nav: HomeNavigator) {
 
 `@Screen` repeatable'dır. Bağlanan her route'un kendi `@MviViewModel(route)`'u ve route-bound handler'ı vardır. Paylaşılan content fonksiyonu tüm route'larla uyumlu State ve Intent tipleri kullanmalıdır; Effect ve tipli Navigator tipleri route'a göre farklı olabilir.
 
-`@TopBar(route)` ve `@BottomBar(route)`, repeatable ve migration-only `gezgin-mvi` API'leridir. Üretilen yapı dış `Column`, top bar, content'in `ColumnScope`'unu koruyan `Column(Modifier.fillMaxWidth().weight(1f))` ve yalnız IME gizliyken bottom bar sırasındadır. Yalnız mevcut ZAD ekran şeklini korumak için vardır; migration kalıcı app-owned container'a geçtiğinde kaldırılmalıdır.
-
-Yalnız uyumluluk için: deprecated `@ScreenEffect` route argümanı taşımaz. Processor bunu ancak exact `Flow<E>` tipi, explicit handler tarafından işgal edilmemiş tam bir `@MviViewModel` route'u bulduğunda kabul eder. Sıfır aday, birden fazla boş aday, duplicate legacy handler veya explicit handler overlap'i derlemeyi kırar. Yeni kod `@EffectHandler(Route::class)` kullanmalıdır.
+`@TopBar(route)` ve `@BottomBar(route)`, repeatable, migration-only ve `@ExperimentalGezginMigrationApi` ile korunan `gezgin-mvi` API'leridir. Üretilen yapı dış `Column`, top bar, content'in `ColumnScope`'unu koruyan `Column(Modifier.fillMaxWidth().weight(1f))` ve yalnız IME gizliyken bottom bar sırasındadır. Yalnız mevcut ZAD ekran şeklini korumak için vardır; migration kalıcı app-owned container'a geçtiğinde kaldırılmalıdır. Consumer açıkça `@OptIn(ExperimentalGezginMigrationApi::class)` bildirmelidir.
 
 ### Fragment interop
 

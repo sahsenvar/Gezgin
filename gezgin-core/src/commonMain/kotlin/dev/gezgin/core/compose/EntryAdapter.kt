@@ -1,4 +1,4 @@
-@file:OptIn(GezginInternalApi::class)
+@file:OptIn(GezginInternalApi::class, dev.gezgin.core.ExperimentalGezginMigrationApi::class)
 
 package dev.gezgin.core.compose
 

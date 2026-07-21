@@ -12,12 +12,13 @@ import kotlin.reflect.KClass
  * on every usage.
  *
  * Like every kind annotation (`@Screen` et al.), [route] is mandatory-explicit — the VM's route is given
- * directly; codegen matches the triple (`@MviViewModel`/`@Screen`/`@ScreenEffect`) by route and requires all
- * three to be in the SAME module (per-module KSP matching, §10.1).
+ * directly; codegen matches `@MviViewModel` and `@Screen` by route, then attaches an optional
+ * route-explicit `@EffectHandler`. Every participating declaration must be in the SAME module
+ * (per-module KSP matching, §10.1).
  *
  * Guardrail: an `@MviViewModel` class MUST implement [dev.gezgin.mvi.GezginMvi]; otherwise a compile error.
  * Codegen also validates the matched `@Screen(Route)` content's `(state, onIntent)` and, if present, the
- * `@ScreenEffect`'s `Flow<E>` types against the VM's `GezginMvi<S,I,E>` supertype arguments.
+ * `@EffectHandler`'s `Flow<E>` type against the VM's `GezginMvi<S,I,E>` supertype arguments.
  *
  * Note: gezgin-mvi is DI-agnostic at RUNTIME; DI-detection (§10.1) reads the VM's
  * `@HiltViewModel`/`@KoinViewModel` annotations + ctor `@Assisted`/`@InjectedParam` by string-FQN in codegen

@@ -24,8 +24,8 @@ public interface GezginMvi<out S, in I, out E> {
 
     /**
      * The optional one-shot effect stream (non-nav side effects; snackbar/toast/haptic). If absent,
-     * `emptyFlow()`. `@ScreenEffect` consumes it via [ObserveEffects] **only while STARTED** → there is NO
-     * observer on a covered or STOPPED entry.
+     * `emptyFlow()`. A route-explicit effect handler consumes it via [ObserveEffects] **only while STARTED**
+     * → there is NO observer on a covered or STOPPED entry.
      *
      * **Backing contract (losslessness, Faz 5 recheck / MJ2):** a buffered source is REQUIRED so that an
      * effect emitted while there is no observer is NOT LOST. RECOMMENDED: [GezginEffects] (`Channel(UNLIMITED)

@@ -77,7 +77,7 @@ publishing {
         pom {
             name.set("gezgin-mvi")
             description.set(
-                "Opsiyonel MVI binder add-on'u (gezgin-core'a bağımlı): @MviViewModel/@ScreenEffect + " +
+                "Opsiyonel MVI binder add-on'u (gezgin-core'a bağımlı): @MviViewModel/@EffectHandler + " +
                     "GezginMvi<S,I,E> sözleşmesi + codegen binder + ObserveEffects + DI-detection " +
                     "(Hilt/Koin, androidx fallback).",
             )

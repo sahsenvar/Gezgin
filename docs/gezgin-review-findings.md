@@ -38,7 +38,7 @@ feature:A/B/… + :app   (hepsi core:navigation'ı görür)
 ## 🟡 MAJOR
 
 ### M1 — `GezginMvi<S,I,E>` invariant; "somut VM alt-tip" iddiası E kaynağı olmayınca geçersiz 🟢 ÇÖZÜLDÜ (`@ViewModel` eritti)
-**Sorun:** Invariant `GezginMvi` → resolver dönüş tipi VM'in S/I/E'siyle **birebir** eşleşmeli. E yalnız opsiyonel `@ScreenEffect(Flow<E>)`'te var; `@Screen(state, onIntent)`'te yok. `@ScreenEffect` yoksa ama VM effect yayıyorsa codegen E'yi bilemez → derlenmez.
+**Sorun:** Invariant `GezginMvi` → resolver dönüş tipi VM'in S/I/E'siyle **birebir** eşleşmeli. E route-explicit `@EffectHandler(route)` üzerindeki `Flow<E>`'den doğrulanır; `@Screen(state, onIntent)`'te yoktur. Handler yoksa VM yine derlenir, ancak effect toplama sorumluluğu üretilen entry'ye eklenmez.
 **Çözüm (kullanıcı — `@ViewModel`):** VM'e `@ViewModel(Route::class)` konur → codegen **somut VM tipini** bilir, resolver'ı `-> OrderChainViewModel` (concrete) tipler → imzada `GezginMvi<S,I,E>` up-cast'i **yok** → invariance sorunu **erir.** S/I/E VM'in `GezginMvi` supertype arg'larından **kesin** okunur (content'ten türetme yok, E-kaynağı yok). Variance (`<out S, in I, out E>`) artık yük taşımaz, polish olarak kalır. **Guardrail:** `@ViewModel` var `GezginMvi` yok → derleme hatası. İşlendi: spec §10.1.
 
 ### M2 — Bir *flow*'un (ekran değil) result tipini nasıl deklare/döndürdüğü 🟢 ÇÖZÜLDÜ

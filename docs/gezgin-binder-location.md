@@ -109,19 +109,18 @@ Column {
 
 Top veya bottom provider olmayabilir. Aynı route için duplicate provider ya da State/Intent mismatch compile error'dür. Bu API'ler ZAD kalıcı app-owned container'a geçtiğinde `gezgin-mvi`den kaldırılmalıdır.
 
-## Deprecated compatibility bridge
+## Route-explicit effect handlers
 
-Deprecated `@ScreenEffect`, route argümanı taşımayan eski yüzeydir. Processor yalnız handler'ın exact `Flow<E>` tipi, explicit handler tarafından işgal edilmemiş tam bir `@MviViewModel` route'u bulursa binding çıkarır.
+Effect binding yalnız `@EffectHandler(Route::class)` ile route-explicit yapılır; processor handler'ın `Flow<E>` tipini o route'un `@MviViewModel` sözleşmesine karşı doğrular.
 
 Şu durumların tamamı derlemeyi kırar:
 
-- `Flow<E>` için sıfır VM route adayı;
-- birden fazla unoccupied route adayı;
-- bütün adayların explicit handler tarafından işgal edilmesi;
-- aynı route'a birden fazla legacy handler;
-- legacy ve explicit handler overlap'i.
+- handler route'u için `@Screen(state, onIntent)` bulunmaması;
+- aynı route'a birden fazla handler bağlanması;
+- `Flow<E>`, navigator veya owner-`onIntent` tipinin route'un VM sözleşmesiyle eşleşmemesi;
+- handler signature'ında processor'ın sağlayamadığı ekstra parametre bulunması.
 
-Bu köprü yalnız eski source uyumluluğu içindir. Yeni ve maintained kod `@EffectHandler(Route::class)` kullanır.
+Processor effect tipinden route inference yapmaz; her maintained handler `@EffectHandler(Route::class)` ile sahipliğini açıklar.
 
 ## Sınırlar
 

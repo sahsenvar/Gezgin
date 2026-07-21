@@ -14,7 +14,6 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.ksp.toTypeName
 
 internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.MviViewModel"
-internal const val SCREEN_EFFECT_FQ = "dev.gezgin.mvi.annotation.ScreenEffect"
 internal const val EFFECT_HANDLER_FQ = "dev.gezgin.mvi.annotation.EffectHandler"
 internal const val GEZGIN_MVI_FQ = "dev.gezgin.mvi.GezginMvi"
 
@@ -44,7 +43,7 @@ private const val UNIT_FQ = "kotlin.Unit"
  * [dev.gezgin.processor.entry.EntryModelReader]'s `SC4` duplicate-route pattern).
  *
  * **Same-module (§10.1):** KSP only sees one module's symbols per run, so a cross-module VM/content
- * pairing simply won't match — the `@MviViewModel`/`@Screen`/`@ScreenEffect` triple being in the SAME
+ * pairing simply won't match — the `@MviViewModel`/`@Screen`/`@EffectHandler` set being in the SAME
  * module is naturally enforced by `resolver.getSymbolsWithAnnotation` returning only THIS module's
  * `@MviViewModel`s. `EntryModelReader` closes the loop symmetrically (`MV2`/`MV3`).
  */

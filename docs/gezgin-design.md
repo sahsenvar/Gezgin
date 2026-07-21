@@ -278,7 +278,7 @@ fun HomeEffectHandler(effects: Flow<HomeEffect>, nav: HomeNavigator) {
 - DI detection Hilt/Koin/androidx resolver'ı üretebilir. Assisted parametreler Gezgin'in sağlayabildiği route alanlarıyla sınırlıdır; ekstra content dependency'leri `provideXEntry` üzerinde açık resolver param'ı olur.
 - Route-bound `@TopBar`/`@BottomBar`, yalnız ZAD geçişi için temporary `gezgin-mvi` API'leridir. Generated entry sırası: dış `Column` -> top -> `Column(Modifier.fillMaxWidth().weight(1f)) { Screen(...) }` -> yalnız `!imeVisible` iken bottom. Bu API kalıcı container/scroll/screen-scope sözleşmesi değildir ve migration sonunda kaldırılır.
 
-**Deprecated compatibility bridge:** `@ScreenEffect` route argümanı taşımayan eski yüzeydir. Processor yalnız exact `Flow<E>` tipi, explicit handler tarafından işgal edilmemiş **tam bir** VM route'u bulursa inference yapar. Sıfır aday (`MV6`), birden fazla boş aday (`MV17`), explicit overlap (`MV18`) veya aynı route'a birden fazla legacy handler (`MV9`) derlemeyi kırar. Yeni kod yalnız `@EffectHandler(Route::class)` kullanır.
+**Route ownership:** Effect binding yalnız `@EffectHandler(Route::class)` ile yapılır. Processor route'un ekran/VM sahipliğini, `Flow<E>` tipini, optional navigator tipini ve optional owner-`onIntent` tipini fail-loud doğrular; route inference yapmaz.
 
 Güncel binder açıklaması: [gezgin-binder-location.md](gezgin-binder-location.md).
 

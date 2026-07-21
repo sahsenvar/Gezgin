@@ -52,7 +52,7 @@ navigasyon katmanı (Navigation 3 üzerinde). Yayınlanan artefaktlar: `dev.gezg
   kullan (cihazda `am kill` ile doğrulandı; sample tümüyle bu deseni kullanır).
 - **4 entry kind** — `@Screen`, `@Dialog`, `@BottomSheet`, `@FullscreenModal` (modal = render
   varyantı olan normal back-stack entry'si).
-- **MVI add-on** (`gezgin-mvi`, opsiyonel) — `@MviViewModel` / `@ScreenEffect` +
+- **MVI add-on** (`gezgin-mvi`, opsiyonel) — `@MviViewModel` / route-explicit `@EffectHandler` +
   `GezginMvi<S, I, E>` + codegen binder (`provideXEntry`) + DI-detection (Hilt/Koin, androidx
   fallback).
 - **Fragment interop** — `@FragmentScreen` ile brownfield Fragment yaprakları

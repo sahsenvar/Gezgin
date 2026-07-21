@@ -69,8 +69,12 @@ public interface FullscreenModalContract {
  * Migration-only switch for Material's built-in bottom-sheet handle.
  * This is not Gezgin's permanent route-bound presentation/slot API.
  */
+@ExperimentalGezginMigrationApi
 public enum class BottomSheetDragHandleMode {
+    @ExperimentalGezginMigrationApi
     Default,
+
+    @ExperimentalGezginMigrationApi
     None,
 }
 
@@ -113,5 +117,6 @@ public interface BottomSheetContract {
     public val dismissOnBackPress: Boolean get() = true
     public val dismissOnClickOutside: Boolean get() = true
     public val sheetGesturesEnabled: Boolean get() = true
+    @ExperimentalGezginMigrationApi
     public val dragHandleMode: BottomSheetDragHandleMode get() = BottomSheetDragHandleMode.Default
 }

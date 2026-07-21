@@ -1,4 +1,7 @@
-@file:OptIn(dev.gezgin.core.GezginInternalApi::class)
+@file:OptIn(
+    dev.gezgin.core.ExperimentalGezginMigrationApi::class,
+    dev.gezgin.core.GezginInternalApi::class,
+)
 
 package dev.gezgin.core.fixtures
 import androidx.compose.animation.fadeIn

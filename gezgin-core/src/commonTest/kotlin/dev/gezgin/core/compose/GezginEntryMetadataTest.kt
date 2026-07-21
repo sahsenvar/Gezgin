@@ -1,3 +1,5 @@
+@file:OptIn(dev.gezgin.core.ExperimentalGezginMigrationApi::class)
+
 package dev.gezgin.core.compose
 
 import androidx.navigation3.ui.NavDisplay

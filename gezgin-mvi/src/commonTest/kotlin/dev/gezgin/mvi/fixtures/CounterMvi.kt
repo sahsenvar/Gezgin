@@ -13,8 +13,8 @@ import dev.gezgin.core.compose.GezginEntryScope
 import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.ObserveEffects
+import dev.gezgin.mvi.annotation.EffectHandler
 import dev.gezgin.mvi.annotation.MviViewModel
-import dev.gezgin.mvi.annotation.ScreenEffect
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.update
  * Task-5.0 derleme kanıtı (full codegen 5.1/5.2). Kanıtladığı üçlü + shape:
  *  - `@MviViewModel(Route::class)` bir VM class'ında (CLASS target) + VM `GezginMvi<S,I,E>` implement eder
  *    (İKİSİ DE — guardrail'in doğrulayacağı biçim) → S/I/E generic şekli kullanılabilir.
- *  - stateless `@Screen(Route)` content `(state, onIntent)` + `@ScreenEffect` effects `(Flow<E>)`.
+ *  - stateless `@Screen(Route)` content `(state, onIntent)` + route-explicit effect handler `(Flow<E>)`.
  *  - `provideXEntry` = codegen'in üreteceği ANDROIDX-FALLBACK resolver shape'i, gezgin-core entry-scoping'e
  *    (`GezginEntryScope.register<Route>`) karşı derlenir: `viewModel(factory = viewModelFactory{ initializer{} })`
  *    + `collectAsStateWithLifecycle()` + `ObserveEffects(...)` + stateless content çağrısı.
@@ -72,7 +72,7 @@ fun CounterContent(state: CounterState, onIntent: (CounterIntent) -> Unit) {
     if (state.count < 0) onIntent(CounterIntent.Increment)
 }
 
-@ScreenEffect
+@EffectHandler(CounterRoute::class)
 @Composable
 fun CounterEffects(effects: Flow<CounterEffect>) {
     ObserveEffects(effects) { /* CounterEffect.Toast -> show */ }

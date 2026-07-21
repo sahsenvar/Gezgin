@@ -29,7 +29,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
  * Faz 5.2 gate for [dev.gezgin.processor.codegen.MviEntryCodegen] — MVI-mode `provideXEntry` codegen
- * (spec §10.1): DI-detected default resolver, conditional nav wiring, `@ScreenEffect` wiring, and
+ * (spec §10.1): DI-detected default resolver, conditional nav wiring, route-explicit effect wiring, and
  * Problem-2 resolver params.
  *
  * **kctfork caveat (same as [EntryCodegenTest]):** the emitted entry bodies call compose-runtime inline
@@ -174,7 +174,7 @@ class MviEntryCodegenTest {
         assertFalse(text.contains("LocalGezginRawNavigator"), text)
         assertContains(text, "val vm = viewModel(route)")
         assertContains(text, "val state by vm.uiState.collectAsStateWithLifecycle()")
-        // @ScreenEffect matched by effect type → wired (no nav param on the binder), NAMED arg (MN1).
+        // @EffectHandler matched by route → wired (no nav param on the binder), NAMED arg (MN1).
         assertContains(text, "CounterEffects(effects = vm.effects)")
         assertContains(text, "CounterContent(state = state, onIntent = vm::onIntent)")
     }
@@ -299,7 +299,7 @@ class MviEntryCodegenTest {
     }
 
     @Test
-    fun `Important 2 — @ScreenEffect with nav wires navigator solely for the effect (VM ctor has no nav)`() {
+    fun `route-explicit EffectHandler with nav wires navigator solely for the effect`() {
         val text = generateMvi(SourceFile.kotlin("EffNav.kt", EFFECT_NAV_MVI_SOURCE))
 
         // (a) The effect binder is invoked WITH nav, NAMED args (MN1).

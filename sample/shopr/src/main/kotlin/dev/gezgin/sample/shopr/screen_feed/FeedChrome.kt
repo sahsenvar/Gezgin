@@ -1,3 +1,5 @@
+@file:OptIn(dev.gezgin.core.ExperimentalGezginMigrationApi::class)
+
 package dev.gezgin.sample.shopr.screen_feed
 
 import androidx.compose.foundation.layout.Arrangement

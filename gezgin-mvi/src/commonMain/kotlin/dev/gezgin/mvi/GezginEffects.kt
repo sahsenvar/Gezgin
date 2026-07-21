@@ -25,8 +25,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
  * collector (`receiveAsFlow` does not fan out — a second observer shares the value, it does not duplicate it).
  *
  * **Stable instance:** [flow] is set up once (`val`) → the SAME `Flow` on every access. In the
- * `ObserveEffects(vm.effects) { ... }` call inside `@ScreenEffect`, the `LaunchedEffect(effects, ...)` key
- * does not change on recomposition, so the collector is not restarted needlessly. (A `get()` property that
+ * `ObserveEffects(vm.effects) { ... }` call inside a route-explicit effect handler, the
+ * `LaunchedEffect(effects, ...)` key does not change on recomposition, so the collector is not restarted
+ * needlessly. (A `get()` property that
  * calls `receiveAsFlow()` on every access is therefore WRONG — the key would change on every recomposition.)
  *
  * Usage:

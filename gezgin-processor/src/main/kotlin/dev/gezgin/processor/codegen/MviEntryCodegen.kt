@@ -73,7 +73,7 @@ private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetCont
  *         val nav = LocalGezginRawNavigator.current.orderChainNavigator(LocalGezginEntryId.current)
  *         val vm = viewModel(nav, route)
  *         val state by vm.uiState.collectAsStateWithLifecycle()
- *         OrderChainEffects(effects = vm.effects)              // @ScreenEffect matched (by effect type)
+ *         OrderChainEffects(effects = vm.effects)              // @EffectHandler matched by route
  *         OrderChainContent(state = state, onIntent = vm::onIntent)   // stateless @Screen content
  *     }
  * }
@@ -89,7 +89,7 @@ private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetCont
  *
  * **`nav` wiring (§10.1 open question, resolved: conditional):** unlike the spec's literal always-`nav`
  * example, `nav` is wired only when the VM ctor actually declares a `nav` param OR the matched
- * `@ScreenEffect` takes one — mirroring core-mode's conditional `hasNavParam`. An MVI VM with no edges
+ * `@EffectHandler` takes one — mirroring core-mode's conditional `hasNavParam`. An MVI VM with no edges
  * never forces an `xNavigator()` factory call that couldn't resolve. When wired, the factory is
  * qualified against the ROUTE's package (`entry.routePackageName`), exactly like [EntryCodegen].
  *

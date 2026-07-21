@@ -35,9 +35,6 @@ public abstract interface annotation class dev/gezgin/mvi/annotation/MviViewMode
 	public abstract fun route ()Ljava/lang/Class;
 }
 
-public abstract interface annotation class dev/gezgin/mvi/annotation/ScreenEffect : java/lang/annotation/Annotation {
-}
-
 public abstract interface annotation class dev/gezgin/mvi/annotation/TopBar : java/lang/annotation/Annotation {
 	public abstract fun route ()Ljava/lang/Class;
 }

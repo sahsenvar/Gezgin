@@ -104,7 +104,7 @@ fun ColumnScope.SharedFeed(
 
 Her route ayrı `@MviViewModel(route)` ve `@EffectHandler(route)` alır. State ve Intent content ile uyumlu olmalıdır; Home ve Featured route'larının Effect ve typed Navigator tipleri farklı olabilir. Duplicate, eksik veya type-mismatch binding processor tarafından fail-loud reddedilir.
 
-Deprecated `@ScreenEffect` yalnız source-compatibility bridge'idir. Exact `Flow<E>` tipi, explicit handler tarafından işgal edilmemiş tam bir route göstermiyorsa inference yapılmaz; sıfır/birden fazla aday, duplicate legacy handler ve explicit overlap derleme hatasıdır. Maintained sample kodu `@EffectHandler(Route::class)` kullanır.
+Effect binding yalnız route-explicit `@EffectHandler(Route::class)` ile yapılır; maintained sample kodu her handler'ın route ownership'ini açıkça bildirir.
 
 ## Migration-only top/bottom chrome
 
@@ -159,7 +159,7 @@ data object LockedSheetRoute : AppGraph, BottomSheetContract {
 
 `dismissOnBackPress`, `dismissOnClickOutside` ve drag/swipe gesture kontrolü birbirinden bağımsızdır. `@NoBack` sheet için back dismissal ve gestures mutlaka `false` olmalıdır. Programatik seçim/result kapanışında sample önce `GezginSheetController.hide()` ile animasyonu bitirir, sonra typed result/back çağrısını yapar.
 
-Geçici ZAD uyumluluğu için `BottomSheetDragHandleMode.None`, Material host'a `dragHandle = null` iletir; özel handle consumer içeriğinde kalır. Varsayılan `Default` mevcut davranışı korur. Bu enum V2 route-bound presentation/slot tasarımı değildir ve ileride kaldırılabilir.
+Geçici ZAD uyumluluğu için `BottomSheetDragHandleMode.None`, Material host'a `dragHandle = null` iletir; özel handle consumer içeriğinde kalır. Varsayılan `Default` mevcut davranışı korur. Enum ve `BottomSheetContract.dragHandleMode`, `@OptIn(ExperimentalGezginMigrationApi::class)` gerektirir; bunlar V2 route-bound presentation/slot tasarımı değildir ve ileride kaldırılabilir.
 
 ## Fragment interop
 

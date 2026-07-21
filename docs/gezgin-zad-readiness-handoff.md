@@ -86,7 +86,6 @@ The strict boundaries were checked with:
 
 ```bash
 ! rg -n 'DialogFragment|BottomSheetDialogFragment' gezgin-core/src gezgin-mvi/src gezgin-processor/src
-! rg -n '@ScreenEffect' sample --glob '*.kt'
 ! rg -n 'Channel\.UNLIMITED' compatibility/zad-consumer sample/shopr/src/main/kotlin/dev/gezgin/sample/shopr/screen_feed sample/shopr/src/main/kotlin/dev/gezgin/sample/shopr/screen_featured_feed
 ```
 
@@ -145,7 +144,7 @@ Key results:
 - Independent consumer clean and refresh builds: 8 tasks each, `BUILD SUCCESSFUL`.
 - Sample app and Shopr assemblies: 189 tasks, `BUILD SUCCESSFUL`.
 - Fragment-focused processor and core regressions passed.
-- Boundary searches found no Fragment modal interop implementation, maintained sample `@ScreenEffect`, or `Channel.UNLIMITED` in strict-MVI proof slices.
+- Boundary searches found no Fragment modal interop implementation or `Channel.UNLIMITED` in strict-MVI proof slices.
 
 ### Real Fragment process-death regression
 
@@ -178,7 +177,7 @@ An explicit handler may declare `onIntent: (I) -> Unit`. Generated entry code bi
 handler collect a typed navigator result and return it through `result -> Intent -> ViewModel`
 without placing a Navigator in the ViewModel or introducing a process-wide callback relay.
 
-Deprecated `@ScreenEffect` has no route argument and is compatibility-only. Its exact `Flow<E>` type must identify exactly one `@MviViewModel` route not occupied by an explicit handler. Zero candidates, multiple unoccupied candidates, duplicate legacy handlers, or explicit-handler overlap fail compilation. New ZAD code must use `@EffectHandler(Route::class)`.
+Effect binding is available only through `@EffectHandler(Route::class)`. Route ownership is explicit, and missing screens, duplicate handlers, or route-local type mismatches fail compilation.
 
 For PD-safe results, an effect handler calls generated `launchX()`, collects generated `xResults` while composed, and forwards each typed `NavResult` to the ViewModel as an Intent. The serialized result slot survives process death and collector re-attachment. Suspend `goToXForResult()` is process-lifetime convenience, not ZAD's strict-MVI ownership model.
 

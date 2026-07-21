@@ -314,62 +314,6 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `legacy handler with zero matching routes names function and candidate routes`() {
-        val source = MVI_SOURCE
-            .replace("sealed interface CounterEffect {", "data class OtherEffect(val value: String)\n\n    sealed interface CounterEffect {")
-            .replace("Flow<CounterEffect>)", "Flow<OtherEffect>)")
-
-        assertViolationMentions("MV6", source, "CounterEffects", "route candidates: none")
-    }
-
-    @Test
-    fun `legacy handler with multiple matching routes names every route and function`() {
-        val source = ROUTE_EXPLICIT_MVI_SOURCE
-            .replace("import dev.gezgin.mvi.annotation.EffectHandler", "import dev.gezgin.mvi.annotation.ScreenEffect")
-            .replace("EffectA(val value: String)", "SharedEffect(val value: String)")
-            .replace("EffectB(val value: Int)", "EffectB(val value: Int)")
-            .replace("GezginMvi<SharedState, SharedIntent, EffectA>", "GezginMvi<SharedState, SharedIntent, SharedEffect>")
-            .replace("GezginMvi<SharedState, SharedIntent, EffectB>", "GezginMvi<SharedState, SharedIntent, SharedEffect>")
-            .substringBefore("    @EffectHandler(G.A::class)") + """
-                @ScreenEffect
-                @Composable
-                fun LegacyEffects(effects: Flow<SharedEffect>) {}
-            """.trimIndent()
-
-        assertViolationMentions("MV17", source, "LegacyEffects", "G.A", "G.B")
-    }
-
-    @Test
-    fun `legacy and explicit handler overlap names route and both functions`() {
-        val source = ROUTE_EXPLICIT_MVI_SOURCE + """
-
-            @dev.gezgin.mvi.annotation.ScreenEffect
-            @Composable
-            fun LegacyEffectsA(effects: Flow<EffectA>) {}
-        """.trimIndent()
-
-        assertViolationMentions("MV18", source, "G.A", "EffectsA", "LegacyEffectsA")
-    }
-
-    @Test
-    fun `legacy handler binds the one unoccupied route when another matching route is explicit`() {
-        val source = ROUTE_EXPLICIT_MVI_SOURCE
-            .replace("data class EffectB(val value: Int)\n", "")
-            .replace("EffectB", "EffectA")
-            .substringBefore("@EffectHandler(G.B::class)") + """
-                @dev.gezgin.mvi.annotation.ScreenEffect
-                @Composable
-                fun LegacyEffects(effects: Flow<EffectA>) {}
-            """.trimIndent()
-
-        val dump = dumpOf(SourceFile.kotlin("PartialLegacy.kt", source))
-        val routeA = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.A" in it }
-        val routeB = dump.first { it.startsWith("mvientry SharedContent") && "route=dev.gezgin.routeexplicit.G.B" in it }
-        assertContains(routeA, "effect=EffectsA", message = routeA)
-        assertContains(routeB, "effect=LegacyEffects", message = routeB)
-    }
-
-    @Test
     fun `per-route state mismatch names route and shared content function`() {
         val source = ROUTE_EXPLICIT_MVI_SOURCE
             .replace("data class SharedState(val value: String)", "data class SharedState(val value: String)\n    data class OtherState(val value: String)")
@@ -701,9 +645,9 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `MV6 — @ScreenEffect whose Flow E matches no @MviViewModel effect type is rejected`() {
+    fun `MV16 — route-explicit EffectHandler Flow E must match its ViewModel effect type`() {
         assertViolates(
-            "MV6",
+            "MV16",
             """
             package dev.gezgin.mv6
 
@@ -711,7 +655,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.EffectHandler
             import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
@@ -734,8 +678,8 @@ class MviModelReaderTest {
             fun Content(state: S, onIntent: (I) -> Unit) {
             }
 
-            // Flow<OtherE> — E of no @MviViewModel.
-            @ScreenEffect
+            // Flow<OtherE> does not match this route's ViewModel effect type.
+            @EffectHandler(R::class)
             @Composable
             fun BadEffects(effects: Flow<OtherE>) {
             }
@@ -787,54 +731,6 @@ class MviModelReaderTest {
             @Screen(R::class)
             @Composable
             fun Content(state: S, onIntent: (I) -> Unit, controller: GezginSheetController) {
-            }
-            """.trimIndent(),
-        )
-    }
-
-    @Test
-    fun `MV9 — two @ScreenEffect binders sharing one effect type are rejected`() {
-        // Both binders declare Flow<E> matching Vm's effect type (each MV6-clean on its own), but only one
-        // can wire to Vm — the other silently dangles. Symmetric to MV4; MV9 rejects the ambiguity.
-        assertViolates(
-            "MV9",
-            """
-            package dev.gezgin.mv9
-
-            import androidx.compose.runtime.Composable
-            import dev.gezgin.core.Route
-            import dev.gezgin.core.annotation.Screen
-            import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ScreenEffect
-            import dev.gezgin.mvi.annotation.MviViewModel
-            import kotlinx.coroutines.flow.Flow
-            import kotlinx.coroutines.flow.MutableStateFlow
-            import kotlinx.coroutines.flow.StateFlow
-
-            data class R(val x: Int = 0) : Route
-            data class S(val n: Int)
-            sealed interface I { data object Go : I }
-            data class E(val m: String)
-
-            @MviViewModel(R::class)
-            class Vm : GezginMvi<S, I, E> {
-                override val uiState: StateFlow<S> = MutableStateFlow(S(0))
-                override fun onIntent(intent: I) {}
-            }
-
-            @Screen(R::class)
-            @Composable
-            fun Content(state: S, onIntent: (I) -> Unit) {
-            }
-
-            @ScreenEffect
-            @Composable
-            fun EffectsA(effects: Flow<E>) {
-            }
-
-            @ScreenEffect
-            @Composable
-            fun EffectsB(effects: Flow<E>) {
             }
             """.trimIndent(),
         )
@@ -951,10 +847,10 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `MV6 — generic-argument effect mismatch (Flow Wrapper Int vs VM Wrapper String) is caught by TypeName`() {
-        // Same flattening trap as MV5, on the @ScreenEffect Flow<E> arg. TypeName catches Int vs String.
+    fun `MV16 — route-explicit generic effect mismatch is caught by TypeName`() {
+        // Same flattening trap as MV5, on the @EffectHandler Flow<E> arg. TypeName catches Int vs String.
         assertViolates(
-            "MV6",
+            "MV16",
             """
             package dev.gezgin.mv6gen
 
@@ -962,7 +858,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.EffectHandler
             import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
@@ -985,7 +881,7 @@ class MviModelReaderTest {
             }
 
             // Flow<Wrapper<Int>> — flattens to the same `…Wrapper` FQ as VM effect Wrapper<String>.
-            @ScreenEffect
+            @EffectHandler(R::class)
             @Composable
             fun BadEffects(effects: Flow<Wrapper<Int>>) {
             }
@@ -1073,7 +969,7 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `MV11 — @ScreenEffect with an extra param beyond Flow and nav is rejected (MJ5)`() {
+    fun `MV11 — route-explicit EffectHandler with an extra param beyond Flow and nav is rejected`() {
         // An extra `extra: SomeState` has no wiring path (no effect-binder resolver mechanism); codegen
         // would emit `Effects(effects = vm.effects)` and die with "No value passed for parameter". MV11.
         assertViolates(
@@ -1085,7 +981,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.Route
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.EffectHandler
             import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
@@ -1109,7 +1005,7 @@ class MviModelReaderTest {
             }
 
             // Extra `extra: SomeState` beyond {Flow<E>, nav} — MV11.
-            @ScreenEffect
+            @EffectHandler(R::class)
             @Composable
             fun Effects(effects: Flow<E>, extra: SomeState) {
             }
@@ -1118,7 +1014,7 @@ class MviModelReaderTest {
     }
 
     @Test
-    fun `MV11 — @ScreenEffect nav param typed as a non-navigator is rejected (MJ5)`() {
+    fun `MV11 — route-explicit EffectHandler nav param typed as a non-navigator is rejected`() {
         // `Home` earns a HomeNavigator (via @GoTo), so MV7 passes; but the effect's `nav: SomethingElse` is
         // a RESOLVED non-navigator type → the generated `HEffects(effects = …, nav = nav)` would type-clash.
         assertViolates(
@@ -1132,7 +1028,7 @@ class MviModelReaderTest {
             import dev.gezgin.core.annotation.NavGraph
             import dev.gezgin.core.annotation.Screen
             import dev.gezgin.mvi.GezginMvi
-            import dev.gezgin.mvi.annotation.ScreenEffect
+            import dev.gezgin.mvi.annotation.EffectHandler
             import dev.gezgin.mvi.annotation.MviViewModel
             import kotlinx.coroutines.flow.Flow
             import kotlinx.coroutines.flow.MutableStateFlow
@@ -1162,7 +1058,7 @@ class MviModelReaderTest {
             }
 
             // nav is a RESOLVED non-navigator type → MV11.
-            @ScreenEffect
+            @EffectHandler(G.Home::class)
             @Composable
             fun HEffects(effects: Flow<HEffect>, nav: SomethingElse) {
             }

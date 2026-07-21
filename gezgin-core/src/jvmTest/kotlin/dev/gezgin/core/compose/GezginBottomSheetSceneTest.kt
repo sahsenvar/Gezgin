@@ -1,4 +1,8 @@
-@file:OptIn(ExperimentalTestApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(
+    ExperimentalTestApi::class,
+    ExperimentalMaterial3Api::class,
+    dev.gezgin.core.ExperimentalGezginMigrationApi::class,
+)
 
 package dev.gezgin.core.compose
 

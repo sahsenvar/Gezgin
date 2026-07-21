@@ -21,7 +21,7 @@ Phase A may add a real consumer compile fixture inside Gezgin that models the ZA
 - Gezgin currently builds with Kotlin `2.2.20` and KSP `2.2.20-2.0.2`.
 - The Android target currently exposes a mixed Navigation 3 dependency family: AndroidX Navigation 3 runtime alongside JetBrains Navigation 3 UI/lifecycle artifacts. The ZAD-shaped consumer proof must resolve this mismatch before readiness can be declared.
 - `@Screen` is not repeatable.
-- `@ScreenEffect` has no route parameter. The processor associates it by effect type, which is not sufficient when one composable is bound to several routes.
+- Effect handlers require an explicit route, so one composable bound to several routes retains deterministic ownership.
 - `rememberNavigator` has no `restoreKey`. Android holder identity and saved snapshot identity are positional rather than explicitly session/mode namespaced.
 - `BottomSheetContract` has no gesture switch, and the current `@NoBack` plus `@BottomSheet` guard assumes swipe dismissal cannot be disabled.
 - MVI entry generation directly invokes the screen composable. It does not have route-bound top/bottom chrome providers.
@@ -103,7 +103,7 @@ ZAD navigation follows exactly:
 - A route-explicit `@EffectHandler(route)` may additionally declare `onIntent: (I) -> Unit`.
   Gezgin binds it to that route's owner `ViewModel::onIntent` after exact Intent-type validation.
   This is the generic return seam for `typed result -> owner Intent -> effect`; it does not expose a
-  Navigator to the ViewModel and is not available through the deprecated inferred `@ScreenEffect` path.
+  Navigator to the ViewModel and is available only through the route-explicit handler path.
 - `RawNavigator` is limited in ZAD to `AppEffectHandler` and the temporary `FragmentNavigation` adapter.
 - The adapter is deleted after feature migration. It is not permitted in the final dependency graph.
 
@@ -117,7 +117,7 @@ ZAD navigation follows exactly:
 - Effect and Navigator types may differ by route;
 - processor diagnostics identify the route and declaration that conflict.
 
-`@ScreenEffect` is replaced by repeatable `@EffectHandler(route)`. A deprecated legacy `@ScreenEffect` path remains only when the processor can associate it with exactly one route without inference conflict. The processor fails compilation for zero matches, several matches, duplicate handlers, or legacy/explicit overlap.
+`@EffectHandler(route)` is repeatable and always route-explicit. The processor rejects missing routes, duplicate handlers, and route-local type incompatibilities without effect-type inference.
 
 ### 3.5 Temporary MVI chrome compatibility
 
@@ -236,9 +236,8 @@ Add `restoreKey` to `rememberNavigator` and all platform implementations. Preser
 ### A3. Make route binding explicit and repeatable
 
 Implement repeatable `@Screen`, route-bound repeatable `@EffectHandler` (including its optional,
-exactly typed owner-`onIntent` dispatch seam), the deprecated unambiguous `@ScreenEffect` bridge,
-per-route MVI validation, and per-route code generation. Diagnostics must cover duplicate, missing,
-ambiguous, and incompatible bindings.
+exactly typed owner-`onIntent` dispatch seam), per-route MVI validation, and per-route code generation.
+Diagnostics must cover duplicate, missing, and incompatible bindings.
 
 ### A4. Add temporary MVI chrome
 
@@ -284,12 +283,12 @@ ZAD work must not begin until every row is green.
 | Toolchain | Clean ZAD-shaped fixture compiles with Kotlin 2.3.21, Koin 4.2.2 KCP, AGP 9.2.1, JDK 21, and the ZAD AndroidX Nav3 family. |
 | Dependency family | Fixture dependency inspection shows no JetBrains Navigation 3 UI/lifecycle artifact in Android runtime classpaths. |
 | Restore namespace | Common/Desktop tests and Android holder-identity tests prove same-key restore and changed-key reset. |
-| Route binding | Processor tests prove repeatable screens, route-explicit handlers, distinct route codegen, and fail-loud legacy ambiguity/conflicts. |
+| Route binding | Processor tests prove repeatable screens, route-explicit handlers, distinct route codegen, and fail-loud duplicate/type conflicts. |
 | MVI chrome | Golden/codegen tests prove the exact `ColumnScope` wrapper and IME-aware bottom behavior. |
 | Bottom sheet | Contract, metadata, runtime wiring, guard, equality, and default compatibility tests pass. |
 | Temporary sheet handle | `Default` preserves current output, `None` wires `dragHandle = null`, consumer-owned custom content compiles without route lambdas, and the removal boundary is documented. |
 | Fragment regression | Existing true process-death Fragment screen suite remains green; no modal interop has been added. |
-| Public API | API dumps, docs, and samples match the implementation and contain no stale `@ScreenEffect` recommendation. |
+| Public API | API dumps, docs, and samples match the route-explicit implementation without a legacy inference surface. |
 | Publication | Android and JVM artifacts publish to a local test repository and the fixture resolves those artifacts successfully. |
 | Full verification | Repository-wide checks pass from a clean worktree and the handoff record names the exact artifact. |
 
@@ -429,7 +428,7 @@ Phase A hands the future ZAD session one immutable compatibility statement conta
 - local/remote repository coordinates and integrity data for the tested artifact;
 - commands and clean outputs for full verification, API validation, publication, fixture compilation, and dependency inspection;
 - restore-key semantics and the default-compatibility behavior;
-- processor diagnostics and legacy `@ScreenEffect` compatibility limits;
+- route-explicit processor diagnostics and duplicate/type-mismatch limits;
 - temporary chrome removal boundary;
 - temporary bottom-sheet drag-handle semantics, default compatibility, and explicit replacement/removal boundary;
 - confirmation that Fragment interop remains screen-only and existing real process-death support is unchanged;

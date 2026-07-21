@@ -277,8 +277,8 @@ val SHEET_MVI_SOURCE = """
 """.trimIndent()
 
 /**
- * `@ScreenEffect`-with-`nav` path (Important 2): `Home` earns a `HomeNavigator` (via `@GoTo(Other)`),
- * the VM ctor takes ONLY `route` (no nav), and the `@ScreenEffect` binder takes `nav: HomeNavigator`.
+ * Route-explicit `@EffectHandler`-with-`nav` path (Important 2): `Home` earns a `HomeNavigator` (via
+ * `@GoTo(Other)`), the VM ctor takes ONLY `route` (no nav), and the handler takes `nav: HomeNavigator`.
  * Pins the branch where nav is wired SOLELY because the effect wants it: `val nav = …` IS emitted and
  * the binder is called `HomeEffects(vm.effects, nav)`, yet the resolver signature carries NO `nav` param
  * and the `viewModel(route)` call site (androidx, route-only ctor) passes only `route`.
@@ -292,7 +292,7 @@ val EFFECT_NAV_MVI_SOURCE = """
     import dev.gezgin.core.annotation.NavGraph
     import dev.gezgin.core.annotation.Screen
     import dev.gezgin.mvi.GezginMvi
-    import dev.gezgin.mvi.annotation.ScreenEffect
+    import dev.gezgin.mvi.annotation.EffectHandler
     import dev.gezgin.mvi.annotation.MviViewModel
     import kotlinx.coroutines.flow.Flow
     import kotlinx.coroutines.flow.MutableStateFlow
@@ -311,7 +311,7 @@ val EFFECT_NAV_MVI_SOURCE = """
     sealed interface HomeIntent { data object Go : HomeIntent }
     data class HomeEffect(val m: String)
 
-    // VM ctor takes ONLY route — nav is wired SOLELY because the @ScreenEffect below wants it.
+    // VM ctor takes ONLY route — nav is wired SOLELY because the route-explicit handler below wants it.
     @MviViewModel(F.Home::class)
     class HomeViewModel(route: F.Home) : GezginMvi<HomeState, HomeIntent, HomeEffect> {
         override val uiState: StateFlow<HomeState> = MutableStateFlow(HomeState(route.id.length))
@@ -324,7 +324,7 @@ val EFFECT_NAV_MVI_SOURCE = """
     }
 
     // Effect binder wants nav — its Flow<E> E matches HomeViewModel's effect type (MV6-clean).
-    @ScreenEffect
+    @EffectHandler(F.Home::class)
     @Composable
     fun HomeEffects(effects: Flow<HomeEffect>, nav: HomeNavigator) {
     }
