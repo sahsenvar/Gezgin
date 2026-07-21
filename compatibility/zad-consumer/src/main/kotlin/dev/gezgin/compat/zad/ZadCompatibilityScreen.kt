@@ -1,5 +1,3 @@
-@file:OptIn(dev.gezgin.core.ExperimentalGezginMigrationApi::class)
-
 package dev.gezgin.compat.zad
 
 import androidx.compose.runtime.Composable
