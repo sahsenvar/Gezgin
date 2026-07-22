@@ -24,7 +24,7 @@ kotlin { jvmToolchain(17) }
 dependencies {
   implementation(project(":sample:navigation"))
   implementation(project(":sample:domain"))
-  // MVI add-on (Faz 10) — Dashboard/ItemDetail/Welcome MVI-mode'a çevrildi; üretilen entry'lerin
+  // MVI add-on — Dashboard/ItemDetail/Welcome MVI-mode'u kullanır; üretilen entry'lerin
   // viewModel()/collectAsStateWithLifecycle() çağrıları ve VM'lerin androidx `ViewModel` tabanı
   // buradan.
   implementation(project(":gezgin-mvi"))
@@ -34,7 +34,7 @@ dependencies {
   implementation(libs.androidx.compose.ui)
   implementation(libs.androidx.compose.material3)
 
-  // Faz 6.4 — `@FragmentScreen HelpFragment` + üretilen `provideHelpEntry()`'nin
+  // `@FragmentScreen HelpFragment` + üretilen `provideHelpEntry()`'nin
   // `AndroidFragment<..>`
   // çağrısı için. gezgin-core fragment-compose'u `implementation` tuttuğundan TÜKETİCİYE SIZMAZ →
   // @FragmentScreen barındıran bu feature modülü kendi fragment-compose'unu AÇIKÇA getirir (hem

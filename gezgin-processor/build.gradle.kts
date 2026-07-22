@@ -17,7 +17,7 @@ dokka {
 }
 
 kotlin {
-  // Faz 9.1 — açık API yüzeyi. Processor'ın yayınlanan tek public tipi KSP giriş noktası
+  // Açık API yüzeyi. Processor'ın yayınlanan tek public tipi KSP giriş noktası
   // `GezginProcessorProvider`'dır (ServiceLoader); geri kalan tüm codegen/model/reader tipleri
   // `internal` (yalnız bu modül + kendi testleri kullanır → API yüzeyi minimuma iner).
   explicitApi()
@@ -31,7 +31,7 @@ dependencies {
 
   testImplementation(project(":gezgin-core"))
   testImplementation(project(":gezgin-test"))
-  // Faz 5.1 — MVI-mode fixtures (`@MviViewModel`/`@EffectHandler`/`GezginMvi`) compiled by kctfork.
+  // MVI-mode fixtures (`@MviViewModel`/`@EffectHandler`/`GezginMvi`) compiled by kctfork.
   // Mirrors the `:gezgin-core` test dep; the processor itself has NO compile dep on gezgin-mvi
   // (all its annotations are read as string FQNs), only this test sourceset does.
   testImplementation(project(":gezgin-mvi"))

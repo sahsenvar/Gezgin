@@ -21,14 +21,14 @@ dokka {
 }
 
 kotlin {
-  // Faz 9.1 — yayınlanan modüller için açık API yüzeyi (her public bildirim explicit visibility +
+  // Yayınlanan modüller için açık API yüzeyi (her public bildirim explicit visibility +
   // dönüş tipi ister; kasıtlı-olmayan yüzey `internal`'a çekilir). BCV .api dump'ıyla birlikte
   // çalışır.
   explicitApi()
   jvmToolchain(17)
   // gezgin-core ile aynı hedef seti: jvm() = desktop Compose, androidTarget() = Android.
   // Hilt Android-only olduğundan Hilt default resolver'ı yalnız androidTarget'ta anlamlı (spike
-  // task-5.0);
+  // doğrulaması);
   // gezgin-mvi'nin KENDİSİ DI-agnostik (§15) — Hilt/Koin RUNTIME dep'i YOK, codegen string-FQN
   // okur.
   jvm { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }

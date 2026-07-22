@@ -22,7 +22,7 @@ dokka {
 }
 
 kotlin {
-  // Faz 9.1 — açık API yüzeyi (her public bildirim explicit visibility + dönüş tipi ister).
+  // Açık API yüzeyi (her public bildirim explicit visibility + dönüş tipi ister).
   // Codegen'in
   // ürettiği kodun dokunduğu tipler (RawNavigator/GezginEntryScope/Local*/topology tipleri/fragment
   // interop) public KALIR; salt-iç durum makinesi (GezginState/ResultBus) ve PD save()/platform
@@ -30,9 +30,9 @@ kotlin {
   // `internal`'a çekildi. BCV .api dump'ı bu yüzeyi kilitler.
   explicitApi()
   jvmToolchain(17)
-  // jvm() = desktop Compose hedefi (Faz 3 GezginDisplay); compose.desktop.currentOs çalıştırma
+  // jvm() = desktop Compose hedefi; compose.desktop.currentOs çalıştırma
   // zamanı
-  // yalnız desktop uiTest'te gerekebilir (Faz 3.2+), burada eklenmedi.
+  // yalnız desktop uiTest'te gerekebilir, burada eklenmedi.
   jvm { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
   androidTarget { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
   sourceSets {
@@ -45,7 +45,7 @@ kotlin {
       api(
         "org.jetbrains.compose.foundation:foundation:${libs.versions.compose.multiplatform.get()}"
       )
-      // material3 (CMP) — Faz 4.2 BottomSheet scene: `ModalBottomSheet`/`SheetState`/
+      // material3 (CMP) — BottomSheet scene: `ModalBottomSheet`/`SheetState`/
       // `rememberModalBottomSheetState` commonMain'de (iki platformda), el-yazımı `OverlayScene`
       // için gerekli (Nav3'te hazır BottomSheetSceneStrategy YOK — 4.0 raporu §3). `api` çünkü
       // `sheetState: SheetState` Local'i public yüzeyde (@BottomSheet content'i okur). Sürüm
@@ -57,12 +57,12 @@ kotlin {
       compileOnly(libs.jb.navigation3.ui)
       compileOnly(libs.jb.lifecycle.viewmodel.navigation3)
     }
-    // Faz 6 (Fragment interop, §11) — androidMain-only runtime (`dev.gezgin.core.fragment`):
+    // Fragment interop — androidMain-only runtime (`dev.gezgin.core.fragment`):
     // gezginArgs/gezginNav delege'leri + bind-registry + route.toBundle.
     // `androidx.fragment.app.Fragment`
     // ve `android.os.Bundle` tiplerini kullanır (fragment-compose transitively `fragment`'ı
     // getirir).
-    // `implementation` (Task 6.0 kararı): kullanıcıya SIZMAZ — `AndroidFragment` çağrısı yalnız
+    // `implementation`: kullanıcıya SIZMAZ — `AndroidFragment` çağrısı yalnız
     // KULLANICI
     // modülünde üretilen `provideXEntry` içinde geçer, kullanıcı kendi fragment-compose sürümünü
     // ekler.
@@ -87,7 +87,7 @@ kotlin {
       implementation(kotlin("test"))
       implementation(libs.kotlinx.coroutines.test)
     }
-    // Task 3.2 (desktop uiTest altyapısı, test-only) — NavDisplay'in gerçek render/back döngüsünü
+    // Desktop uiTest altyapısı (test-only) — NavDisplay'in gerçek render/back döngüsünü
     // cihazsız (JVM/desktop) doğrulamak için. `compose.uiTest`/`compose.desktop.uiTestJUnit4`
     // (String-tipli DSL yardımcıları) da aynı şekilde hard-deprecated — doğrudan koordinat.
     jvmTest.dependencies {

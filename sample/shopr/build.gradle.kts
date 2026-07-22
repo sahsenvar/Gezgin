@@ -32,7 +32,7 @@ kotlin { jvmToolchain(17) }
 dependencies {
   implementation(project(":gezgin-core"))
   implementation(project(":sample:domain"))
-  // MVI add-on (Faz 10) — shopr ekranları MVI-mode'a çevrildi; `api` yüzeyiyle JB
+  // MVI add-on — shopr ekranları MVI-mode'u kullanır; `api` yüzeyiyle JB
   // lifecycle-viewmodel-compose/runtime-compose'u transitively getirir (androidx `ViewModel` tabanı
   // +
   // viewModelScope + collectAsStateWithLifecycle üretilen entry'lerden çözülür).

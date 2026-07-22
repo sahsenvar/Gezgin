@@ -14,7 +14,7 @@ plugins {
   alias(libs.plugins.ksp) apply false
   alias(libs.plugins.compose.multiplatform) apply false
   alias(libs.plugins.kotlin.compose) apply false
-  // Faz 9.1 — BCV yalnız KÖK'e uygulanır (apply false DEĞİL); alt-projelerin apiCheck/apiDump
+  // BCV yalnız KÖK'e uygulanır (apply false DEĞİL); alt-projelerin apiCheck/apiDump
   // görevlerini
   // kendisi kurar ve `apiCheck`'i `check` yaşam-döngüsüne bağlar (varsayılan davranış).
   alias(libs.plugins.binary.compatibility.validator)
@@ -253,7 +253,7 @@ subprojects {
 // alındı
 // (.api dump tutulur). Yalnız sample/* modülleri (gerçekten yayınlanmayan) hariç tutulur.
 apiValidation {
-  // Faz 9.3 (K4) — @GezginInternalApi ile işaretli forced-public semboller (codegen/gezgin-test
+  // @GezginInternalApi ile işaretli forced-public semboller (codegen/gezgin-test
   // kancaları)
   // kilitli ABI yüzeyinden düşürülür → alpha01 sonrası deprecation döngüsü olmadan evrilebilirler.
   nonPublicMarkers += "dev.gezgin.core.GezginInternalApi"

@@ -3,7 +3,7 @@ kotlin = "2.3.21"
 ksp = "2.3.9"
 agp = "8.13.2"
 compose-multiplatform = "1.11.0"
-# CMP material3 (Faz 4.2 BottomSheet) — org.jetbrains.compose plugin 1.11.0'ın BUNDLE ettiği material3
+# CMP material3 (BottomSheet) — org.jetbrains.compose plugin 1.11.0'ın BUNDLE ettiği material3
 # sürümü composeVersion'dan (1.11.0) FARKLI (`ComposeBuildConfig.composeMaterial3Version = 1.9.0`);
 # `org.jetbrains.compose.material3:material3` yalnız 1.9.0'a kadar stable yayınlıyor (1.11.0 stable YOK,
 # yalnız alpha). Deprecated `compose.material3` accessor'ı yerine direkt koordinat (runtime/foundation
@@ -19,18 +19,18 @@ kotlinpoet = "2.2.0"
 kctfork = "0.9.0"
 androidx-activity-compose = "1.9.3"
 androidx-compose-bom = "2024.10.01"
-# Faz 6 (Fragment interop) — androidx.fragment:fragment-compose (`AndroidFragment` composable + transitively
-# `androidx.fragment.app.Fragment`/`Bundle` glue). Task 6.0 spike'ta Maven metadata ile SABİTLENDİ: stable
+# Fragment interop — androidx.fragment:fragment-compose (`AndroidFragment` composable + transitively
+# `androidx.fragment.app.Fragment`/`Bundle` glue). Stable sürüm Maven metadata ile sabitlendi:
 # 1.8.9 (1.9.0-alpha* alpha, `<latest>` naifçe alpha'ya işaret ediyor → açık pin). Yalnız gezgin-core
 # androidMain, `implementation` (kullanıcıya sızmaz; kullanıcı kendi fragment sürümünü yönetir — §11.2).
 androidx-fragment = "1.8.9"
-# Faz 6.4 (Fragment interop sample) — androidx.appcompat:appcompat. `AndroidFragment` host'unun bir
-# `FragmentActivity`/`AppCompatActivity` olması ZORUNLU (Task 6.0 §1e.1: yoksa runtime crash). Yalnız
+# Fragment interop sample — androidx.appcompat:appcompat. `AndroidFragment` host'unun bir
+# `FragmentActivity`/`AppCompatActivity` olması ZORUNLU; aksi halde runtime crash olur. Yalnız
 # `sample:app`'in KENDİ classpath'i için (gezgin-core fragment-compose'u `implementation` tuttuğundan
 # sızmaz — kullanıcı kendi host'unu getirir). Maven metadata (dl.google.com, 2026-07-09) ile SABİTLENDİ:
 # stable 1.7.1 (1.8.0-alpha01 alpha; `<latest>`/`<release>` naifçe alpha'ya işaret ediyor → açık pin).
 androidx-appcompat = "1.7.1"
-# gezgin-mvi (Faz 5) DI-detection FQN'leri — spike task-5.0 (2026-07-08, Maven Central/dl.google.com metadata ile doğrulandı).
+# gezgin-mvi DI-detection FQN'leri Maven Central ve Google Maven metadata'sıyla doğrulandı.
 # gezgin-mvi bunlara RUNTIME bağımlı DEĞİL (DI-agnostik, §15): codegen bu annotation'ları STRING-FQN ile okur
 # (gezgin-processor'ın `dev.gezgin.core.*` FQN'lerini okuduğu desen). Bu entry'ler 5.2/5.3 sample/kullanıcı içindir.
 # Koin annotations: org.koin.core.annotation.KoinViewModel + org.koin.core.annotation.InjectedParam
@@ -42,7 +42,7 @@ hilt = "2.60.1"         # com.google.dagger:hilt-android — latest stable (Mave
 androidx-hilt = "1.4.0" # androidx.hilt:hilt-navigation-compose — latest stable (dl.google.com, 2026-07-08).
 #   NOT: 1.4.0'da androidx.hilt.navigation.compose.hiltViewModel @Deprecated → androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 #   (yeni artefakt: androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0). Codegen 5.2'de hedef paketi seçer.
-# Faz 9.1 — kotlinx binary-compatibility-validator: yayınlanan 3 modülün ABI'sini .api dosyalarıyla kilitler
+# kotlinx binary-compatibility-validator yayınlanan modüllerin ABI'sini .api dosyalarıyla kilitler
 # (apiCheck `check`'e otomatik bağlanır). Latest stable (Maven Central, 2026-07-10).
 binary-compatibility-validator = "0.18.1"
 dokka = "2.2.0"
@@ -68,7 +68,7 @@ androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-ru
 # Desktop keeps the JetBrains Navigation 3/lifecycle family.
 jb-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "jb-navigation3" }
 jb-lifecycle-viewmodel-navigation3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "jb-lifecycle-nav3" }
-# gezgin-mvi (Faz 5) — JB Compose Multiplatform lifecycle-compose. jb-lifecycle-nav3 (2.10.0-alpha05) ile AYNI release
+# gezgin-mvi — JB Compose Multiplatform lifecycle-compose. jb-lifecycle-nav3 ile AYNI release
 # train'i (org.jetbrains.androidx.lifecycle grubu; Maven Central metadata 2026-07-08 doğrulandı — üç artefakt de 2.10.0-alpha05
 # yayınlıyor) → ayrı version ref'e gerek yok. viewmodel-compose → androidx.lifecycle.viewmodel.compose.{viewModel,viewModelFactory}
 # (commonMain, KMP); runtime-compose → androidx.lifecycle.compose.{collectAsStateWithLifecycle,LocalLifecycleOwner} (commonMain, KMP).
@@ -81,7 +81,7 @@ koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", ver
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "androidx-hilt" }
-# sample:shopr (Task 3.6) — plain Android application (NOT KMP), so plain androidx.* coordinates
+# sample:shopr — plain Android application (NOT KMP), so plain androidx.* coordinates
 # (not the org.jetbrains.compose.* CMP ones gezgin-core uses) + a BOM to keep ui/material3/activity
 # compose versions mutually consistent.
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "androidx-compose-bom" }
@@ -89,11 +89,11 @@ androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
-# Faz 6 — `AndroidFragment` (üretilen provideXEntry içinde) + `androidx.fragment.app.Fragment`/`Bundle`
+# `AndroidFragment` (üretilen provideXEntry içinde) + `androidx.fragment.app.Fragment`/`Bundle`
 # (gezgin-core androidMain runtime: gezginArgs/gezginNav/bindGezgin/route.toBundle). Bkz. [versions] notu.
 androidx-fragment-compose = { module = "androidx.fragment:fragment-compose", version.ref = "androidx-fragment" }
-# Faz 6.4 — `sample:app` host'u `AppCompatActivity` (AndroidFragment'in ZORUNLU FragmentActivity host'u,
-# §11.1/Task 6.0 §1e.1) + `Theme.AppCompat.*` (AppCompatActivity teması). Bkz. [versions] notu.
+# `sample:app` host'u `AppCompatActivity` (AndroidFragment'in ZORUNLU FragmentActivity host'u) +
+# `Theme.AppCompat.*` (AppCompatActivity teması). Bkz. [versions] notu.
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
 
 [plugins]

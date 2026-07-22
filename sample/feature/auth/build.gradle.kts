@@ -25,7 +25,7 @@ dependencies {
   // The central nav module (spec §3.3) — brings gezgin-core (routes/navigators) transitively.
   implementation(project(":sample:navigation"))
   implementation(project(":sample:domain"))
-  // MVI add-on (Faz 10) — auth ekranları MVI-mode'a çevrildi;
+  // MVI add-on — auth ekranları MVI-mode'u kullanır;
   // GezginMvi/GezginEffects/ObserveEffects
   // ve üretilen GezginMviEntries.kt'nin androidx ViewModel tabanı buradan (`api` yüzeyi) çözülür.
   implementation(project(":gezgin-mvi"))
