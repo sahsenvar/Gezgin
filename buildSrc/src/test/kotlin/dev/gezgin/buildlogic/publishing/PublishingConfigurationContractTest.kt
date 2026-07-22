@@ -44,6 +44,12 @@ class PublishingConfigurationContractTest {
         val rootBuild = text("build.gradle.kts")
         assertContains(rootBuild, "providers.gradleProperty(\"GROUP\")")
         assertContains(rootBuild, "providers.gradleProperty(\"VERSION_NAME\")")
+        assertContains(rootBuild, "\":gezgin-core\"")
+        assertContains(rootBuild, "\":gezgin-mvi\"")
+        assertContains(rootBuild, "\":gezgin-test\"")
+        assertContains(rootBuild, "\":gezgin-processor\"")
+        assertContains(rootBuild, "configure(publishedProjects)")
+        assertFalse(rootBuild.contains("allprojects {"), "release coordinates must not leak into samples")
 
         publishedModules.forEach { module ->
             val build = text("$module/build.gradle.kts")
@@ -89,14 +95,33 @@ class PublishingConfigurationContractTest {
     @Test
     fun `compatibility consumer resolves the release coordinates from an isolated repository`() {
         val consumerBuild = text("compatibility/zad-consumer/build.gradle.kts")
-        assertContains(consumerBuild, "implementation(\"io.github.sahsenvar:gezgin-core:0.1.0\")")
-        assertContains(consumerBuild, "implementation(\"io.github.sahsenvar:gezgin-mvi:0.1.0\")")
-        assertContains(consumerBuild, "ksp(\"io.github.sahsenvar:gezgin-processor:0.1.0\")")
-        assertFalse(consumerBuild.contains("dev.gezgin:"), "consumer must not use pre-release coordinates")
+        assertContains(consumerBuild, "providers.gradleProperty(\"useAlpha04MavenLocal\")")
+        assertContains(consumerBuild, "\"io.github.sahsenvar\"")
+        assertContains(consumerBuild, "\"0.1.0\"")
+        assertContains(consumerBuild, "\"dev.gezgin\"")
+        assertContains(consumerBuild, "\"0.1.0-alpha04\"")
 
         val consumerSettings = text("compatibility/zad-consumer/settings.gradle.kts")
         assertContains(consumerSettings, "providers.gradleProperty(\"releaseVerificationRepository\")")
-        assertContains(consumerSettings, "maven { url = uri(repositoryPath) }")
+        assertContains(consumerSettings, "exclusiveContent")
+        assertContains(consumerSettings, "includeGroup(\"io.github.sahsenvar\")")
+        assertContains(consumerSettings, "providers.gradleProperty(\"useAlpha04MavenLocal\")")
+        assertContains(consumerSettings, "releaseVerificationRepository == null")
+        assertContains(consumerSettings, "mavenLocal()")
+        assertContains(consumerSettings, "mavenCentral()")
+    }
+
+    @Test
+    fun `ships a behavioral signed publication and consumer verification entrypoint`() {
+        val rootBuild = text("build.gradle.kts")
+        assertContains(rootBuild, "VerifyReleaseRepositoryTask")
+        assertContains(rootBuild, "verifyReleasePublications")
+        assertContains(rootBuild, "--refresh-dependencies")
+        assertContains(rootBuild, "--project-cache-dir")
+
+        val verificationScript = projectRoot.resolve("gradle/verify-release-publications.sh")
+        assertTrue(Files.isRegularFile(verificationScript), "Missing behavioral release verification script")
+        assertTrue(Files.isExecutable(verificationScript), "Release verification script must be executable")
     }
 
     private fun properties(relativePath: String): Properties =

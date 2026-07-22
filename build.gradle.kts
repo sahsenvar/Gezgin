@@ -1,4 +1,5 @@
 import dev.gezgin.buildlogic.kdoc.CheckPublicApiKDocTask
+import dev.gezgin.buildlogic.publishing.VerifyReleaseRepositoryTask
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import org.gradle.api.publish.PublishingExtension
 
@@ -21,11 +22,8 @@ plugins {
 
 val releaseGroup = providers.gradleProperty("GROUP").get()
 val releaseVersion = providers.gradleProperty("VERSION_NAME").get()
-
-allprojects {
-    group = releaseGroup
-    version = releaseVersion
-}
+val publishedProjectPaths = setOf(":gezgin-core", ":gezgin-mvi", ":gezgin-test", ":gezgin-processor")
+val publishedProjects = publishedProjectPaths.map(::project)
 
 val publishedModuleDescriptions = mapOf(
     "gezgin-core" to "DI-agnostic Kotlin Multiplatform navigation runtime and Compose display layer.",
@@ -34,7 +32,10 @@ val publishedModuleDescriptions = mapOf(
     "gezgin-processor" to "KSP2 processor that generates typed Gezgin navigators and entry providers.",
 )
 
-subprojects {
+configure(publishedProjects) {
+    group = releaseGroup
+    version = releaseVersion
+
     pluginManager.withPlugin("com.vanniktech.maven.publish") {
         extensions.configure<MavenPublishBaseExtension>("mavenPublishing") {
             publishToMavenCentral()
@@ -73,6 +74,57 @@ subprojects {
             }
         }
     }
+}
+
+val releaseVerificationRepository = providers.gradleProperty("releaseVerificationRepository")
+val releaseVerificationDirectory = layout.dir(releaseVerificationRepository.map(::file))
+
+val verifyPublishedReleaseRepository = tasks.register<VerifyReleaseRepositoryTask>(
+    "verifyPublishedReleaseRepository",
+) {
+    group = "verification"
+    description = "Verifies the exact artifacts, metadata, dependency mappings, docs, and signatures."
+    repositoryDirectory.set(releaseVerificationDirectory)
+    requireSignatures.set(
+        providers.gradleProperty("verifyReleaseSignatures").map(String::toBoolean).orElse(false),
+    )
+}
+
+gradle.projectsEvaluated {
+    verifyPublishedReleaseRepository.configure {
+        dependsOn(
+            publishedProjects.map { publishedProject ->
+                publishedProject.tasks.named("publishAllPublicationsToReleaseVerificationRepository")
+            },
+        )
+    }
+}
+
+val verifyReleaseConsumer = tasks.register<Exec>("verifyReleaseConsumer") {
+    group = "verification"
+    description = "Compiles the Gradle 9.4.1 consumer against only the injected Gezgin repository."
+    dependsOn(verifyPublishedReleaseRepository)
+    workingDir(layout.projectDirectory.dir("compatibility/zad-consumer"))
+    doFirst {
+        val repository = releaseVerificationDirectory.get().asFile
+        val projectCache = repository.parentFile.resolve("consumer-project-cache")
+        commandLine(
+            "./gradlew",
+            "compileDebugKotlin",
+            "-PreleaseVerificationRepository=${repository.absolutePath}",
+            "--refresh-dependencies",
+            "--rerun-tasks",
+            "--no-build-cache",
+            "--project-cache-dir=${projectCache.absolutePath}",
+            "--no-daemon",
+        )
+    }
+}
+
+tasks.register("verifyReleasePublications") {
+    group = "verification"
+    description = "Publishes, verifies, and consumes the complete signed release repository."
+    dependsOn(verifyReleaseConsumer)
 }
 
 val publicApiSourceRoots = mapOf(

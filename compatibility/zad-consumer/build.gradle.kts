@@ -7,6 +7,12 @@ plugins {
     id("io.insert-koin.compiler.plugin") version "1.0.1"
 }
 
+val useAlpha04MavenLocal = providers.gradleProperty("useAlpha04MavenLocal")
+    .map(String::toBoolean)
+    .getOrElse(false)
+val gezginGroup = if (useAlpha04MavenLocal) "dev.gezgin" else "io.github.sahsenvar"
+val gezginVersion = if (useAlpha04MavenLocal) "0.1.0-alpha04" else "0.1.0"
+
 android {
     namespace = "dev.gezgin.compat.zad"
     compileSdk = 37
@@ -57,9 +63,9 @@ configurations.configureEach {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:gezgin-core:0.1.0")
-    implementation("io.github.sahsenvar:gezgin-mvi:0.1.0")
-    ksp("io.github.sahsenvar:gezgin-processor:0.1.0")
+    implementation("$gezginGroup:gezgin-core:$gezginVersion")
+    implementation("$gezginGroup:gezgin-mvi:$gezginVersion")
+    ksp("$gezginGroup:gezgin-processor:$gezginVersion")
 
     implementation("androidx.navigation3:navigation3-runtime:1.0.0")
     implementation("androidx.navigation3:navigation3-ui:1.0.0")
