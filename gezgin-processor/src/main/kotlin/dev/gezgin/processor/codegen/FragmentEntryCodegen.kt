@@ -14,6 +14,8 @@ private val ENTRY_SCOPE = ClassName(COMPOSE_PKG, "GezginEntryScope")
 private val ENTRY_KIND = ClassName(COMPOSE_PKG, "EntryKind")
 private val LOCAL_ENTRY_ID = MemberName(COMPOSE_PKG, "LocalGezginEntryId")
 private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigator")
+private val MODIFIER = ClassName("androidx.compose.ui", "Modifier")
+private val FILL_MAX_SIZE = MemberName("androidx.compose.foundation.layout", "fillMaxSize")
 
 // mN1 — route→Bundle encode is keyed on `route` via `remember` so a recomposition of the hosting
 // entry doesn't re-serialize an unchanged route every frame (only re-runs when `route` changes).
@@ -123,6 +125,7 @@ internal object FragmentEntryCodegen {
             }
             .add("%M<%T>(\n", ANDROID_FRAGMENT, fragmentClass)
             .indent()
+            .add("modifier = %T.%M(),\n", MODIFIER, FILL_MAX_SIZE)
             .add("arguments = %M(route) { route.%M(raw) },\n", REMEMBER, TO_BUNDLE)
             .apply {
                 if (navWired) {
