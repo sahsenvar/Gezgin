@@ -41,4 +41,4 @@ jobs:
           :gezgin-core:test :gezgin-core:jvmTest
           :gezgin-processor:test :gezgin-mvi:jvmTest :gezgin-test:jvmTest
           :sample:navigation:test :sample:shopr:test :sample:app:assembleDebug
-          apiCheck --console=plain
+          check apiCheck --console=plain

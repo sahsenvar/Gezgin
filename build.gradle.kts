@@ -18,12 +18,62 @@ plugins {
     alias(libs.plugins.binary.compatibility.validator)
     alias(libs.plugins.dokka) apply false
     alias(libs.plugins.maven.publish) apply false
+    alias(libs.plugins.spotless)
+    alias(libs.plugins.kover)
 }
 
 val releaseGroup = providers.gradleProperty("GROUP").get()
 val releaseVersion = providers.gradleProperty("VERSION_NAME").get()
 val publishedProjectPaths = setOf(":gezgin-core", ":gezgin-mvi", ":gezgin-test", ":gezgin-processor")
 val publishedProjects = publishedProjectPaths.map(::project)
+val koverMinLineCoverage = providers.gradleProperty("KOVER_MIN_LINE_COVERAGE").map(String::toInt)
+
+publishedProjects.forEach { publishedProject ->
+    publishedProject.pluginManager.apply("org.jetbrains.kotlinx.kover")
+}
+
+spotless {
+    kotlin {
+        target("**/*.kt")
+        targetExclude("**/.gradle/**", "**/build/**", "**/generated/**")
+        ktfmt("0.58").googleStyle()
+    }
+    kotlinGradle {
+        target("**/*.gradle.kts")
+        targetExclude("**/.gradle/**", "**/build/**")
+        ktfmt("0.58").googleStyle()
+    }
+}
+
+dependencies {
+    publishedProjects.forEach { publishedProject ->
+        add("kover", publishedProject)
+    }
+}
+
+kover {
+    reports {
+        total {
+            filters {
+                includes {
+                    classes("dev.gezgin.*")
+                }
+            }
+            html {
+                onCheck = true
+            }
+            verify {
+                rule("published production line coverage") {
+                    bound {
+                        minValue = koverMinLineCoverage.get()
+                        coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.LINE
+                        aggregationForGroup = kotlinx.kover.gradle.plugin.dsl.AggregationType.COVERED_PERCENTAGE
+                    }
+                }
+            }
+        }
+    }
+}
 
 val publishedModuleDescriptions = mapOf(
     "gezgin-core" to "DI-agnostic Kotlin Multiplatform navigation runtime and Compose display layer.",
@@ -95,7 +145,7 @@ gradle.projectsEvaluated {
     verifyPublishedReleaseRepository.configure {
         dependsOn(
             publishedProjects.map { publishedProject ->
-                publishedProject.tasks.named("publishAllPublicationsToReleaseVerificationRepository")
+                "${publishedProject.path}:publishAllPublicationsToReleaseVerificationRepository"
             },
         )
     }
@@ -160,6 +210,12 @@ tasks.register<CheckPublicApiKDocTask>("checkPublicApiKDoc") {
         sourceSets.map { sourceSet -> fileTree("$module/src/$sourceSet/kotlin") { include("**/*.kt") } }
     }
     sourceFiles.from(moduleSources.values.flatten())
+}
+
+tasks.named("check") {
+    dependsOn("spotlessCheck")
+    dependsOn("koverVerify")
+    dependsOn("checkPublicApiKDoc")
 }
 
 subprojects {

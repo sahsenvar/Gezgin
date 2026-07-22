@@ -143,6 +143,31 @@ class PublishingConfigurationContractTest {
         assertFalse(workflow.contains("MAVEN_CENTRAL_PASSWORD"))
     }
 
+    @Test
+    fun `enforces Kotlin formatting and no-regression coverage for published production modules`() {
+        val catalog = text("gradle/libs.versions.toml")
+        assertContains(catalog, "spotless = \"8.8.0\"")
+        assertContains(catalog, "kover = \"0.9.8\"")
+        assertContains(catalog, "spotless = { id = \"com.diffplug.spotless\", version.ref = \"spotless\" }")
+        assertContains(catalog, "kover = { id = \"org.jetbrains.kotlinx.kover\", version.ref = \"kover\" }")
+
+        val rootProperties = properties("gradle.properties")
+        assertTrue(rootProperties.containsKey("KOVER_MIN_LINE_COVERAGE"))
+
+        val rootBuild = text("build.gradle.kts")
+        assertContains(rootBuild, "alias(libs.plugins.spotless)")
+        assertContains(rootBuild, "alias(libs.plugins.kover)")
+        assertContains(rootBuild, "ktfmt")
+        assertContains(rootBuild, "KOVER_MIN_LINE_COVERAGE")
+        assertContains(rootBuild, "total {")
+        assertContains(rootBuild, "html {")
+        assertContains(rootBuild, "verify {")
+        assertContains(rootBuild, "publishedProjectPaths")
+        assertContains(rootBuild, "publishedProject.pluginManager.apply(\"org.jetbrains.kotlinx.kover\")")
+        assertContains(rootBuild, "dependsOn(\"koverVerify\")")
+        assertFalse(rootBuild.contains("sample:"), "samples must not lower the publication coverage baseline")
+    }
+
     private fun properties(relativePath: String): Properties =
         Properties().apply {
             projectRoot.resolve(relativePath).inputStream().use(::load)

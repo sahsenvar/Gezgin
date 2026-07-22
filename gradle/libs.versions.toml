@@ -47,6 +47,8 @@ androidx-hilt = "1.4.0" # androidx.hilt:hilt-navigation-compose — latest stabl
 binary-compatibility-validator = "0.18.1"
 dokka = "2.2.0"
 vanniktech-maven-publish = "0.37.0"
+spotless = "8.8.0"
+kover = "0.9.8"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -107,3 +109,5 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 binary-compatibility-validator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compatibility-validator" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
