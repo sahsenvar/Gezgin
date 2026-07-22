@@ -32,11 +32,11 @@ private const val RESULT_FLOW_FQ = "dev.gezgin.core.ResultFlow"
  * routes (classes/objects) that belong to them, into a semantic [GraphModel].
  *
  * MEMBERSHIP : a route/sub-graph belongs to the annotated graph/flow it DIRECTLY implements (`:
- * ParentGraph`) — "subtyping = nesting" (design-notes §3), so a member declared in a SEPARATE file
- * is attributed correctly. Member enumeration uses [KSClassDeclaration.getSealedSubclasses] (proven
- * cross-file), unioned with lexical children so a member written `: Route` (declaring no annotated
- * supertype but nested inside an annotated graph — e.g. an intervening `@NavGraph`) keeps its
- * lexical nesting membership. See [membershipParent].
+ * ParentGraph`) — "subtyping = nesting" (the ownership model), so a member declared in a SEPARATE
+ * file is attributed correctly. Member enumeration uses [KSClassDeclaration.getSealedSubclasses]
+ * (proven cross-file), unioned with lexical children so a member written `: Route` (declaring no
+ * annotated supertype but nested inside an annotated graph — e.g. an intervening `@NavGraph`) keeps
+ * its lexical nesting membership. See [membershipParent].
  *
  * Flow-chain and result-type rules are documented on the individual model types in `GraphModel.kt`.
  */
@@ -108,8 +108,8 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
 
   /**
    * The single annotated graph/flow `decl` is a member of. Primary source is the DIRECT annotated
-   * supertype (`: ParentGraph`) so a member declared in a separate file resolves correctly
-   * (design-notes §3: "subtyping = nesting"). Fallback is the lexically-enclosing annotated graph,
+   * supertype (`: ParentGraph`) so a member declared in a separate file resolves correctly (the
+   * ownership model: "subtyping = nesting"). Fallback is the lexically-enclosing annotated graph,
    * preserving lexical nesting for a member that declares no annotated supertype (e.g. an
    * intervening `@NavGraph : Route`). When both agree — the lexical parent is itself a declared
    * supertype (the normal nested route) — the lexical parent is chosen, so an E5-style route
@@ -224,10 +224,10 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
 
   /**
    * Every `@NavGraph`/`@FlowGraph`-annotated interface `decl` implements DIRECTLY (declared
-   * supertypes only, no transitive walk). Deliberately non-transitive for E5/N11: a graph interface
-   * extending another annotated graph (`OrderGraph : AppGraph`, spec §3.1) makes each of its routes
-   * transitively implement the parent graph too — that inheritance must not read as the route (or
-   * graph) "implementing a second graph".
+   * supertypes only, no transitive walk). This keeps the `E5` and `N11` validations from treating a
+   * graph interface extending another annotated graph (`OrderGraph : AppGraph`, the current
+   * contract) makes each of its routes transitively implement the parent graph too — that
+   * inheritance must not read as the route (or graph) "implementing a second graph".
    */
   private fun implementedGraphFqsOf(decl: KSClassDeclaration): List<String> =
     directAnnotatedGraphSupertypes(decl).mapNotNull { it.qualifiedName?.asString() }

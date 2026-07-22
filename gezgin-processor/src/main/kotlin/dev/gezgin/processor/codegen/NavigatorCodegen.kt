@@ -71,7 +71,7 @@ internal object NavigatorCodegen {
   }
 
   /**
-   * hook (`TestApiCodegen`): the exact same "does this route earn a navigator at all" predicate
+   * Hook (`TestApiCodegen`): the exact same "does this route earn a navigator at all" predicate
    * [buildNavigatorFile] uses for its early-return, exposed so a SEPARATE codegen pass can decide
    * whether a `fromX()` test accessor is meaningful.
    */
@@ -401,13 +401,13 @@ internal object NavigatorCodegen {
   }
 
   /**
-   * The result type of the innermost result-OWNING (`ResultFlow<T>` DIRECTLY declaring, spec §6
-   * ownership) flow in [route]'s chain — mirrors `RawNavigator.quitWith`'s runtime resolution
-   * (`chain.indexOfLast { it.isResultFlow }` over the generated topology, whose `isResultFlow` flag
-   * is emitted from [GraphModelNode.declaresResultFlowDirectly] — see `TopologyCodegen`), so the
-   * statically generated `quitWith(result: T)` targets the exact same flow instance the raw call
-   * resolves to. A nested result-less sub-flow (transitive [GraphModelNode.isResultFlow]) owns no
-   * contract and must never capture the resolution.
+   * The result type of the innermost result-OWNING (`ResultFlow<T>` DIRECTLY declaring, the current
+   * contract ownership) flow in [route]'s chain — mirrors `RawNavigator.quitWith`'s runtime
+   * resolution (`chain.indexOfLast { it.isResultFlow }` over the generated topology, whose
+   * `isResultFlow` flag is emitted from [GraphModelNode.declaresResultFlowDirectly] — see
+   * `TopologyCodegen`), so the statically generated `quitWith(result: T)` targets the exact same
+   * flow instance the raw call resolves to. A nested result-less sub-flow (transitive
+   * [GraphModelNode.isResultFlow]) owns no contract and must never capture the resolution.
    */
   private fun innermostResultFlowResultTypeFq(
     route: RouteModel,

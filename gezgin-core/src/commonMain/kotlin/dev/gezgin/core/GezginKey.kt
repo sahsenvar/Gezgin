@@ -3,8 +3,8 @@ package dev.gezgin.core
 import kotlinx.serialization.Serializable
 
 /**
- * A single stack entry: route instance + unique id + enclosing flow-instance chain. `internal`
- * (K1): part of the process-death snapshot ([SavedState]), which is not exposed on the public ABI.
+ * A single stack entry: route instance + unique id + enclosing flow-instance chain. `internal` ():
+ * part of the process-death snapshot ([SavedState]), which is not exposed on the public ABI.
  */
 @Serializable
 internal data class GezginKey(

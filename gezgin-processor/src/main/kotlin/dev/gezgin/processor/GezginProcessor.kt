@@ -60,7 +60,8 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
       // Codegen only runs on a clean model — a malformed model can't emit sane code.
       if (validationOk) {
         // GRAPH-derived codegen (topology/serializers/navigators/test accessors) is gated on
-        // this module OWNING graphs. A cross-module FEATURE (spec §3.3) has none (they live in
+        // this module OWNING graphs. A cross-module FEATURE (the current contract) has none (they
+        // live in
         // the central `:navigation` module) → this block is skipped, but its `@Screen` ENTRY
         // codegen below still runs.
         if (model.graphs.isNotEmpty()) {
@@ -78,7 +79,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
             return emptyList()
           }
 
-          // [PKG] (M2) — navigator'lar targetPackage'a üretilir ama cross-module probe route'un
+          // [PKG]  — navigator'lar targetPackage'a üretilir ama cross-module probe route'un
           // DECLARATION paketinde (routePackageName) arar; alt-paketler ayrışırsa probe sessizce
           // ıskalar. "Her graph/route paketi == targetPackage" şartı bu varsayımı sözleşmeye
           // çevirir.
@@ -114,7 +115,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
             it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
           }
 
-          // §13 typed test API (`GezginTestNavigator.fromX()`) — opt-IN (default false): only a
+          //  typed test API (`GezginTestNavigator.fromX()`) — opt-IN (default false): only a
           // test source set's KSP config sets `gezgin.emitTestAccessors=true` (no `:gezgin-test`
           // dep in prod).
           val emitTestAccessors = environment.options["gezgin.emitTestAccessors"].toBoolean()
@@ -186,7 +187,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
               it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
             }
           }
-          // Fragment interop `provideXEntry` (§11.1): each @FragmentScreen →
+          // Fragment interop `provideXEntry` (): each @FragmentScreen →
           // `AndroidFragment`-hosting
           // entry in a THIRD file `GezginFragmentEntries.kt`. Same emitEntries gate.
           if (fragmentModels.isNotEmpty()) {

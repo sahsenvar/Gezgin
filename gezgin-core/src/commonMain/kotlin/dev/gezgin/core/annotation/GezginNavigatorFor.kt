@@ -17,7 +17,7 @@ import kotlin.reflect.KClass
  * the probe finds a class it compares [route] against the entry's routeFq → nav is bound only on an
  * IDENTITY match.
  *
- * Gated behind [GezginInternalApi] (K4): only generated code applies it; it stays a BINARY-retained
+ * Gated behind [GezginInternalApi] (): only generated code applies it; it stays a BINARY-retained
  * classpath stamp for the cross-module KSP read.
  *
  * @property route the route whose generated navigator is annotated

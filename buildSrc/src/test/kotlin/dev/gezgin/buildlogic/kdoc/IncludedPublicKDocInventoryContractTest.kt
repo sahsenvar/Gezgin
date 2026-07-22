@@ -65,16 +65,19 @@ class IncludedPublicKDocInventoryContractTest {
     }
     val parts = candidate.split('-')
     if (parts.size < 2 || parts.first().length !in 1..2) return false
-    return parts
-      .mapIndexed { index, part ->
-        val letters = part.takeWhile(Char::isLetter)
-        val digits = part.drop(letters.length)
-        letters.length in 1..2 &&
-          letters.all(Char::isUpperCase) &&
-          digits.all(Char::isDigit) &&
-          (digits.isEmpty() || index == parts.lastIndex)
-      }
-      .all { it }
+    val validShape =
+      parts
+        .mapIndexed { index, part ->
+          val letters = part.takeWhile(Char::isLetter)
+          val digits = part.drop(letters.length)
+          letters.length in 1..2 &&
+            letters.all(Char::isUpperCase) &&
+            digits.all(Char::isDigit) &&
+            (digits.isEmpty() || index == parts.lastIndex)
+        }
+        .all { it }
+    return validShape &&
+      (parts.size >= 3 || parts.any { part -> part.length == 1 || part.any(Char::isDigit) })
   }
 
   private fun inventoryProse(kDoc: String): Set<String> {

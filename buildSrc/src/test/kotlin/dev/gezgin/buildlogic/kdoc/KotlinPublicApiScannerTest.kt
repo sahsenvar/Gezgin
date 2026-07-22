@@ -461,10 +461,10 @@ class KotlinPublicApiScannerTest {
     val result =
       scan(
         """
-            /** Uses UTF-8 and RFC-8259 JSON in an Android-only KMP/MVI API. */
+            /** Uses UTF-8 and RFC-8259 JSON in an Android-only KMP/MVI UI-UX API. */
             public fun consumerTerms(): Unit = Unit
 
-            /** Preserves process-death state through API class names. */
+            /** Preserves process-death state through CI-CD and QA-QC API class names. */
             public fun lifecycleTerms(): Unit = Unit
             """
       )

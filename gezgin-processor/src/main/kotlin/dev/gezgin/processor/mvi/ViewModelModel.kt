@@ -3,9 +3,9 @@ package dev.gezgin.processor.mvi
 import com.squareup.kotlinpoet.TypeName
 
 /**
- * The dependency-injection framework a `@MviViewModel` class opts into (§10.1 DI detection),
- * detected by [ViewModelModelReader] from the VM class's own annotations — read as **string FQNs**,
- * so `gezgin-processor` gains NO compile dependency on Hilt or Koin (mirrors the `dev.gezgin.mvi.*`
+ * The dependency-injection framework a `@MviViewModel` class opts into ( DI detection), detected by
+ * [ViewModelModelReader] from the VM class's own annotations — read as **string FQNs**, so
+ * `gezgin-processor` gains NO compile dependency on Hilt or Koin (mirrors the `dev.gezgin.mvi.*`
  * reads). the `MviEntryCodegen` branches on this to emit the correct default `viewModel` resolver:
  * - [HILT_ASSISTED] — `@HiltViewModel(assistedFactory = VM.Factory::class)` + `@AssistedInject`
  *   ctor with `@Assisted` params → `hiltViewModel<VM, VM.Factory>(creationCallback = {
@@ -30,9 +30,9 @@ internal enum class VmDiKind {
 
 /**
  * One primary-constructor parameter of a `@MviViewModel` class, captured by [ViewModelModelReader]
- * for DI-detection (§10.1). [MviEntryCodegen][dev.gezgin.processor.codegen.MviEntryCodegen]
- * classifies each into `route`/`nav`/other by [name] and [typeFq] to decide whether a default
- * resolver can be emitted (only when every DI-relevant param is `route`- or `nav`-typed).
+ * for DI-detection (). [MviEntryCodegen][dev.gezgin.processor.codegen.MviEntryCodegen] classifies
+ * each into `route`/`nav`/other by [name] and [typeFq] to decide whether a default resolver can be
+ * emitted (only when every DI-relevant param is `route`- or `nav`-typed).
  *
  * **Why no [TypeName] here (unlike S/I/E and extras):** codegen never emits a ctor param's type.
  * The `route`/`nav` types are RECONSTRUCTED from the entry (`args: XRoute`, `nav: XNavigator`), and
@@ -55,37 +55,36 @@ internal data class VmCtorParam(
   val diAnnotated: Boolean,
   /**
    * `KSType.isError` — the param TYPE failed to resolve (typically a same-module `nav: XNavigator`
-   * whose navigator class isn't generated yet in this KSP round). MJ1: the `nav` NAME is a fallback
+   * whose navigator class isn't generated yet in this KSP round). the `nav` NAME is a fallback
    * classifier ONLY when the type is unresolvable — a RESOLVED non-navigator type (e.g. a Koin
    * `@InjectedParam nav: AnalyticsTracker`) must classify by TYPE (OTHER), not be hijacked by the
    * name.
    */
   val isError: Boolean = false,
   /**
-   * `KSValueParameter.hasDefault` — the param has a Kotlin default value. MN4: a defaulted OTHER
-   * param need NOT be supplied by Gezgin (the ctor call omits it), so it must not force the
-   * `viewModel` resolver to become required.
+   * `KSValueParameter.hasDefault` — the param has a Kotlin default value. a defaulted OTHER param
+   * need NOT be supplied by Gezgin (the ctor call omits it), so it must not force the `viewModel`
+   * resolver to become required.
    */
   val hasDefault: Boolean = false,
 )
 
 /**
  * One `@MviViewModel(Route::class)`-annotated class that additionally implements
- * `dev.gezgin.mvi.GezginMvi<S, I, E>` (spec §10/§10.1), resolved and validated by
+ * `dev.gezgin.mvi.GezginMvi<S, I, E>` (the current contract), resolved and validated by
  * [ViewModelModelReader] into everything the MVI-mode `provideXEntry` codegen needs.
  *
- * **Route linking (§10.1):** the VM binds itself to a route via `@MviViewModel(Route::class)`; the
+ * **Route linking ():** the VM binds itself to a route via `@MviViewModel(Route::class)`; the
  * matching stateless `@Screen(Route::class)` content binds to the SAME route explicitly. [routeFq]
  * is the join key between this model and an [dev.gezgin.processor.entry.EntryFunctionModel] whose
  * `mvi` descriptor points back here (see the route-linking note on [ViewModelModelReader]).
  *
  * **S/I/E — FQ + [TypeName] pair per generic arg (load-bearing).** Each of state/intent/effect is
  * captured BOTH as a flattened fully-qualified string (`…FooState`, for validation/comparison/dump)
- * AND as a KotlinPoet [TypeName] (for 5.2 codegen — `StateFlow<S>`, VM references, etc.). The FQ
- * string alone flattens generics (`List<String>` → `kotlin.collections.List`); the [TypeName]
- * preserves the full parameterization. Capturing both avoids re-introducing the
- * "generic-flattening" bug the Sample Showcase stage fixed for ctor params (mirrors
- * [dev.gezgin.processor.model.ParamModel]).
+ * AND as a KotlinPoet [TypeName] (for codegen — `StateFlow<S>`, VM references, etc.). The FQ string
+ * alone flattens generics (`List<String>` → `kotlin.collections.List`); the [TypeName] preserves
+ * the full parameterization. Capturing both avoids re-introducing the "generic-flattening" bug the
+ * Sample Showcase stage fixed for ctor params (mirrors [dev.gezgin.processor.model.ParamModel]).
  */
 internal data class ViewModelModel(
   val vmFq: String,
@@ -104,9 +103,7 @@ internal data class ViewModelModel(
   val intentTypeName: TypeName,
   val effectTypeFq: String,
   val effectTypeName: TypeName,
-  /**
-   * DI framework the VM opts into (§10.1) — drives which default `viewModel` resolver 5.2 emits.
-   */
+  /** DI framework the VM opts into () — drives which default `viewModel` resolver codegen emits. */
   val di: VmDiKind,
   /** The `@HiltViewModel(assistedFactory = …)` type FQ for [VmDiKind.HILT_ASSISTED]; else null. */
   val assistedFactoryFq: String?,

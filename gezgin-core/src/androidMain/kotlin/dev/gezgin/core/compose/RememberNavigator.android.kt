@@ -16,7 +16,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * Android actual (C1 — spec §225 "stable RawNavigator") — iki katman:
+ * Android actual ("stable RawNavigator") — iki katman:
  * 1. **Config-change (rotasyon) dayanıklılığı:** navigator, host `ViewModelStoreOwner` (Activity —
  *    `rememberNavigator` çağrısı setContent'te, GezginDisplay'in ÜSTÜNDE) scope'lu bir
  *    [NavigatorHolder] ViewModel'inde tutulur. Activity `ViewModelStore` retained-instance ile
@@ -24,21 +24,21 @@ import kotlinx.serialization.json.Json
  *    per-entry ViewModel'in (aynı mekanizmayla yaşayan) ctor'unda yakaladığı navigator referansı
  *    rotasyondan sonra ÖLÜ olmaz; display'in gözlemlediği `keysState`'i sürmeye devam eder.
  *    (HEAD'de `rememberSaveable` restore'da YENİ bir navigator kuruyordu → VM eskisini, display
- *    yenisini tutuyordu = C1.)
+ *    yenisini tutuyordu = .)
  * 2. **Process death:** holder ViewModel'i de ölür → taze navigator `start`'ta kurulur.
  *    `rememberSaveable` (Bundle → PD'yi atlar) serileştirilmiş [dev.gezgin.core.SavedState]
  *    snapshot'ını taşır; taze instance onu BİR KEZ [RawNavigator.adoptRestored] ile benimser. Adopt
  *    tetikleyicisi [NavigatorHolder.adoptChecked] bayrağıdır: holder'a bağlı, TAZE kurulduğu
  *    composition'da `false` → adopt (snapshot varsa) → `true`. Config-change'te holder (dolayısıyla
- *    bayrak) retained → rotasyonda re-adopt YOK (MN-1: bayrak snapshot boş olsa DA ilk
- *    composition'da set edilir; canlı navigator zaten doğru state'i taşıdığından snapshot'la
- *    üzerine yazmak hem gereksiz hem de teslim edilmiş bir slotu diriltme (çift-teslim) hazard'ı
- *    taşırdı). PD'de taze holder → bayrak `false` → adopt tam bir kez. `save` daima CANLI
- *    navigator'dan encode eder (held değer yok sayılır) → snapshot güncel. Bozuk/şema-uyumsuz
- *    snapshot [decodeSavedStateOrNull] ile `null` → sessiz fresh-start.
+ *    bayrak) retained → rotasyonda re-adopt YOK (bayrak snapshot boş olsa DA ilk composition'da set
+ *    edilir; canlı navigator zaten doğru state'i taşıdığından snapshot'la üzerine yazmak hem
+ *    gereksiz hem de teslim edilmiş bir slotu diriltme (çift-teslim) hazard'ı taşırdı). PD'de taze
+ *    holder → bayrak `false` → adopt tam bir kez. `save` daima CANLI navigator'dan encode eder
+ *    (held değer yok sayılır) → snapshot güncel. Bozuk/şema-uyumsuz snapshot
+ *    [decodeSavedStateOrNull] ile `null` → sessiz fresh-start.
  *
- * **Çoklu-navigator (MJ-A):** holder `viewModel<NavigatorHolder>(key = …)` ile call-site-stabil bir
- * key altında edinilir. Key `rememberSaveable`'da tutulan benzersiz bir token'dır; iki bağımsız
+ * **Çoklu-navigator ():** holder `viewModel<NavigatorHolder>(key = …)` ile call-site-stabil bir key
+ * altında edinilir. Key `rememberSaveable`'da tutulan benzersiz bir token'dır; iki bağımsız
  * `rememberNavigator` çağrısı (master/detail, adaptif iki-pane, overlay navigator) AYRI
  * rememberSaveable slot'una (composition konumundan türetilir) düşer → AYRI token → AYRI holder.
  * Token config-change'te Bundle'dan aynen restore edilir (retained holder'ı geri bulur), PD'de de
@@ -135,10 +135,10 @@ internal actual fun rememberRawNavigatorInstance(
   }
 
 /**
- * C1 — config-change'i atlayan host-scope'lu kap. Activity `ViewModelStore`'unda yaşar →
- * rotasyondan sağ çıkar; [adoptChecked] snapshot-adopt'un holder ömrü başına EN FAZLA BİR KEZ —
- * yalnız holder TAZE kurulduğu (PD ya da ilk açılış) composition'da — çalışmasını garanti eder
- * (MN-1: config-change'te re-adopt olmaz).
+ * Config-change'i atlayan host-scope'lu kap. Activity `ViewModelStore`'unda yaşar → rotasyondan sağ
+ * çıkar; [adoptChecked] snapshot-adopt'un holder ömrü başına EN FAZLA BİR KEZ — yalnız holder TAZE
+ * kurulduğu (PD ya da ilk açılış) composition'da — çalışmasını garanti eder (config-change'te
+ * re-adopt olmaz).
  */
 private class NavigatorHolder(val navigator: RawNavigator) : ViewModel() {
   var adoptChecked: Boolean = false

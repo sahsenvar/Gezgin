@@ -51,10 +51,10 @@ internal constructor(
     onRootBack: () -> Unit = {},
   ) : this(start, topology, onRootBack, Json, restored = null)
 
-  // `var` (C1): identity-stabil facade — config-change'te [adoptRestored] AYNI instance'ın
+  // `var` (): identity-stabil facade — config-change'te [adoptRestored] AYNI instance'ın
   // `state`'ini
   // re-point eder (yeni RawNavigator KURMAZ). VM ctor'unda yakalanan navigator referansı böylece
-  // rotasyondan sonra da display'in gözlemlediği aynı akışları sürer (spec §225 "stable
+  // rotasyondan sonra da display'in gözlemlediği aynı akışları sürer ( "stable
   // RawNavigator").
   private var state =
     if (restored != null) GezginState(restored.keys, restored.nextId, topology)
@@ -62,7 +62,7 @@ internal constructor(
   private val bus = ResultBus()
 
   /**
-   * Modal-kind-at-root reddi için display'in enjekte ettiği kanca (M4): bir route'un kayıtlı kind'ı
+   * Modal-kind-at-root reddi için display'in enjekte ettiği kanca (): bir route'un kayıtlı kind'ı
    * `SCREEN` DIŞINDA (Dialog/BottomSheet/FullscreenModal) ise `true` döner. Varsayılan `{ false }`
    * — display kablolamadan (saf RawNavigator birim testleri) hiçbir op reddedilmez. `GezginDisplay`
    * registry'yi kurduktan SONRA set eder; [replaceTo] mutasyondan ÖNCE bununla kontrol eder →
@@ -116,7 +116,7 @@ internal constructor(
   }
 
   /**
-   * slot payload'ı `topology.edges[edgeId].resultSerializer` ile encode → PD-güvenli anlık görüntü.
+   * Slot payload'ı `topology.edges[edgeId].resultSerializer` ile encode → PD-güvenli anlık görüntü.
    * ctor'daki [json] kullanılır (encode/decode simetrisi için tek kaynak).
    */
   @Suppress("UNCHECKED_CAST")
@@ -179,16 +179,15 @@ internal constructor(
   }
 
   /**
-   * C1 — PD (process death) restore: bu AYNI facade'in underlying state'ini [restored]'a re-point
-   * eder. Android'de YALNIZ taze holder'ın PD-adopt yolunda çağrılır (config-change'te holder +
-   * canlı navigator retained kalır → re-adopt YOK, MN-1). Yeni bir `RawNavigator` KURULMAZ → bu
-   * instance'ı ctor'da yakalamış her sahip (özellikle rotasyondan sağ çıkan bir ViewModel)
-   * restore'dan sonra da display'in gözlemlediği state'i sürmeye devam eder ( "stable
-   * RawNavigator"). `bus`/StateFlow instance'ları KORUNUR (aynı `keysState`/`backStack` → mevcut
-   * collector'lar kopmaz), yalnız içerikleri restore edilmiş snapshot'a döner. Ctor'un `restored !=
-   * null` yolunun birebir eşleniği; İDEMPOTENT (aynı snapshot'la tekrar çağrı state'i aynı değere
-   * sabitler, bkz. NavigatorIdentityRestoreTest) ve event yayınlamaz — bu bir kuruluş, navigasyon
-   * değil.
+   * PD (process death) restore: bu AYNI facade'in underlying state'ini [restored]'a re-point eder.
+   * Android'de YALNIZ taze holder'ın PD-adopt yolunda çağrılır (config-change'te holder + canlı
+   * navigator retained kalır → re-adopt YOK). Yeni bir `RawNavigator` KURULMAZ → bu instance'ı
+   * ctor'da yakalamış her sahip (özellikle rotasyondan sağ çıkan bir ViewModel) restore'dan sonra
+   * da display'in gözlemlediği state'i sürmeye devam eder ( "stable RawNavigator"). `bus`/StateFlow
+   * instance'ları KORUNUR (aynı `keysState`/`backStack` → mevcut collector'lar kopmaz), yalnız
+   * içerikleri restore edilmiş snapshot'a döner. Ctor'un `restored != null` yolunun birebir
+   * eşleniği; İDEMPOTENT (aynı snapshot'la tekrar çağrı state'i aynı değere sabitler, bkz.
+   * NavigatorIdentityRestoreTest) ve event yayınlamaz — bu bir kuruluş, navigasyon değil.
    */
   internal fun adoptRestored(restored: SavedState) {
     // MJ-B (atomicity) — riskli slot decode'unu MUTASYONDAN ÖNCE yap: `decodeSlot` bir edge
@@ -241,7 +240,7 @@ internal constructor(
     clearUpTo: KClass<out Route>? = null,
     inclusive: Boolean = true,
   ) {
-    // K1 — clearUpTo hedefi stack'te YOKSA MUTASYONDAN/`require`'dan ÖNCE zarif no-op (backTo'nun
+    // clearUpTo hedefi stack'te YOKSA MUTASYONDAN/`require`'dan ÖNCE zarif no-op (backTo'nun
     // BackToTargetMissing deseni): aksi halde cutIndex'in require(i >= 0)'ı fırlardı → bir
     // @ReplaceTo
     // edge'ine hızlı çift-tık (ilk çağrı clearUpTo'yu zaten kaldırmış) main-thread'de app'i
@@ -250,7 +249,7 @@ internal constructor(
       _events.tryEmit(NavEvent.ReplaceToTargetMissing(clearUpTo?.simpleName ?: "?"))
       return
     }
-    // M4 — modal-kind-at-root reddi MUTASYONDAN ÖNCE: replaceTo kökü temizleyip yerine bir modal
+    // modal-kind-at-root reddi MUTASYONDAN ÖNCE: replaceTo kökü temizleyip yerine bir modal
     // koyacaksa (sonuçtaki stack'in dibi = bir modal route) state hiç değiştirilmeden fırlat.
     // Aksi halde eski davranış (state önce `[modal]`'a döner, guard SONRAKİ composition'da patlar)
     // error-boundary'li host'ta navigator'ı kalıcı geçersiz bir stack'te bırakırdı.
@@ -305,7 +304,7 @@ internal constructor(
    * while quit() stays on the innermost.
    */
   public fun quitWith(result: Any?) {
-    // quitWith hedef seçimi: en içteki KAPSAYAN ResultFlow (spec §6);
+    // quitWith hedef seçimi: en içteki KAPSAYAN ResultFlow ();
     // hiç ResultFlow yoksa fallback = en içteki flow (typed katman quitWith'i zaten yalnız
     // ResultFlow'da üretir).
     val top = state.stack.last()
@@ -329,20 +328,20 @@ internal constructor(
   }
 
   /**
-   * M3 — entry-scoped `backWithResult`: pins THE RESULT to its OWNER entry. If [entryId] is no
-   * longer the top (e.g. an async job's result arrived late after the sheet was dismissed by a
-   * gesture) it is a SILENT NO-OP → the value is not delivered to the slot of a foreign entry that
-   * is not waiting for that slot (that expects a result of a different type) and that entry is not
+   * Entry-scoped `backWithResult`: pins THE RESULT to its OWNER entry. If [entryId] is no longer
+   * the top (e.g. an async job's result arrived late after the sheet was dismissed by a gesture) it
+   * is a SILENT NO-OP → the value is not delivered to the slot of a foreign entry that is not
+   * waiting for that slot (that expects a result of a different type) and that entry is not
    * accidentally popped (a dirty-delivery/ double-back race is prevented). The typed
    * `backWithResult(result)` that codegen generates binds the ctor's `entryId` to this overload.
    *
-   * **mn-1 — owner top ama pending-target DEĞİL:** owner top iken (`top.id == entryId`) ama onu
-   * hedefleyen bekleyen bir slot yoksa (bir `ResultRoute` düz `@GoTo`/`navigate` ile ya da
-   * core-mode raw kullanımla açılmışsa), eskiden bu hem teslimi hem pop'u atlar → ekran kapanmaz,
-   * kullanıcı sıkışırdı. Artık en güvenli davranış: değeri düşür (kimse dinlemiyor) ama owner
-   * ekranı yine de KAPAT (`popTopAndEmit`). `bus.deliver` yalnız gerçek bir pending-target varken
-   * çağrılır; ardından `popTopAndEmit`'in [settleRemoved]'ı zaten teslim edilmiş (result != null)
-   * slotu atlar (çift-teslim yok).
+   * **owner top ama pending-target DEĞİL:** owner top iken (`top.id == entryId`) ama onu hedefleyen
+   * bekleyen bir slot yoksa (bir `ResultRoute` düz `@GoTo`/`navigate` ile ya da core-mode raw
+   * kullanımla açılmışsa), eskiden bu hem teslimi hem pop'u atlar → ekran kapanmaz, kullanıcı
+   * sıkışırdı. Artık en güvenli davranış: değeri düşür (kimse dinlemiyor) ama owner ekranı yine de
+   * KAPAT (`popTopAndEmit`). `bus.deliver` yalnız gerçek bir pending-target varken çağrılır;
+   * ardından `popTopAndEmit`'in [settleRemoved]'ı zaten teslim edilmiş (result != null) slotu atlar
+   * (çift-teslim yok).
    */
   @GezginInternalApi
   public fun backWithResult(entryId: Long, result: Any?) {
@@ -359,12 +358,12 @@ internal constructor(
   public fun backWithResult(result: Any?): Unit = backWithResult(currentEntryId, result)
 
   /**
-   * C-MJ-1 — entry-pinned `back`: [backWithResult]`(entryId, …)` deseninin sonuçsuz eşleniği.
-   * Yalnız [entryId] HÂLÂ top ise normal [back]'i uygular; değilse SESSİZ NO-OP. Modal
-   * (dialog/sheet) dismiss'i kendi sahip-entry'sine pinlemek için kullanılır: çifte-dismiss /
-   * hide-animasyon penceresinde geç gelen / app-scope coroutine'den gelen bir `back`, modal artık
-   * top değilken ALTTAKİ ekranı poplamaz — no-op olur (fail-loud/sahibe-pin felsefesi). Ek: modal
-   * artık top değilse (kullanıcı zaten kapattı) bu no-op'tur; canlı top'a etki etmez.
+   * Entry-pinned `back`: [backWithResult]`(entryId, …)` deseninin sonuçsuz eşleniği. Yalnız
+   * [entryId] HÂLÂ top ise normal [back]'i uygular; değilse SESSİZ NO-OP. Modal (dialog/sheet)
+   * dismiss'i kendi sahip-entry'sine pinlemek için kullanılır: çifte-dismiss / hide-animasyon
+   * penceresinde geç gelen / app-scope coroutine'den gelen bir `back`, modal artık top değilken
+   * ALTTAKİ ekranı poplamaz — no-op olur (fail-loud/sahibe-pin felsefesi). Ek: modal artık top
+   * değilse (kullanıcı zaten kapattı) bu no-op'tur; canlı top'a etki etmez.
    */
   @GezginInternalApi
   public fun back(entryId: Long) {
@@ -400,7 +399,7 @@ internal constructor(
     // etmez):
     // teslim edilmiş ama tüketilmemiş slot varken re-launch, slotsuz öksüz bir entry push'lardı.
     if (bus.slots.any { it.callerEntryId == callerEntryId && it.edgeId == edgeId }) return
-    // @GoForResult edge'i DAİMA container-entry'dir → hedef flow için taze instance mint (spec §8.1
+    // @GoForResult edge'i DAİMA container-entry'dir → hedef flow için taze instance mint (
     // re-entrancy sınırı: aynı flow tipine içten re-entry, dış instance'ın id'sini miras ALMAZ).
     val enterFlow = topology.flowChain(route::class).isNotEmpty()
     val pushed =
@@ -472,7 +471,7 @@ internal constructor(
       _events.tryEmit(NavEvent.FlowQuit(flowId, canceled = true))
       settleRemoved(removed)
     }
-    // K2 — singleTop=true: bir @QuitAndGoTo edge'ine çift-tık idempotent olsun. İkinci çağrıda
+    // singleTop=true: bir @QuitAndGoTo edge'ine çift-tık idempotent olsun. İkinci çağrıda
     // (flow
     // zaten yıkıldı, top = route) navigate no-op döner → aksi halde ikinci bir (çoğu zaman @NoBack)
     // `route`
@@ -514,7 +513,7 @@ internal constructor(
   private fun isPendingTarget(id: Long): Boolean =
     bus.slots.any { it.targetEntryId == id && it.result == null }
 
-  /** top, kendi flow segmentinin İLK entry'si mi (altındaki entry o innermost id'yi taşımıyor). */
+  /** Returns whether the top is the first entry in its innermost flow segment. */
   private fun isFlowEntry(top: GezginKey): Boolean {
     if (top.flowPath.isEmpty()) return false
     val innermost = top.flowPath.last()
@@ -539,7 +538,7 @@ internal constructor(
       if (
         slot.result == null && slot.targetEntryId in removedIds && slot.callerEntryId !in removedIds
       ) {
-        // MJ-A — "değer taşıyor muyuz"u [valueTargetId]'in VARLIĞINDAN oku, [deliverValue]'nun
+        // "değer taşıyor muyuz"u [valueTargetId]'in VARLIĞINDAN oku, [deliverValue]'nun
         // içeriğinden DEĞİL: quitWith DAİMA non-null valueTargetId geçirir (Canceled-only
         // çağıranlar —
         // quit/replaceTo/backTo/quitAndGoTo — DAİMA null). Böylece meşru bir `null` DEĞER

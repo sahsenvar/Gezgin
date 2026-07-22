@@ -62,9 +62,9 @@ internal actual fun GezginNoBackHandler() {
  * katmanda oluşturduğu/decorate ettiği entry'ler, decoration tekrar uygulanmadan stabil özel route
  * anahtarlarıyla bu API'ye uyarlanır. Scene strategy zinciri `GezginDialogSceneStrategy(pinnedBack)
  * then GezginBottomSheetSceneStrategy(pinnedBack) then SinglePaneSceneStrategy()` — dialog- ve
- * sheet-metadata'lı entry'ler overlay (dismiss'i sahip-entry'ye pinli, C-MJ-1), kalanı tek-pane
- * (default `SinglePaneSceneStrategy` fallback'ı en sonda açıkça korunur; her overlay stratejisi
- * ilgili metadata key'i yoksa null döner). Nav3 built-in `DialogSceneStrategy` BIRAKILDI (entry-pin
+ * sheet-metadata'lı entry'ler overlay (dismiss'i sahip-entry'ye pinli), kalanı tek-pane (default
+ * `SinglePaneSceneStrategy` fallback'ı en sonda açıkça korunur; her overlay stratejisi ilgili
+ * metadata key'i yoksa null döner). Nav3 built-in `DialogSceneStrategy` BIRAKILDI (entry-pin
  * edilemezdi).
  */
 @Composable
@@ -74,7 +74,7 @@ internal actual fun GezginNavDisplay(
   onBack: () -> Unit,
   pinnedBack: (Long) -> Unit,
 ) {
-  // m3 — strateji instance'ları/list'i stateless ama HER recomposition'da yeniden kurulmasın
+  // strateji instance'ları/list'i stateless ama HER recomposition'da yeniden kurulmasın
   // (GezginDisplay'in decorator/onBack için uyguladığı kimlik-stabilizasyonuyla tutarlı):
   // `remember`.
   // `pinnedBack` GezginDisplay'de navigator'a `remember`'lı → stabil anahtar.

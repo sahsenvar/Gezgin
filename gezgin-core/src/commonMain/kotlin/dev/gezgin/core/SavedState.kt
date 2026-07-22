@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * PD-safe snapshot of a [RawNavigator]: stack + id counter + in-flight/undelivered result slots.
- * `internal` (K1): the process-death snapshot schema is not part of the public ABI — only the
+ * `internal` (): the process-death snapshot schema is not part of the public ABI — only the
  * same-module `rememberNavigator` restore path reads it, so adding a slot field later stays a
  * non-breaking change.
  */

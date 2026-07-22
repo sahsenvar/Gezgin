@@ -15,11 +15,11 @@ import dev.gezgin.core.Route
 
 /**
  * Desktop (JVM): per-entry `ViewModelStore` decorator'ı — Android [rememberPlatformEntryDecorators]
- * actual'ının DAVRANIŞSAL AYNADAŞI (C1·MJ3). Üretilen MVI entry'leri VM'i
+ * actual'ının DAVRANIŞSAL AYNADAŞI (·). Üretilen MVI entry'leri VM'i
  * `viewModel()`/`koinViewModel()`/`hiltViewModel()` ile çözer; üçü de `LocalViewModelStoreOwner`
  * ister → decorator olmadan desktop'ta ya ilk render'da `IllegalStateException` (owner yok) ya da
  * VM pencere-scoped olurdu (aynı route'un iki stack instance'ı TEK VM paylaşır, pop'ta `onCleared`
- * hiç gelmez — §222'nin "entry-scoped, pop'ta onCleared" vaadinin sessiz ihlali; yalnız Android'de
+ * hiç gelmez — 'nin "entry-scoped, pop'ta onCleared" vaadinin sessiz ihlali; yalnız Android'de
  * doğruydu).
  *
  * JB `rememberViewModelStoreNavEntryDecorator`
@@ -70,7 +70,7 @@ internal actual fun GezginNoBackHandler() {
  * Desktop (JB alpha05): `NavDisplay` scene-strategy'si **TEKİL** `sceneStrategy: SceneStrategy<T>`.
  * `GezginDialogSceneStrategy(pinnedBack) then GezginBottomSheetSceneStrategy(pinnedBack) then
  * SinglePaneSceneStrategy()` — dialog- ve sheet-metadata'lı entry'ler overlay olarak (her strateji
- * kendi metadata key'ini okur, ayrık; dismiss'i sahip-entry'ye pinli, C-MJ-1), kalanı tek-pane
+ * kendi metadata key'ini okur, ayrık; dismiss'i sahip-entry'ye pinli), kalanı tek-pane
  * (SceneStrategy.then overlay-önce sözleşmesi; iki overlay stratejisi karşılıklı-dışlayan, sıra
  * önemsiz — SinglePane en sonda fallback). Nav3 built-in `DialogSceneStrategy` BIRAKILDI (entry-pin
  * edilemezdi).
@@ -82,7 +82,7 @@ internal actual fun GezginNavDisplay(
   onBack: () -> Unit,
   pinnedBack: (Long) -> Unit,
 ) {
-  // m3 — strateji zinciri stateless ama HER recomposition'da yeniden kurulmasın (Android actual'la
+  // strateji zinciri stateless ama HER recomposition'da yeniden kurulmasın (Android actual'la
   // aynı kimlik-stabilizasyonu; GezginDisplay'in decorator/onBack `remember`'ıyla tutarlı).
   val sceneStrategy =
     remember(pinnedBack) {

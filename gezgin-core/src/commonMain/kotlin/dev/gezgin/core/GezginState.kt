@@ -45,7 +45,7 @@ internal class GezginState(
   }
 
   /**
-   * M4 — `replaceUpTo`'nun MUTASYON YAPMADAN sonuçtaki kök (dip) route'unu hesaplar: temizleme tüm
+   * `replaceUpTo`'nun MUTASYON YAPMADAN sonuçtaki kök (dip) route'unu hesaplar: temizleme tüm
    * stack'i kaldıracaksa (`cutFrom == 0`) yeni kök `route` olur, aksi halde mevcut dip korunur.
    * [RawNavigator.replaceTo] bunu modal-kind-at-root reddi için state'i değiştirmeden önce
    * kullanır.
@@ -57,10 +57,9 @@ internal class GezginState(
   ): Route = if (cutIndex(clearUpTo, inclusive) == 0) route else _stack.first().route
 
   /**
-   * `clearUpTo` hedefi stack'te var mı — [RawNavigator.replaceTo]'nun MUTASYON/`require` YAPMADAN,
-   * güvenli no-op kararı için sorduğu ön-koşul (null hedef = "yalnız top'u değiştir", daima
-   * geçerli). [cutIndex]'in `require(i >= 0)`'ına düşmeden önce bu döner: hedef yoksa çağıran
-   * ReplaceToTargetMissing yayıp erken çıkar.
+   * Checks whether `clearUpTo` exists before [RawNavigator.replaceTo] mutates the stack or reaches
+   * [cutIndex]'s precondition. A `null` target means "replace only the top" and is always valid.
+   * Callers emit `ReplaceToTargetMissing` and return early when a non-null target is absent.
    */
   fun hasOnStack(clearUpTo: KClass<out Route>?): Boolean =
     clearUpTo == null || _stack.any { clearUpTo.isInstance(it.route) }

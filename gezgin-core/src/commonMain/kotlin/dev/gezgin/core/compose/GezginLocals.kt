@@ -7,13 +7,12 @@ import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.RawNavigator
 
 /**
- * Top-entry-drive contract (§10.1/§12): an entry's content only ever sees a navigator built with
- * its OWN `entryId` — [GezginDisplay] wraps every entry content with these two locals inside
- * `toNavEntry`, and the generated `provideXEntry` reads them to build the typed navigator
- * (`xNavigator()`).
+ * Top-entry-drive contract (): an entry's content only ever sees a navigator built with its OWN
+ * `entryId` — [GezginDisplay] wraps every entry content with these two locals inside `toNavEntry`,
+ * and the generated `provideXEntry` reads them to build the typed navigator (`xNavigator()`).
  *
- * Both locals are gated behind [GezginInternalApi] (K4): only generated code installs and reads
- * them. Application code that needs read access to the active navigator (core-mode) uses
+ * Both locals are gated behind [GezginInternalApi] (): only generated code installs and reads them.
+ * Application code that needs read access to the active navigator (core-mode) uses
  * [currentGezginNavigator] instead — a read-only accessor that can't rewrite the display's provider
  * contract.
  *

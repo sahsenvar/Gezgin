@@ -45,7 +45,7 @@ private val INITIALIZER = MemberName("androidx.lifecycle.viewmodel", "initialize
 private val KOIN_VIEW_MODEL = MemberName("org.koin.compose.viewmodel", "koinViewModel")
 private val PARAMETERS_OF = MemberName("org.koin.core.parameter", "parametersOf")
 
-// Hilt package pin (§10.1 open question): androidx.hilt:hilt-navigation-compose 1.4.0 deprecates
+// Hilt package pin ( open question): androidx.hilt:hilt-navigation-compose 1.4.0 deprecates
 // this
 // FQ in favor of androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel (new artifact). The OLDER
 // FQ
@@ -63,8 +63,8 @@ private val HILT_VIEW_MODEL = MemberName("androidx.hilt.navigation.compose", "hi
 private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetController"
 
 /**
- * emits `fun GezginEntryScope.provideXEntry(...)` for every MVI-mode [EntryFunctionModel]
- * (`entry.mvi != null`, spec §10.1). The counterpart to core-mode's [EntryCodegen]: same
+ * Emits `fun GezginEntryScope.provideXEntry(...)` for every MVI-mode [EntryFunctionModel]
+ * (`entry.mvi != null`, the current contract). The counterpart to core-mode's [EntryCodegen]: same
  * `GezginEntryScope` extension + `register<Route>(...)` shape (no wrapper type), grouped one
  * [FileSpec] per composable package — but into a SEPARATE `GezginMviEntries.kt` (see [generate]) so
  * a feature module mixing both entry styles gets `GezginEntries.kt` (core) + `GezginMviEntries.kt`
@@ -86,23 +86,22 @@ private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetCont
  * }
  * ```
  *
- * **DI default resolver (§10.1 rule 1):** a default is emitted ONLY when every DI-relevant ctor
- * param is `route`- or `nav`-typed AND neither role is duplicated (relevant =
- * `@Assisted`/`@InjectedParam` for Hilt/Koin; ALL for androidx; NONE for plain Hilt). Any other
- * relevant param (e.g. `@Assisted userId: String`), or two route- / two nav-typed relevant params
- * (which the resolver couldn't positionally disambiguate) → no default, the `viewModel` param
- * becomes REQUIRED. Always override-able either way. (The route/nav/`emitDefault` classification is
- * shared with [dev.gezgin.processor.entry.EntryModelReader] via [VmDiClassifier] so its `MV7`
- * nav-presence guardrail and this codegen never disagree.)
+ * **DI default resolver ( rule 1):** a default is emitted ONLY when every DI-relevant ctor param is
+ * `route`- or `nav`-typed AND neither role is duplicated (relevant = `@Assisted`/`@InjectedParam`
+ * for Hilt/Koin; ALL for androidx; NONE for plain Hilt). Any other relevant param (e.g. `@Assisted
+ * userId: String`), or two route- / two nav-typed relevant params (which the resolver couldn't
+ * positionally disambiguate) → no default, the `viewModel` param becomes REQUIRED. Always
+ * override-able either way. (The route/nav/`emitDefault` classification is shared with
+ * [dev.gezgin.processor.entry.EntryModelReader] via [VmDiClassifier] so its `MV7` nav-presence
+ * guardrail and this codegen never disagree.)
  *
- * **`nav` wiring (§10.1 open question, resolved: conditional):** unlike the spec's literal
- * always-`nav` example, `nav` is wired only when the VM ctor actually declares a `nav` param OR the
- * matched `@EffectHandler` takes one — mirroring core-mode's conditional `hasNavParam`. An MVI VM
- * with no edges never forces an `xNavigator()` factory call that couldn't resolve. When wired, the
- * factory is qualified against the ROUTE's package (`entry.routePackageName`), exactly like
- * [EntryCodegen].
+ * **`nav` wiring ( open question, resolved: conditional):** unlike the spec's literal always-`nav`
+ * example, `nav` is wired only when the VM ctor actually declares a `nav` param OR the matched
+ * `@EffectHandler` takes one — mirroring core-mode's conditional `hasNavParam`. An MVI VM with no
+ * edges never forces an `xNavigator()` factory call that couldn't resolve. When wired, the factory
+ * is qualified against the ROUTE's package (`entry.routePackageName`), exactly like [EntryCodegen].
  *
- * **Problem 2 (§10.1 rule 2):** each `resolverExtraParam` becomes a REQUIRED `@Composable () -> T`
+ * **Problem 2 ( rule 2):** each `resolverExtraParam` becomes a REQUIRED `@Composable () -> T`
  * param, threaded as `<name>()` into the content call. Role extras (`controller`) read from
  * `LocalGezginSheetController`. All content extras are passed as NAMED args so the split
  * role/resolver lists need not reconstruct the composable's original parameter order.
@@ -227,7 +226,7 @@ internal object MviEntryCodegen {
 
     return when (vm.di) {
       VmDiKind.ANDROIDX -> {
-        // NAMED constructor call (MN1) over the route/nav params ONLY — order-independent, and any
+        // NAMED constructor call  over the route/nav params ONLY — order-independent, and any
         // defaulted OTHER param (MN4, e.g. `retries: Int = 3`) is OMITTED so the VM's own default
         // applies. `emitDefault` guarantees there are no NON-defaulted OTHER params here.
         val ctorArgs =

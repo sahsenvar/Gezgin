@@ -108,25 +108,26 @@ internal data class GraphModelNode(
   /**
    * Every `@NavGraph`/`@FlowGraph`-annotated interface this graph implements DIRECTLY (declared
    * supertypes only, non-transitive). The graph-level parallel of [RouteModel.implementedGraphFqs]:
-   * a well-formed graph has AT MOST one (its parent, `OrderGraph : AppGraph` spec §3.1); two or
-   * more is the ambiguous-parent violation (N11) — the membership walk needs a single parent.
+   * a well-formed graph has AT MOST one (its parent, `OrderGraph : AppGraph` the current contract);
+   * two or more is the ambiguous-parent violation (`N11`) — the membership walk needs a single
+   * parent.
    */
   val directParentFqs: List<String>,
   /**
    * The single graph/flow this graph is a member of : the annotated supertype it declares
-   * (`subtyping = nesting`, design-notes §3), falling back to a lexically-enclosing annotated
+   * (`subtyping = nesting`, the ownership model), falling back to a lexically-enclosing annotated
    * graph. `null` = no parent by either mechanism — a top-level root graph/flow (legitimate;
-   * reached by an edge) OR, when [isNested], an orphan (N12). Distinct from [parentFlowFq], which
+   * reached by an edge) OR, when [isNested], an orphan (`N12`). Distinct from [parentFlowFq], which
    * skips intervening `@NavGraph`s to name the nearest enclosing FLOW.
    */
   val membershipParentFq: String?,
-  /** Lexically nested inside another type declaration (vs a top-level file member) — feeds N12. */
+  /** Lexically nested inside another type declaration; used by the `N12` validation. */
   val isNested: Boolean,
   /**
    * Whether this graph is declared as a `sealed interface`. Cross-file member discovery
    * ([dev.gezgin.processor.model.ModelReader]) relies on `getSealedSubclasses`, which per the KSP
    * contract returns EMPTY for a non-sealed declaration — so a route/flow declaring `: G` in
-   * another file would silently drop out of every graph. N13 enforces this so the derivation is
+   * another file would silently drop out of every graph. `N13` enforces this so the derivation is
    * sound; the field never enters the model dump (golden output unaffected).
    */
   val isSealedInterface: Boolean,

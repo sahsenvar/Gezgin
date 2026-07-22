@@ -79,7 +79,7 @@ public fun GezginDisplay(
           "guard is permanent because a modal cannot be root and OverlayScene requires at " +
           "least one underlaid entry (§7). route: ${rootRoute::class.simpleName}"
       }
-      // M4 — kind-lookup kancasını navigator'a enjekte et: replaceTo (clearUpTo=root) MUTASYONDAN
+      // kind-lookup kancasını navigator'a enjekte et: replaceTo (clearUpTo=root) MUTASYONDAN
       // ÖNCE, sonuçtaki kök modal olacaksa reddedebilsin. Kind yalnız burada (registry) bilinir;
       // kayıtsız route → `false` (modal değil varsay; kayıtsızlığın açık hatası toNavEntry'de).
       navigator.modalRootGuard = { route ->
@@ -118,7 +118,7 @@ public fun GezginDisplay(
   // üretiyordu (NavDisplay'in `onBack` parametresi identity ile karşılaştırılabilir call-site'lar
   // için gereksiz iş). Davranış AYNI — sadece kimlik stabilize edildi.
   val onBack = remember(navigator, scope) { gezginOnBack(navigator, scope) }
-  // C-MJ-1 — modal (dialog/sheet) dismiss'ini sahip-entry'ye pinleyen back kancası:
+  // modal (dialog/sheet) dismiss'ini sahip-entry'ye pinleyen back kancası:
   // `navigator.back(id)`
   // yalnız o entry HÂLÂ top ise pop eder, değilse no-op → çifte-dismiss / hide-animasyon penceresi
   // / geç
@@ -139,9 +139,9 @@ public fun GezginDisplay(
 }
 
 /**
- * The `NavDisplay` `onBack` lambda — the `@NoBack` runtime guard (M5′, ). When back is invoked it
- * reads the LIVE top entry (`navigator.keys.last()`, not a captured stale value): if the top's
- * record has `noBack==true` AND the top is NOT the root, back is SWALLOWED (no pop) — otherwise
+ * The `NavDisplay` `onBack` lambda — the `@NoBack` runtime guard (′). When back is invoked it reads
+ * the LIVE top entry (`navigator.keys.last()`, not a captured stale value): if the top's record has
+ * `noBack==true` AND the top is NOT the root, back is SWALLOWED (no pop) — otherwise
  * `navigator.back()`. **Root exemption:** while the stack has a single entry (`keys.size <= 1`),
  * `noBack` is ignored → `back()` (at the bottom this hits `onRootBack`; the user is not trapped in
  * the app).
@@ -158,14 +158,14 @@ internal fun gezginOnBack(navigator: RawNavigator, scope: GezginEntryScope): () 
   val isRoot = top == null || isRootEntry(keys, top.id)
   val topNoBack = top != null && scope.registry[top.route::class]?.noBack == true
   if (topNoBack && !isRoot) {
-    // @NoBack top entry (kök değil): Gezgin-sahipli geri-yutma — pop YOK (M5′).
+    // @NoBack top entry (kök değil): Gezgin-sahipli geri-yutma — pop YOK (′).
   } else {
     navigator.back()
   }
 }
 
 /**
- * consolidation — [GezginDisplay]'s per-entry `isRoot` (`key.id == keys.first().id`) and
+ * Consolidation — [GezginDisplay]'s per-entry `isRoot` (`key.id == keys.first().id`) and
  * [gezginOnBack]'s old `keys.size <= 1` predicate were asking the SAME thing (when the
  * bottom-of-stack entry is the TOP, both were equal for a single entry — `size<=1` ⟺ top.id ==
  * first.id): merged into a single helper.

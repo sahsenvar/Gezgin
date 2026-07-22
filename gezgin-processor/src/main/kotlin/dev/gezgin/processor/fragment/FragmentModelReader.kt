@@ -19,9 +19,9 @@ private const val ROUTE_FQ = "dev.gezgin.core.Route"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
 private const val FRAGMENT_FQ = "androidx.fragment.app.Fragment"
 
-// Modal presentation contracts (§7) — a @FragmentScreen route implementing one is FS7 (fragment
+// Modal presentation contracts () — a @FragmentScreen route implementing one is FS7 (fragment
 // interop
-// is screen-only §11.2; would be silently ignored).
+// is screen-only ; would be silently ignored).
 private val MODAL_CONTRACT_FQS =
   setOf(
     "dev.gezgin.core.DialogContract",
@@ -30,7 +30,7 @@ private val MODAL_CONTRACT_FQS =
   )
 
 /**
- * reads every `@FragmentScreen(Route::class)`-annotated CLASS (spec §11/§11.1/§11.2 brownfield
+ * Reads every `@FragmentScreen(Route::class)`-annotated CLASS (the current contract brownfield
  * Fragment interop) into a validated [FragmentEntryModel] list, mirroring
  * [dev.gezgin.processor.mvi.ViewModelModelReader]'s structure — both read a CLASS-target,
  * mandatory-route-arg annotation and use the collect-all-then-fail, bracketed-code error idiom
@@ -42,21 +42,21 @@ private val MODAL_CONTRACT_FQS =
  * fixtures), exactly like the `dev.gezgin.mvi.*` reads.
  *
  * Guardrails (`FS`-family — Fragment Screen):
- * - **`FS1` — FragmentFactory-instantiability (§11.1).** Android recreates Fragments after
- *   PD/config- change via a PUBLIC no-arg ctor (`clazz.getConstructor().newInstance()`). `FS1`
- *   rejects every shape that would pass the frontend but crash inside
- *   `FragmentFactory.instantiate`: an `abstract` class (`InstantiationException`); an `inner` class
- *   (its ctor carries the outer instance); a parameterized primary ctor (the common case — a
- *   tailored gezginArgs/gezginNav message); and a class with only secondary ctors or a
- *   private/protected ctor (no accessible no-arg ctor → `NoSuchMethodException`). route/nav arrive
- *   through `gezginArgs`/`gezginNav` , never the ctor. → no model emitted.
+ * - **`FS1` — FragmentFactory-instantiability ().** Android recreates Fragments after PD/config-
+ *   change via a PUBLIC no-arg ctor (`clazz.getConstructor().newInstance()`). `FS1` rejects every
+ *   shape that would pass the frontend but crash inside `FragmentFactory.instantiate`: an
+ *   `abstract` class (`InstantiationException`); an `inner` class (its ctor carries the outer
+ *   instance); a parameterized primary ctor (the common case — a tailored gezginArgs/gezginNav
+ *   message); and a class with only secondary ctors or a private/protected ctor (no accessible
+ *   no-arg ctor → `NoSuchMethodException`). route/nav arrive through `gezginArgs`/`gezginNav` ,
+ *   never the ctor. → no model emitted.
  * - **`FS2` — route type sanity + no bare `Route`.** The resolved route type must implement
  *   `dev.gezgin.core.Route` (mirrors `SC5` — same [getAllSuperTypes] walk) AND must not be the bare
  *   `Route` interface itself: `@FragmentScreen`'s route arg is mandatory and concrete — as is every
  *   kind annotation's now (`@Screen(Route::class)` is likewise rejected, as `SC9`) — so
  *   `@FragmentScreen(Route::class)` would emit a `register<Route>` no concrete-class push ever
  *   matches — a DEAD registration. → no model.
- * - **`FS7` — screen-only, no modal contract (§11.2).** A route implementing a modal presentation
+ * - **`FS7` — screen-only, no modal contract ().** A route implementing a modal presentation
  *   contract (`DialogContract`/`BottomSheetContract`/`FullscreenModalContract`) is rejected:
  *   fragment interop always registers `kind = SCREEN`, so would be SILENTLY ignored (the user asked
  *   for a modal, got a full-screen fragment). Hard-error like `SC8`/`MV8` (silent-drop). → no
@@ -105,8 +105,8 @@ private val MODAL_CONTRACT_FQS =
  * keeps `EntryModelReader` UNTOUCHED (zero change to core-mode / MVI-mode behavior) and lets `FS3`
  * uniformly own every Fragment duplicate (same-kind AND cross-kind) under one code.
  *
- * **Deliberately NOT validated: `gezginArgs<R>()`/`gezginNav<N>()` type-argument matching (mN3).**
- * Unlike `@Screen`, whose generated `XScreen(route, nav)` call makes a wrong route/navigator type a
+ * **Deliberately NOT validated: `gezginArgs<R>()`/`gezginNav<N>()` type-argument matching.** Unlike
+ * `@Screen`, whose generated `XScreen(route, nav)` call makes a wrong route/navigator type a
  * COMPILE error, a Fragment reads its route/nav via hand-written `private val args by
  * gezginArgs<R>()` / `private val nav by gezginNav<N>()` delegates whose `R`/`N` are NOT tied to
  * `@FragmentScreen(route)`. A mismatch (`gezginArgs<WrongRoute>()` after a copy-paste) compiles —
@@ -174,7 +174,7 @@ internal class FragmentModelReader(
     // NoSuchMethodException;
     //   parameterized primary ctor / secondary-ctor-only / private ctor → no accessible no-arg
     // ctor.
-    // route/nav arrive through gezginArgs/gezginNav, never the ctor (§11.1).
+    // route/nav arrive through gezginArgs/gezginNav, never the ctor ().
     if (Modifier.ABSTRACT in decl.modifiers) {
       error(
         "FS1",
@@ -194,7 +194,7 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS1 — parametreli primary ctor yasak (§11.1) — en sık hata, özel/aksiyonel mesaj.
+    // FS1 — parametreli primary ctor yasak () — en sık hata, özel/aksiyonel mesaj.
     val ctorParams = decl.primaryConstructor?.parameters.orEmpty()
     if (ctorParams.isNotEmpty()) {
       error(
@@ -286,7 +286,7 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS7 — Fragment interop is screen-only (§11.2). A route implementing a modal
+    // FS7 — Fragment interop is screen-only (). A route implementing a modal
     // presentation contract (Dialog/BottomSheet/FullscreenModal) would be registered as a plain
     // SCREEN
     // (FragmentEntryCodegen unconditionally `kind = SCREEN`) with SILENTLY ignored —

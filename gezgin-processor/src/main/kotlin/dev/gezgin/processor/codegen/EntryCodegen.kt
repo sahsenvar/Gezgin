@@ -15,8 +15,8 @@ private val LOCAL_ENTRY_ID = MemberName(COMPOSE_PKG, "LocalGezginEntryId")
 private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigator")
 
 /**
- * emits `fun GezginEntryScope.provideXEntry()` for every [EntryFunctionModel]
- * [dev.gezgin.processor.entry.EntryModelReader] resolved (spec §10.1/§12/§14 core-mode):
+ * Emits `fun GezginEntryScope.provideXEntry()` for every [EntryFunctionModel]
+ * [dev.gezgin.processor.entry.EntryModelReader] resolved (the current contract core-mode):
  * ```kotlin
  * fun GezginEntryScope.provideOrderChainEntry() {
  *     register<OrderChainRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
@@ -33,8 +33,7 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
  * qualified against each entry's own [EntryFunctionModel.routePackageName] — the package the route
  * DECLARATION (and thus [NavigatorCodegen]'s factory) lives in. Reading it per-entry off the route
  * (rather than off one shared nav-topology package) is what makes the factory import resolve in a
- * cross-module feature, whose own model has no graphs and hence no target package of its own
- * (§3.3).
+ * cross-module feature, whose own model has no graphs and hence no target package of its own ().
  */
 internal object EntryCodegen {
 

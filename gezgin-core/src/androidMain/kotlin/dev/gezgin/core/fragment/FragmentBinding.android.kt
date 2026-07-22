@@ -10,37 +10,36 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 /**
- * the LIVE-reference (`gezginNav`) and typed-arg (`gezginArgs`) access half of `@FragmentScreen`
- * interop. The two delegates read from two different sources:
+ * The live-reference (`gezginNav`) and typed-argument (`gezginArgs`) access half of
+ * `@FragmentScreen` interop. The two delegates read from two different sources:
  * - **`gezginArgs<Route>()` → the Fragment's own `arguments` Bundle** ([decodeGezginRoute]).
  *   `arguments` is set up when the Fragment is instantiated (`setArguments`, BEFORE `onUpdate`) →
- *   it is decoded INDEPENDENTLY of `onUpdate` timing (spec 291 "route from the Bundle → PD-safe";
- *   ). Since the route's PD source is Gezgin's OWN backstack (d), on a fresh-process restore the
- *   entry re-renders → `arguments` is regenerated with the fresh route → decode works.
+ *   it is decoded independently of `onUpdate` timing. Since the route's process-death source is
+ *   Gezgin's own back stack, on a fresh-process restore the entry re-renders → `arguments` is
+ *   regenerated with the fresh route → decode works.
  *
  *   **Validity window (STRICT contract):** on the FIRST-CREATION instance (`AndroidFragment`
  *   instantiates the Fragment ITSELF: the first composition evaluates `route.toBundle(raw)` BEFORE
  *   the Fragment is created → [gezginFragmentJson] is populated by then) `gezginArgs` is safe from
  *   `onAttach`/`onCreate` onward.
  *
- *   **REAL process-death caveat (device-verified 2026-07-12, was previously WRONG here):** after a
- *   true process death, `FragmentActivity.onCreate(savedInstanceState)` restores the FM-saved
- *   Fragment and dispatches `onAttach`, `onCreate`, `onCreateView` and even `onViewCreated` to it
- *   BEFORE `setContent`'s first composition (hence before `route.toBundle` in the NEW process)
- *   runs. So in the fresh-process restore branch [gezginFragmentJson] is still `null` EVEN in
- *   `onViewCreated` (the old claim that `onViewCreated` is "behind the first composition" is FALSE
- *   for FM-restore) → `gezginArgs` would throw. The fix is NOT a later lifecycle callback (there is
- *   no Fragment callback guaranteed to run after the first composition); it is registering the
- *   app-Json at PROCESS STARTUP via [Gezgin.initFragmentInterop] in `Application.onCreate` (runs
- *   before FM restore). With that init done, `gezginArgs` is safe from
- *   `onCreateView`/`onViewCreated` onward in BOTH branches. The sample `HelpFragment` reads in
- *   `onViewCreated`; the sample `Application` calls `Gezgin.initFragmentInterop(gezginJson)`.
- *   (Config-change/DKA keeps the process alive → static stays populated → this only matters for
- *   TRUE process death.)
+ *   **Process-death caveat:** after a true process death,
+ *   `FragmentActivity.onCreate(savedInstanceState)` restores the FM-saved Fragment and dispatches
+ *   `onAttach`, `onCreate`, `onCreateView` and even `onViewCreated` to it BEFORE `setContent`'s
+ *   first composition (hence before `route.toBundle` in the NEW process) runs. So in the
+ *   fresh-process restore branch [gezginFragmentJson] is still `null` EVEN in `onViewCreated`
+ *   before the first composition during FragmentManager restore, so `gezginArgs` would throw. A
+ *   later lifecycle callback cannot solve this because there is no Fragment callback guaranteed to
+ *   run after the first composition; it is registering the app-Json at PROCESS STARTUP via
+ *   [Gezgin.initFragmentInterop] in `Application.onCreate` (runs before FM restore). With that init
+ *   done, `gezginArgs` is safe from `onCreateView`/`onViewCreated` onward in BOTH branches. The
+ *   sample `HelpFragment` reads in `onViewCreated`; the sample `Application` calls
+ *   `Gezgin.initFragmentInterop(gezginJson)`. (Config-change/DKA keeps the process alive → static
+ *   stays populated → this only matters for TRUE process death.)
  * - **`gezginNav<Navigator>()` → the [boundRegistry] below** (filled by [bindGezgin] in
  *   `onUpdate`). A live navigator facade has NO serializable form → it must be carried in an
  *   instance-keyed registry, not in the Bundle. That is why `gezginNav` is genuinely invalid until
- *   `onUpdate` runs (spec 298).
+ *   `onUpdate` runs.
  */
 
 /**
@@ -84,9 +83,9 @@ private class BoundGezgin(val nav: Any?)
  *
  * On config-change/PD the fragment is a NEW instance and `bindGezgin` (hence [onGezginBound]) runs
  * again for it → the collector is re-attached against the fresh `viewLifecycleOwner`. It fires ONCE
- * per live instance (bind is once-per-instance, c) → no duplicate collectors on the same instance.
- * If the route is an edge-less leaf (NO navigator), [onGezginBound] is still invoked, but
- * `gezginNav` throws `[FS5]` — a display-only leaf should NOT implement this interface.
+ * per live instance because binding runs once per instance, so it does not duplicate collectors. If
+ * the route is an edge-less leaf (NO navigator), [onGezginBound] is still invoked, but `gezginNav`
+ * throws `[FS5]` — a display-only leaf should NOT implement this interface.
  *
  * @author @sahsenvar
  */
@@ -100,8 +99,7 @@ public interface GezginBindingObserver {
 /**
  * Fragment-instance → live navigator side-table. **Weak key (`WeakHashMap`):** a Fragment recreated
  * on config-change/PD is a DIFFERENT instance (a new weak key) → the old entry is GC'd, so the
- * registry naturally tracks the live instance ( c). Set up/read on the main thread; no
- * synchronization.
+ * registry naturally tracks the live instance. Set up/read on the main thread; no synchronization.
  */
 private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
 
@@ -111,10 +109,10 @@ private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
  * navigator under the instance.
  *
  * **Unconditional put — no bind-once/skip-if-present guard:** `onUpdate` runs once per live
- * instance (c); for a NEW instance after config-change/PD it must run again to re-bind — an
- * "already bound, skip" defense is the one thing that BREAKS this path. Overwriting with equal data
- * is harmless (idempotent-by-construction). `public`: the generated code lives in the CONSUMER
- * module (cross-module `internal` is not visible).
+ * instance; for a NEW instance after config-change/PD it must run again to re-bind — an "already
+ * bound, skip" defense is the one thing that BREAKS this path. Overwriting with equal data is
+ * harmless (idempotent-by-construction). `public`: the generated code lives in the CONSUMER module
+ * (cross-module `internal` is not visible).
  *
  * [route] is not currently used by the registry (args are carried in the Bundle) but is KEPT in the
  * signature so it matches the generated `onUpdate { bindGezgin(fragment, route, nav) }` shape
@@ -124,26 +122,21 @@ private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
   boundRegistry[fragment] = BoundGezgin(nav)
-  // Post-bind hook: registry SET edildikten SONRA çağrılır (onGezginBound içinde
-  // gezginNav
-  // okunabilir). commitNow SONRASI çalıştığından viewLifecycleOwner hazır → result-LAUNCHER
-  // fragment'ı
-  // xResults collector'ını burada güvenle kurar. İmplement etmeyen fragment'lar için no-op.
+  // Invoke after registration so onGezginBound can read gezginNav. commitNow has completed, which
+  // means viewLifecycleOwner is ready and a result-launching Fragment can safely collect xResults.
   (fragment as? GezginBindingObserver)?.onGezginBound()
 }
 
 /**
- * The NAV-LESS overload of [bindGezgin] — for when a route gains NO navigator (an edge-less leaf:
- * no
- *
- * @GoTo/@ReplaceTo/@BackTo/... edge, no result-contract → `NavigatorCodegen` does NOT generate an
- *   `XNavigator` for it). In this case the GENERATED `provideXEntry` never binds `nav` and calls
- *   `onUpdate = { fragment -> bindGezgin(fragment, route) }` (it NEVER calls a non-existent factory
- *   — the stage-later counterpart of SC2/MV7; the condition is computed in `GezginProcessor` via
- *   `NavigatorCodegen.hasNavigator`). It BINDS the Fragment without a navigator: `gezginArgs` (from
- *   the Bundle) still works; but if `gezginNav` is read, [gezginBoundNav] throws an `[FS5]` error —
- *   not "not bound" but "NO navigator". A legitimate display-only brownfield screen
- *   (Settings/About) follows this path; it is NOT REJECTED at KSP time.
+ * The navigator-free overload of [bindGezgin] handles an edge-less route with no
+ * `@GoTo`/`@ReplaceTo`/`@BackTo` edge or result contract, for which `NavigatorCodegen` does not
+ * generate an `XNavigator`. In this case the generated `provideXEntry` never binds `nav` and calls
+ * `onUpdate = { fragment -> bindGezgin(fragment, route) }` (it NEVER calls a non-existent factory
+ * because the condition is computed in `GezginProcessor` via `NavigatorCodegen.hasNavigator`). It
+ * binds the Fragment without a navigator: `gezginArgs` (from the Bundle) still works; but if
+ * `gezginNav` is read, [gezginBoundNav] throws an `[FS5]` error — not "not bound" but "NO
+ * navigator". A legitimate display-only brownfield screen (Settings/About) follows this path; it is
+ * NOT REJECTED at KSP time.
  *
  * **UNCONDITIONAL put** — the same idempotency contract as the nav-ful overload (NO bind-once
  * guard): a new instance after config-change/PD must re-bind. `public`: the generated code lives in
@@ -153,10 +146,8 @@ public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route) {
   boundRegistry[fragment] = BoundGezgin(nav = null)
-  // Nav'sız leaf de bind edilir; onGezginBound çağrılır ama gezginNav [FS5] fırlatır
-  // (leaf
-  // ekran bu interface'i implement ETMEMELİ). Simetri için ve "bind tamamlandı" sinyali olarak
-  // çağrılır.
+  // A navigator-free leaf is still bound and receives the completion callback. Reading gezginNav
+  // remains invalid for such a leaf and produces the documented FS5 error.
   (fragment as? GezginBindingObserver)?.onGezginBound()
 }
 

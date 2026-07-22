@@ -79,17 +79,15 @@ private class MaterialSheetController(
 }
 
 /**
- * [GezginBottomSheetScene]'in `NavEntry.metadata`'da taşındığı anahtar (Gezgin-tanımlı, iki
- * platformda AYNI string — kendi strateji'miz kendi key'ini yazıp okur, platform-içi tutarlı;
- * DialogSceneStrategy'nin `"dialog"` key'inden ayrık, transition key'lerinden de ayrık).
+ * Metadata key used to carry [GezginBottomSheetScene] properties on both platforms. It is distinct
+ * from the dialog and transition metadata keys.
  */
 internal const val GEZGIN_BOTTOM_SHEET_KEY = "gezginBottomSheet"
 
 /**
- * `@BottomSheet` route'unun opsiyonel [dev.gezgin.core.BottomSheetContract]'ından (runtime değer, )
- * çözülen sheet property'leri. `NavEntry.metadata`'ya [GEZGIN_BOTTOM_SHEET_KEY] altında konur;
- * strateji bunu okuyup [GezginBottomSheetScene]'i kurar. `data class` → scene eşitliği +
- * adapter-level pin için bedava `equals`/`hashCode`.
+ * Sheet properties resolved from the route's optional [dev.gezgin.core.BottomSheetContract] runtime
+ * value. They are stored under [GEZGIN_BOTTOM_SHEET_KEY], and the scene strategy uses them to
+ * construct [GezginBottomSheetScene].
  */
 internal data class GezginBottomSheetProps(
   val skipPartiallyExpanded: Boolean,
@@ -100,26 +98,21 @@ internal data class GezginBottomSheetProps(
 )
 
 /**
- * El-yazımı BottomSheet `OverlayScene` — Nav3'te hazır `BottomSheetSceneStrategy` YOK; material3
- * `ModalBottomSheet` ile `DialogScene` şablonundan yazıldı. `overlaidEntries` = alttaki entry'ler
- * (arka SCREEN görünür kalır); `content` sheet'i overlay olarak çizer ve `entry.Content()`'i
- * [LocalGezginSheetController] ile sararak controller'ı content'e enjekte eder.
+ * Bottom-sheet `OverlayScene` implemented with Material3 `ModalBottomSheet`. [overlaidEntries]
+ * keeps the underlying screen visible, while [content] renders the sheet and provides
+ * [LocalGezginSheetController] around the entry content.
  *
- * **swipe-dismiss→Canceled + entry-pin (C-MJ-1):** `onDismissRequest = onBack` — burada [onBack]
- * strateji tarafından sahip-entry'ye PİNLENMİŞ `{ navigator.back(entryId) }` ile beslenir (tekil
- * `NavDisplay.onBack` DEĞİL). material3'te swipe-down / scrim-tap / geri-tuşu ÜÇÜ de tek
- * `onDismissRequest`'e düşer (jar-doğrulandı: `settleToDismiss`/`Scrim`/predictive-back hepsi bu
- * callback'i çağırır) → dismiss = `navigator.back(entryId)` = sheet HÂLÂ top ise pop (`ResultRoute`
- * için `Canceled`), artık top DEĞİLSE (çifte-dismiss / geç async) NO-OP → alttaki ekran poplanmaz.
+ * **Dismissal ownership:** the strategy supplies [onBack] as an entry-pinned
+ * `navigator.back(entryId)` callback. Material3 routes swipe-down, scrim taps, and system back to
+ * `onDismissRequest`. The callback pops the sheet, producing `Canceled` for a `ResultRoute`, only
+ * while that sheet remains on top; a late or duplicate dismissal is a no-op and cannot pop the
+ * underlying screen.
  *
- * Nav3 `Scene` sözleşmesi eşitlik ister (aynı backstack için aynı scene instance'ı kullanılsın
- * diye) → `DialogScene` gibi `equals`/`hashCode` elle implement edildi.
+ * Nav3 scene reuse depends on equality, so this class compares the same structural fields used by
+ * its hash code.
  *
- * **Kalıntı risk — programatik pop animasyonsuz (4.4/gelecek):** kullanıcı jest'leriyle
- * (swipe/scrim/back) kapatmada material3 `ModalBottomSheet` hide-animation'ı `onDismissRequest`'ten
- * ÖNCE oynar (görsel slide-down). Ama PROGRAMATİK `navigator.back()` doğrudan entry'yi
- * backstack'ten düşürür → scene SinglePane'e recompose olur, sheet animasyonsuz kaybolur. İleride
- * Gelecekte `OverlayScene.onRemove()` override'ı programatik pop'a da slide-down ekleyebilir.
+ * Gesture dismissal animates before `onDismissRequest`. A direct programmatic `navigator.back()`
+ * removes the entry immediately, so it does not run the Material sheet hide animation.
  */
 internal class GezginBottomSheetScene(
   override val key: Any,
@@ -130,10 +123,7 @@ internal class GezginBottomSheetScene(
 ) : OverlayScene<Route> {
 
   init {
-    // DialogScene paritesi (§7) — bir overlay scene altında en az bir underlaid entry ŞART.
-    // toNavEntry'nin
-    // modal-kind-at-root guard'ı bunu zaten önceler; bu scene-invariant kendi başına net olsun diye
-    // defansif.
+    // Match the overlay invariant enforced by DialogScene: every overlay needs an underlying entry.
     require(overlaidEntries.isNotEmpty()) {
       "GezginBottomSheetScene: overlaidEntries cannot be empty; a BottomSheet overlay must have at " +
         "least one SCREEN entry underneath it (Nav3 OverlayScene invariant, §7). key: $key"
@@ -190,9 +180,7 @@ internal class GezginBottomSheetScene(
   }
 
   override fun hashCode(): Int {
-    // m6 — standart zincirleme (alan-sırası-duyarlı): toplam yerine 31*(…)+… — `equals`'ın
-    // karşılaştırdığı
-    // dört alanla birebir aynı sıra/set (data-class'ın üreteceğiyle eşdeğer hash kalitesi).
+    // Use the same field order and set as equals.
     var result = key.hashCode()
     result = 31 * result + entry.hashCode()
     result = 31 * result + overlaidEntries.hashCode()
@@ -227,7 +215,7 @@ internal class GezginBottomSheetSceneStrategy(private val onDismiss: (Long) -> U
         entry = lastEntry,
         overlaidEntries = entries.dropLast(1),
         props = it,
-        onBack = { onDismiss(entryId) }, // C-MJ-1: dismiss sahip-entry'ye pinli
+        onBack = { onDismiss(entryId) }, // Keep dismissal pinned to the owning entry.
       )
     }
   }

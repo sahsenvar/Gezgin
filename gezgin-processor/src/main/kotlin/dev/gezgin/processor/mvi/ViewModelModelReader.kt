@@ -17,7 +17,7 @@ internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.MviViewModel"
 internal const val EFFECT_HANDLER_FQ = "dev.gezgin.mvi.annotation.EffectHandler"
 internal const val GEZGIN_MVI_FQ = "dev.gezgin.mvi.GezginMvi"
 
-// DI-detection FQNs (§10.1) — read as strings, no compile dependency on Hilt/Koin.
+// DI-detection FQNs () — read as strings, no compile dependency on Hilt/Koin.
 private const val HILT_VIEW_MODEL_FQ = "dagger.hilt.android.lifecycle.HiltViewModel"
 private const val KOIN_VIEW_MODEL_FQ = "org.koin.core.annotation.KoinViewModel"
 private const val ASSISTED_FQ = "dagger.assisted.Assisted"
@@ -25,8 +25,8 @@ private const val INJECTED_PARAM_FQ = "org.koin.core.annotation.InjectedParam"
 private const val UNIT_FQ = "kotlin.Unit"
 
 /**
- * reads every `@MviViewModel(Route::class)`-annotated CLASS (spec §10/§10.1 MVI add-on) into a
- * validated [ViewModelModel] list, mirroring [dev.gezgin.processor.entry.EntryModelReader]'s
+ * Reads every `@MviViewModel(Route::class)`-annotated CLASS (the current contract MVI add-on) into
+ * a validated [ViewModelModel] list, mirroring [dev.gezgin.processor.entry.EntryModelReader]'s
  * constructor shape and its collect-all-then-fail, bracketed-code error idiom (`MV1`/`MV4`) via
  * [logger]. [read] never throws — it reports every violation in one pass and returns whether the
  * read was clean alongside whatever models DID resolve.
@@ -35,15 +35,15 @@ private const val UNIT_FQ = "kotlin.Unit"
  * dependency on `gezgin-mvi` (only its test sourceset does, for fixtures), exactly like the
  * existing `dev.gezgin.core.*` reads.
  *
- * **`MV1` (guardrail, §10.1):** a `@MviViewModel` class MUST implement `GezginMvi<S,I,E>`
- * (transitively, via `getAllSuperTypes` — same pattern as `ModelReader.resultTypeArgOf`). A
- * `@MviViewModel` that doesn't → error, no model emitted for it (S/I/E are unreadable, so it would
- * be useless to 5.2 anyway).
+ * **`MV1` (guardrail):** a `@MviViewModel` class MUST implement `GezginMvi<S,I,E>` (transitively,
+ * via `getAllSuperTypes` — same pattern as `ModelReader.resultTypeArgOf`). A `@MviViewModel` that
+ * doesn't → error, no model emitted for it (S/I/E are unreadable, so it would be useless to 5.2
+ * anyway).
  *
  * **`MV4` (duplicate):** two `@MviViewModel` classes resolving to the same route → error (mirrors
  * [dev.gezgin.processor.entry.EntryModelReader]'s `SC4` duplicate-route pattern).
  *
- * **Same-module (§10.1):** KSP only sees one module's symbols per run, so a cross-module VM/content
+ * **Same-module ():** KSP only sees one module's symbols per run, so a cross-module VM/content
  * pairing simply won't match — the `@MviViewModel`/`@Screen`/`@EffectHandler` set being in the SAME
  * module is naturally enforced by `resolver.getSymbolsWithAnnotation` returning only THIS module's
  * `@MviViewModel`s. `EntryModelReader` closes the loop symmetrically (`MV2`/`MV3`).
@@ -68,7 +68,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     val vmSimpleName = decl.simpleName.asString()
     val annotation = decl.annotations.first { it.fqName() == VIEW_MODEL_FQ }
 
-    // `@MviViewModel(route)` is a mandatory KClass arg (no sentinel, §10.1) — but stay defensive if
+    // `@MviViewModel(route)` is a mandatory KClass arg (no sentinel) — but stay defensive if
     // it
     // somehow fails to resolve to a class type.
     val routeType = annotation.classArg("route")
@@ -137,7 +137,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     }
     seenRouteFqs[routeFq] = vmSimpleName
 
-    // DI detection (§10.1): read the VM's own DI annotation + its ctor params so
+    // DI detection (): read the VM's own DI annotation + its ctor params so
     // MviEntryCodegen can emit the right default `viewModel` resolver (Hilt/Koin/androidx) and
     // decide whether a default is even possible (only when every DI-relevant param is route/nav).
     val (di, assistedFactoryFq) = detectDi(decl)
@@ -204,7 +204,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
 
   /**
    * The VM's DI framework + (for Hilt-assisted) its factory FQ, by inspecting the class's own
-   * annotations (§10.1). `@HiltViewModel` with a non-sentinel `assistedFactory` →
+   * annotations (). `@HiltViewModel` with a non-sentinel `assistedFactory` →
    * [VmDiKind.HILT_ASSISTED]; a bare `@HiltViewModel` → [VmDiKind.HILT_PLAIN]; `@KoinViewModel` →
    * [VmDiKind.KOIN]; none → [VmDiKind.ANDROIDX]. The sentinel guard accepts real Hilt's
    * `HiltViewModel::class` self-referential default (which the fixture stub now mirrors exactly) —
@@ -225,11 +225,11 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
    * The three substituted type args `S, I, E` of `GezginMvi<S,I,E>` if [decl] transitively
    * implements it, else null. Three-argument sibling of `ModelReader.resultTypeArgOf`, but
    * deliberately NOT built on KSP's `getAllSuperTypes()`: that helper throws
-   * `NoSuchElementException("No TypeParameter found for index …")` on the spec-§10.1-canonical `VM
-   * : BaseViewModel<S,I,E> : GezginMvi<S,I,E>` pattern (a KSP
-   * transitive-type-parameter-substitution bug — the intermediate base FORWARDS its type params to
-   * `GezginMvi` rather than binding concrete types). `ModelReader.resultTypeArgOf` never trips it
-   * only because `ResultRoute<OrderId>` always binds a CONCRETE arg at the immediate supertype.
+   * `NoSuchElementException("No TypeParameter found for index …")` on the spec--canonical `VM :
+   * BaseViewModel<S,I,E> : GezginMvi<S,I,E>` pattern (a KSP transitive-type-parameter-substitution
+   * bug — the intermediate base FORWARDS its type params to `GezginMvi` rather than binding
+   * concrete types). `ModelReader.resultTypeArgOf` never trips it only because
+   * `ResultRoute<OrderId>` always binds a CONCRETE arg at the immediate supertype.
    *
    * Instead this walks [KSClassDeclaration.superTypes] level by level, carrying a param→concrete
    * substitution so a `GezginMvi<S,I,E>` reached through any number of type-param-forwarding bases

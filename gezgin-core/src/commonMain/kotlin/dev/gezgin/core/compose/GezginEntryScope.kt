@@ -33,7 +33,7 @@ public enum class EntryKind {
  * A Gezgin registry record — [kind] selects modal scene wiring, and [content] is the composable
  * content narrowed to `Route` (the safe cast in register<R>).
  *
- * [noBack] (M5′, ): the runtime counterpart of the `@NoBack` annotation. When `true` this entry is
+ * [noBack] (′): the runtime counterpart of the `@NoBack` annotation. When `true` this entry is
  * TERMINAL — a Gezgin-owned back-swallower is set up: (1) the [gezginOnBack] guard turns `back()`
  * into a no-op while this entry is the top (no pop; except the root exemption), (2) [toNavEntry]
  * wraps the content with an entry-scoped back handler ([GezginNoBackHandler]) OUTER (BEFORE the

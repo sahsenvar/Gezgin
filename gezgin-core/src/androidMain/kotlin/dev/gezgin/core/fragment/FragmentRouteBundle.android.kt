@@ -17,7 +17,7 @@ import kotlinx.serialization.json.Json
  * (`PolymorphicSerializer(Route::class)`) — this is the SAME MECHANISM that `GezginKey.route` and
  * backstack PD (`RawNavigator.save`/restore) ALREADY use for a route; the polymorphism comes from
  * the app's `SerializersModule` (not from Gezgin itself). So EVERY route that survives Gezgin PD
- * survives this too by construction (§3b). NO new Json/module: the app-Json CARRIED by [nav]
+ * survives this too by construction (b). NO new Json/module: the app-Json CARRIED by [nav]
  * (`internal val json`, now module-visible) is reused.
  */
 
@@ -29,13 +29,13 @@ private const val GEZGIN_FRAGMENT_ROUTE_KEY = "dev.gezgin.fragment.route"
 
 /**
  * The app's polymorphic [Json] (the SAME instance that feeds backstack PD), captured for
- * `gezginArgs`'s decode. **Why a process-wide holder (§B4 decision):** `gezginArgs<Route>()` is
- * called inside the USER's bare `Fragment` subclass, with NO `RawNavigator`/composition/DI in scope
- * — so it cannot read `nav.json` directly the way `route.toBundle(nav)` (GENERATED code, `nav` in
- * scope) does. Because [toBundle] is evaluated (as the `arguments =` value) STRICTLY BEFORE
+ * `gezginArgs`'s decode. **Why a process-wide holder ( decision):** `gezginArgs<Route>()` is called
+ * inside the USER's bare `Fragment` subclass, with NO `RawNavigator`/composition/DI in scope — so
+ * it cannot read `nav.json` directly the way `route.toBundle(nav)` (GENERATED code, `nav` in scope)
+ * does. Because [toBundle] is evaluated (as the `arguments =` value) STRICTLY BEFORE
  * `AndroidFragment` instantiates the Fragment, the holder is populated before Fragment args are
- * read on every composition (fresh-process included). One `gezginSerializersModule` per app (§3.3)
- * → one effective Json; equivalent for route polymorphism even with multiple NavDisplays.
+ * read on every composition (fresh-process included). One `gezginSerializersModule` per app () →
+ * one effective Json; equivalent for route polymorphism even with multiple NavDisplays.
  * `@Volatile`: a thread-visibility safeguard (in practice always the main thread).
  */
 @Volatile internal var gezginFragmentJson: Json? = null
@@ -75,7 +75,7 @@ public object Gezgin {
  * Encodes [this] route polymorphically into a single `String` extra with [nav]'s app-Json and
  * returns a Bundle. Called from the GENERATED `provideXEntry` (`arguments = route.toBundle(raw)`) —
  * NOT a direct user-facing API. **`public` (CONTRARY to dispatch's `internal` recommendation — a
- * required deviation, §B4/deviations):** the generated code lives in the CONSUMER module, where
+ * required deviation, /deviations):** the generated code lives in the CONSUMER module, where
  * cross-module `internal` is NOT VISIBLE; same as other codegen-called symbols like
  * `register`/navigator-factory (public but codegen-oriented). Side effect: it captures
  * [gezginFragmentJson] for `gezginArgs`'s scope-less decode path.

@@ -2,7 +2,7 @@ package dev.gezgin.processor.mvi
 
 /**
  * The route/nav/other classification of a [ViewModelModel]'s primary-constructor params, aggregated
- * into the three booleans both MVI-mode consumers key off (§10.1).
+ * into the three booleans both MVI-mode consumers key off ().
  * - [vmHasNav] — a DI-relevant ctor param is a `nav` (drives the resolver's `nav:` param +
  *   `viewModel(nav, route)`).
  * - [vmHasRoute] — a DI-relevant ctor param is the route (drives `args` in the supplied-args list).
@@ -16,15 +16,15 @@ internal data class VmDiClassification(
 )
 
 /**
- * Shared DI-param classification for a `@MviViewModel`'s primary constructor (§10.1). Both
+ * Shared DI-param classification for a `@MviViewModel`'s primary constructor (). Both
  * [dev.gezgin.processor.entry.EntryModelReader] (for the `MV7` nav-presence guardrail) and
  * [dev.gezgin.processor.codegen.MviEntryCodegen] (for the default `viewModel` resolver) must agree
  * on whether a VM's ctor needs `nav`/`route` and whether a default resolver is even emittable — so
  * that logic lives here once rather than being duplicated in each.
  *
- * **Classification precedence (MJ1):** type decides; name is only a fallback. A param is NAV when
- * its type IS the route's `${x}Navigator` ([VmCtorParam.typeFq] == [navigatorTypeFq]). The `nav`
- * NAME classifies NAV *only* when the type failed to resolve ([VmCtorParam.isError]) — the one
+ * **Classification precedence :** type decides; name is only a fallback. A param is NAV when its
+ * type IS the route's `${x}Navigator` ([VmCtorParam.typeFq] == [navigatorTypeFq]). The `nav` NAME
+ * classifies NAV *only* when the type failed to resolve ([VmCtorParam.isError]) — the one
  * legitimate case being a same-module `nav: XNavigator` whose navigator class isn't generated yet
  * in this KSP round. A RESOLVED non-navigator param named `nav` (e.g. a Koin `@InjectedParam nav:
  * AnalyticsTracker`) is classified by its type (OTHER) — NOT hijacked by the name, which previously
@@ -53,7 +53,7 @@ internal object VmDiClassifier {
       param.typeFq == navigatorTypeFq -> Role.NAV
       // Name is a fallback ONLY for an unresolvable type (a same-module, not-yet-generated
       // navigator);
-      // a RESOLVED `nav`-named param that isn't the navigator type is OTHER (MJ1), never
+      // a RESOLVED `nav`-named param that isn't the navigator type is OTHER , never
       // NAV-by-name.
       param.name == "nav" && param.isError -> Role.NAV
       else -> Role.OTHER
@@ -72,9 +72,7 @@ internal object VmDiClassifier {
       VmDiKind.HILT_PLAIN -> emptyList()
     }
 
-  /**
-   * The aggregate [VmDiClassification] both `EntryModelReader` (MV7) and `MviEntryCodegen` consume.
-   */
+  /** The aggregate [VmDiClassification] both `EntryModelReader` and `MviEntryCodegen` consume. */
   fun classify(vm: ViewModelModel, routeFq: String, navigatorTypeFq: String): VmDiClassification {
     val relevant = relevantParams(vm)
     val roles = relevant.map { it to roleOf(it, routeFq, navigatorTypeFq) }

@@ -29,7 +29,7 @@ private const val FULLSCREEN_MODAL_FQ = "dev.gezgin.core.annotation.FullscreenMo
 private const val ROUTE_FQ = "dev.gezgin.core.Route"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
 
-// Modal presentation contracts (§7) — read as string FQs (no compile dep beyond gezgin-core, which
+// Modal presentation contracts () — read as string FQs (no compile dep beyond gezgin-core, which
 // is
 // already a dep). SC8 (kind↔contract mismatch) + SC7 (@NoBack × modal) key off the route's
 // supertypes.
@@ -49,7 +49,7 @@ private val CONTRACT_BY_KIND =
   )
 private val ALL_KIND_CONTRACT_FQS = CONTRACT_BY_KIND.values.toSet()
 
-// MVI-mode (§10.1) FQ constants — read as strings, no compile dep on gezgin-mvi.
+// MVI-mode () FQ constants — read as strings, no compile dep on gezgin-mvi.
 // M3 — the @BottomSheet role extra is Gezgin's own GezginSheetController (not material3
 // SheetState).
 private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetController"
@@ -59,7 +59,7 @@ private const val FLOW_FQ = "kotlinx.coroutines.flow.Flow"
 private const val FUNCTION1_FQ = "kotlin.Function1"
 private const val UNIT_FQ = "kotlin.Unit"
 
-// Problem-2 (§10.1) content-extra names that collide with the identifiers `MviEntryCodegen`'s
+// Problem-2 () content-extra names that collide with the identifiers `MviEntryCodegen`'s
 // emitted
 // `provideXEntry` introduces: the resolver param `viewModel`, and the register-body locals `route`
 // (lambda param), `nav` (nav-wired factory), `vm` (the resolved VM). An extra colliding with one of
@@ -81,13 +81,12 @@ private val KIND_BY_ANNOTATION_FQ =
 
 /**
  * (MVI-mode) — reads every `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`- annotated
- * composable FUNCTION (spec §10.1) and validates it into an [EntryFunctionModel] list, reporting
- * every violation as a bracketed-code KSP error via [logger]. [read] never throws — like the graph
- * validator, it collects every violation in one pass and returns whether the read was clean
- * alongside whatever models DID resolve.
+ * composable FUNCTION (the current contract) and validates it into an [EntryFunctionModel] list,
+ * reporting every violation as a bracketed-code KSP error via [logger]. [read] never throws — like
+ * the graph validator, it collects every violation in one pass and returns whether the read was
+ * clean alongside whatever models DID resolve.
  *
- * **Two modes, selected by the composable's parameter shape (§10.1) — the annotation is
- * unchanged:**
+ * **Two modes, selected by the composable's parameter shape () — the annotation is unchanged:**
  * - **core-mode** `(route, nav)` — self-bind boilerplate (see [buildCoreEntry]); `SC2`-`SC10`
  *   below. A composable with `route`/`nav` only (or neither) stays here.
  * - **MVI-mode** `(state, onIntent[, extras])` — a composable whose params include BOTH a `state`
@@ -112,7 +111,7 @@ private val KIND_BY_ANNOTATION_FQ =
  *
  * **Unknown params (`SC3`, core-mode only):** V1 core-mode supports only `route:`/`nav:` params —
  * any other parameter is rejected. MVI-mode does NOT use `SC3`: its non-`{state,onIntent}` params
- * are recorded as extras (Problem 2), never rejected (`gezgin-mvi` scope, §10.1).
+ * are recorded as extras (Problem 2), never rejected (`gezgin-mvi` scope).
  *
  * **Route type sanity (`SC5`):** the resolved type must implement `dev.gezgin.core.Route`.
  *
@@ -256,7 +255,7 @@ internal class EntryModelReader(
         )
       }
 
-    // MV3 — every @MviViewModel must have a matching content in this module (§10.1 same-module
+    // MV3 — every @MviViewModel must have a matching content in this module ( same-module
     // triple).
     vmModels.forEach { vm ->
       if (vm.routeFq !in matchedVmRoutes) {
@@ -435,7 +434,7 @@ internal class EntryModelReader(
       // (that's where NavigatorCodegen emits it). Reading it off `routeDecl` — always
       // resolvable via KSP regardless of which module the route was compiled in — is what
       // lets EntryCodegen qualify the factory import cross-module (a feature module's own
-      // model has no graphs, so its `targetPackage` is empty and useless here). See §3.3.
+      // model has no graphs, so its `targetPackage` is empty and useless here). See .
       routePackageName = routeDecl.packageName.asString(),
       // Declaration-tabanlı okuma: `routeModel` YALNIZ bu modülün
       // GraphModel'inde bilinen route'lar için var olur (cross-module route'larda null) — model
@@ -453,7 +452,7 @@ internal class EntryModelReader(
 
   // endregion
 
-  // region MVI-mode (§10.1)
+  // region MVI-mode ()
 
   private fun buildMviEntry(
     fn: KSFunctionDeclaration,
@@ -504,7 +503,7 @@ internal class EntryModelReader(
     // SC8 (kind↔contract) + SC7 (@NoBack × modal) — shared with core-mode, statically decidable.
     if (!checkKindContractAndNoBack(fnName, routeDecl, kind)) return null
 
-    // MV2 — the content's route must have a @MviViewModel in THIS module (§10.1 same-module
+    // MV2 — the content's route must have a @MviViewModel in THIS module ( same-module
     // triple).
     val vm = vmByRouteFq[routeFq]
     if (vm == null) {
@@ -589,7 +588,7 @@ internal class EntryModelReader(
     // Problem 2 — record params beyond {state, onIntent}. A GezginSheetController (by TYPE) is
     // role-provided (Local-injected via LocalGezginSheetController); everything else becomes a 5.2
     // resolver param. Deliberately NOT SC3-rejected here — that hard-reject is core-mode only
-    // (§10.1) —
+    // () —
     // but MV10 (reserved name) and MV8 (controller off a @BottomSheet) ARE rejected: both would
     // otherwise reach codegen and emit compile-clean-but-broken/crashing code (compile-safe
     // philosophy).
@@ -636,9 +635,9 @@ internal class EntryModelReader(
         } else if (p.hasDefault) {
           // MN4 — a resolver extra WITH a Kotlin default need NOT be
           // Gezgin-supplied:
-          // the generated content call passes NAMED args (MN1), so an omitted defaulted param falls
+          // the generated content call passes NAMED args , so an omitted defaulted param falls
           // back to the composable's own default. Don't force a mandatory `@Composable () -> T`
-          // resolver for it (§10.1 "minimal ceremony") — drop it from both lists.
+          // resolver for it ( "minimal ceremony") — drop it from both lists.
           Unit
         } else {
           resolverExtras += extra
@@ -789,7 +788,7 @@ internal class EntryModelReader(
      */
     val effectTypeName: TypeName?,
     /**
-     * The `Flow<E>` param's NAME — 5.2 emits the effect call named (MN1). Null if the binder has
+     * The `Flow<E>` param's NAME — codegen emits the effect call named . Null if the binder has
      * none.
      */
     val flowParamName: String?,

@@ -69,14 +69,14 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   /**
    * @GoTo/@ReplaceTo/@QuitAndGoTo may never *enter* a ResultFlow from outside — only @GoForResult
-   *   may. A source already inside the target flow is exempt (spec §8.1 "İçeride: serbest @GoTo" —
-   *   entry rules constrain crossing the boundary, not movement within it).
+   *   may. A source already inside the target flow is exempt (the current contract "İçeride:
+   *   serbest @GoTo" — entry rules constrain crossing the boundary, not movement within it).
    *
    * The boundary is keyed on [GraphModelNode.declaresResultFlowDirectly], NOT the transitive
    * [GraphModelNode.isResultFlow]: a result-LESS nested sub-flow (`ZoomFlow : AvatarFlow` where
    * only `AvatarFlow : ResultFlow<…>`) is transitively a ResultFlow but owns no result contract of
    * its own — `@GoTo`-ing into it from within its enclosing result flow crosses no result boundary
-   * (§6 "nested ResultFlow" / the sample's AvatarFlow→ZoomFlow). Entering such a sub-flow from
+   * ( "nested ResultFlow" / the sample's AvatarFlow→ZoomFlow). Entering such a sub-flow from
    * *outside* the enclosing flow is still rejected — by E3 (jumping into a flow's interior).
    */
   private fun checkE1(route: RouteModel) {
@@ -156,11 +156,11 @@ internal class GezginValidator(private val model: GraphModel, private val logger
    * still crosses AvatarFlow's boundary → E3 (the old single-level parent check let it slip past
    * both E3 and — post the direct-declaration E1 fix — E1 too, silently bypassing AvatarFlow's
    * result contract). From INSIDE AvatarFlow the same edge stays legal (AvatarFlow is in the
-   * source's chain — §8.1 "içeride serbest @GoTo").
+   * source's chain — "içeride serbest @GoTo").
    *
-   * Back-edges (`@BackTo`) are out of scope per spec §4.2: forward edges define topology, back
-   * edges walk existing history (a `@BackTo` whose target isn't on the back stack is a runtime
-   * no-op, not a topology error).
+   * Back-edges (`@BackTo`) are out of scope per the current contract: forward edges define
+   * topology, back edges walk existing history (a `@BackTo` whose target isn't on the back stack is
+   * a runtime no-op, not a topology error).
    */
   private fun checkE3(route: RouteModel) {
     route.edges
@@ -259,8 +259,8 @@ internal class GezginValidator(private val model: GraphModel, private val logger
   /**
    * A graph/flow may declare AT MOST ONE annotated graph/flow supertype — the membership walk
    * (which derives `graphFq`/`flowChainFq`/`parentFlow`) needs a single unambiguous parent.
-   * `OrderGraph : AppGraph` (one parent, spec §3.1) is fine; declaring two annotated parents is
-   * not. The graph-level parallel of the route-level E5.
+   * `OrderGraph : AppGraph` (one parent, the current contract) is fine; declaring two annotated
+   * parents is not. The graph-level parallel of the route-level E5.
    */
   private fun checkN11(graph: GraphModelNode) {
     if (graph.directParentFqs.size >= 2) {
@@ -292,7 +292,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
   }
 
   /**
-   * Every `@NavGraph`/`@FlowGraph` must be a `sealed interface` (design.md §3.1). Cross-file member
+   * Every `@NavGraph`/`@FlowGraph` must be a `sealed interface` (design.md ). Cross-file member
    * discovery ([dev.gezgin.processor.model.ModelReader]) uses `getSealedSubclasses`, which per the
    * KSP contract returns EMPTY for a non-sealed declaration — so a route/flow declaring `: G` in
    * ANOTHER file silently drops out of the model (no navigator/serializer), surfacing later as a
@@ -570,10 +570,10 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   // endregion
 
-  // region Deliberately-omitted modal guards ( adjudication — see spec §7)
+  // region Deliberately-omitted modal guards ( adjudication — see the current contract)
   //
   // `@QuitAndGoTo(modal)` is spec'd as a KSP *warning*, but it is NOT reliably implementable in
-  // Gezgin's canonical cross-module architecture (§3.3) and is therefore DELIBERATELY NOT checked
+  // Gezgin's canonical cross-module architecture () and is therefore DELIBERATELY NOT checked
   // here. The reason is a compilation-unit split: the `@QuitAndGoTo(X)` edge lives on a route
   // interface in the nav module (this `GraphModel`), whereas X's modal-*kind* lives on a
   // `@Dialog`/`@BottomSheet`/`@FullscreenModal` composable in a separate feature module
@@ -585,8 +585,8 @@ internal class GezginValidator(private val model: GraphModel, private val logger
   // identical code across build topologies, so it is intentionally not shipped. Moreover the case
   // does not crash at runtime — `@QuitAndGoTo(X)` yields `[.., Caller, X]` (caller stays below), so
   // OverlayScene's non-empty-overlaid invariant holds; it is an advisory design-smell, not a
-  // correctness violation. Consequence: ALL §7 modal guards are runtime — modal props are
-  // route-instance values (KSP-invisible, §2.4) and modal kind is feature-module-local.
+  // correctness violation. Consequence: ALL  modal guards are runtime — modal props are
+  // route-instance values (KSP-invisible) and modal kind is feature-module-local.
   //
   // endregion
 

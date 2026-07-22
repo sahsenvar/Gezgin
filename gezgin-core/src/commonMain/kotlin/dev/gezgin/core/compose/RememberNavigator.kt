@@ -123,7 +123,7 @@ public fun rememberNavigator(
 }
 
 /**
- * C1 — [RawNavigator] instance acquisition, with platform-specific identity stability. The Android
+ * [RawNavigator] instance acquisition, with platform-specific identity stability. The Android
  * actual wraps it in a holder scoped to the host ViewModel (the SAME instance is preserved across
  * config-change) + adopts the `rememberSaveable` PD snapshot via [RawNavigator.adoptRestored]. The
  * desktop actual uses `rememberSaveable` ([navigatorSaver]) (no config-change → identity is already
@@ -190,7 +190,7 @@ internal fun encodeNavigatorState(nav: RawNavigator, json: Json): String =
   json.encodeToString(SavedState.serializer(), nav.save())
 
 /**
- * json-encoded `String` → a new `RawNavigator` (via `restored=`, the decode half, see the
+ * Json-encoded `String` → a new `RawNavigator` (via `restored=`, the decode half, see the
  * [navigatorSaver] KDoc).
  */
 internal fun decodeNavigatorState(
@@ -245,7 +245,7 @@ internal fun decodeNavigatorStateOrNull(
   }
 
 /**
- * C1 (the Android PD-adopt path) — decodes the PD snapshot `String` directly into [SavedState]
+ * (the Android PD-adopt path) — decodes the PD snapshot `String` directly into [SavedState]
  * (WITHOUT building a navigator; fed to [RawNavigator.adoptRestored]). The SAME fault-tolerance as
  * [decodeNavigatorStateOrNull]: if corrupted/schema-incompatible json (an old app version) throws
  * `SerializationException`/`IllegalArgumentException` → `null` (NO adopt, the navigator stays at

@@ -22,7 +22,7 @@ private val REMEMBER = MemberName("androidx.compose.runtime", "remember")
 // `androidx.fragment.compose.AndroidFragment` — FQ MemberName only, NO compile dependency on
 // androidx.fragment anywhere in gezgin-processor (same "emit as FQ strings" discipline as
 // MviEntryCodegen's
-// Hilt/Koin/lifecycle references; §11.2 keeps the processor fragment-free). Pinned 1.8.9 => the
+// Hilt/Koin/lifecycle references;  keeps the processor fragment-free). Pinned 1.8.9 => the
 // 4-param
 // overload (arguments, onUpdate) — NO `maxLifecycle`/`fragmentState`.
 private val ANDROID_FRAGMENT = MemberName("androidx.fragment.compose", "AndroidFragment")
@@ -34,9 +34,9 @@ private val TO_BUNDLE = MemberName(FRAGMENT_RT_PKG, "toBundle")
 private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
 
 /**
- * emits `fun GezginEntryScope.provideXEntry()` for every [FragmentEntryModel]
- * [dev.gezgin.processor.fragment.FragmentModelReader] resolved (spec §11.1 brownfield Fragment
- * interop). The THIRD entry codegen, alongside core-mode [EntryCodegen] and MVI-mode
+ * Emits `fun GezginEntryScope.provideXEntry()` for every [FragmentEntryModel]
+ * [dev.gezgin.processor.fragment.FragmentModelReader] resolved (the current contract brownfield
+ * Fragment interop). The THIRD entry codegen, alongside core-mode [EntryCodegen] and MVI-mode
  * [MviEntryCodegen]: same `GezginEntryScope` extension + `register<Route>(...)` shape, grouped one
  * [FileSpec] per Fragment package — but into a SEPARATE `GezginFragmentEntries.kt` (mirrors
  * `MviEntryCodegen`'s own separate-file rationale) so a module mixing entry styles gets
@@ -57,7 +57,7 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * }
  * ```
  *
- * **Screen-only (§11.2).** Fragment interop has no dialog/bottom-sheet/fullscreen variant — every
+ * **Screen-only ().** Fragment interop has no dialog/bottom-sheet/fullscreen variant — every
  * emitted `register` is `kind = EntryKind.SCREEN`, unconditionally.
  *
  * **Navigator wiring — CONDITIONAL (SC2/MV7 parity, one stage later).** A Fragment wires `nav`
