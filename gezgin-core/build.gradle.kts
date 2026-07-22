@@ -104,8 +104,8 @@ kotlin {
       implementation("org.robolectric:robolectric:4.14")
       implementation(libs.androidx.activity.compose)
       implementation(libs.androidx.lifecycle.viewmodel.compose)
-      implementation("androidx.compose.ui:ui-test-junit4:1.7.8")
-      implementation("androidx.compose.ui:ui-test-manifest:1.7.8")
+      implementation("androidx.compose.ui:ui-test-junit4:1.11.4")
+      implementation("androidx.compose.ui:ui-test-manifest:1.11.4")
     }
   }
 }
