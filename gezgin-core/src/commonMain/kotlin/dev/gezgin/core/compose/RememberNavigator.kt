@@ -73,18 +73,17 @@ internal fun restoreNamespace(restoreKey: String): String {
  * instance is set up and the serialized snapshot in `rememberSaveable` is adopted ONCE via
  * [RawNavigator.adoptRestored]. The desktop actual uses `rememberSaveable(navigatorSaver)` (on CMP
  * desktop there is NO config-change → the identity is already stable for the lifetime of the
- * composition; Faz-3 behavior unchanged).
+ * composition; desktop has no Android-style configuration change).
  *
  * **Setup guard (§12):** `start`'s flow-chain may NOT contain a member with `isResultFlow == true`
  * — a ResultFlow member cannot be opened alone (without a pending caller) as the root/first entry
  * (§8.1). The modal-kind guard is NOT here — the kind info lives in the entry-scope (registry), so
  * it is applied inside [GezginDisplay] (AFTER the register lookup).
  *
- * **Stale-lambda fix (deferred, final-review):** `stableOnRootBack` is set up only on the FIRST
- * composition (the `remember` init-lambda) — if the caller's `onRootBack` is a new lambda instance
- * that closes over some state (e.g. `{ someState.value }`), a STABLE (set-up-once) wrapper lambda
- * is handed to the holder, but that wrapper calls the MOST RECENT `onRootBack` on EVERY invocation
- * (`rememberUpdatedState`).
+ * **Current callback:** `stableOnRootBack` is set up only on the FIRST composition (the `remember`
+ * init-lambda) — if the caller's `onRootBack` is a new lambda instance that closes over some state
+ * (e.g. `{ someState.value }`), a STABLE (set-up-once) wrapper lambda is handed to the holder, but
+ * that wrapper calls the MOST RECENT `onRootBack` on EVERY invocation (`rememberUpdatedState`).
  */
 @Composable
 public fun rememberNavigator(
@@ -143,11 +142,10 @@ internal expect fun rememberRawNavigatorInstance(
  * The [RawNavigator] <-> `String` `Saver` — under [navigatorSaver] it delegates to
  * [encodeNavigatorState]/ [decodeNavigatorState] (a SINGLE `json` source for encode/decode
  * symmetry, see the `RawNavigator` KDoc). NOT `@Composable` — deliberate: it can be pinned directly
- * by a unit test without a Compose runtime setup (Task 3.2 deliverable e, the fallback without
- * uiTest). The actual encode/decode logic is deliberately lifted OUT of the `Saver`'s
- * `SaverScope`-receiver `save` member into plain functions — so tests never call Compose's
- * extension-member `Saver.save` (calling it over foreign (androidx) binary metadata on Kotlin/JVM
- * proved fragile).
+ * by a unit test without a Compose runtime setup. The actual encode/decode logic is deliberately
+ * lifted OUT of the `Saver`'s `SaverScope`-receiver `save` member into plain functions — so tests
+ * never call Compose's extension-member `Saver.save` (calling it over foreign (androidx) binary
+ * metadata on Kotlin/JVM proved fragile).
  */
 internal fun navigatorSaver(
   start: Route,
@@ -213,9 +211,9 @@ internal fun decodeNavigatorState(
 }
 
 /**
- * PD-restore fault-tolerance (Important 1, final-review) — the wrapper that [navigatorSaver]'s
- * `restore` ACTUALLY calls. The saved `String` (a corrupted/schema-incompatible PD state left over
- * from an old app version, e.g. if a field name/serializer changed after a migration) MAY make
+ * Process-death restore fault tolerance — the wrapper that [navigatorSaver]'s `restore` ACTUALLY
+ * calls. The saved `String` (a corrupted/schema-incompatible PD state left over from an old app
+ * version, e.g. if a field name/serializer changed after a migration) MAY make
  * [decodeNavigatorState] throw — either `SerializationException` (malformed/schema-incompatible
  * json) or `IllegalArgumentException` (kotlinx.serialization is known to wrap some decode errors in
  * this type, e.g. polymorphic/enum resolution). The Compose `Saver` contract allows `restore` to
@@ -226,8 +224,8 @@ internal fun decodeNavigatorState(
  * **Logging note:** there is NO logging infrastructure at this layer (neither a `Logger` interface
  * nor a platform hook) — it is swallowed silently. In a real app it is RECOMMENDED to wire this
  * silence to a telemetry/crash-reporting hook (the user may not notice the silent data loss); that
- * infrastructure is out of Faz 3 scope, so a `println` was deliberately NOT added either (it would
- * create production log noise) — see the final-review report, a TODO to track.
+ * infrastructure is not part of this low-level API, so a `println` is deliberately not used because
+ * it would create production log noise.
  */
 internal fun decodeNavigatorStateOrNull(
   encoded: String,
@@ -239,8 +237,7 @@ internal fun decodeNavigatorStateOrNull(
   try {
     decodeNavigatorState(encoded, start, topology, json, onRootBack).takeIf {
       it.keys.isNotEmpty()
-    } // şema-geçerli ama BOŞ stack → fresh-start (final re-review Minor 2; boş stack composition'da
-    // keys.first() ile patlardı)
+    } // A schema-valid empty stack falls back to fresh start; composition requires a first key.
   } catch (e: SerializationException) {
     null
   } catch (e: IllegalArgumentException) {
