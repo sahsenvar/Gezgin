@@ -30,6 +30,9 @@ import kotlin.reflect.KClass
  * `SettingsViewModel(navigator: SettingsNavigator)`) is not recognized and makes the `viewModel` param
  * required (a safe but silent degradation). The route ctor param is matched BY TYPE (always resolvable), so
  * it has no such naming constraint.
+ *
+ * @property route the route whose entry resolves the annotated ViewModel
+ * @author @sahsenvar
  */
 @Target(AnnotationTarget.CLASS)
 public annotation class MviViewModel(val route: KClass<out Route>)

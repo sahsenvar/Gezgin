@@ -10,6 +10,8 @@ package dev.gezgin.core
  * These are registered as BCV non-public markers, so they are excluded from the locked `.api` surface and
  * can evolve after the first release without a deprecation cycle. Generated files emit the matching
  * `@OptIn(GezginInternalApi::class)`; application code should use the typed navigators instead.
+ *
+ * @author @sahsenvar
  */
 @RequiresOptIn(
     message = "Gezgin internal API — intended for :gezgin-test and generated codegen only, not application code.",

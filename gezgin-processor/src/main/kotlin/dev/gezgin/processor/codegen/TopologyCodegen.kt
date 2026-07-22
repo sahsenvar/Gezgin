@@ -49,7 +49,7 @@ private val SERIALIZER = MemberName("kotlinx.serialization", "serializer")
  *   generate unconditionally, since every result type is serializable (either `@Serializable` or a
  *   kotlinx builtin), resolved uniformly through the reified [SERIALIZER] lookup.
  * - [generateSerializers] → `GezginSerializers.kt`: the `SerializersModule` registering every
- *   concrete [dev.gezgin.core.Route] subtype for polymorphic serialization. Split into its own file
+ *   concrete `dev.gezgin.core.Route` subtype for polymorphic serialization. Split into its own file
  *   (gated by the `gezgin.emitSerializers` KSP option, default `true`) purely so test compilations
  *   that can't wire the kotlinx-serialization compiler plugin can opt out of it without losing
  *   [generateTopology] coverage — `subclass(X::class)` needs no `.serializer()` call itself, but a

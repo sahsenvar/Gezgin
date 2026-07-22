@@ -36,6 +36,8 @@ import kotlinx.serialization.json.Json
  * `private`) — Fragment interop's `androidMain` `route.toBundle(nav)` helper reuses this SAME app-Json (with
  * the polymorphic Route module) when encoding the `arguments` Bundle (it does NOT create a second Json →
  * symmetry with backstack PD). Visible only within the module, it does not leak to public.
+ *
+ * @author @sahsenvar
  */
 public class RawNavigator internal constructor(
     start: Route,
@@ -47,7 +49,7 @@ public class RawNavigator internal constructor(
     /**
      * Public construction for tests and integration (`GezginTestNavigator`, custom hosts). Deliberately
      * omits the [json]/[restored] process-death parameters — those belong to the same-module
-     * `rememberNavigator` restore path (the app's stable [kotlinx.serialization.json.Json] is supplied
+     * `rememberNavigator` restore path (the app's stable `Json` is supplied
      * there), so [SavedState] and its slot schema stay off the public surface.
      */
     public constructor(
@@ -67,7 +69,7 @@ public class RawNavigator internal constructor(
     /**
      * Modal-kind-at-root reddi için display'in enjekte ettiği kanca (M4): bir route'un kayıtlı kind'ı
      * `SCREEN` DIŞINDA (Dialog/BottomSheet/FullscreenModal) ise `true` döner. Varsayılan `{ false }` —
-     * display kablolamadan (saf RawNavigator birim testleri) hiçbir op reddedilmez. [GezginDisplay]
+     * display kablolamadan (saf RawNavigator birim testleri) hiçbir op reddedilmez. `GezginDisplay`
      * registry'yi kurduktan SONRA set eder; [replaceTo] mutasyondan ÖNCE bununla kontrol eder →
      * sonuçtaki stack'in kökü bir modal olacaksa state MUTATE EDİLMEDEN fırlatır (composition-zamanı
      * `toNavEntry` guard'ı emniyet ağı olarak KALIR).
@@ -87,7 +89,7 @@ public class RawNavigator internal constructor(
      * (id'siz) taşır → `StateFlow` eşit-değer dedup'ı yüzünden `replaceTo` ile aynı-değer-farklı-id
      * bir hedefe geçiş [backStack]'te YENİ emit ÜRETMEZ (route listesi değişmez), dolayısıyla
      * recompose tetiklemez. `GezginKey` benzersiz `id` taşıdığından bu akış her id değişiminde
-     * (yeni instance push/replace) farklı bir liste yayar → [GezginDisplay] bunu `collectAsState`
+     * (yeni instance push/replace) farklı bir liste yayar → `GezginDisplay` bunu `collectAsState`
      * ederek contentKey'i (id) değişen entry'yi yeniden kurar. `internal`: zarf public API'ye sızmaz.
      */
     internal val keysState: StateFlow<List<GezginKey>> = _keysState.asStateFlow()
@@ -116,7 +118,7 @@ public class RawNavigator internal constructor(
         refreshBackStack()
     }
 
-    /** slot payload'ı topology.edges[edgeId].resultSerializer ile encode → PD-güvenli anlık görüntü.
+    /** slot payload'ı `topology.edges[edgeId].resultSerializer` ile encode → PD-güvenli anlık görüntü.
      *  ctor'daki [json] kullanılır (encode/decode simetrisi için tek kaynak). */
     @Suppress("UNCHECKED_CAST")
     internal fun save(): SavedState {

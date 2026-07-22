@@ -32,6 +32,8 @@ import dev.gezgin.core.BottomSheetDragHandleMode
  * A bare visual [hide] on its own leaves the entry on the stack (the back button would then dismiss an
  * invisible sheet) — pair it with a navigator pop, or use [hideAndBack]. For a `ResultRoute` sheet,
  * deliver the result via the typed navigator's `backWithResult(value)` right after [hide].
+ *
+ * @author @sahsenvar
  */
 public interface GezginSheetController {
     /** Animate the sheet to fully hidden WITHOUT popping the entry. Pair with a navigator pop. */
@@ -55,7 +57,7 @@ public val LocalGezginSheetController: ProvidableCompositionLocal<GezginSheetCon
         error("LocalGezginSheetController can only be read inside @BottomSheet content installed by GezginDisplay.")
     }
 
-/** [GezginSheetController] backed by the material3 [SheetState] + the scene's back callback (internal impl). */
+/** [GezginSheetController] backed by the material3 `SheetState` + the scene's back callback (internal impl). */
 private class MaterialSheetController(
     private val sheetState: SheetState,
     private val onBack: () -> Unit,
@@ -90,8 +92,8 @@ internal data class GezginBottomSheetProps(
 )
 
 /**
- * El-yazımı BottomSheet [OverlayScene] (§7) — Nav3'te hazır `BottomSheetSceneStrategy` YOK (4.0 raporu §3)
- * → material3 `ModalBottomSheet` ile [androidx.navigation3.scene.DialogScene] şablonundan yazıldı.
+ * El-yazımı BottomSheet `OverlayScene` (§7) — Nav3'te hazır `BottomSheetSceneStrategy` YOK (4.0 raporu §3)
+ * → material3 `ModalBottomSheet` ile `DialogScene` şablonundan yazıldı.
  * `overlaidEntries` = alttaki entry'ler (arka SCREEN görünür kalır); `content` sheet'i overlay olarak
  * çizer ve `entry.Content()`'i [LocalGezginSheetController] ile sararak controller'ı content'e enjekte eder.
  *
@@ -103,7 +105,7 @@ internal data class GezginBottomSheetProps(
  * `Canceled`), artık top DEĞİLSE (çifte-dismiss / geç async) NO-OP → alttaki ekran poplanmaz.
  *
  * Nav3 `Scene` sözleşmesi eşitlik ister (aynı backstack için aynı scene instance'ı kullanılsın diye) →
- * [DialogScene] gibi `equals`/`hashCode` elle implement edildi.
+ * `DialogScene` gibi `equals`/`hashCode` elle implement edildi.
  *
  * **Kalıntı risk — programatik pop animasyonsuz (4.4/gelecek):** kullanıcı jest'leriyle (swipe/scrim/back)
  * kapatmada material3 `ModalBottomSheet` hide-animation'ı `onDismissRequest`'ten ÖNCE oynar (görsel
@@ -188,7 +190,7 @@ internal class GezginBottomSheetScene(
 }
 
 /**
- * BottomSheet [SceneStrategy] (§7, C-MJ-1) — top entry'nin `NavEntry.metadata`'sında [GEZGIN_BOTTOM_SHEET_KEY]
+ * BottomSheet `SceneStrategy` (§7, C-MJ-1) — top entry'nin `NavEntry.metadata`'sında [GEZGIN_BOTTOM_SHEET_KEY]
  * (adapter [toNavEntry] `kind == BOTTOM_SHEET` iken yazar) varsa bir [GezginBottomSheetScene] döndürür,
  * yoksa `null` (zincirdeki sonraki stratejiye devret). [GezginDialogSceneStrategy] deseni; `overlaidEntries =
  * entries.dropLast(1)` (arka SCREEN görünür). Dismiss, [onDismiss] ile sahip-entry id'sine

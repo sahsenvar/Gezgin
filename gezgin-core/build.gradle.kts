@@ -6,7 +6,18 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.dokka)
     `maven-publish`
+}
+
+dokka {
+    dokkaPublications.html {
+        failOnWarning.set(true)
+    }
+    dokkaSourceSets.configureEach {
+        reportUndocumented.set(true)
+        suppressGeneratedFiles.set(true)
+    }
 }
 
 // Faz 9.3 (M7) — JVM/Android derlemelerinde `-Xjvm-default=all`: default'lu interface üyeleri gerçek JVM

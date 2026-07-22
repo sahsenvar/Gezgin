@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.emptyFlow
  * The variance (`out S, in I, out E`) = polish (S/E are produced/come out, I is consumed); it eases type
  * inference and no longer carries weight — since S/I/E are read directly from the supertype args, it adds no
  * extra constraint on codegen.
+ *
+ * @author @sahsenvar
  */
 public interface GezginMvi<out S, in I, out E> {
     /** The UI state stream — codegen observes it with `collectAsStateWithLifecycle()` and gives `state` to the stateless content. */

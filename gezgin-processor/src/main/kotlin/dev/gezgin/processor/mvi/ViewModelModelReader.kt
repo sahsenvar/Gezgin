@@ -36,7 +36,7 @@ private const val UNIT_FQ = "kotlin.Unit"
  * `dev.gezgin.core.*` reads.
  *
  * **`MV1` (guardrail, §10.1):** a `@MviViewModel` class MUST implement `GezginMvi<S,I,E>` (transitively,
- * via [getAllSuperTypes] — same pattern as `ModelReader.resultTypeArgOf`). A `@MviViewModel` that doesn't
+ * via `getAllSuperTypes` — same pattern as `ModelReader.resultTypeArgOf`). A `@MviViewModel` that doesn't
  * → error, no model emitted for it (S/I/E are unreadable, so it would be useless to 5.2 anyway).
  *
  * **`MV4` (duplicate):** two `@MviViewModel` classes resolving to the same route → error (mirrors

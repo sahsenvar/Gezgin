@@ -13,7 +13,10 @@ import dev.gezgin.core.compose.GezginTransition
  * that implement it inherit the graph's value through Kotlin's interface property-override chain unless they
  * have their own override (the screen>graph cascade comes FOR FREE — no extra code). The remaining
  * app-level step ([dev.gezgin.core.compose.navTransitions]) lives in [dev.gezgin.core.compose.resolveTransition].
+ *
+ * @author @sahsenvar
  */
 public interface Route {
+    /** The route-level transition override, or `null` to inherit the graph or application transition. */
     public val transition: GezginTransition? get() = null
 }

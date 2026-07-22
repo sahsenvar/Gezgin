@@ -84,7 +84,7 @@ internal fun restoreNamespace(restoreKey: String): String {
  * **Stale-lambda fix (deferred, final-review):** `stableOnRootBack` is set up only on the FIRST composition
  * (the `remember` init-lambda) — if the caller's `onRootBack` is a new lambda instance that closes over some
  * state (e.g. `{ someState.value }`), a STABLE (set-up-once) wrapper lambda is handed to the holder, but that
- * wrapper calls the MOST RECENT `onRootBack` on EVERY invocation ([rememberUpdatedState]).
+ * wrapper calls the MOST RECENT `onRootBack` on EVERY invocation (`rememberUpdatedState`).
  */
 @Composable
 public fun rememberNavigator(
@@ -203,7 +203,7 @@ internal fun decodeNavigatorState(
  * either `SerializationException` (malformed/schema-incompatible json) or `IllegalArgumentException`
  * (kotlinx.serialization is known to wrap some decode errors in this type, e.g. polymorphic/enum resolution).
  * The Compose `Saver` contract allows `restore` to return `null` — on `null` Compose falls to
- * [rememberSaveable]'s init-lambda (i.e. a fresh setup from `start`); so both exceptions CAUGHT here are
+ * `rememberSaveable`'s init-lambda (i.e. a fresh setup from `start`); so both exceptions CAUGHT here are
  * mapped to null (a silent fresh-start instead of a crash-loop).
  *
  * **Logging note:** there is NO logging infrastructure at this layer (neither a `Logger` interface nor a

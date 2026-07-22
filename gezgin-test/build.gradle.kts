@@ -2,7 +2,18 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.dokka)
     `maven-publish`
+}
+
+dokka {
+    dokkaPublications.html {
+        failOnWarning.set(true)
+    }
+    dokkaSourceSets.configureEach {
+        reportUndocumented.set(true)
+        suppressGeneratedFiles.set(true)
+    }
 }
 
 // F-MAJOR-2 — versiyonlama: yayınlanan diğer 3 modülle aynı koordinat. Modül-başına açık `version`

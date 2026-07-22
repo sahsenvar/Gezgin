@@ -1009,9 +1009,9 @@ internal class EntryModelReader(
     private fun KSAnnotation.classArg(name: String): KSType? = arg(name)?.value as? KSType
 
     /**
-     * Reads the kind annotation's now-MANDATORY [route] arg (shared by both modes). The `Route::class`
+     * Reads the kind annotation's now-MANDATORY `route` arg (shared by both modes). The `Route::class`
      * inference sentinel was removed — a bare `Route::class` (or a missing arg, defensively) names no
-     * concrete destination and is rejected as [SC9]. Returns the resolved route KSType, or null (after
+     * concrete destination and is rejected as `SC9`. Returns the resolved route KSType, or null (after
      * reporting SC9) when it is sentinel/absent.
      */
     private fun resolveMandatoryRoute(annotation: KSAnnotation, fnName: String): KSType? {

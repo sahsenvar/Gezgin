@@ -25,7 +25,7 @@ internal data class MviChromeProviderModel(
  * MVI-mode entries; a core-mode entry carries `mvi = null` and is emitted by [dev.gezgin.processor.codegen.EntryCodegen]
  * exactly as before (zero behavior change). Faz 5.2's MVI codegen branches on this being non-null.
  *
- * [vm] is the matched `@MviViewModel` (linked by shared route — see [EntryModelReader]); its `S/I/E`
+ * [vm] is the matched `@MviViewModel` (linked by shared route — see `EntryModelReader`); its `S/I/E`
  * types drove the content/effect validation (`MV5`/`MV6`) that produced this descriptor.
  *
  * **Problem 2 extras split (5.2 needs the distinction):** [roleExtraParams] are Gezgin-role-provided
@@ -57,7 +57,7 @@ internal data class MviEntryModel(
 
 /**
  * One `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`-annotated composable function, resolved
- * and validated (Task 3.4, spec §10.1/§12/§14 core-mode slice) into everything [EntryCodegen] needs
+ * and validated (Task 3.4, spec §10.1/§12/§14 core-mode slice) into everything `EntryCodegen` needs
  * to emit a `provideXEntry()` — no further KSP lookups happen at codegen time.
  */
 internal data class EntryFunctionModel(

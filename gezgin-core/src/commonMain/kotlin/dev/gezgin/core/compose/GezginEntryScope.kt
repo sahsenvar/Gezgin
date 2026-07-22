@@ -11,6 +11,8 @@ import kotlin.reflect.KClass
  * overlay render (see EntryAdapter.kt); FULLSCREEN_MODAL uses `usePlatformDefaultWidth=false` (fullscreen).
  * `BOTTOM_SHEET` (Faz 4.2) gets GezginBottomSheetSceneStrategy metadata → `ModalBottomSheet` overlay (a
  * hand-written OverlayScene, the sheet controller injected via a Local); `SCREEN` is single-pane.
+ *
+ * @author @sahsenvar
  */
 public enum class EntryKind { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
 
@@ -36,6 +38,8 @@ internal class RegisteredEntry(
  * The trailing-lambda receiver of `GezginDisplay` (§10.1/§12) — the user (or codegen's generated
  * `provideXEntry`) calls [register] here to bind a route to its content. No wrapper type leaks to the user:
  * the registry is `internal`, read only by the [dev.gezgin.core.compose] package (GezginDisplay/adapter).
+ *
+ * @author @sahsenvar
  */
 public class GezginEntryScope internal constructor() {
 

@@ -6,7 +6,7 @@ package dev.gezgin.processor.mvi
  *
  * - [vmHasNav] — a DI-relevant ctor param is a `nav` (drives the resolver's `nav:` param + `viewModel(nav, route)`).
  * - [vmHasRoute] — a DI-relevant ctor param is the route (drives `args` in the supplied-args list).
- * - [emitDefault] — a default `viewModel` resolver is emittable AT ALL (every DI-relevant param is
+ * - `emitDefault` — a default `viewModel` resolver is emittable AT ALL (every DI-relevant param is
  *   route/nav-typed AND no role is duplicated — see [VmDiClassifier.classify]).
  */
 internal data class VmDiClassification(

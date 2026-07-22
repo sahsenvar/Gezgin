@@ -11,10 +11,10 @@ import dev.gezgin.processor.model.RouteModel
  * fragment (`FS5`), core-mode (`SC2`) ve MVI-mode (`MV7`) nav-wiring guard'larının üçü de buraya çağırır
  * (drift yok). İki dal:
  *
- * - **SAME-module route** ([routeModel] != null): navigator BU KSP turunda üretilecek, henüz classpath'te
- *   YOK → kararı bellekteki [GraphModel] üzerinden [NavigatorCodegen.hasNavigator] verir (probe kullanılamaz).
- * - **CROSS-module route** ([routeModel] == null, başka modülde derlenmiş): navigator, route kazandıysa,
- *   classpath'te ZATEN derlenmiş bir `XNavigator` sınıfıdır → [GezginNavigatorFor] damgası ile KİMLİK
+ * - **SAME-module route** (`routeModel` != null): navigator BU KSP turunda üretilecek, henüz classpath'te
+ *   YOK → kararı bellekteki `GraphModel` üzerinden [NavigatorCodegen.hasNavigator] verir (probe kullanılamaz).
+ * - **CROSS-module route** (`routeModel` == null, başka modülde derlenmiş): navigator, route kazandıysa,
+ *   classpath'te ZATEN derlenmiş bir `XNavigator` sınıfıdır → `GezginNavigatorFor` damgası ile KİMLİK
  *   doğrulanarak probe edilir. Eski `?: true` kör iyimserliği (nav-wanting VM/effect/fragment'ı navigator'sız
  *   cross-module route'ta üretilen kodda `raw.xNavigator()` unresolved reference'ına götürürdü — `FS5`'in
  *   öldürmek için var olduğu hata) bununla değişti.
@@ -22,9 +22,9 @@ import dev.gezgin.processor.model.RouteModel
  * **Kimlik, ad DEĞİL (FS5/M1).** `x` türetimi çakışabilir (`HelpRoute`/`HelpScreenRoute` → `x=Help` →
  * ikisi de `HelpNavigator` adıyla eşleşir). Ada bakan bir probe display-only bir route'a YABANCI bir
  * route'un navigator'ını sessizce bağlardı. [probeCompiledNavigator] sınıfı ADIYLA bulur ama
- * [GezginNavigatorFor.route]'u entry'nin [routeFq]'siyle karşılaştırır → yalnız KİMLİK eşleşince kabul.
+ * `GezginNavigatorFor.route`'u entry'nin `routeFq`'siyle karşılaştırır → yalnız KİMLİK eşleşince kabul.
  *
- * **Paket sözleşmesi (M2).** Probe navigator'ı [routePackageName] içinde arar; navigator'lar
+ * **Paket sözleşmesi (M2).** Probe navigator'ı `routePackageName` içinde arar; navigator'lar
  * `TopologyCodegen.targetPackage` (tüm graph/route'ların ortak öneki) altında üretilir. Bu iki paketin
  * DAİMA eşit olması `GezginProcessor`'ın `[PKG]` denetimiyle (her route/graph paketi == targetPackage)
  * garanti altındadır — aksi halde çok-alt-paketli bir nav modülü navigator'ı route'un paketi DIŞINDA üretir
@@ -55,7 +55,7 @@ internal object NavigatorProbe {
         }
 
     /**
-     * `${routePackageName}.${x}Navigator` classpath'te var VE [GezginNavigatorFor] damgası [routeFq]'yi
+     * `${routePackageName}.${x}Navigator` classpath'te var VE `GezginNavigatorFor` damgası `routeFq`'yi
      * gösteriyorsa `true`. Sınıf yoksa (edge'siz route → hiç navigator yok) ya da damga başka bir route'u
      * gösteriyorsa (ada-çakışan decoy) `false`.
      */

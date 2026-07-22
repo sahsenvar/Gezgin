@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
  *
  * **Why `Channel(UNLIMITED)`:** a `Channel` is HOT but HOLDS the value until it is consumed. Even without a
  * subscriber, [send]-ed effects wait in the queue (`UNLIMITED` → [send] never suspends/blocks, never drops)
- * and are delivered IN ORDER when the single collector reconnects via [flow] ([receiveAsFlow]) (return to
+ * and are delivered IN ORDER when the single collector reconnects via [flow] (`receiveAsFlow`) (return to
  * STARTED / entry re-compose). An effect = exactly-once delivery; that is why [flow] is for a **single**
  * collector (`receiveAsFlow` does not fan out — a second observer shares the value, it does not duplicate it).
  *
@@ -37,6 +37,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
  * // ...
  * _effects.send(CounterEffect.Toast("saved"))
  * ```
+ *
+ * @author @sahsenvar
  */
 public class GezginEffects<E> {
     private val channel = Channel<E>(Channel.UNLIMITED)

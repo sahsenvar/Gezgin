@@ -4,7 +4,7 @@ package dev.gezgin.core
  * The **optional** typed home for modal presentation properties (§7) — a `@Dialog` route implements this
  * interface to carry the dialog window's dismiss/layout behavior as a **runtime value** off the route
  * instance (NOT from KSP — §2.4; the adapter reads it via `route as? DialogContract`). If the route does
- * not implement it, the adapter uses the default [androidx.compose.ui.window.DialogProperties] (identical
+ * not implement it, the adapter uses the default `DialogProperties` (identical
  * to `DialogContract`'s defaults).
  *
  * This is NOT a **marker** like `ResultRoute<T>`: it carries PROPERTIES. Two ways to supply them — **use
@@ -29,7 +29,7 @@ package dev.gezgin.core
  * is polluted and it is unnecessary; the `get() =` form produces no backing field (getter-only) and never
  * enters the schema. So use the getter form even in the CONSTANT case.
  *
- * The fields map **one-to-one** to the real fields of [androidx.compose.ui.window.DialogProperties] (in the
+ * The fields map **one-to-one** to the real fields of `DialogProperties` (in the
  * adapter, [dev.gezgin.core.compose.toNavEntry]):
  * - [dismissOnBackPress] → `DialogProperties.dismissOnBackPress` (back button/Esc dismisses the dialog).
  * - [dismissOnClickOutside] → `DialogProperties.dismissOnClickOutside` (tapping outside dismisses).
@@ -41,10 +41,17 @@ package dev.gezgin.core
  * dismiss (tap-outside/Esc/when back is allowed) → the dialog scene's `onDismissRequest = onBack` →
  * `navigator.back()` → pop; if the route is a `ResultRoute`, the caller receives `Canceled` (the existing
  * `back()` path).
+ *
+ * @author @sahsenvar
  */
 public interface DialogContract {
+    /** Whether a click outside the dialog dismisses it. */
     public val dismissOnClickOutside: Boolean get() = true
+
+    /** Whether back dismisses the dialog. */
     public val dismissOnBackPress: Boolean get() = true
+
+    /** Whether the platform-default dialog width is used. */
     public val usePlatformDefaultWidth: Boolean get() = true
 }
 
@@ -59,15 +66,22 @@ public interface DialogContract {
  * NOTE: end-to-end on-device verification of §7 fullscreen-modal render (scrim, predictive) is in Task 4.3.
  * 4.1 sets up contract reading + metadata wiring + the guard; DialogSceneStrategy renders it as a fullscreen
  * dialog (usePlatformDefaultWidth=false; 4.0 report §6).
+ *
+ * @author @sahsenvar
  */
 public interface FullscreenModalContract {
+    /** Whether a click outside the full-screen modal dismisses it. */
     public val dismissOnClickOutside: Boolean get() = true
+
+    /** Whether back dismisses the full-screen modal. */
     public val dismissOnBackPress: Boolean get() = true
 }
 
 /**
  * Migration-only switch for Material's built-in bottom-sheet handle.
  * This is not Gezgin's permanent route-bound presentation/slot API.
+ *
+ * @author @sahsenvar
  */
 @ExperimentalGezginMigrationApi
 public enum class BottomSheetDragHandleMode {
@@ -111,12 +125,23 @@ public enum class BottomSheetDragHandleMode {
  * `navigator.back()` → pop; if the route is a `ResultRoute`, the caller receives `Canceled` (the existing
  * `back()` path — in material3 swipe+scrim+back ALL THREE funnel into a single `onDismissRequest`,
  * jar-verified).
+ *
+ * @author @sahsenvar
  */
 public interface BottomSheetContract {
+    /** Whether the sheet skips Material's partially expanded state. */
     public val skipPartiallyExpanded: Boolean get() = false
+
+    /** Whether back dismisses the sheet. */
     public val dismissOnBackPress: Boolean get() = true
+
+    /** Whether a click outside the sheet dismisses it. */
     public val dismissOnClickOutside: Boolean get() = true
+
+    /** Whether drag and swipe gestures are enabled for the sheet. */
     public val sheetGesturesEnabled: Boolean get() = true
+
+    /** Selects the temporary built-in drag-handle behavior. */
     @ExperimentalGezginMigrationApi
     public val dragHandleMode: BottomSheetDragHandleMode get() = BottomSheetDragHandleMode.Default
 }

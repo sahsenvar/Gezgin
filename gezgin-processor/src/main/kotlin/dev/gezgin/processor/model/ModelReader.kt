@@ -81,7 +81,7 @@ internal class ModelReader(
     }
 
     /**
-     * Whether [decl] is an instantiable navigable destination (a route), not a subgraph or an
+     * Whether `decl` is an instantiable navigable destination (a route), not a subgraph or an
      * intermediate type. `object`s qualify; classes only if NON-abstract and NON-sealed — an
      * abstract/sealed class is a shared base, never a destination, and must not leak into the route
      * list (nor into the polymorphic serializers module as a `subclass()`). Annotated graphs are
@@ -102,7 +102,7 @@ internal class ModelReader(
     // region Membership derivation (Task 8.1 — supertype-primary, lexical-fallback)
 
     /**
-     * The single annotated graph/flow [decl] is a member of. Primary source is the DIRECT annotated
+     * The single annotated graph/flow `decl` is a member of. Primary source is the DIRECT annotated
      * supertype (`: ParentGraph`) so a member declared in a separate file resolves correctly
      * (design-notes §3: "subtyping = nesting"). Fallback is the lexically-enclosing annotated graph,
      * preserving pre-8.0 nesting for a member that declares no annotated supertype (e.g. an
@@ -129,7 +129,7 @@ internal class ModelReader(
         }
     }
 
-    /** Enclosing annotated graphs from outermost to innermost, excluding [decl] itself. */
+    /** Enclosing annotated graphs from outermost to innermost, excluding `decl` itself. */
     private fun enclosingGraphChain(decl: KSClassDeclaration): List<KSClassDeclaration> {
         val chain = mutableListOf<KSClassDeclaration>()
         val seen = mutableSetOf<String>()
@@ -210,7 +210,7 @@ internal class ModelReader(
     }
 
     /**
-     * Every `@NavGraph`/`@FlowGraph`-annotated interface [decl] implements DIRECTLY (declared
+     * Every `@NavGraph`/`@FlowGraph`-annotated interface `decl` implements DIRECTLY (declared
      * supertypes only, no transitive walk). Deliberately non-transitive for E5/N11: a graph interface
      * extending another annotated graph (`OrderGraph : AppGraph`, spec §3.1) makes each of its routes
      * transitively implement the parent graph too — that inheritance must not read as the route (or
@@ -297,11 +297,11 @@ internal class ModelReader(
 
     // region Helpers
 
-    /** Whether [decl]'s OWN (declared) supertype list names [fq] — non-transitive (cf. [resultTypeArgOf]). */
+    /** Whether `decl`'s OWN (declared) supertype list names [fq] — non-transitive (cf. [resultTypeArgOf]). */
     private fun KSClassDeclaration.directlyImplements(fq: String): Boolean =
         superTypes.any { it.resolve().declaration.qualifiedName?.asString() == fq }
 
-    /** `T` from `markerFq<T>` if [decl] transitively implements `markerFq<T>` (substituted), else null. */
+    /** `T` from `markerFq<T>` if `decl` transitively implements `markerFq<T>` (substituted), else null. */
     private fun resultTypeArgOf(decl: KSClassDeclaration, markerFq: String): String? {
         val markerType = decl.getAllSuperTypes().firstOrNull { it.declaration.qualifiedName?.asString() == markerFq }
             ?: return null

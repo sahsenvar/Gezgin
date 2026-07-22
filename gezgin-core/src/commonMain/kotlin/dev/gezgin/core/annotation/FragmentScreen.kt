@@ -42,6 +42,9 @@ import kotlin.reflect.KClass
  * deliberately **no dialog/bottom-sheet Fragment variant** (§11.2 — Fragment interop is screen-only; no
  * `@FragmentDialog`/`@FragmentBottomSheet`). No special multiplatform handling is needed at the
  * declaration level — the annotation simply never resolves a target on non-Android sources.
+ *
+ * @property route the route type rendered by the annotated Fragment
+ * @author @sahsenvar
  */
 @Target(AnnotationTarget.CLASS)
 public annotation class FragmentScreen(val route: KClass<out Route>)

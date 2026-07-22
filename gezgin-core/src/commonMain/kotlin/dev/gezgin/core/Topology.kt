@@ -12,7 +12,9 @@ import kotlinx.serialization.KSerializer
  * devtools/introspection value). Not a `data class` — `copy`/`componentN` are not part of the ABI.
  */
 public class FlowType @GezginInternalApi constructor(
+    /** The generated stable identifier of the flow type. */
     public val id: String,
+    /** Whether this flow produces a result for its caller. */
     public val isResultFlow: Boolean,
 )
 
@@ -24,7 +26,9 @@ public class FlowType @GezginInternalApi constructor(
  */
 @GezginInternalApi
 public class EdgeSpec(
+    /** The generated stable identifier of the navigation edge. */
     public val id: String,
+    /** The serializer for result payloads, or `null` when the edge carries no result. */
     public val resultSerializer: KSerializer<*>?,
 )
 
@@ -38,10 +42,12 @@ public class GezginTopology @GezginInternalApi constructor(
     private val flowStarts: Map<String, KClass<out Route>>,
     internal val edges: Map<String, EdgeSpec>,
 ) {
+    /** Returns the outer-to-inner flow chain enclosing [route]. */
     public fun flowChain(route: KClass<out Route>): List<FlowType> {
         return flowChains[route] ?: emptyList()
     }
 
+    /** Returns the start route registered for [flowTypeId]. */
     public fun startOf(flowTypeId: String): KClass<out Route> {
         return flowStarts.getValue(flowTypeId)
     }

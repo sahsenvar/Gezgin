@@ -21,7 +21,7 @@ import dev.gezgin.core.Route
 internal const val GEZGIN_DIALOG_KEY = "gezginDialog"
 
 /**
- * Gezgin-sahipli Dialog [OverlayScene] (§7, C-MJ-1) — Nav3'ün built-in `DialogScene`'inin birebir işlevsel
+ * Gezgin-sahipli Dialog `OverlayScene` (§7, C-MJ-1) — Nav3'ün built-in `DialogScene`'inin birebir işlevsel
  * kopyası, TEK farkla: `onDismissRequest` sahip-entry'ye pinlenmiş [onBack]'e bağlanır (built-in tekil
  * `NavDisplay.onBack`'e bağlar → çifte-dismiss / geç-dismiss ALTTAKİ ekranı poplardı). [onBack] burada
  * `{ navigator.back(entry.contentKey) }` ile beslenir → modal artık top değilken dismiss NO-OP olur.
@@ -78,7 +78,7 @@ internal class GezginDialogScene(
 }
 
 /**
- * Dialog [SceneStrategy] (§7, C-MJ-1) — top entry'nin `NavEntry.metadata`'sında [GEZGIN_DIALOG_KEY]
+ * Dialog `SceneStrategy` (§7, C-MJ-1) — top entry'nin `NavEntry.metadata`'sında [GEZGIN_DIALOG_KEY]
  * (adapter [toNavEntry] `kind == DIALOG`/`FULLSCREEN_MODAL` iken yazar) varsa bir [GezginDialogScene]
  * döndürür, yoksa `null` (zincirdeki sonraki stratejiye devret). Dismiss, [onDismiss] ile sahip-entry
  * id'sine (`lastEntry.contentKey`) pinlenir → modal artık top değilken pop no-op olur. Built-in

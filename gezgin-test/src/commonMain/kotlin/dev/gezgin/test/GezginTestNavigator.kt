@@ -10,7 +10,9 @@ import kotlin.reflect.KClass
 
 /**
  * §13 — UI-less test API, raw surface (generated codegen adds the typed `from<Source>()` accessors).
- * Thin delegation over [RawNavigator] for tests that don't want to stand up a display layer.
+ * Thin delegation over `RawNavigator` for tests that don't want to stand up a display layer.
+ *
+ * @author @sahsenvar
  */
 public class GezginTestNavigator(
     start: Route,
@@ -18,18 +20,26 @@ public class GezginTestNavigator(
     onRootBack: () -> Unit = {},
 ) {
     /**
-     * The underlying [RawNavigator]. Gated behind [GezginInternalApi] (M5): the generated `fromX()`
+     * The underlying `RawNavigator`. Gated behind `GezginInternalApi` (M5): the generated `fromX()`
      * accessors resolve through it, but tests should prefer the typed delegates below and the generated
      * `fromX()` extensions. Opt in explicitly to reach the raw surface.
      */
     @GezginInternalApi
     public val raw: RawNavigator = RawNavigator(start = start, topology = topology, onRootBack = onRootBack)
 
+    /** The current route stack, from root to top. */
     public val backStack: List<Route> get() = raw.backStack.value
+
+    /** The route currently at the top of [backStack]. */
     public val current: Route get() = raw.current
 
+    /** Pushes [route] onto the stack using the runtime navigator. */
     public fun navigate(route: Route): Unit = raw.navigate(route)
+
+    /** Pops the current route or invokes the configured root-back callback at the root. */
     public fun back(): Unit = raw.back()
+
+    /** Replaces the current route with [route]. */
     public fun replaceTo(route: Route): Unit = raw.replaceTo(route)
 
     /** Pop back to [target] (inclusive pops [target] too). Mirrors the runtime `@BackTo`. */

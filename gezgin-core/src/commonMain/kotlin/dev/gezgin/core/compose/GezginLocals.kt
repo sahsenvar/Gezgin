@@ -23,6 +23,7 @@ public val LocalGezginEntryId: ProvidableCompositionLocal<Long> = staticComposit
     error("LocalGezginEntryId can only be read inside entry content installed by GezginDisplay.")
 }
 
+/** The generated-code seam that provides the active raw navigator to entry content. */
 @GezginInternalApi
 public val LocalGezginRawNavigator: ProvidableCompositionLocal<RawNavigator> = staticCompositionLocalOf<RawNavigator> {
     error("LocalGezginRawNavigator can only be read inside entry content installed by GezginDisplay.")

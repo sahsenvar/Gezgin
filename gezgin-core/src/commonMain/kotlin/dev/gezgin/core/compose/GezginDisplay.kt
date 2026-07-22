@@ -24,7 +24,7 @@ import dev.gezgin.core.Route
  * [keysState][RawNavigator.keysState] emits a new list by the `id` difference (the R2 contentKey contract;
  * Task 3.3 deliverable 4a).
  *
- * **Decorators (Task 3.3 deliverable 1):** entries are decorated with [rememberDecoratedNavEntries] BEFORE
+ * **Decorators (Task 3.3 deliverable 1):** entries are decorated with `rememberDecoratedNavEntries` BEFORE
  * being handed to `NavDisplay`. COMMON: `rememberSaveableStateHolderNavEntryDecorator()` (saveable state =
  * mandatory; `rememberSaveable` runs in each entry's own `contentKey`=id slot → two equal-valued routes get
  * SEPARATE saved state; the R2 saved-state side, desktop included). PLATFORM:
@@ -136,7 +136,7 @@ public fun GezginDisplay(
 }
 
 /**
- * The [NavDisplay] `onBack` lambda — the `@NoBack` runtime guard (M5′, §4.2; Task 3.3 deliverable 3). When
+ * The `NavDisplay` `onBack` lambda — the `@NoBack` runtime guard (M5′, §4.2; Task 3.3 deliverable 3). When
  * back is invoked it reads the LIVE top entry (`navigator.keys.last()`, not a captured stale value): if the
  * top's record has `noBack==true` AND the top is NOT the root, back is SWALLOWED (no pop) — otherwise
  * `navigator.back()`. **Root exemption:** while the stack has a single entry (`keys.size <= 1`), `noBack` is

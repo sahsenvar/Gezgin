@@ -1,6 +1,17 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.dokka)
     `maven-publish`
+}
+
+dokka {
+    dokkaPublications.html {
+        failOnWarning.set(true)
+    }
+    dokkaSourceSets.configureEach {
+        reportUndocumented.set(true)
+        suppressGeneratedFiles.set(true)
+    }
 }
 
 // Faz 7.4 — versiyonlama: proje ilk sürümü (bkz. gezgin-core/build.gradle.kts gerekçesi — modül-başına

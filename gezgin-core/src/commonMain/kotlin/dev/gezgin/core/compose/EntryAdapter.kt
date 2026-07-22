@@ -46,7 +46,7 @@ import dev.gezgin.core.Route
  * ([isRoot]==false — "root entry'de noBack yok sayılır → back = onRootBack"), content ekran
  * içeriğinden ÖNCE [GezginNoBackHandler] ile sarılır: Gezgin'in handler'ı OUTER/önce kaydolur →
  * dispatcher LIFO'sunda ekranın kendi (daha İÇ, sonra kaydolan) `BackHandler`'ı kazanır, yoksa
- * Gezgin'inki back'i yutar. [isRoot] çağıran ([GezginDisplay]) tarafından stack'in dibi (`keys.first`)
+ * Gezgin'inki back'i yutar. [isRoot] çağıran (`GezginDisplay`) tarafından stack'in dibi (`keys.first`)
  * bilgisinden geçirilir — call-time gerçeği, capture edilmiş stale scope değil (§10.1 staleness notu).
  *
  * Task 3.5 fix — **per-entry transition metadata (§9):** entry'nin KENDİ route'unun cascade'i
@@ -68,7 +68,7 @@ internal fun GezginEntryScope.toNavEntry(
         ?: error("No entry is registered for route: ${key.route::class.simpleName}")
     // §7 modal-kind-at-root guard (kuruluş-zamanı RUNTIME) — TÜM dinamik yolları tek yerde kapatır:
     // start route DIŞINDA `replaceTo(SomeDialogRoute)`/`quitAndGoTo` da tek-modal (kök) stack üretebilir.
-    // Bu ANA guard'dır; [GezginDisplay]'deki setup-time check yalnız start route'u kapsar → redundant
+    // Bu ANA guard'dır; `GezginDisplay`'deki setup-time check yalnız start route'u kapsar → redundant
     // güvenlik ağı olarak kalır. DIALOG/FULLSCREEN_MODAL Nav3-içi `require(overlaidEntries.isNotEmpty())`
     // ile çökerdi (Gezgin-mesajsız), BOTTOM_SHEET ise hiç fırlamayıp boş arka-planda sessiz render'dı.
     require(!(isRoot && registered.kind != EntryKind.SCREEN)) {
@@ -128,7 +128,7 @@ internal fun GezginEntryScope.toNavEntry(
 }
 
 /**
- * Kind + route-instance → dialog scene [DialogProperties] (§7), yoksa `null` (dialog-dışı entry →
+ * Kind + route-instance → dialog scene `DialogProperties` (§7), yoksa `null` (dialog-dışı entry →
  * plain tek-pane). Property'ler route'un opsiyonel [DialogContract]/[FullscreenModalContract]'ından
  * (runtime değer, §2.4) okunur; route implement etmemişse tip-varsayılan `DialogProperties`:
  * - [EntryKind.DIALOG] → `DialogProperties(dismissOnBackPress, dismissOnClickOutside,

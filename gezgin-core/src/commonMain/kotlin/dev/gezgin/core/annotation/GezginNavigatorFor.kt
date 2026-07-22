@@ -17,6 +17,8 @@ import kotlin.reflect.KClass
  *
  * Gated behind [GezginInternalApi] (K4): only generated code applies it; it stays a BINARY-retained
  * classpath stamp for the cross-module KSP read.
+ *
+ * @property route the route whose generated navigator is annotated
  */
 @GezginInternalApi
 @Target(AnnotationTarget.CLASS)

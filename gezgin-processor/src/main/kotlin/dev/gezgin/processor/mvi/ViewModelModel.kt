@@ -13,7 +13,7 @@ import com.squareup.kotlinpoet.TypeName
  *   (Android-only; the factory FQ is [ViewModelModel.assistedFactoryFq]).
  * - [HILT_PLAIN] — `@HiltViewModel` with NO assisted factory → `hiltViewModel<VM>()`; Gezgin supplies
  *   NOTHING and Nav3 has no path that writes the route into `SavedStateHandle`, so this VM receives NO
- *   route data (a parameterized route is rejected with `MV12`, [EntryModelReader]). It always has a
+ *   route data (a parameterized route is rejected with `MV12`, `EntryModelReader`). It always has a
  *   default resolver and never wires nav; use [HILT_ASSISTED] for a route-data-carrying screen.
  * - [KOIN] — `@KoinViewModel`, `@InjectedParam` ctor params → `koinViewModel { parametersOf(args, nav) }`.
  * - [ANDROIDX] — no DI annotation at all → `viewModel(factory = viewModelFactory { initializer { VM(...) } })`

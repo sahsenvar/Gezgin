@@ -8,6 +8,9 @@ import kotlin.reflect.KClass
  * declare its presentation kind, and bind it to a route. [route] is MANDATORY: it names the destination
  * route explicitly (e.g. `@Screen(FeedScreenRoute::class)`), so the composable↔route binding is visible
  * without reading generated code. Marks a plain full-screen destination.
+ *
+ * @property route the route type rendered by the annotated composable
+ * @author @sahsenvar
  */
 @Target(AnnotationTarget.FUNCTION)
 @Repeatable
@@ -22,6 +25,9 @@ public annotation class Screen(val route: KClass<out Route>)
  * dialog composable) — if both are used in the same file, an import alias is recommended
  * (e.g. `import androidx.compose.ui.window.Dialog as ComposeDialog`); otherwise the compiler reports an
  * ambiguity, or (depending on import order) silently resolves the wrong one.
+ *
+ * @property route the route type rendered by the annotated dialog composable
+ * @author @sahsenvar
  */
 @Target(AnnotationTarget.FUNCTION)
 public annotation class Dialog(val route: KClass<out Route>)
@@ -31,6 +37,9 @@ public annotation class Dialog(val route: KClass<out Route>)
  * [dev.gezgin.core.BottomSheetContract] for presentation properties; content can dismiss the sheet
  * programmatically via [dev.gezgin.core.compose.LocalGezginSheetController]. [route] is MANDATORY and
  * names the destination route explicitly (see [Screen]).
+ *
+ * @property route the route type rendered by the annotated bottom-sheet composable
+ * @author @sahsenvar
  */
 @Target(AnnotationTarget.FUNCTION)
 public annotation class BottomSheet(val route: KClass<out Route>)
@@ -40,6 +49,9 @@ public annotation class BottomSheet(val route: KClass<out Route>)
  * `usePlatformDefaultWidth` concept) — the route may implement the optional
  * [dev.gezgin.core.FullscreenModalContract] for presentation properties. [route] is MANDATORY and names
  * the destination route explicitly (see [Screen]).
+ *
+ * @property route the route type rendered by the annotated full-screen modal composable
+ * @author @sahsenvar
  */
 @Target(AnnotationTarget.FUNCTION)
 public annotation class FullscreenModal(val route: KClass<out Route>)

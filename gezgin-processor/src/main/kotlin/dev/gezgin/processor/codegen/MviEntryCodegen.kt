@@ -176,7 +176,7 @@ internal object MviEntryCodegen {
         return funBuilder.build()
     }
 
-    /** The DI-detected default `{ [nav, ]args -> … }` resolver lambda (only reached when [emitDefault]). */
+    /** The DI-detected default `{ [nav, ]args -> … }` resolver lambda (only reached when `emitDefault`). */
     private fun defaultResolver(
         vm: ViewModelModel,
         vmClass: ClassName,

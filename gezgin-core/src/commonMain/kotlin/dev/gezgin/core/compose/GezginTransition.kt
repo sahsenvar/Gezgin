@@ -27,27 +27,39 @@ public typealias GezginPredictiveTransitionSpec = AnimatedContentTransitionScope
  * `null` = "this level says nothing" — the cascade falls to a higher level (graph > app > NavDisplay
  * default) ([resolveTransition]). If `predictive` is not written, the NavDisplay wiring (`GezginDisplay`)
  * fills it from `backward` (§9 "if predictive is not written = backward").
+ *
+ * @author @sahsenvar
  */
 public class GezginTransition(
+    /** The transition used when navigating forward, or `null` to inherit a broader default. */
     public val forward: GezginTransitionSpec? = null,
+    /** The transition used when popping, or `null` to inherit a broader default. */
     public val backward: GezginTransitionSpec? = null,
+    /** The predictive-back transition, or `null` to fall back to [backward]. */
     public val predictive: GezginPredictiveTransitionSpec? = null,
 )
 
-/** The [transition] builder — `forward { }` / `backward { }` / `predictive { }` calls fill the [GezginTransition] fields. */
+/**
+ * Builds a [GezginTransition] from directional transition specifications.
+ *
+ * @author @sahsenvar
+ */
 public class GezginTransitionBuilder {
     private var forward: GezginTransitionSpec? = null
     private var backward: GezginTransitionSpec? = null
     private var predictive: GezginPredictiveTransitionSpec? = null
 
+    /** Sets the forward-navigation [spec]. */
     public fun forward(spec: GezginTransitionSpec) {
         forward = spec
     }
 
+    /** Sets the pop-navigation [spec]. */
     public fun backward(spec: GezginTransitionSpec) {
         backward = spec
     }
 
+    /** Sets the predictive-back [spec]. */
     public fun predictive(spec: GezginPredictiveTransitionSpec) {
         predictive = spec
     }

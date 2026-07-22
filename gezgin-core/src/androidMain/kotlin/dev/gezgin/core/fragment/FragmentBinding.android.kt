@@ -78,6 +78,8 @@ private class BoundGezgin(val nav: Any?)
  * (bind is once-per-instance, §1c) → no duplicate collectors on the same instance. If the route is an
  * edge-less leaf (NO navigator), [onGezginBound] is still invoked, but `gezginNav` throws `[FS5]` — a
  * display-only leaf should NOT implement this interface.
+ *
+ * @author @sahsenvar
  */
 public interface GezginBindingObserver {
     /** Called on the main thread right after this Fragment's navigator is bound (post-`commitNow`). */
@@ -118,11 +120,11 @@ public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
 
 /**
  * The NAV-LESS overload of [bindGezgin] — for when a route gains NO navigator (an edge-less leaf: no
- * @GoTo/@ReplaceTo/@BackTo/... edge, no result-contract → [dev.gezgin.processor.codegen.NavigatorCodegen]
+ * @GoTo/@ReplaceTo/@BackTo/... edge, no result-contract → `NavigatorCodegen`
  * does NOT generate an `XNavigator` for it, §11.1). In this case the GENERATED `provideXEntry` never binds
  * `nav` and calls `onUpdate = { fragment -> bindGezgin(fragment, route) }` (it NEVER calls a non-existent
  * factory — the phase-later counterpart of SC2/MV7; the condition is computed in
- * [dev.gezgin.processor.GezginProcessor] via `NavigatorCodegen.hasNavigator`). It BINDS the Fragment without a
+ * `GezginProcessor` via `NavigatorCodegen.hasNavigator`). It BINDS the Fragment without a
  * navigator: `gezginArgs` (from the Bundle) still works; but if `gezginNav` is read, [gezginBoundNav] throws
  * an `[FS5]` error — not "not bound" but "NO navigator". A legitimate display-only brownfield screen
  * (Settings/About) follows this path; it is NOT REJECTED at KSP time.
