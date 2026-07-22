@@ -431,6 +431,72 @@ class KotlinPublicApiScannerTest {
     assertTrue(result.declarations.single { it.name == "excludedNotation" }.excluded)
   }
 
+  @Test
+  fun `rejects compact internal identifier families`() {
+    val result =
+      scan(
+        """
+            /** Carries the MJ-A stale-lambda fix. */
+            public fun staleLambda(): Unit = Unit
+
+            /** Implements E-MJ-F1 post-bind behavior. */
+            public fun postBind(): Unit = Unit
+
+            /** Memoizes route arguments according to mN2. */
+            public fun memoizedArgs(): Unit = Unit
+            """
+      )
+
+    assertEquals(
+      setOf("staleLambda", "postBind", "memoizedArgs"),
+      result.findings
+        .filter { it.kind == KDocFindingKind.INTERNAL_SPEC_KDOC }
+        .map { it.declaration.name }
+        .toSet(),
+    )
+  }
+
+  @Test
+  fun `allows established consumer-facing technical tokens`() {
+    val result =
+      scan(
+        """
+            /** Uses UTF-8 and RFC-8259 JSON in an Android-only KMP/MVI API. */
+            public fun consumerTerms(): Unit = Unit
+
+            /** Preserves process-death state through API class names. */
+            public fun lifecycleTerms(): Unit = Unit
+            """
+      )
+
+    assertEquals(
+      emptyList(),
+      result.findings.filter { it.kind == KDocFindingKind.INTERNAL_SPEC_KDOC },
+    )
+  }
+
+  @Test
+  fun `rejects deterministic prose defects`() {
+    val result =
+      scan(
+        """
+            /** Generated accessors). */
+            public fun unmatchedDelimiter(): Unit = Unit
+
+            /** Uses the concrete concrete layout choice. */
+            public fun duplicateWord(): Unit = Unit
+            """
+      )
+
+    assertEquals(
+      setOf("unmatchedDelimiter", "duplicateWord"),
+      result.findings
+        .filter { it.kind == KDocFindingKind.MALFORMED_KDOC }
+        .map { it.declaration.name }
+        .toSet(),
+    )
+  }
+
   private fun scan(source: String): KotlinPublicApiScanResult =
     scanner.scan(
       KotlinSourceInput(path = "src/main/kotlin/Fixture.kt", content = source.trimIndent())

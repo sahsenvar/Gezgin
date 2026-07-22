@@ -121,6 +121,7 @@ abstract class CheckPublicApiKDocWorkAction : WorkAction<CheckPublicApiKDocWorkP
                 "public KDoc contains an implementation-process artifact"
               KDocFindingKind.INTERNAL_SPEC_KDOC ->
                 "public KDoc contains internal spec or review notation"
+              KDocFindingKind.MALFORMED_KDOC -> "public KDoc contains malformed prose"
             }
           "${declaration.path}:${declaration.line}:${declaration.column}: $reason: " +
             "${declaration.kind} ${declaration.name}"

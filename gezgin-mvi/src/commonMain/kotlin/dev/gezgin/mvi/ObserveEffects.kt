@@ -28,7 +28,7 @@ import kotlinx.coroutines.withContext
  * `Main.immediate` = on recompose/collect resume (returning to STARTED) the buffered effect is
  * processed without being deferred to the next frame or skipped.
  *
- * **Stale-lambda fix (MJ-A):** the `LaunchedEffect` keys are `(effects, lifecycleOwner)` only —
+ * **Stable callback capture:** the `LaunchedEffect` keys are `(effects, lifecycleOwner)` only —
  * both stable, so the running `collect` is NOT restarted on recomposition. If `onEffect` were
  * passed straight to `collect(onEffect)` the collector would bind the FIRST composition's lambda
  * FOREVER; an `onEffect` that closes over a value that changes across recomposition (a callback

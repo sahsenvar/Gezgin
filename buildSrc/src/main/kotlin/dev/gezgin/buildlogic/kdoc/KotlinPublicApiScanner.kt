@@ -51,6 +51,7 @@ enum class KDocFindingKind {
   NON_ENGLISH_KDOC,
   PROCESS_ARTIFACT_KDOC,
   INTERNAL_SPEC_KDOC,
+  MALFORMED_KDOC,
 }
 
 data class PublicApiKDocFinding(val declaration: PublicApiDeclaration, val kind: KDocFindingKind)
@@ -123,6 +124,9 @@ class KotlinPublicApiScanner : AutoCloseable {
             }
             if (declaration.kDocText?.containsInternalSpecMarker() == true) {
               add(PublicApiKDocFinding(declaration, KDocFindingKind.INTERNAL_SPEC_KDOC))
+            }
+            if (declaration.kDocText?.containsMalformedProse() == true) {
+              add(PublicApiKDocFinding(declaration, KDocFindingKind.MALFORMED_KDOC))
             }
           }
         }
@@ -242,7 +246,22 @@ class KotlinPublicApiScanner : AutoCloseable {
   private fun String.containsProcessArtifact(): Boolean = PROCESS_ARTIFACT.containsMatchIn(this)
 
   private fun String.containsInternalSpecMarker(): Boolean =
-    INTERNAL_SPEC_MARKER.containsMatchIn(this)
+    INTERNAL_SPEC_MARKER.containsMatchIn(this) || COMPACT_INTERNAL_ID.containsMatchIn(this)
+
+  private fun String.containsMalformedProse(): Boolean {
+    if (DUPLICATE_WORD.containsMatchIn(this)) return true
+    var parenthesisDepth = 0
+    WITHOUT_INLINE_CODE.replace(this, "").forEach { character ->
+      when (character) {
+        '(' -> parenthesisDepth++
+        ')' -> {
+          if (parenthesisDepth == 0) return true
+          parenthesisDepth--
+        }
+      }
+    }
+    return parenthesisDepth != 0
+  }
 
   private fun KtDeclaration.effectiveKDoc(): KDoc? {
     docComment?.let {
@@ -316,5 +335,9 @@ class KotlinPublicApiScanner : AutoCloseable {
           "\\b(?:spec|review|test)\\s+(?:id|provenance)\\b",
         RegexOption.IGNORE_CASE,
       )
+    val COMPACT_INTERNAL_ID =
+      Regex("\\b[A-Z]{1,2}(?:-[A-Z]{1,2})+(?:-?\\d+)?\\b|\\bm[A-Z]{1,2}\\d+\\b")
+    val DUPLICATE_WORD = Regex("\\b([A-Za-z]{3,})\\s+\\1\\b", RegexOption.IGNORE_CASE)
+    val WITHOUT_INLINE_CODE = Regex("`[^`]*`")
   }
 }

@@ -35,9 +35,9 @@ package dev.gezgin.core
  * - [dismissOnBackPress] → `DialogProperties.dismissOnBackPress` (back button/Esc dismisses the
  *   dialog).
  * - [dismissOnClickOutside] → `DialogProperties.dismissOnClickOutside` (tapping outside dismisses).
- * - [usePlatformDefaultWidth] → `DialogProperties.usePlatformDefaultWidth`. The concrete concrete
- *   layout choice: `true` = platform-default dialog width (wrapped), `false` = the content decides
- *   its own width (wide/near-fullscreen). Using this name instead of `layout` avoids hiding which
+ * - [usePlatformDefaultWidth] → `DialogProperties.usePlatformDefaultWidth`. The concrete layout
+ *   choice: `true` = platform-default dialog width (wrapped), `false` = the content decides its own
+ *   width (wide/near-fullscreen). Using this name instead of `layout` avoids hiding which
  *   `DialogProperties` field it maps down to (minimal magic).
  *
  * dismiss (tap-outside/Esc/when back is allowed) → the dialog scene's `onDismissRequest = onBack` →
@@ -67,7 +67,7 @@ public interface DialogContract {
  * adapter). A `@FullscreenModal` route carries only dismiss behavior. If the route does not
  * implement it, the adapter builds a fullscreen `DialogProperties` with the default dismisses (both
  * `true`). **Overrides must use the `get() =` form** because an initializer `val` leaks into the
- * serialized schema).
+ * serialized schema.
  *
  * The adapter reads this contract into entry metadata and the dialog scene renders it with
  * `usePlatformDefaultWidth = false`. The same modal-at-root guard used by the other overlay kinds

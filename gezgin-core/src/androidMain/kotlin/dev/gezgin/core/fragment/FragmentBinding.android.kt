@@ -55,9 +55,8 @@ import kotlin.reflect.KProperty
 private class BoundGezgin(val nav: Any?)
 
 /**
- * E-MJ-F1 — the reliable post-bind hook a `@FragmentScreen` Fragment implements when it is a result
- * LAUNCHER (its route declares a `@GoForResult` edge, so it must collect the generated `xResults`
- * Flow).
+ * Post-bind hook for a `@FragmentScreen` Fragment whose route declares a `@GoForResult` edge. The
+ * Fragment must collect the generated `xResults` flow after its navigator is available.
  *
  * **Why this is needed:** `gezginNav` is bound inside `AndroidFragment.onUpdate`, which runs AFTER
  * the internal `commitNow()` (fragment-compose 1.8.9 fact). So `gezginNav` is NOT yet bound in
@@ -125,7 +124,7 @@ private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
   boundRegistry[fragment] = BoundGezgin(nav)
-  // E-MJ-F1 — post-bind hook: registry SET edildikten SONRA çağrılır (onGezginBound içinde
+  // Post-bind hook: registry SET edildikten SONRA çağrılır (onGezginBound içinde
   // gezginNav
   // okunabilir). commitNow SONRASI çalıştığından viewLifecycleOwner hazır → result-LAUNCHER
   // fragment'ı
@@ -154,7 +153,7 @@ public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route) {
   boundRegistry[fragment] = BoundGezgin(nav = null)
-  // E-MJ-F1 — nav'sız leaf de bind edilir; onGezginBound çağrılır ama gezginNav [FS5] fırlatır
+  // Nav'sız leaf de bind edilir; onGezginBound çağrılır ama gezginNav [FS5] fırlatır
   // (leaf
   // ekran bu interface'i implement ETMEMELİ). Simetri için ve "bind tamamlandı" sinyali olarak
   // çağrılır.
@@ -230,13 +229,13 @@ internal fun gezginBoundRoute(fragment: Fragment): Route {
 }
 
 /**
- * mN2 — the memoizing `ReadOnlyProperty` behind [gezginArgs]. Decodes the route from the
- * `arguments` Bundle ONCE (on the first successful read) and caches it; every later read of the
- * same delegate returns the SAME instance (no per-read JSON re-decode, no fresh-instance-per-read
- * foot-gun). The delegate is created per `by gezginArgs()` property, which is per
- * fragment-instance, so the cache is correctly instance-scoped. A FAILED first read (fresh-process
- * restore before `toBundle`, [gezginBoundRoute] throws) does NOT cache → the strict validity window
- * is preserved and a later `onViewCreated` read still succeeds.
+ * Memoizing `ReadOnlyProperty` behind [gezginArgs]. Decodes the route from the `arguments` Bundle
+ * ONCE (on the first successful read) and caches it; every later read of the same delegate returns
+ * the SAME instance (no per-read JSON re-decode, no fresh-instance-per-read foot-gun). The delegate
+ * is created per `by gezginArgs()` property, which is per fragment-instance, so the cache is
+ * correctly instance-scoped. A FAILED first read (fresh-process restore before `toBundle`,
+ * [gezginBoundRoute] throws) does NOT cache → the strict validity window is preserved and a later
+ * `onViewCreated` read still succeeds.
  */
 @PublishedApi
 internal class GezginArgsProperty<R : Route>(private val cast: (Route) -> R) :
@@ -250,8 +249,8 @@ internal class GezginArgsProperty<R : Route>(private val cast: (Route) -> R) :
 /**
  * The Fragment counterpart of `@Screen`'s `route` param. `by gezginArgs<XRoute>()` — decodes the
  * typed route from the Fragment's `arguments` Bundle and casts to the reified type. INDEPENDENT of
- * `onUpdate` (arguments are set up at instantiation time). **Memoized (mN2):** decodes ONCE per
- * fragment instance and returns a STABLE instance on repeated reads (see [GezginArgsProperty]).
+ * `onUpdate` (arguments are set up at instantiation time). **Memoized:** decodes ONCE per fragment
+ * instance and returns a STABLE instance on repeated reads (see [GezginArgsProperty]).
  * **Validity:** PD-safe in ALL cases from `onCreateView`/`onViewCreated` onward; in
  * `onAttach`/`onCreate` it is safe only on the FIRST-CREATION instance, NOT in the fresh-process
  * FragmentManager-restore branch (at that moment [gezginFragmentJson] is still `null` — see the
