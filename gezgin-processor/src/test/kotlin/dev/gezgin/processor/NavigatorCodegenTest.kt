@@ -76,7 +76,7 @@ class NavigatorCodegenTest {
         .first()
     }
     assertTrue(delivered is NavResult.Value<*>, "expected a delivered Value, got $delivered")
-    val orderId = (delivered as NavResult.Value<*>).value
+    val orderId = delivered.value
     val innerValue =
       orderId!!.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(orderId)
     assertEquals("done", innerValue)
@@ -226,7 +226,7 @@ class NavigatorCodegenTest {
         .invoke(null, raw)
 
     assertTrue(delivered is NavResult.Value<*>, "expected a delivered Value, got $delivered")
-    val orderId = (delivered as NavResult.Value<*>).value
+    val orderId = delivered.value
     val innerValue =
       orderId!!.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(orderId)
     assertEquals("addr-1", innerValue)

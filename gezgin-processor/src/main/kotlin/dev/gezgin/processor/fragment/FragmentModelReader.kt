@@ -304,7 +304,7 @@ internal class FragmentModelReader(
         "$fragmentSimpleName: route ${routeFq.substringAfterLast('.')} " +
           "implements ${modalContract.substringAfterLast('.')}, but @FragmentScreen entries render " +
           "only in screen-mode (§11.2); the modal contract would be silently ignored (the user asks " +
-          "for a modal but gets a plain full-screen fragment). Remove from the route, " +
+          "for a modal but gets a plain full-screen fragment). Remove the contract from the route, " +
           "or build the modal as a @Dialog/@BottomSheet/@FullscreenModal composable instead of a Fragment",
       )
       return null

@@ -1078,7 +1078,7 @@ internal class EntryModelReader(
           "presentation contract must match (@Dialog↔DialogContract, @FullscreenModal↔" +
           "FullscreenModalContract, @BottomSheet↔BottomSheetContract). The adapter reads only the " +
           "contract for the kind, so the wrong contract becomes null through `route as? …` and overrides " +
-          "(for example dismissOnClickOutside=false) are silently dropped. Fix the kind or remove (§7)",
+          "(for example dismissOnClickOutside=false) are silently dropped. Fix the kind or remove the contract (§7)",
       )
       return false
     }

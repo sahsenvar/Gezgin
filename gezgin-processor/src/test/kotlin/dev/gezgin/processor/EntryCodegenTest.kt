@@ -7,6 +7,7 @@ import dev.gezgin.processor.CompileHarness.generatedSourceFor
 import dev.gezgin.processor.fixtures.ENTRY_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -649,6 +650,12 @@ class EntryCodegenTest {
           .trimIndent()
       )
     assertTrue(msg.contains("[SC8]"), msg)
+    assertContains(
+      msg,
+      "overrides (for example dismissOnClickOutside=false) are silently dropped. " +
+        "Fix the kind or remove the contract (§7)",
+      message = msg,
+    )
   }
 
   @Test

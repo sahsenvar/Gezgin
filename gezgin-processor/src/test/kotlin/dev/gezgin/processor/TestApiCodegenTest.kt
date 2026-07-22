@@ -41,7 +41,7 @@ class TestApiCodegenTest {
         .invoke(null)
 
     assertTrue(delivered is NavResult.Value<*>, "expected a delivered Value, got $delivered")
-    val orderId = (delivered as NavResult.Value<*>).value
+    val orderId = delivered.value
     val innerValue =
       orderId!!.javaClass.getDeclaredField("value").apply { isAccessible = true }.get(orderId)
     assertEquals("o1", innerValue)

@@ -53,7 +53,7 @@ class FragmentModelReaderTest {
   /**
    * Guardrail assertion: the compile fails and the KSP output carries the expected `[FSn]` code.
    */
-  private fun assertViolates(code: String, source: String, vararg extra: SourceFile) {
+  private fun assertViolates(code: String, source: String, vararg extra: SourceFile): String {
     val result =
       compileGezgin(
         SourceFile.kotlin("Bad.kt", source),
@@ -63,6 +63,7 @@ class FragmentModelReaderTest {
       )
     assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
     assertContains(result.messages, "[$code]", message = result.messages)
+    return result.messages
   }
 
   // region Positive — dump
@@ -483,24 +484,31 @@ class FragmentModelReaderTest {
 
   @Test
   fun `FS7 — @FragmentScreen route implementing a modal contract is rejected (screen-only)`() {
-    assertViolates(
-      "FS7",
-      """
-      package dev.gezgin.fs7
+    val messages =
+      assertViolates(
+        "FS7",
+        """
+        package dev.gezgin.fs7
 
-      import androidx.fragment.app.Fragment
-      import dev.gezgin.core.BottomSheetContract
-      import dev.gezgin.core.Route
-      import dev.gezgin.core.annotation.FragmentScreen
+        import androidx.fragment.app.Fragment
+        import dev.gezgin.core.BottomSheetContract
+        import dev.gezgin.core.Route
+        import dev.gezgin.core.annotation.FragmentScreen
 
-      // A BottomSheetContract route bound to a Fragment would render as a plain SCREEN, contract
-      // silently ignored. FS7.
-      data class SheetRoute(val x: Int = 0) : Route, BottomSheetContract
+        // A BottomSheetContract route bound to a Fragment would render as a plain SCREEN, contract
+        // silently ignored. FS7.
+        data class SheetRoute(val x: Int = 0) : Route, BottomSheetContract
 
-      @FragmentScreen(SheetRoute::class)
-      class SortSheetFragment : Fragment()
-      """
-        .trimIndent(),
+        @FragmentScreen(SheetRoute::class)
+        class SortSheetFragment : Fragment()
+          """
+          .trimIndent(),
+      )
+    assertContains(
+      messages,
+      "for a modal but gets a plain full-screen fragment). Remove the contract from the route, " +
+        "or build the modal as a @Dialog/@BottomSheet/@FullscreenModal composable instead of a Fragment",
+      message = messages,
     )
   }
 
