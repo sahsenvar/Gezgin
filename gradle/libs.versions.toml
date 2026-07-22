@@ -48,7 +48,7 @@ binary-compatibility-validator = "0.18.1"
 dokka = "2.2.0"
 vanniktech-maven-publish = "0.37.0"
 spotless = "8.8.0"
-kover = "0.9.8"
+kover = "0.9.9"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
