@@ -15,8 +15,8 @@ import kotlin.reflect.KProperty
  * - **`gezginArgs<Route>()` → the Fragment's own `arguments` Bundle** ([decodeGezginRoute]).
  *   `arguments` is set up when the Fragment is instantiated (`setArguments`, BEFORE `onUpdate`) →
  *   it is decoded INDEPENDENTLY of `onUpdate` timing (spec 291 "route from the Bundle → PD-safe";
- *   §B4). Since the route's PD source is Gezgin's OWN backstack (§1d), on a fresh-process restore
- *   the entry re-renders → `arguments` is regenerated with the fresh route → decode works.
+ *   ). Since the route's PD source is Gezgin's OWN backstack (d), on a fresh-process restore the
+ *   entry re-renders → `arguments` is regenerated with the fresh route → decode works.
  *
  *   **Validity window (STRICT contract):** on the FIRST-CREATION instance (`AndroidFragment`
  *   instantiates the Fragment ITSELF: the first composition evaluates `route.toBundle(raw)` BEFORE
@@ -45,10 +45,10 @@ import kotlin.reflect.KProperty
 
 /**
  * Registry entry: the LIVE navigator facade a `@FragmentScreen` Fragment accesses via `gezginNav`.
- * (The route is NOT kept here — `gezginArgs` reads it from the `arguments` Bundle, §B4.) Since the
+ * (The route is NOT kept here — `gezginArgs` reads it from the `arguments` Bundle.) Since the
  * navigator type is the generated `XNavigator`, gezgin-core does not know it → `Any?`; `gezginNav`
  * casts to the reified type. If [nav] is `null`, the route gains NO navigator (an edge-less leaf —
- * no edge/back-edge/result-contract → no generated `XNavigator`, §11.1): the Fragment IS bound but
+ * no edge/back-edge/result-contract → no generated `XNavigator`): the Fragment IS bound but
  * `gezginNav` cannot be read ([gezginBoundNav] throws FS5) — this is DISTINCT from "not bound yet"
  * (NO record at all in the registry).
  */
@@ -85,8 +85,8 @@ private class BoundGezgin(val nav: Any?)
  *
  * On config-change/PD the fragment is a NEW instance and `bindGezgin` (hence [onGezginBound]) runs
  * again for it → the collector is re-attached against the fresh `viewLifecycleOwner`. It fires ONCE
- * per live instance (bind is once-per-instance, §1c) → no duplicate collectors on the same
- * instance. If the route is an edge-less leaf (NO navigator), [onGezginBound] is still invoked, but
+ * per live instance (bind is once-per-instance, c) → no duplicate collectors on the same instance.
+ * If the route is an edge-less leaf (NO navigator), [onGezginBound] is still invoked, but
  * `gezginNav` throws `[FS5]` — a display-only leaf should NOT implement this interface.
  *
  * @author @sahsenvar
@@ -101,7 +101,7 @@ public interface GezginBindingObserver {
 /**
  * Fragment-instance → live navigator side-table. **Weak key (`WeakHashMap`):** a Fragment recreated
  * on config-change/PD is a DIFFERENT instance (a new weak key) → the old entry is GC'd, so the
- * registry naturally tracks the live instance ( §1c). Set up/read on the main thread; no
+ * registry naturally tracks the live instance ( c). Set up/read on the main thread; no
  * synchronization.
  */
 private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
@@ -112,14 +112,14 @@ private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
  * navigator under the instance.
  *
  * **Unconditional put — no bind-once/skip-if-present guard:** `onUpdate` runs once per live
- * instance (§1c); for a NEW instance after config-change/PD it must run again to re-bind — an
+ * instance (c); for a NEW instance after config-change/PD it must run again to re-bind — an
  * "already bound, skip" defense is the one thing that BREAKS this path. Overwriting with equal data
  * is harmless (idempotent-by-construction). `public`: the generated code lives in the CONSUMER
  * module (cross-module `internal` is not visible).
  *
- * [route] is not currently used by the registry (args are carried in the Bundle, §B4) but is KEPT
- * in the signature so it matches the generated `onUpdate { bindGezgin(fragment, route, nav) }`
- * shape exactly and leaves the door open to future registry-based arg access.
+ * [route] is not currently used by the registry (args are carried in the Bundle) but is KEPT in the
+ * signature so it matches the generated `onUpdate { bindGezgin(fragment, route, nav) }` shape
+ * exactly and leaves the door open to future registry-based arg access.
  */
 @GezginInternalApi
 @Suppress("UNUSED_PARAMETER")
@@ -138,14 +138,13 @@ public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
  * no
  *
  * @GoTo/@ReplaceTo/@BackTo/... edge, no result-contract → `NavigatorCodegen` does NOT generate an
- *   `XNavigator` for it, §11.1). In this case the GENERATED `provideXEntry` never binds `nav` and
- *   calls `onUpdate = { fragment -> bindGezgin(fragment, route) }` (it NEVER calls a non-existent
- *   factory — the stage-later counterpart of SC2/MV7; the condition is computed in
- *   `GezginProcessor` via `NavigatorCodegen.hasNavigator`). It BINDS the Fragment without a
- *   navigator: `gezginArgs` (from the Bundle) still works; but if `gezginNav` is read,
- *   [gezginBoundNav] throws an `[FS5]` error — not "not bound" but "NO navigator". A legitimate
- *   display-only brownfield screen (Settings/About) follows this path; it is NOT REJECTED at KSP
- *   time.
+ *   `XNavigator` for it). In this case the GENERATED `provideXEntry` never binds `nav` and calls
+ *   `onUpdate = { fragment -> bindGezgin(fragment, route) }` (it NEVER calls a non-existent factory
+ *   — the stage-later counterpart of SC2/MV7; the condition is computed in `GezginProcessor` via
+ *   `NavigatorCodegen.hasNavigator`). It BINDS the Fragment without a navigator: `gezginArgs` (from
+ *   the Bundle) still works; but if `gezginNav` is read, [gezginBoundNav] throws an `[FS5]` error —
+ *   not "not bound" but "NO navigator". A legitimate display-only brownfield screen
+ *   (Settings/About) follows this path; it is NOT REJECTED at KSP time.
  *
  * **UNCONDITIONAL put** — the same idempotency contract as the nav-ful overload (NO bind-once
  * guard): a new instance after config-change/PD must re-bind. `public`: the generated code lives in
@@ -190,12 +189,12 @@ internal fun gezginBoundNav(fragment: Fragment): Any {
 }
 
 /**
- * The Fragment counterpart of `@Screen`'s `nav` param (§11.1). `by gezginNav<XNavigator>()` —
- * returns the post-bind live navigator cast to the reified type. [gezginBoundNav] separates two
- * cases with distinct errors: if not bound yet, "not bound"; if the route has no navigator (a bare
- * `@NoBack` leaf, bound via the nav-less [bindGezgin]), `[FS5]` "NO navigator". (Usually the second
- * is already caught at compile time: a route without a navigator has NO `XNavigator` type generated
- * → `gezginNav<XNavigator>()` cannot resolve; FS5 is a residual runtime net.)
+ * The Fragment counterpart of `@Screen`'s `nav` param. `by gezginNav<XNavigator>()` — returns the
+ * post-bind live navigator cast to the reified type. [gezginBoundNav] separates two cases with
+ * distinct errors: if not bound yet, "not bound"; if the route has no navigator (a bare `@NoBack`
+ * leaf, bound via the nav-less [bindGezgin]), `[FS5]` "NO navigator". (Usually the second is
+ * already caught at compile time: a route without a navigator has NO `XNavigator` type generated →
+ * `gezginNav<XNavigator>()` cannot resolve; FS5 is a residual runtime net.)
  */
 public inline fun <reified N> gezginNav(): ReadOnlyProperty<Fragment, N> =
   ReadOnlyProperty { fragment, _ ->
@@ -205,7 +204,7 @@ public inline fun <reified N> gezginNav(): ReadOnlyProperty<Fragment, N> =
 /**
  * `gezginArgs`'s `arguments`-Bundle read (the non-inline real body; [gezginArgs] only inlines the
  * reified cast → [gezginFragmentJson]/[decodeGezginRoute] can stay `internal`). It decodes from the
- * Bundle, INDEPENDENTLY of `onUpdate` (§B4) — if [gezginFragmentJson] is null (in practice never:
+ * Bundle, INDEPENDENTLY of `onUpdate` — if [gezginFragmentJson] is null (in practice never:
  * `toBundle` populates it before the Fragment is created), a descriptive error.
  */
 @PublishedApi
@@ -237,7 +236,7 @@ internal fun gezginBoundRoute(fragment: Fragment): Route {
  * foot-gun). The delegate is created per `by gezginArgs()` property, which is per
  * fragment-instance, so the cache is correctly instance-scoped. A FAILED first read (fresh-process
  * restore before `toBundle`, [gezginBoundRoute] throws) does NOT cache → the strict validity window
- * (§B4) is preserved and a later `onViewCreated` read still succeeds.
+ * is preserved and a later `onViewCreated` read still succeeds.
  */
 @PublishedApi
 internal class GezginArgsProperty<R : Route>(private val cast: (Route) -> R) :
@@ -249,15 +248,15 @@ internal class GezginArgsProperty<R : Route>(private val cast: (Route) -> R) :
 }
 
 /**
- * The Fragment counterpart of `@Screen`'s `route` param (§11.1). `by gezginArgs<XRoute>()` —
- * decodes the typed route from the Fragment's `arguments` Bundle and casts to the reified type.
- * INDEPENDENT of `onUpdate` (arguments are set up at instantiation time). **Memoized (mN2):**
- * decodes ONCE per fragment instance and returns a STABLE instance on repeated reads (see
- * [GezginArgsProperty]). **Validity:** PD-safe in ALL cases from `onCreateView`/`onViewCreated`
- * onward; in `onAttach`/`onCreate` it is safe only on the FIRST-CREATION instance, NOT in the
- * fresh-process FragmentManager-restore branch (at that moment [gezginFragmentJson] is still `null`
- * — see the file-level KDoc + the [gezginBoundRoute] error). Read the route in `onCreateView`/
- * `onViewCreated` (§B4).
+ * The Fragment counterpart of `@Screen`'s `route` param. `by gezginArgs<XRoute>()` — decodes the
+ * typed route from the Fragment's `arguments` Bundle and casts to the reified type. INDEPENDENT of
+ * `onUpdate` (arguments are set up at instantiation time). **Memoized (mN2):** decodes ONCE per
+ * fragment instance and returns a STABLE instance on repeated reads (see [GezginArgsProperty]).
+ * **Validity:** PD-safe in ALL cases from `onCreateView`/`onViewCreated` onward; in
+ * `onAttach`/`onCreate` it is safe only on the FIRST-CREATION instance, NOT in the fresh-process
+ * FragmentManager-restore branch (at that moment [gezginFragmentJson] is still `null` — see the
+ * file-level KDoc + the [gezginBoundRoute] error). Read the route in `onCreateView`/
+ * `onViewCreated`.
  */
 public inline fun <reified R : Route> gezginArgs(): ReadOnlyProperty<Fragment, R> =
   GezginArgsProperty {

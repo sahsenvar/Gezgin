@@ -403,6 +403,34 @@ class KotlinPublicApiScannerTest {
     )
   }
 
+  @Test
+  fun `rejects internal spec notation only for included public KDoc`() {
+    val result =
+      scan(
+        """
+            import dev.gezgin.core.GezginInternalApi
+
+            /** Follows the modal rules from §7, the m5 milestone, and C-MJ-1. */
+            public fun internalNotation(): Unit = Unit
+
+            /** Behavior was jar-verified against review provenance for Fix 9. */
+            public fun testProvenance(): Unit = Unit
+
+            /** Normal consumer-facing API documentation. */
+            @GezginInternalApi public fun excludedNotation(): Unit = Unit
+            """
+      )
+
+    assertEquals(
+      setOf("internalNotation", "testProvenance"),
+      result.findings
+        .filter { it.kind == KDocFindingKind.INTERNAL_SPEC_KDOC }
+        .map { it.declaration.name }
+        .toSet(),
+    )
+    assertTrue(result.declarations.single { it.name == "excludedNotation" }.excluded)
+  }
+
   private fun scan(source: String): KotlinPublicApiScanResult =
     scanner.scan(
       KotlinSourceInput(path = "src/main/kotlin/Fixture.kt", content = source.trimIndent())

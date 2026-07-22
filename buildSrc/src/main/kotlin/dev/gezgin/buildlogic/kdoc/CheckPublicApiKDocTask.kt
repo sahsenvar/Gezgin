@@ -119,6 +119,8 @@ abstract class CheckPublicApiKDocWorkAction : WorkAction<CheckPublicApiKDocWorkP
               KDocFindingKind.NON_ENGLISH_KDOC -> "public KDoc must be English"
               KDocFindingKind.PROCESS_ARTIFACT_KDOC ->
                 "public KDoc contains an implementation-process artifact"
+              KDocFindingKind.INTERNAL_SPEC_KDOC ->
+                "public KDoc contains internal spec or review notation"
             }
           "${declaration.path}:${declaration.line}:${declaration.column}: $reason: " +
             "${declaration.kind} ${declaration.name}"

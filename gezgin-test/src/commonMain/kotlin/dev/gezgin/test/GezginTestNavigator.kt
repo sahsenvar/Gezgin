@@ -9,9 +9,8 @@ import dev.gezgin.core.Route
 import kotlin.reflect.KClass
 
 /**
- * §13 — UI-less test API, raw surface (generated codegen adds the typed `from<Source>()`
- * accessors). Thin delegation over `RawNavigator` for tests that don't want to stand up a display
- * layer.
+ * UI-less test API with a raw surface; generated code adds the typed `from<Source>()` accessors).
+ * Thin delegation over `RawNavigator` for tests that don't want to stand up a display layer.
  *
  * @author @sahsenvar
  */

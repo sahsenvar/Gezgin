@@ -21,7 +21,7 @@ import dev.gezgin.core.BottomSheetDragHandleMode
 import dev.gezgin.core.Route
 
 /**
- * Gezgin-owned handle a `@BottomSheet` content uses to dismiss its sheet (§7) — read from
+ * Gezgin-owned handle a `@BottomSheet` content uses to dismiss its sheet — read from
  * [LocalGezginSheetController]. It replaces the raw material3 `SheetState` on the public surface,
  * so no experimental third-party type is locked into Gezgin's ABI; the material `SheetState` stays
  * an internal implementation detail of [GezginBottomSheetScene].
@@ -86,9 +86,9 @@ private class MaterialSheetController(
 internal const val GEZGIN_BOTTOM_SHEET_KEY = "gezginBottomSheet"
 
 /**
- * `@BottomSheet` route'unun opsiyonel [dev.gezgin.core.BottomSheetContract]'ından (runtime değer,
- * §2.4) çözülen sheet property'leri. `NavEntry.metadata`'ya [GEZGIN_BOTTOM_SHEET_KEY] altında
- * konur; strateji bunu okuyup [GezginBottomSheetScene]'i kurar. `data class` → scene eşitliği +
+ * `@BottomSheet` route'unun opsiyonel [dev.gezgin.core.BottomSheetContract]'ından (runtime değer, )
+ * çözülen sheet property'leri. `NavEntry.metadata`'ya [GEZGIN_BOTTOM_SHEET_KEY] altında konur;
+ * strateji bunu okuyup [GezginBottomSheetScene]'i kurar. `data class` → scene eşitliği +
  * adapter-level pin için bedava `equals`/`hashCode`.
  */
 internal data class GezginBottomSheetProps(
@@ -100,10 +100,10 @@ internal data class GezginBottomSheetProps(
 )
 
 /**
- * El-yazımı BottomSheet `OverlayScene` (§7) — Nav3'te hazır `BottomSheetSceneStrategy` YOK;
- * material3 `ModalBottomSheet` ile `DialogScene` şablonundan yazıldı. `overlaidEntries` = alttaki
- * entry'ler (arka SCREEN görünür kalır); `content` sheet'i overlay olarak çizer ve
- * `entry.Content()`'i [LocalGezginSheetController] ile sararak controller'ı content'e enjekte eder.
+ * El-yazımı BottomSheet `OverlayScene` — Nav3'te hazır `BottomSheetSceneStrategy` YOK; material3
+ * `ModalBottomSheet` ile `DialogScene` şablonundan yazıldı. `overlaidEntries` = alttaki entry'ler
+ * (arka SCREEN görünür kalır); `content` sheet'i overlay olarak çizer ve `entry.Content()`'i
+ * [LocalGezginSheetController] ile sararak controller'ı content'e enjekte eder.
  *
  * **swipe-dismiss→Canceled + entry-pin (C-MJ-1):** `onDismissRequest = onBack` — burada [onBack]
  * strateji tarafından sahip-entry'ye PİNLENMİŞ `{ navigator.back(entryId) }` ile beslenir (tekil
@@ -205,13 +205,13 @@ internal class GezginBottomSheetScene(
 }
 
 /**
- * BottomSheet `SceneStrategy` (§7, C-MJ-1) — top entry'nin `NavEntry.metadata`'sında
- * [GEZGIN_BOTTOM_SHEET_KEY] (adapter [toNavEntry] `kind == BOTTOM_SHEET` iken yazar) varsa bir
- * [GezginBottomSheetScene] döndürür, yoksa `null` (zincirdeki sonraki stratejiye devret).
- * [GezginDialogSceneStrategy] deseni; `overlaidEntries = entries.dropLast(1)` (arka SCREEN
- * görünür). Dismiss, [onDismiss] ile sahip-entry id'sine (`lastEntry.contentKey`) pinlenir → sheet
- * artık top değilken pop no-op. [GezginNavDisplay] actual'larında GezginDialogSceneStrategy'nin
- * YANINA (fallback `SinglePaneSceneStrategy`'den ÖNCE) eklenir.
+ * BottomSheet `SceneStrategy` — top entry'nin `NavEntry.metadata`'sında [GEZGIN_BOTTOM_SHEET_KEY]
+ * (adapter [toNavEntry] `kind == BOTTOM_SHEET` iken yazar) varsa bir [GezginBottomSheetScene]
+ * döndürür, yoksa `null` (zincirdeki sonraki stratejiye devret). [GezginDialogSceneStrategy]
+ * deseni; `overlaidEntries = entries.dropLast(1)` (arka SCREEN görünür). Dismiss, [onDismiss] ile
+ * sahip-entry id'sine (`lastEntry.contentKey`) pinlenir → sheet artık top değilken pop no-op.
+ * [GezginNavDisplay] actual'larında GezginDialogSceneStrategy'nin YANINA (fallback
+ * `SinglePaneSceneStrategy`'den ÖNCE) eklenir.
  */
 internal class GezginBottomSheetSceneStrategy(private val onDismiss: (Long) -> Unit) :
   SceneStrategy<Route> {

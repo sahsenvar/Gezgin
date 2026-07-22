@@ -5,14 +5,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 
 /**
- * The MVI add-on contract (§10.1) — opt-in. It does NOT enter Gezgin's state-holder world (it
- * imposes no store/reducer); it is just the **minimal surface** codegen reads: a state stream, an
- * optional effect stream, an intent entry point.
+ * The MVI add-on contract — opt-in. It does NOT enter Gezgin's state-holder world (it imposes no
+ * store/reducer); it is just the **minimal surface** codegen reads: a state stream, an optional
+ * effect stream, an intent entry point.
  *
- * A VM marked `@MviViewModel(Route::class)` MUST implement this (BOTH ARE MANDATORY — guardrail,
- * §10.1): codegen reads the VM's concrete type from `@MviViewModel`, and **S/I/E from this
- * supertype's type args** (no derivation from the content → the spec's E-source problem is solved).
- * If `@MviViewModel` is present but `GezginMvi` is not → compile error (5.1).
+ * A VM marked `@MviViewModel(Route::class)` MUST implement this (BOTH ARE MANDATORY — guardrail, ):
+ * codegen reads the VM's concrete type from `@MviViewModel`, and **S/I/E from this supertype's type
+ * args** (no derivation from the content → the spec's E-source problem is solved). If
+ * `@MviViewModel` is present but `GezginMvi` is not → compile error (5.1).
  *
  * The variance (`out S, in I, out E`) = polish (S/E are produced/come out, I is consumed); it eases
  * type inference and no longer carries weight — since S/I/E are read directly from the supertype

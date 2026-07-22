@@ -1,8 +1,8 @@
 package dev.gezgin.core
 
 /**
- * Observe-only navigation event (§10). `navigator.events: Flow<NavEvent>` emits these types —
- * intended for logging/analytics/devtools; it does NOT affect the flow (it only observes).
+ * Observe-only navigation event. `navigator.events: Flow<NavEvent>` emits these types — intended
+ * for logging/analytics/devtools; it does NOT affect the flow (it only observes).
  *
  * @author @sahsenvar
  */

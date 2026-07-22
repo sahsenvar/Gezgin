@@ -50,6 +50,7 @@ enum class KDocFindingKind {
   MISSING_AUTHOR,
   NON_ENGLISH_KDOC,
   PROCESS_ARTIFACT_KDOC,
+  INTERNAL_SPEC_KDOC,
 }
 
 data class PublicApiKDocFinding(val declaration: PublicApiDeclaration, val kind: KDocFindingKind)
@@ -119,6 +120,9 @@ class KotlinPublicApiScanner : AutoCloseable {
             }
             if (declaration.kDocText?.containsProcessArtifact() == true) {
               add(PublicApiKDocFinding(declaration, KDocFindingKind.PROCESS_ARTIFACT_KDOC))
+            }
+            if (declaration.kDocText?.containsInternalSpecMarker() == true) {
+              add(PublicApiKDocFinding(declaration, KDocFindingKind.INTERNAL_SPEC_KDOC))
             }
           }
         }
@@ -237,6 +241,9 @@ class KotlinPublicApiScanner : AutoCloseable {
 
   private fun String.containsProcessArtifact(): Boolean = PROCESS_ARTIFACT.containsMatchIn(this)
 
+  private fun String.containsInternalSpecMarker(): Boolean =
+    INTERNAL_SPEC_MARKER.containsMatchIn(this)
+
   private fun KtDeclaration.effectiveKDoc(): KDoc? {
     docComment?.let {
       return it
@@ -299,6 +306,14 @@ class KotlinPublicApiScanner : AutoCloseable {
           "spike report|implementation brief|implementation report|implementation checkpoint|" +
           "release report|release checkpoint|migration report|migration checkpoint|" +
           "phase migration|phase implementation)\\b",
+        RegexOption.IGNORE_CASE,
+      )
+    val INTERNAL_SPEC_MARKER =
+      Regex(
+        "§\\s*[a-z]?\\d+(?:\\.\\d+)*|" +
+          "\\b(?:m|c|r|n|k)(?:-[a-z]+-)?\\d+(?:[\u2032'](?!\\w)|\\b)|" +
+          "\\b(?:fix|problem)\\s+\\d+\\b|\\bjar-verified\\b|" +
+          "\\b(?:spec|review|test)\\s+(?:id|provenance)\\b",
         RegexOption.IGNORE_CASE,
       )
   }

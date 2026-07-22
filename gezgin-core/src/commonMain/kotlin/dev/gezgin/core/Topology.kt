@@ -7,10 +7,10 @@ import kotlinx.serialization.KSerializer
 
 /**
  * One flow segment in a route's enclosing chain. Constructed only by generated topology code
- * ([GezginTopology]), so the constructor is gated behind [GezginInternalApi] (M2); the type itself
- * and its [id]/[isResultFlow] stay public because [GezginTopology.flowChain] returns
- * `List<FlowType>` (a devtools/introspection value). Not a `data class` — `copy`/`componentN` are
- * not part of the ABI.
+ * ([GezginTopology]), so the constructor is gated behind [GezginInternalApi]; the type itself and
+ * its [id]/[isResultFlow] stay public because [GezginTopology.flowChain] returns `List<FlowType>`
+ * (a devtools/introspection value). Not a `data class` — `copy`/`componentN` are not part of the
+ * ABI.
  *
  * @author @sahsenvar
  */
@@ -26,8 +26,8 @@ constructor(
 /**
  * The result-edge descriptor (id + optional result serializer). Constructed and read only by
  * generated topology code and the same-module runtime, so the whole type is gated behind
- * [GezginInternalApi] (M2) — it is no longer referenced by any public signature (`edges` is
- * `internal`), which keeps `kotlinx.serialization` off the public surface.
+ * [GezginInternalApi]. It is not referenced by any public signature (`edges` is `internal`), which
+ * keeps `kotlinx.serialization` off the public surface.
  */
 @GezginInternalApi
 public class EdgeSpec(
@@ -39,7 +39,7 @@ public class EdgeSpec(
 
 /**
  * The generated, loadable navigation topology. Constructed only by generated code
- * (`GezginGenerated.kt`), so the constructor is gated behind [GezginInternalApi] (M2);
+ * (`GezginGenerated.kt`), so the constructor is gated behind [GezginInternalApi];
  * [flowChain]/[startOf] stay public for introspection, while [edges] is `internal` (read only by
  * the same-module runtime).
  *

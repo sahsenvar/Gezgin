@@ -1,14 +1,14 @@
 package dev.gezgin.core
 
 /**
- * The **optional** typed home for modal presentation properties (§7) — a `@Dialog` route implements
- * this interface to carry the dialog window's dismiss/layout behavior as a **runtime value** off
- * the route instance (NOT from KSP — §2.4; the adapter reads it via `route as? DialogContract`). If
- * the route does not implement it, the adapter uses the default `DialogProperties` (identical to
+ * The **optional** typed home for modal presentation properties. A `@Dialog` route implements this
+ * interface to carry the dialog window's dismiss/layout behavior as a **runtime value** off the
+ * route instance rather than from KSP; the adapter reads it via `route as? DialogContract`. If the
+ * route does not implement it, the adapter uses the default `DialogProperties` (identical to
  * `DialogContract`'s defaults).
  *
  * This is NOT a **marker** like `ResultRoute<T>`: it carries PROPERTIES. Two ways to supply them —
- * **use the `get() =` form in BOTH** (see the m5 warning below):
+ * **use the `get() =` form in both cases**:
  * - **CONSTANT** (route-specific, no args): `override val dismissOnClickOutside get() = false` — an
  *   interface property override (defaulted → write only what you want to change).
  * - **CONDITIONAL** (depends on the call site): supply from a route ctor param — `data class
@@ -23,7 +23,7 @@ package dev.gezgin.core
  * behavior react as that state changes; the value is frozen at the value it had when the dialog
  * opened.
  *
- * **m5 — `get() =` is REQUIRED (do NOT write an initializer `val`):** writing `override val
+ * **Getter form required (do not write an initializer `val`):** writing `override val
  * dismissOnClickOutside = false` (a backing-field initializer) makes kotlinx.serialization include
  * this property in the `@Serializable` route's SERIALIZED SCHEMA → the presentation prop leaks into
  * the saved-state (PD) format. With `encodeDefaults=false` the actual data may be harmless, but the
@@ -35,11 +35,10 @@ package dev.gezgin.core
  * - [dismissOnBackPress] → `DialogProperties.dismissOnBackPress` (back button/Esc dismisses the
  *   dialog).
  * - [dismissOnClickOutside] → `DialogProperties.dismissOnClickOutside` (tapping outside dismisses).
- * - [usePlatformDefaultWidth] → `DialogProperties.usePlatformDefaultWidth`. The concrete
- *   counterpart of §7's abstract `layout` property: `true` = platform-default dialog width
- *   (wrapped), `false` = the content decides its own width (wide/near-fullscreen). Using this name
- *   instead of `layout` avoids hiding which `DialogProperties` field it maps down to (minimal
- *   magic).
+ * - [usePlatformDefaultWidth] → `DialogProperties.usePlatformDefaultWidth`. The concrete concrete
+ *   layout choice: `true` = platform-default dialog width (wrapped), `false` = the content decides
+ *   its own width (wide/near-fullscreen). Using this name instead of `layout` avoids hiding which
+ *   `DialogProperties` field it maps down to (minimal magic).
  *
  * dismiss (tap-outside/Esc/when back is allowed) → the dialog scene's `onDismissRequest = onBack` →
  * `navigator.back()` → pop; if the route is a `ResultRoute`, the caller receives `Canceled` (the
@@ -62,13 +61,13 @@ public interface DialogContract {
 }
 
 /**
- * The optional typed home for fullscreen-modal presentation properties (§7) — the parallel of
+ * The optional typed home for fullscreen-modal presentation properties. This parallels
  * [DialogContract], but with NO `usePlatformDefaultWidth`: a fullscreen modal BY DEFINITION decides
  * its own content width (`DialogProperties(usePlatformDefaultWidth = false)` — FIXED in the
  * adapter). A `@FullscreenModal` route carries only dismiss behavior. If the route does not
  * implement it, the adapter builds a fullscreen `DialogProperties` with the default dismisses (both
- * `true`). **Overrides must use the `get() =` form** ([DialogContract]'s m5 warning — an
- * initializer `val` leaks into the serialized schema).
+ * `true`). **Overrides must use the `get() =` form** because an initializer `val` leaks into the
+ * serialized schema).
  *
  * The adapter reads this contract into entry metadata and the dialog scene renders it with
  * `usePlatformDefaultWidth = false`. The same modal-at-root guard used by the other overlay kinds
@@ -102,12 +101,12 @@ public enum class BottomSheetDragHandleMode {
 }
 
 /**
- * The **optional** typed home for BottomSheet presentation properties (§7) — a `@BottomSheet` route
+ * The **optional** typed home for BottomSheet presentation properties. A `@BottomSheet` route
  * implements this interface to carry the modal sheet's behavior as a **runtime value** off the
  * route instance (same pattern as [DialogContract]; the adapter reads it via `route as?
  * BottomSheetContract`). If the route does not implement it, the adapter uses the type defaults
- * (identical to the defaults below). Overrides must use the `get() =` form ([DialogContract]'s m5
- * warning — an initializer `val` leaks into the serialized schema).
+ * (identical to the defaults below). Overrides must use the `get() =` form because an initializer
+ * `val` leaks into the serialized schema.
  *
  * **Prop set — five fields mapping to the REAL knobs of material3 `ModalBottomSheet`** (the dismiss
  * pair symmetric with [DialogContract] + sheet-specific state/gesture knobs):
@@ -117,7 +116,7 @@ public enum class BottomSheetDragHandleMode {
  * - [dismissOnBackPress] → `ModalBottomSheetProperties(shouldDismissOnBackPress = ...)`. When
  *   `false` the back button does not dismiss the sheet. Parallel to
  *   [DialogContract.dismissOnBackPress]; it is subject to the **same `@NoBack` guard**
- *   (`require(!(noBack && dismissOnBackPress))` in the adapter — a setup-time runtime check, §7).
+ *   (`require(!(noBack && dismissOnBackPress))` in the adapter, checked during setup).
  * - [dismissOnClickOutside] → `ModalBottomSheetProperties(shouldDismissOnClickOutside = ...)`.
  *   Whether a scrim-tap (outside tap) dismisses the sheet; default `true`. `false` → tap-outside
  *   does not dismiss, but swipe-down and the back button (if allowed) STILL work. Parallel to
@@ -135,8 +134,8 @@ public enum class BottomSheetDragHandleMode {
  *
  * dismiss (swipe-down / scrim-tap / when back is allowed) → the sheet's `onDismissRequest = onBack`
  * → `navigator.back()` → pop; if the route is a `ResultRoute`, the caller receives `Canceled` (the
- * existing `back()` path — in material3 swipe+scrim+back ALL THREE funnel into a single
- * `onDismissRequest`, jar-verified).
+ * existing `back()` path). Material3 funnels swipe, scrim tap, and back into the same
+ * `onDismissRequest` callback.
  *
  * @author @sahsenvar
  */

@@ -73,19 +73,19 @@ internal constructor(
 
   private val _backStack = MutableStateFlow<List<Route>>(emptyList())
   /**
-   * The public, observable back stack (§10) — a devtools / "where are we now" indicator. It carries
-   * only `Route` (id-less); the id-aware stream the display needs is [keysState] (internal).
+   * The public, observable back stack — a devtools / "where are we now" indicator. It carries only
+   * `Route` (id-less); the id-aware stream the display needs is [keysState] (internal).
    */
   public val backStack: StateFlow<List<Route>> = _backStack.asStateFlow()
 
   private val _keysState = MutableStateFlow<List<GezginKey>>(emptyList())
   /**
-   * Display-katmanı için `id` TAŞIYAN entry görünümü (R2, §2.1). [backStack] yalnız `Route`
-   * (id'siz) taşır → `StateFlow` eşit-değer dedup'ı yüzünden `replaceTo` ile aynı-değer-farklı-id
-   * bir hedefe geçiş [backStack]'te YENİ emit ÜRETMEZ (route listesi değişmez), dolayısıyla
-   * recompose tetiklemez. `GezginKey` benzersiz `id` taşıdığından bu akış her id değişiminde (yeni
-   * instance push/replace) farklı bir liste yayar → `GezginDisplay` bunu `collectAsState` ederek
-   * contentKey'i (id) değişen entry'yi yeniden kurar. `internal`: zarf public API'ye sızmaz.
+   * Display-katmanı için `id` TAŞIYAN entry görünümü. [backStack] yalnız `Route` (id'siz) taşır →
+   * `StateFlow` eşit-değer dedup'ı yüzünden `replaceTo` ile aynı-değer-farklı-id bir hedefe geçiş
+   * [backStack]'te YENİ emit ÜRETMEZ (route listesi değişmez), dolayısıyla recompose tetiklemez.
+   * `GezginKey` benzersiz `id` taşıdığından bu akış her id değişiminde (yeni instance push/replace)
+   * farklı bir liste yayar → `GezginDisplay` bunu `collectAsState` ederek contentKey'i (id) değişen
+   * entry'yi yeniden kurar. `internal`: zarf public API'ye sızmaz.
    */
   internal val keysState: StateFlow<List<GezginKey>> = _keysState.asStateFlow()
 
@@ -183,7 +183,7 @@ internal constructor(
    * eder. Android'de YALNIZ taze holder'ın PD-adopt yolunda çağrılır (config-change'te holder +
    * canlı navigator retained kalır → re-adopt YOK, MN-1). Yeni bir `RawNavigator` KURULMAZ → bu
    * instance'ı ctor'da yakalamış her sahip (özellikle rotasyondan sağ çıkan bir ViewModel)
-   * restore'dan sonra da display'in gözlemlediği state'i sürmeye devam eder (spec §225 "stable
+   * restore'dan sonra da display'in gözlemlediği state'i sürmeye devam eder ( "stable
    * RawNavigator"). `bus`/StateFlow instance'ları KORUNUR (aynı `keysState`/`backStack` → mevcut
    * collector'lar kopmaz), yalnız içerikleri restore edilmiş snapshot'a döner. Ctor'un `restored !=
    * null` yolunun birebir eşleniği; İDEMPOTENT (aynı snapshot'la tekrar çağrı state'i aynı değere
@@ -218,11 +218,10 @@ internal constructor(
   }
 
   /**
-   * Back: the order (§8.1 / Fix 9) — (1) if the top is a flow ENTRY, delegate ENTIRELY to quit()
-   * (even if there is a pending target: settleRemoved delivers Canceled), the event becomes
-   * `FlowQuit(canceled=true)`, NO `Popped`; (2) a plain pop + `Popped` — if the top is a
-   * pending-target, settleRemoved delivers its Canceled (a single gate). At the bottom →
-   * onRootBack.
+   * Back order: (1) if the top is a flow ENTRY, delegate ENTIRELY to quit() (even if there is a
+   * pending target: settleRemoved delivers Canceled), the event becomes `FlowQuit(canceled=true)`,
+   * NO `Popped`; (2) a plain pop + `Popped` — if the top is a pending-target, settleRemoved
+   * delivers its Canceled (a single gate). At the bottom → onRootBack.
    */
   public fun back() {
     val top = state.stack.last()
@@ -303,7 +302,7 @@ internal constructor(
   /**
    * Close atomically with a Value + deliver to the caller. A silent no-op when not inside a flow
    * (symmetric with quit()). In a nested ResultFlow the target = the NEAREST-ENCLOSING ResultFlow
-   * (spec §6); quit() stays on the innermost.
+   * while quit() stays on the innermost.
    */
   public fun quitWith(result: Any?) {
     // quitWith hedef seçimi: en içteki KAPSAYAN ResultFlow (spec §6);
@@ -364,8 +363,8 @@ internal constructor(
    * Yalnız [entryId] HÂLÂ top ise normal [back]'i uygular; değilse SESSİZ NO-OP. Modal
    * (dialog/sheet) dismiss'i kendi sahip-entry'sine pinlemek için kullanılır: çifte-dismiss /
    * hide-animasyon penceresinde geç gelen / app-scope coroutine'den gelen bir `back`, modal artık
-   * top değilken ALTTAKİ ekranı poplamaz — no-op olur (fail-loud/sahibe-pin felsefesi, spec §7).
-   * Ek: modal artık top değilse (kullanıcı zaten kapattı) bu no-op'tur; canlı top'a etki etmez.
+   * top değilken ALTTAKİ ekranı poplamaz — no-op olur (fail-loud/sahibe-pin felsefesi). Ek: modal
+   * artık top değilse (kullanıcı zaten kapattı) bu no-op'tur; canlı top'a etki etmez.
    */
   @GezginInternalApi
   public fun back(entryId: Long) {

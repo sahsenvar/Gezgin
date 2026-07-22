@@ -1,7 +1,7 @@
 package dev.gezgin.core
 
 /**
- * The result returned from a result-producing destination (`ResultRoute<T>`/`ResultFlow<T>`, §6).
+ * The result returned from a result-producing destination (`ResultRoute<T>` or `ResultFlow<T>`).
  * The suspend `goToXForResult()` or the `xResults` stream yields this; the consumer matches on
  * [Value]/[Canceled].
  *

@@ -5,7 +5,7 @@ import dev.gezgin.core.Route
 import kotlin.reflect.KClass
 
 /**
- * The presentation kind (§3.2) — the runtime counterpart of the `@Screen`/`@Dialog`/`@BottomSheet`/
+ * The presentation kind — the runtime counterpart of the `@Screen`/`@Dialog`/`@BottomSheet`/
  * `@FullscreenModal` annotations. `DIALOG` and `FULLSCREEN_MODAL` entries get DialogSceneStrategy
  * metadata in [toNavEntry] (properties from the optional DialogContract/FullscreenModalContract) →
  * `Dialog` overlay render (see EntryAdapter.kt); FULLSCREEN_MODAL uses
@@ -33,12 +33,12 @@ public enum class EntryKind {
  * A Gezgin registry record — [kind] selects modal scene wiring, and [content] is the composable
  * content narrowed to `Route` (the safe cast in register<R>).
  *
- * [noBack] (M5′, §4.2): the runtime counterpart of the `@NoBack` annotation. When `true` this entry
- * is TERMINAL — a Gezgin-owned back-swallower is set up: (1) the [gezginOnBack] guard turns
- * `back()` into a no-op while this entry is the top (no pop; except the root exemption), (2)
- * [toNavEntry] wraps the content with an entry-scoped back handler ([GezginNoBackHandler]) OUTER
- * (BEFORE the screen content — in the dispatcher LIFO the screen's own `BackHandler` registers more
- * INNER/later and wins). Generated entries read `@NoBack` and set this register-time flag.
+ * [noBack] (M5′, ): the runtime counterpart of the `@NoBack` annotation. When `true` this entry is
+ * TERMINAL — a Gezgin-owned back-swallower is set up: (1) the [gezginOnBack] guard turns `back()`
+ * into a no-op while this entry is the top (no pop; except the root exemption), (2) [toNavEntry]
+ * wraps the content with an entry-scoped back handler ([GezginNoBackHandler]) OUTER (BEFORE the
+ * screen content — in the dispatcher LIFO the screen's own `BackHandler` registers more INNER/later
+ * and wins). Generated entries read `@NoBack` and set this register-time flag.
  */
 @PublishedApi
 internal class RegisteredEntry(
@@ -48,7 +48,7 @@ internal class RegisteredEntry(
 )
 
 /**
- * The trailing-lambda receiver of `GezginDisplay` (§10.1/§12) — the user (or codegen's generated
+ * The trailing-lambda receiver of `GezginDisplay` — the user (or codegen's generated
  * `provideXEntry`) calls [register] here to bind a route to its content. No wrapper type leaks to
  * the user: the registry is `internal`, read only by the [dev.gezgin.core.compose] package
  * (GezginDisplay/adapter).

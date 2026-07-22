@@ -62,22 +62,22 @@ internal fun restoreNamespace(restoreKey: String): String {
 
 /**
  * Sets up `RawNavigator` in a platform-appropriate, IDENTITY-STABLE holder — the PD (process death)
- * simulation of §1.10/§12: the saved type is `String` (json-encoded [SavedState], [navigatorSaver]/
+ * simulation: the saved type is `String` (json-encoded [SavedState], [navigatorSaver]/
  * [decodeSavedStateOrNull]).
  *
- * **C1 — stable RawNavigator across config-change (spec §225):** instance acquisition is delegated
- * to the [rememberRawNavigatorInstance] expect/actual. The Android actual keeps the navigator in a
- * holder scoped to the host `ViewModelStoreOwner` (Activity) → a rotation (Activity recreation)
- * preserves the SAME instance; the navigator reference captured in the VM ctor keeps driving the
- * state the display observes after rotation too. On process death the holder dies too → a fresh
- * instance is set up and the serialized snapshot in `rememberSaveable` is adopted ONCE via
+ * **Stable RawNavigator across configuration changes:** instance acquisition is delegated to the
+ * [rememberRawNavigatorInstance] expect/actual. The Android actual keeps the navigator in a holder
+ * scoped to the host `ViewModelStoreOwner` (Activity) → a rotation (Activity recreation) preserves
+ * the SAME instance; the navigator reference captured in the VM ctor keeps driving the state the
+ * display observes after rotation too. On process death the holder dies too → a fresh instance is
+ * set up and the serialized snapshot in `rememberSaveable` is adopted ONCE via
  * [RawNavigator.adoptRestored]. The desktop actual uses `rememberSaveable(navigatorSaver)` (on CMP
  * desktop there is NO config-change → the identity is already stable for the lifetime of the
  * composition; desktop has no Android-style configuration change).
  *
- * **Setup guard (§12):** `start`'s flow-chain may NOT contain a member with `isResultFlow == true`
- * — a ResultFlow member cannot be opened alone (without a pending caller) as the root/first entry
- * (§8.1). The modal-kind guard is NOT here — the kind info lives in the entry-scope (registry), so
+ * **Setup guard:** `start`'s flow-chain may NOT contain a member with `isResultFlow == true`
+ * because a ResultFlow member cannot be opened alone (without a pending caller) as the root/first
+ * entry. The modal-kind guard is NOT here — the kind info lives in the entry-scope (registry), so
  * it is applied inside [GezginDisplay] (AFTER the register lookup).
  *
  * **Current callback:** `stableOnRootBack` is set up only on the FIRST composition (the `remember`

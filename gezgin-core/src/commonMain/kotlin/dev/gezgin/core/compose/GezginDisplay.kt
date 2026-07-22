@@ -16,38 +16,37 @@ import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
 
 /**
- * The Nav3 `NavDisplay` adapter (§2.1/§4.2/§12) — the `entries` trailing lambda collects the
- * `register<R> {... }` calls, including generated `provideXEntry` bindings, on a [GezginEntryScope]
- * receiver; the content (the `GezginKey` list) is ALWAYS read from `navigator.keysState` (it
- * carries an `id`) — NOT from `backStack` (public `Route`, id-less): because of `StateFlow`
- * equal-value dedup, a `replaceTo` to a same-value-different-id target produces no emit on
- * `backStack`, whereas [keysState][RawNavigator.keysState] emits a new list by the `id` difference.
- * Entry identity is therefore always the `contentKey`.
+ * The Nav3 `NavDisplay` adapter — the `entries` trailing lambda collects the `register<R> {... }`
+ * calls, including generated `provideXEntry` bindings, on a [GezginEntryScope] receiver; the
+ * content (the `GezginKey` list) is ALWAYS read from `navigator.keysState` (it carries an `id`) —
+ * NOT from `backStack` (public `Route`, id-less): because of `StateFlow` equal-value dedup, a
+ * `replaceTo` to a same-value-different-id target produces no emit on `backStack`, whereas
+ * [keysState][RawNavigator.keysState] emits a new list by the `id` difference. Entry identity is
+ * therefore always the `contentKey`.
  *
  * **Decorators:** entries are decorated with `rememberDecoratedNavEntries` before being handed to
  * `NavDisplay`. The common decorator is `rememberSaveableStateHolderNavEntryDecorator()` (saveable
  * state = mandatory; `rememberSaveable` runs in each entry's own `contentKey`=id slot → two
- * equal-valued routes get SEPARATE saved state; the R2 saved-state side, desktop included).
- * PLATFORM: [rememberPlatformEntryDecorators] — on Android
- * `rememberViewModelStoreNavEntryDecorator()` (per-entry VM store; `LocalViewModelStoreOwner` from
- * the host Activity), on desktop the SAME per-entry VM store decorator (since the owner is not
- * guaranteed from the host, with Gezgin's own window-scoped owner). Order `[saveable] + platform`:
- * the VM store decorator depends on the `SavedStateRegistryOwner` the saveable provides → saveable
- * first/OUTER.
+ * equal-valued routes get SEPARATE saved state, including on desktop). PLATFORM:
+ * [rememberPlatformEntryDecorators] — on Android `rememberViewModelStoreNavEntryDecorator()`
+ * (per-entry VM store; `LocalViewModelStoreOwner` from the host Activity), on desktop the SAME
+ * per-entry VM store decorator (since the owner is not guaranteed from the host, with Gezgin's own
+ * window-scoped owner). Order `[saveable] + platform`: the VM store decorator depends on the
+ * `SavedStateRegistryOwner` the saveable provides → saveable first/OUTER.
  *
- * **Setup guard (§12) — the part `rememberNavigator` CANNOT do:** the kind info exists only here
- * (in the entry-scope registry). AFTER the registers are collected, if the root
- * (`navigator.keys.first()`) route's registered kind is OTHER THAN `SCREEN`
- * (`Dialog`/`BottomSheet`/`FullscreenModal`), setup stops with an `error()` — it prevents violating
- * Nav3 `OverlayScene`'s `require(overlaidEntries.isNotEmpty())` invariant (that a modal cannot
- * exist without at least one normal entry beneath it) by starting a modal alone at the root. If the
- * route is NOT registered yet (kind lookup `null`) it does not blow up here — the more descriptive
- * error for that case already exists in [toNavEntry] (`no entry registered for route`). The guard
- * remains necessary even with [GezginNavDisplay] modal scenes because `OverlayScene` requires at
- * least one normal entry beneath every modal (§7).
+ * **Setup guard — the part `rememberNavigator` CANNOT do:** the kind info exists only here (in the
+ * entry-scope registry). AFTER the registers are collected, if the root (`navigator.keys.first()`)
+ * route's registered kind is OTHER THAN `SCREEN` (`Dialog`/`BottomSheet`/`FullscreenModal`), setup
+ * stops with an `error()` — it prevents violating Nav3 `OverlayScene`'s
+ * `require(overlaidEntries.isNotEmpty())` invariant (that a modal cannot exist without at least one
+ * normal entry beneath it) by starting a modal alone at the root. If the route is NOT registered
+ * yet (kind lookup `null`) it does not blow up here — the more descriptive error for that case
+ * already exists in [toNavEntry] (`no entry registered for route`). The guard remains necessary
+ * even with [GezginNavDisplay] modal scenes because `OverlayScene` requires at least one normal
+ * entry beneath every modal.
  *
- * **Transition cascade (§9) — per-entry metadata:** as each entry is built, its own route's cascade
- * is resolved by [resolveTransition] and written into `NavEntry.metadata` through Nav3's
+ * **Transition cascade — per-entry metadata:** as each entry is built, its own route's cascade is
+ * resolved by [resolveTransition] and written into `NavEntry.metadata` through Nav3's
  * `NavDisplay.transitionSpec/popTransitionSpec/predictivePopTransitionSpec` wrappers
  * ([GezginTransition.toNavEntryMetadata]). On pop, NavDisplay reads the metadata of the scene being
  * left, so the innermost route remains authoritative in both directions. If the cascade resolves to
@@ -140,8 +139,8 @@ public fun GezginDisplay(
 }
 
 /**
- * The `NavDisplay` `onBack` lambda — the `@NoBack` runtime guard (M5′, §4.2). When back is invoked
- * it reads the LIVE top entry (`navigator.keys.last()`, not a captured stale value): if the top's
+ * The `NavDisplay` `onBack` lambda — the `@NoBack` runtime guard (M5′, ). When back is invoked it
+ * reads the LIVE top entry (`navigator.keys.last()`, not a captured stale value): if the top's
  * record has `noBack==true` AND the top is NOT the root, back is SWALLOWED (no pop) — otherwise
  * `navigator.back()`. **Root exemption:** while the stack has a single entry (`keys.size <= 1`),
  * `noBack` is ignored → `back()` (at the bottom this hits `onRootBack`; the user is not trapped in
