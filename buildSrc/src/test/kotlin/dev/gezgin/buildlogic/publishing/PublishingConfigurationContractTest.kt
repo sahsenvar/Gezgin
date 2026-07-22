@@ -157,7 +157,7 @@ class PublishingConfigurationContractTest {
     assertContains(workflow, "./gradlew -p buildSrc test")
     assertContains(workflow, "./gradle/verify-release-publications.sh")
     assertContains(workflow, "gpg --version")
-    assertContains(workflow, "java-version: '21'")
+    assertContains(workflow, "java-version: '17'")
     assertFalse(workflow.contains("MAVEN_CENTRAL_USERNAME"))
     assertFalse(workflow.contains("MAVEN_CENTRAL_PASSWORD"))
   }

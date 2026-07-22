@@ -30,6 +30,37 @@ val publishedProjectPaths =
 val publishedProjects = publishedProjectPaths.map(::project)
 val koverMinLineCoverage = providers.gradleProperty("KOVER_MIN_LINE_COVERAGE").map(String::toInt)
 
+tasks.register<Sync>("assembleDokkaSite") {
+  group = "documentation"
+  description = "Assembles the published modules' Dokka HTML into one GitHub Pages site."
+  dependsOn(
+    publishedProjects.map { publishedProject -> "${publishedProject.path}:dokkaGenerateHtml" }
+  )
+  into(layout.buildDirectory.dir("dokka-site"))
+  publishedProjects.forEach { publishedProject ->
+    from(publishedProject.layout.buildDirectory.dir("dokka/html")) { into(publishedProject.name) }
+  }
+  doLast {
+    destinationDir
+      .resolve("index.html")
+      .writeText(
+        """
+      <!doctype html>
+      <html lang="en">
+        <head><meta charset="utf-8"><title>Gezgin API documentation</title></head>
+        <body>
+          <h1>Gezgin API documentation</h1>
+          <ul>
+            ${publishedProjects.joinToString("\n") { "<li><a href=\"${it.name}/\">${it.name}</a></li>" }}
+          </ul>
+        </body>
+      </html>
+      """
+          .trimIndent()
+      )
+  }
+}
+
 publishedProjects.forEach { publishedProject ->
   publishedProject.pluginManager.apply("org.jetbrains.kotlinx.kover")
 }

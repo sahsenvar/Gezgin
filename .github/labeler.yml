@@ -1,0 +1,42 @@
+core:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'gezgin-core/**'
+
+mvi:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'gezgin-mvi/**'
+
+processor:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'gezgin-processor/**'
+
+test:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'gezgin-test/**'
+
+sample:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'sample/**'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '**/*.md'
+
+build:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.gradle.kts'
+          - 'gradle/**'
+          - '*.properties'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
