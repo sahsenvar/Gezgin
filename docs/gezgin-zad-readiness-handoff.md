@@ -82,9 +82,13 @@ The independent consumer resolves AndroidX Navigation 3 on Android:
 - `androidx.navigation3:navigation3-ui:1.0.0`
 - `androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0`
 
-## Alpha05 verification evidence — newly rerun
+## Alpha05 verification evidence
 
-All Android commands used `ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"` after verifying that directory. The following alpha05 commands were rerun from source/version commit `d3262b93bd7332621e4864443c3735488a006083` and completed with `BUILD SUCCESSFUL`:
+All Android commands used `ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"` after verifying that directory. The evidence is split at the immutable source/version checkpoint so pre-commit working-tree runs are not represented as post-commit runs.
+
+### Pre-source-commit working-tree evidence
+
+The focused and standalone full processor commands completed with `BUILD SUCCESSFUL` on the implementation working tree. That implementation and its tests were then committed unchanged; the later immutable-commit root gate below reran the processor suite as part of its combined command.
 
 ```bash
 # Focused generated Fragment entry contract.
@@ -94,6 +98,13 @@ All Android commands used `ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/s
 
 # Full processor regression.
 ./gradlew :gezgin-processor:test --rerun-tasks
+```
+
+### Rerun from immutable source/version commit
+
+The following commands were actually rerun after `d3262b93bd7332621e4864443c3735488a006083` became HEAD and completed with `BUILD SUCCESSFUL`:
+
+```bash
 
 # Root regression, API, and maintained Shopr assembly gate.
 ./gradlew :gezgin-processor:test \
@@ -111,16 +122,17 @@ All Android commands used `ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/s
 ./compatibility/zad-consumer/gradlew \
   -p compatibility/zad-consumer \
   clean compileDebugKotlin --stacktrace
+
+# Console dependency resolution evidence.
+./compatibility/zad-consumer/gradlew \
+  -p compatibility/zad-consumer \
+  dependencyInsight --configuration debugRuntimeClasspath --dependency navigation3
+./compatibility/zad-consumer/gradlew \
+  -p compatibility/zad-consumer \
+  dependencyInsight --configuration debugRuntimeClasspath --dependency lifecycle-viewmodel-navigation3
 ```
 
-Fresh dependency reports for the alpha05 consumer were scanned for the forbidden JetBrains Android runtime families:
-
-```bash
-rg -n 'org\.jetbrains\.androidx\.navigation3|org\.jetbrains\.androidx\.lifecycle:.*navigation3' \
-  compatibility/zad-consumer/build/reports/zad-readiness
-```
-
-Exact forbidden-match count: **0**. The independent consumer compiled the pinned `0.1.0-alpha05` artifacts successfully and did not use a composite/source substitution.
+The two `dependencyInsight` console outputs were checked during consumer validation. Exact forbidden JetBrains Navigation 3/lifecycle-navigation3 match count: **0**. Raw report files were not retained, so this is console-derived evidence rather than a claim about files under `build/reports`. The independent consumer compiled the pinned `0.1.0-alpha05` artifacts successfully and did not use a composite/source substitution.
 
 The alpha05 source checkpoint was clean before this handoff-only update:
 
@@ -174,7 +186,7 @@ Repeatable route-bound `@TopBar(route)` and `@BottomBar(route)` exist only to pr
 
 ### Fragment boundary
 
-Fragment interop remains screen-only. `@FragmentScreen` injects serializable route args and a typed navigator, and the app initializes `Gezgin.initFragmentInterop(gezginJson)` before Fragment restoration. Every generated screen-only `AndroidFragment<Fragment>` entry now supplies `modifier = Modifier.fillMaxSize()`, so the Fragment host consumes the full bounds offered by its parent instead of collapsing to measured child chrome. The focused and full processor suites freshly verify this generated-source contract for alpha05.
+Fragment interop remains screen-only. `@FragmentScreen` injects serializable route args and a typed navigator, and the app initializes `Gezgin.initFragmentInterop(gezginJson)` before Fragment restoration. Every generated screen-only `AndroidFragment<Fragment>` entry now supplies `modifier = Modifier.fillMaxSize()`, so the Fragment host consumes the full bounds offered by its parent instead of collapsing to measured child chrome. The focused and standalone full processor suites verified this generated-source contract on the pre-commit working tree; those sources were committed unchanged, and the combined immutable-commit root gate reran the processor suite.
 
 Existing real process-death support was not reimplemented. There is no `DialogFragment` or `BottomSheetDialogFragment` bridge. ZAD must convert Fragment dialogs and sheets to Compose routes.
 
