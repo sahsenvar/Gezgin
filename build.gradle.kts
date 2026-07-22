@@ -1,4 +1,5 @@
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
+import dev.gezgin.buildlogic.docs.AssembleDokkaSiteTask
 import dev.gezgin.buildlogic.kdoc.CheckPublicApiKDocTask
 import dev.gezgin.buildlogic.publishing.VerifyReleaseRepositoryTask
 import org.gradle.api.publish.PublishingExtension
@@ -30,35 +31,25 @@ val publishedProjectPaths =
 val publishedProjects = publishedProjectPaths.map(::project)
 val koverMinLineCoverage = providers.gradleProperty("KOVER_MIN_LINE_COVERAGE").map(String::toInt)
 
-tasks.register<Sync>("assembleDokkaSite") {
+tasks.register<AssembleDokkaSiteTask>("assembleDokkaSite") {
   group = "documentation"
   description = "Assembles the published modules' Dokka HTML into one GitHub Pages site."
   dependsOn(
     publishedProjects.map { publishedProject -> "${publishedProject.path}:dokkaGenerateHtml" }
   )
-  into(layout.buildDirectory.dir("dokka-site"))
-  publishedProjects.forEach { publishedProject ->
-    from(publishedProject.layout.buildDirectory.dir("dokka/html")) { into(publishedProject.name) }
-  }
-  doLast {
-    destinationDir
-      .resolve("index.html")
-      .writeText(
-        """
-      <!doctype html>
-      <html lang="en">
-        <head><meta charset="utf-8"><title>Gezgin API documentation</title></head>
-        <body>
-          <h1>Gezgin API documentation</h1>
-          <ul>
-            ${publishedProjects.joinToString("\n") { "<li><a href=\"${it.name}/\">${it.name}</a></li>" }}
-          </ul>
-        </body>
-      </html>
-      """
-          .trimIndent()
-      )
-  }
+  moduleNames.set(publishedProjects.map { publishedProject -> publishedProject.name })
+  moduleDocumentationPaths.putAll(
+    publishedProjects.associate { publishedProject ->
+      publishedProject.name to
+        publishedProject.layout.buildDirectory.dir("dokka/html").get().asFile.absolutePath
+    }
+  )
+  documentationDirectories.from(
+    publishedProjects.map { publishedProject ->
+      publishedProject.layout.buildDirectory.dir("dokka/html")
+    }
+  )
+  outputDirectory.set(layout.buildDirectory.dir("dokka-site"))
 }
 
 publishedProjects.forEach { publishedProject ->

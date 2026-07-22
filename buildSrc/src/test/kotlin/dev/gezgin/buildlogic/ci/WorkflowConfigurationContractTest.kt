@@ -90,6 +90,34 @@ class WorkflowConfigurationContractTest {
   }
 
   @Test
+  fun `Dokka site assembly uses a configuration cache safe typed task`() {
+    val rootBuild = text("build.gradle.kts")
+    assertContains(rootBuild, "import dev.gezgin.buildlogic.docs.AssembleDokkaSiteTask")
+    assertContains(rootBuild, "tasks.register<AssembleDokkaSiteTask>(\"assembleDokkaSite\")")
+    val registration =
+      rootBuild
+        .substringAfter("tasks.register<AssembleDokkaSiteTask>(\"assembleDokkaSite\")")
+        .substringBefore("publishedProjects.forEach")
+    assertFalse(
+      registration.contains("doLast"),
+      "The root script must not be captured by task actions",
+    )
+
+    val implementation =
+      text("buildSrc/src/main/kotlin/dev/gezgin/buildlogic/docs/AssembleDokkaSiteTask.kt")
+    assertContains(implementation, "@get:Input")
+    assertContains(implementation, "moduleNames: ListProperty<String>")
+    assertContains(implementation, "moduleDocumentationPaths: MapProperty<String, String>")
+    assertContains(implementation, "@get:InputFiles")
+    assertContains(implementation, "@get:OutputDirectory")
+    assertContains(implementation, "@TaskAction")
+    assertFalse(
+      implementation.contains("Project"),
+      "Task actions must not capture a Gradle Project",
+    )
+  }
+
+  @Test
   fun `labeler covers published modules documentation build and CI`() {
     val labeler = text(".github/labeler.yml")
     listOf("gezgin-core", "gezgin-mvi", "gezgin-processor", "gezgin-test").forEach {
