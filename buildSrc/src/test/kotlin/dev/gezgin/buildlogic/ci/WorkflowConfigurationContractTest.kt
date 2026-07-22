@@ -92,6 +92,23 @@ class WorkflowConfigurationContractTest {
   }
 
   @Test
+  fun `CodeQL init and analyze use the same verified release`() {
+    val workflow = text(".github/workflows/codeql.yml")
+    val actionCommits =
+      Regex("github/codeql-action/(init|analyze)@([0-9a-f]{40})")
+        .findAll(workflow)
+        .associate { match -> match.groupValues[1] to match.groupValues[2] }
+
+    assertEquals(setOf("init", "analyze"), actionCommits.keys)
+    assertEquals(
+      "99df26d4f13ea111d4ec1a7dddef6063f76b97e9",
+      actionCommits.getValue("init"),
+      "CodeQL must use the peeled immutable commit for v4.37.0",
+    )
+    assertEquals(actionCommits.getValue("init"), actionCommits.getValue("analyze"))
+  }
+
+  @Test
   fun `release is a strict ordered stable tag workflow`() {
     val workflow = text(".github/workflows/release.yml")
     assertContains(workflow, "tags: [ 'v*' ]")
