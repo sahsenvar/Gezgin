@@ -18,16 +18,16 @@ import dev.gezgin.sample.navigation.SignUpFlow.CredentialsScreenRoute
 @Screen(CredentialsScreenRoute::class)
 @Composable
 fun CredentialsScreen(state: CredentialsUiState, onIntent: (CredentialsIntent) -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Kayıt ol — hesap bilgileri")
-            OutlinedTextField(
-                value = state.email,
-                onValueChange = { onIntent(CredentialsIntent.EmailChanged(it)) },
-                label = { Text("E-posta") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(onClick = { onIntent(CredentialsIntent.Continue) }) { Text("Devam") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Kayıt ol — hesap bilgileri")
+      OutlinedTextField(
+        value = state.email,
+        onValueChange = { onIntent(CredentialsIntent.EmailChanged(it)) },
+        label = { Text("E-posta") },
+        modifier = Modifier.fillMaxWidth(),
+      )
+      Button(onClick = { onIntent(CredentialsIntent.Continue) }) { Text("Devam") }
     }
+  }
 }

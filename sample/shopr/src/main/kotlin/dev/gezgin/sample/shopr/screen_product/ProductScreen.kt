@@ -10,9 +10,9 @@ import dev.gezgin.sample.shopr.ui.ScreenChrome
 @Screen(Product::class)
 @Composable
 fun ProductScreen(state: ProductUiState, onIntent: (ProductIntent) -> Unit) {
-    ScreenChrome(title = "Product ${state.id}") {
-        Text("Bare route — navigator'ı yok; VM route verisini state olarak tutar.")
-        Text(if (state.favorite) "★ Favoride" else "☆ Favoride değil")
-        Button(onClick = { onIntent(ProductIntent.ToggleFavorite) }) { Text("Favori değiştir") }
-    }
+  ScreenChrome(title = "Product ${state.id}") {
+    Text("Bare route — navigator'ı yok; VM route verisini state olarak tutar.")
+    Text(if (state.favorite) "★ Favoride" else "☆ Favoride değil")
+    Button(onClick = { onIntent(ProductIntent.ToggleFavorite) }) { Text("Favori değiştir") }
+  }
 }

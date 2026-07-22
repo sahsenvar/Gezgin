@@ -10,7 +10,7 @@ import dev.gezgin.sample.shopr.ui.ScreenChrome
 @Screen(Cart::class)
 @Composable
 fun CartScreen(state: CartUiState, onIntent: (CartIntent) -> Unit) {
-    ScreenChrome(title = "Cart (${state.itemCount})") {
-        Button(onClick = { onIntent(CartIntent.Checkout) }) { Text("Ödemeye geç") }
-    }
+  ScreenChrome(title = "Cart (${state.itemCount})") {
+    Button(onClick = { onIntent(CartIntent.Checkout) }) { Text("Ödemeye geç") }
+  }
 }

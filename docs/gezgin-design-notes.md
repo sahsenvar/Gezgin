@@ -1,5 +1,7 @@
 # Gezgin — Tasarım Notları (çalışan taslak)
 
+> **Tarihsel kayıt — current kullanım rehberi değildir.** Bu dosya eski brainstorm ve karar evrimini olduğu gibi korur. Güncel public sözleşme için [gezgin-design.md](gezgin-design.md), ZAD Phase A sınırı için [gezgin-zad-root-integration-spec.md](gezgin-zad-root-integration-spec.md) kullanılmalıdır. Eski deep-link, raw dispatch, MVI effect ve sürüm ifadeleri mevcut özellik iddiası sayılmaz.
+
 Durum: beyin fırtınası sürüyor. Bu dosya kilitlenen kararları, parkedilenleri ve sıradaki konuları tutar.
 Yöntem: **tümden gelim** — önce developer-facing yüzey ("nasıl görünür"), sonra çekirdek.
 
@@ -272,7 +274,7 @@ Gerekçe: DRY / minimal-magic — `BackHandler` platform primitive'i, reinvent e
 Kullanıcıyla **kilitlendi** (son büyük tasarım konusu). Candidate 2 (contract + codegen), `@ScreenModel` yerine kullanıcının önerdiği **`provideXEntry(resolver)`** deseniyle:
 - Codegen `provideXEntry(viewModel: @Composable (nav,args) -> GezginMvi<S,I,E>): GezginEntry` üretir (collect+observe+render). **S/I/E `@Screen` content imzasından türetilir**; VM somut tipi codegen'ce bilinmez (resolver `-> GezginMvi<S,I,E>` tiplenir, kullanıcı VM'i alt-tip).
 - **VM resolution = kullanıcının lambda'sı, entry-kurulum noktasında** (Ktorfit modeli). Ekran kodunda DI **yok**, tek yerde toplanır. Assisted/store/scope kontrolü korunur → kullanıcının tüm kısıtları karşılandı.
-- Ekran kodu: stateless `@Screen(state,onIntent)` + opsiyonel `@ScreenEffect(Flow<E>)`. Sözleşme opt-in `GezginMvi<S,I,E>`.
+- Ekran kodu: stateless `@Screen(state,onIntent)` + route-explicit `@EffectHandler(route)` ile `Flow<E>`. Sözleşme opt-in `GezginMvi<S,I,E>`.
 - **Core default-free** (DI-agnostik); `gezgin-koin` default resolver verebilir (mode flag/overload), codegen constructor'a bakıp `parametersOf` şeklini üretir.
 - **Effect:** opsiyonel; Google state-first önerisi — dayatılmaz. **Mode imzayla:** core `@Screen(route,nav)` kendin-bağla vs mvi `@Screen(state,onIntent)` codegen-bağlar.
 - Araştırma yakınsaması doğrulandı: kimse binder'ı codegen etmiyor (CD/Voyager/community runtime-helper, Circuit runtime-registry) → binder'ı codegen etmek Gezgin'in ayrışması.
@@ -286,7 +288,7 @@ Tüm kilitli kararlar tek, temiz, self-contained `gezgin-design.md`'ye toplandı
 ## MVI artifact split + `GezginEntry` kaldırma + DI-detection (2026-07-02, review sonrası)
 
 Review düzeltmeleri sırasında çıkan refinement'lar (kullanıcı):
-- **MVI'ı core'dan ayır:** `@MviViewModel`/`GezginMvi`/`@ScreenEffect`/binder-codegen/DI-detection → **`gezgin-mvi`** (opt-in). `gezgin-core` DI/VM/MVI bilmez (`@Screen(route,nav)` + navigator'lar + routes/deeplink/topology + `GezginDisplay` + `GezginEntryScope`). Bağlantı seam'i: core'un `GezginEntryScope` + navigator'ları; mvi = entry-producer add-on. `gezgin-mvi → gezgin-core` bağımlı.
+- **MVI'ı core'dan ayır:** `@MviViewModel`/`GezginMvi`/`@EffectHandler(route)`/binder-codegen/DI-detection → **`gezgin-mvi`** (opt-in). `gezgin-core` DI/VM/MVI bilmez (`@Screen(route,nav)` + navigator'lar + routes/deeplink/topology + `GezginDisplay` + `GezginEntryScope`). Bağlantı seam'i: core'un `GezginEntryScope` + navigator'ları; mvi = entry-producer add-on. `gezgin-mvi → gezgin-core` bağımlı.
 - **`GezginEntry` kaldırıldı** (over-engineering'di): `provideXEntry` = `GezginEntryScope` extension, Nav3'ün `entry<Route>{}`'sini **doğrudan** register eder (Zad `registerAll(scope)` deseni). Bundle (`xFeatureEntries()`) = **kullanıcı-yazımı** (codegen üretirse resolver override noktası kapanır); codegen yalnız bireysel `provideXEntry`'leri üretir. `GezginDisplay { … }` trailing lambda = `GezginEntryScope`.
 - **DI-detection (B2 tersine):** `@MviViewModel` VM class'ını KSP-görünür kıldığı için codegen VM'in `@HiltViewModel`/`@KoinViewModel` + ctor `@Assisted`/`@InjectedParam`'ını okur → default resolver üretir (Hilt+Koin, androidx fallback). Ayrı gezgin-koin/hilt add-on'una gerek yok. B2 "düşür"den "feasible"ye döndü (infeasibility "VM tipi lambda gövdesinde"ydi; `@MviViewModel` KSP-görünür pozisyona taşıdı).
 İşlendi: spec §2.4/§3.3/§10.1/§12/§14/§15 + findings B2.

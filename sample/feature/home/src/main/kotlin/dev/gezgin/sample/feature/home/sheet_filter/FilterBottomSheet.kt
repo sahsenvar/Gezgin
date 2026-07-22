@@ -15,9 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.gezgin.core.annotation.BottomSheet
 import dev.gezgin.core.compose.LocalGezginSheetController
+import dev.gezgin.sample.domain.model.SortOrder
 import dev.gezgin.sample.navigation.FilterBottomSheetNavigator
 import dev.gezgin.sample.navigation.HomeGraph.FilterBottomSheetRoute
-import dev.gezgin.sample.domain.model.SortOrder
 import kotlinx.coroutines.launch
 
 // Seçim sonrası sıra ZORUNLU: ÖNCE controller.hide() (kapanma animasyonu), SONRA backWithResult() —
@@ -25,24 +25,28 @@ import kotlinx.coroutines.launch
 @BottomSheet(FilterBottomSheetRoute::class)
 @Composable
 fun FilterBottomSheet(route: FilterBottomSheetRoute, nav: FilterBottomSheetNavigator) {
-    val controller = LocalGezginSheetController.current
-    val scope = rememberCoroutineScope()
-    // hide() suspend animasyon → hızlı çift tık iki backWithResult dispatch edip arkadaki Dashboard'ı da
-    // pop'lar; dispatched bayrağı onClick'te SENKRON (launch'tan önce) set edilir → yalnız ilk tık iş yapar.
-    var dispatched by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Sırala (şu an: ${route.current})")
-        SortOrder.entries.forEach { candidate ->
-            Button(
-                onClick = onClick@{
-                    if (dispatched) return@onClick
-                    dispatched = true
-                    scope.launch {
-                        controller.hide()
-                        nav.backWithResult(candidate)
-                    }
-                },
-            ) { Text(candidate.name) }
-        }
+  val controller = LocalGezginSheetController.current
+  val scope = rememberCoroutineScope()
+  // hide() suspend animasyon → hızlı çift tık iki backWithResult dispatch edip arkadaki Dashboard'ı
+  // da
+  // pop'lar; dispatched bayrağı onClick'te SENKRON (launch'tan önce) set edilir → yalnız ilk tık iş
+  // yapar.
+  var dispatched by remember { mutableStateOf(false) }
+  Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Text("Sırala (şu an: ${route.current})")
+    SortOrder.entries.forEach { candidate ->
+      Button(
+        onClick = onClick@{
+            if (dispatched) return@onClick
+            dispatched = true
+            scope.launch {
+              controller.hide()
+              nav.backWithResult(candidate)
+            }
+          }
+      ) {
+        Text(candidate.name)
+      }
     }
+  }
 }

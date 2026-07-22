@@ -12,18 +12,18 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface SignUpFlow : AuthGraph {
 
-    @StartDestination
-    @GoTo(ProfileInfoScreenRoute::class)
-    @Serializable
-    data object CredentialsScreenRoute : SignUpFlow
+  @StartDestination
+  @GoTo(ProfileInfoScreenRoute::class)
+  @Serializable
+  data object CredentialsScreenRoute : SignUpFlow
 
-    @GoTo(TermsScreenRoute::class)
-    @Serializable
-    data class ProfileInfoScreenRoute(val email: String) : SignUpFlow
+  @GoTo(TermsScreenRoute::class)
+  @Serializable
+  data class ProfileInfoScreenRoute(val email: String) : SignUpFlow
 
-    @BackToStart
-    @Quit
-    @QuitAndGoTo(HomeGraph.WelcomeScreenRoute::class)
-    @Serializable
-    data object TermsScreenRoute : SignUpFlow
+  @BackToStart
+  @Quit
+  @QuitAndGoTo(HomeGraph.WelcomeScreenRoute::class)
+  @Serializable
+  data object TermsScreenRoute : SignUpFlow
 }

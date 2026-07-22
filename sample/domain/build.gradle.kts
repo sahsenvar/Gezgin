@@ -1,13 +1,11 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.kotlin.jvm)
+  alias(libs.plugins.kotlin.serialization)
 }
 
-kotlin {
-    jvmToolchain(17)
-}
+kotlin { jvmToolchain(17) }
 
 dependencies {
-    // Model tipleri @Serializable — koordinat serileştirme runtime'ını (core transitively) getirir.
-    implementation(libs.kotlinx.serialization.json)
+  // Model tipleri @Serializable — koordinat serileştirme runtime'ını (core transitively) getirir.
+  implementation(libs.kotlinx.serialization.json)
 }

@@ -19,15 +19,15 @@ import dev.gezgin.sample.shopr.nav.OrderDetailsDialogNavigator
 @Dialog(OrderDetailsDialogRoute::class)
 @Composable
 fun OrderDetailsDialog(route: OrderDetailsDialogRoute, nav: OrderDetailsDialogNavigator) {
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 6.dp,
-        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-    ) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Sipariş detayı")
-            Text("Sipariş #${route.orderId}")
-            Button(onClick = { nav.backToOrderPlaced() }) { Text("Kapat") }
-        }
+  Surface(
+    shape = MaterialTheme.shapes.large,
+    tonalElevation = 6.dp,
+    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+  ) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Sipariş detayı")
+      Text("Sipariş #${route.orderId}")
+      Button(onClick = { nav.backToOrderPlaced() }) { Text("Kapat") }
     }
+  }
 }

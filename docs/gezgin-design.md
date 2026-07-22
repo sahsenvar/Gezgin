@@ -1,6 +1,6 @@
 # Gezgin — Navigasyon Kütüphanesi Tasarım Spec'i
 
-> Durum: **tasarım tamamlandı** (brainstorm bitti, implementation öncesi). Bu, tüm kilitli kararların temiz/konsolide hâlidir.
+> Durum: **maintained current contract**. Bu belge uygulanan public yüzeyi ve Phase A ZAD-readiness sınırlarını anlatır.
 > Hedef platform: Compose Multiplatform (Android öncelikli; iOS/Desktop/Web).
 > Karar geçmişi + gerekçeler: [gezgin-design-notes.md](gezgin-design-notes.md) · Binder analizi: [gezgin-binder-location.md](gezgin-binder-location.md) · Tanıtım: [gezgin-by-example.md](gezgin-by-example.md).
 
@@ -14,7 +14,7 @@ Mevcut CMP/KMP navigasyon çözümlerinde tek pakette bulunmayan bir kombinasyon
 - **Annotation + codegen** — az boilerplate; graph/wiring/result/binder codegen'de (deep-link → 🔮 V2).
 - **State-as-data çekirdek** — test/log/restore/MVI'yı bedavaya getirir.
 - **MVI/Redux dostu** ama dayatmasız.
-- Nested navigation, multiple back stack, deep link (parent reconstruction), result passing, process-death restore, modal, route/screen/app transition, UI'sız test, **brownfield (Fragment) migration**.
+- Nested navigation, result passing, process-death restore, modal, route/screen/app transition, UI'sız test ve **brownfield screen-Fragment migration**. Multiple back stack ve deep-link route dispatch V2'dir.
 
 **Konumlanma:** Compose Destinations'ın codegen ergonomisi + Nav3/Decompose'un sahiplenilen state-as-data back stack'i + Circuit'in MVI yakınlığı — hepsi **Navigation 3 (Nav3)** üzerinde.
 
@@ -31,13 +31,13 @@ Back stack = gözlemlenebilir + serializable `Route` yapısı; Gezgin tutar. `na
 - **Nav3**: render (`NavDisplay`), `List<NavKey>` back stack, transition + predictive back, per-entry lifecycle & saved state, scene (modal/two-pane).
 - **Gezgin**: codegen, type-safe route/graph, typed result, MVI scoping, transition DSL. (deep-link + multiple back stack → V2, §17)
 - `GezginDisplay` Nav3'ü tamamen sarar → Nav3 churn'ünü kullanıcıdan gizler.
-- KMP durumu (2026-07 doğrulandı): Nav3 **Android'de stable** (androidx navigation3 1.1.4); **non-Android hedeflerde JetBrains portu ALPHA** (`org.jetbrains.androidx.navigation3:navigation3-ui` 1.0.0-alpha05, CMP 1.10+; `lifecycle-viewmodel-navigation3` 2.10.0-alpha05). `GezginDisplay` adapter sınırı bu churn'ün sigortası (örn. `onBack` imza değişimi alpha11'de, `EntryProviderScope` rename — kullanıcıya sızmadan emilir). Sealed route ağacı → kotlinx.serialization kapalı-polimorfizmi bedava (iOS/web serileştirme otomatik).
+- KMP durumu (2026-07 checkout'u): Android hedefi AndroidX `navigation3-runtime`/`navigation3-ui` **1.0.0** ve `lifecycle-viewmodel-navigation3` **2.10.0** kullanır. Desktop hedefi JetBrains `navigation3-ui` **1.0.0-alpha05** ve `lifecycle-viewmodel-navigation3` **2.10.0-alpha05** kullanır. `GezginDisplay` adapter sınırı platform ailelerini ayırır; Android runtime graph'ına JetBrains Navigation 3 UI/lifecycle artefaktı sızmamalıdır.
 
 ### 2.3 DI-agnostik (Ktorfit modeli)
 Gezgin hiçbir DI'a bağlı değil. Codegen parça üretir (entry'ler, navigator'lar, `provideXEntry`); kullanıcı DI'ı kendi bağlar (Koin/Hilt/manuel). Magic yok.
 
 ### 2.4 İlke — compile-time → annotation; runtime → değer
-- **Annotation** (KSP, compile-time): container (`@NavGraph` şeffaf / `@FlowGraph` opak; V1'de her route ikisinden birinde), edge'ler (`@GoTo`/`@ReplaceTo`/`@GoForResult`, geri `@BackTo`/`@BackToStart`, flow-çıkış `@Quit`/`@QuitAndGoTo`), `@NoBack`, `@StartDestination` (yalnız `@FlowGraph`), kind (`@Screen`/`@Dialog`/…), MVI (`@MviViewModel`/`@ScreenEffect`, §10.1), fragment varyantı (`@FragmentScreen`). Result marker'ları (interface): `ResultRoute<T>` (screen), `ResultFlow<T>` (yalnız `@FlowGraph`). **V1 tek-stack;** `@TabGraph`/`@SwitchTo`/multi-backstack/`@DeepLink` → V2 (§17).
+- **Annotation** (KSP, compile-time): container (`@NavGraph` şeffaf / `@FlowGraph` opak; V1'de her route ikisinden birinde), edge'ler (`@GoTo`/`@ReplaceTo`/`@GoForResult`, geri `@BackTo`/`@BackToStart`, flow-çıkış `@Quit`/`@QuitAndGoTo`), `@NoBack`, `@StartDestination` (yalnız `@FlowGraph`), kind (`@Screen`/`@Dialog`/…), MVI (`@MviViewModel`/route-bound `@EffectHandler`, §10.1), fragment varyantı (`@FragmentScreen`). Result marker'ları (interface): `ResultRoute<T>` (screen), `ResultFlow<T>` (yalnız `@FlowGraph`). **V1 tek-stack;** `@TabGraph`/`@SwitchTo`/multi-backstack/`@DeepLink` → V2 (§17).
 - **Runtime değer**: `transition`, navigate opsiyonları (annotation'da kodlanır), modal properties (`DialogContract`/`BottomSheetContract`).
 
 ---
@@ -78,6 +78,7 @@ sealed interface OrderGraph : AppGraph {
 Kind annotation composable'da durur ve üç iş yapar: destination = binding, sunum kind'ı, hedef route'a **açık** bağ (`route` zorunlu).
 - `@Screen` (tam ekran, varsayılan) · `@Dialog` / `@BottomSheet` / `@FullscreenModal` (modal, bkz. §7).
 - Route her zaman açık verilir: `@Screen(OrdersRoute::class)` (sentinel/çıkarım yok). `route:` param'ı opsiyonel — route verisini taşır ve varsa tipi annotation route'uyla aynı olmalı (aksi = derleme hatası).
+- `@Screen` **repeatable**'dır: aynı stateless composable birden çok route'a bağlanabilir. MVI-mode'da her route kendi `@MviViewModel(route)` ve route-bound effect handler'ına sahiptir; ortak content'in State/Intent tipleri bütün bağlarla uyumlu olmalı, Effect/Navigator tipleri route'a göre farklı olabilir (§10.1).
 
 ### 3.3 Multi-module yerleşim
 Kotlin `sealed` alt-tipleri **aynı modül**de olmak zorunda → tüm sealed graph'lar **tek nav modülünde** toplanır (cross-module `OrderGraph : AppGraph` derlenmez):
@@ -89,7 +90,7 @@ core:navigation    → TÜM sealed graph'lar + route'lar + contract'lar (Dialog/
 feature:A / feature:B / … / :app   → hepsi core:navigation'ı görür
 ```
 - Tek sealed ağaç → tüm route/navigator herkese görünür (cross-feature `@GoTo` **derlenir**); polimorfik serialization **compile-time** (runtime merge yok; deep-link reconstruction V2'de aynı ağaçtan gelir).
-- **Codegen dağılımı:** `core:navigation` → tipli navigator'lar + graph topology + `SerializersModule` (deep-link tablosu **🔮 V2**, §5). `feature:X` → `@Screen`/`@ScreenEffect`/`@MviViewModel` → codegen `GezginEntryScope.provideXEntry`'ler; **kullanıcı** `xFeatureEntries()` bundle'ını yazar. `:app` → `GezginDisplay { … }` + back stack (montaj).
+- **Codegen dağılımı:** `core:navigation` → tipli navigator'lar + graph topology + `SerializersModule` (deep-link tablosu **🔮 V2**, §5). `feature:X` → `@Screen`/`@EffectHandler`/`@MviViewModel` → codegen `GezginEntryScope.provideXEntry`'ler; **kullanıcı** `xFeatureEntries()` bundle'ını yazar. `:app` → `GezginDisplay { … }` + back stack (montaj).
 - Her feature KSP'si **yalnız kendi modülünü** işler; cross-module **tip** görünürlüğü yeter (annotation okuması gerekmez → ksp#527 yok). Navigator ctor `internal`; core:navigation her navigator için **public factory** üretir (`fun RawNavigator.xNavigator(): XNavigator`) → feature'ın üretilen entry kodu navigator'ı bu factory'den alır (cross-module derlenir).
 - **Nav modülü tek-paket kısıtı (`[PKG]`):** bir nav modülündeki **her graph/route AYNI pakette** olmalı — bu ortak paket navigator'ların üretim hedefidir. Navigator'lar hep bu hedefe üretilir, ama cross-module probe/factory-import route'un **deklarasyon paketinde** arar; alt-paketlere bölünmüş bir nav modülü navigator'ı route'un paketi DIŞINDA üretir → cross-module lookup sessizce ıskalar. Bu yüzden processor ayrışık paketi **derleme hatasıyla reddeder** (fail-loud, sessiz-kırık yerine). Alt-paketlere bölme ihtiyacı → 🔮 V2.
 - Route-arg domain modelleri **`@Serializable` olmalı** (back stack serialize/PD). Tek-modül app: her şey tek modülde, aynı model tam ağaçla çalışır.
@@ -98,7 +99,7 @@ feature:A / feature:B / … / :app   → hepsi core:navigation'ı görür
 
 ## 4. Navigasyon API — tipli per-source navigator
 
-Codegen **her source ekran için** tipli navigator üretir; her deklare edilen kenar = bir metot. Eklenmeyen hedefe metot yoktur → **derlenmez**. Enforcement = API şeklinin doğal sonucu (`enforceEdges` flag'i yok). Bypass = `nav.raw.navigate(route)` (bilinçli escape hatch).
+Codegen **her source ekran için** tipli navigator üretir; her deklare edilen kenar = bir metot. Eklenmeyen hedefe metot yoktur → **derlenmez**. Enforcement = API şeklinin doğal sonucu (`enforceEdges` flag'i yok). Maintained kullanım ve ZAD entegrasyonu navigasyonu yalnız üretilmiş tipli metotlarla dispatch eder.
 
 ### 4.1 İleri edge seti (route'ta annotation)
 | Annotation | Üretilen metot | Operasyon |
@@ -127,7 +128,7 @@ Metot adı hedeften "Route"/"Screen" eki atılarak türetilir. Generated metotla
 - **`@NoBack` (terminal ekran, örn. result):** iki codegen etkisi — (1) navigator'dan `back()` çıkar; (2) codegen entry content'ini **Gezgin-sahipli enabled `NavigationBackHandler`** ile sarar → back tüketilir (pop yok), predictive preview o entry'de **hiç başlamaz**. (Gerekçe M5′: NavDisplay'de per-entry "back'i tüket / preview kapat" public API'si **yok** — `isBackEnabled` içeride `previousEntries.isNotEmpty()`; buna karşın entry içindeki nested handler alpha09'dan beri dispatcher LIFO'sunda kazanır. Kaynak-doğrulamalı ama resmî dokümanda yazmadığından on-device doğrulama implementation'da.) **Runtime kural:** root entry'de `noBack` yok sayılır → back = `onRootBack` (kullanıcı app'e hapsolmaz). **Back authority:** screen entry'lerde `GezginDisplay`; **modal'larda dialog'un kendi window'u** (`dismissOnBackPress`, §7 carve-out). **Declared olana dokunmaz** (`@BackTo`/`@BackToStart`/`@Quit`/`backWithResult` kalır) → `@NoBack` + `ResultRoute` veya `@NoBack` + `@BackToStart` serbest. Ekranın kendi `BackHandler`'ı daha iç → `@NoBack` + `BackHandler { nav.quit() }` = geri'yi çıkışa yönlendir.
 
 ### 4.3 Operasyon modeli (library-agnostik)
-İleri = push + opt (popUpTo/singleTop) · Geri = pop + opt (backTo/backToStart/quit/withResult) · Lateral = switch (multiple back stack) · Modal = bir entry'nin sunum biçimi · Deep link = dışarıdan stack kur.
+İleri = push + opt (popUpTo/singleTop) · Geri = pop + opt (backTo/backToStart/quit/withResult) · Lateral = switch (multiple back stack, V2) · Modal = bir entry'nin sunum biçimi · Deep link = dışarıdan stack kurma modeli (yalnız V2; current dispatch API'si yok).
 
 ### 4.4 Dinamik geri-yakalama (interception) — Gezgin API'si DEĞİL
 State'e bağlı "geri'yi ben mi yöneteyim" (wizard sayfa-geri, kaydedilmemiş değişiklik) için Gezgin özellik üretmez — geliştirici standart multiplatform `BackHandler(enabled) { }` / `PredictiveBackHandler`'ı `@Screen` içinde kullanır (`enabled=false` → jest düşer → Gezgin default observable pop + §9 predictive; `true` → yakala). VM-driven'da back = UI event → intent → VM karar verir. **Tek library-side yükümlülük:** `GezginDisplay` default back'i standart dispatcher / Nav3 üstünden yapar → kullanıcı `BackHandler`'ı (inner) öncelik alır + default pop observable kalır.
@@ -156,10 +157,16 @@ Hepsi normal back stack entry; fark sadece Nav3 **SceneStrategy** ile overlay re
 - Kind composable'da (`@Dialog`/`@BottomSheet`/`@FullscreenModal`); composable = **sadece içerik** (Surface/Column).
 - Properties = route'ta **opsiyonel** `DialogContract`/`FullscreenModalContract`/`BottomSheetContract`: SABİT = body override, KOŞULLU = constructor param (→ generated navigate param, serialize → PD-safe). `DialogContract`: `dismissOnClickOutside`, `dismissOnBackPress`, `usePlatformDefaultWidth` (spec'in soyut `layout`'unun somut `DialogProperties` karşılığı — `false` = içerik genişliği/geniş modal). `FullscreenModalContract`: yalnız dismiss'ler (`usePlatformDefaultWidth` YOK — tam-ekran tanımı gereği SABİT `false`). Contract yoksa adapter tip-varsayılan `DialogProperties`. Annotation'da prop yok.
 - Pencere + dismiss→pop Gezgin scene'inden; dismiss (tap-outside/swipe) = `Canceled`.
-- BottomSheet: `BottomSheetSceneStrategy` core'a bundle; swipe-dismiss animasyonlu pop; `controller: GezginSheetController` opsiyonel param ile composable'a enjekte (`LocalGezginSheetController`'dan).
+- BottomSheet: `BottomSheetSceneStrategy` core'a bundle; swipe-dismiss animasyonlu pop; `controller: GezginSheetController` opsiyonel param ile composable'a enjekte (`LocalGezginSheetController`'dan). `BottomSheetContract.sheetGesturesEnabled` varsayılan `true`'dur ve doğrudan Material 3 `ModalBottomSheet(sheetGesturesEnabled = …)` değerine iner.
 - Sonuç: dialog/sheet doğal sonuç-üreticisi (`ResultRoute<T>` + `backWithResult`). Entry-scoped VM burada da geçerli.
 - **Guardrail:** `dismissOnBackPress = true` + `@NoBack` = **kuruluş-zamanı runtime guard** (tezat: `@NoBack` geri'yi yutar, `dismissOnBackPress` geri'yle kapat der). `dismissOnBackPress` runtime değer (route-instance property, KSP okuyamaz) → derleme yerine entry kuruluşunda (`toNavEntry`) `require` reddeder.
-- **Guardrail (`@NoBack` × `@BottomSheet` = NET YASAK, runtime):** BottomSheet'te swipe-to-dismiss HİÇBİR prop'la kapatılamaz → `@NoBack` geri-yutması sheet'i material3 tarafında görsel olarak Hidden'a animasyonlar ama entry stack'te top'ta kalır (görsel/state desync: kullanıcı arka ekranı görür ama modal aslında "açık"). Bu yüzden `@NoBack` + `@BottomSheet` `dismissOnBackPress` ne olursa olsun `toNavEntry`'de `require` ile reddedilir. **Dialog için `@NoBack` HÂLÂ legal** (`dismissOnBackPress = false` ile — dialog'un kendi window'u swipe-dismiss'e sahip değil, yalnız geri/scrim; ikisi de prop'la kapatılabilir).
+- **Guardrail (`@NoBack` × `@BottomSheet`, runtime):** bu birleşim artık geçerlidir, ancak route hem `dismissOnBackPress = false` hem `sheetGesturesEnabled = false` sağlamalıdır; aksi entry kuruluşunda fail-loud olur. `dismissOnClickOutside` bağımsızdır. ZAD `preventDismiss` eşlemesi üçünü de `false` yapar:
+
+```kotlin
+override val dismissOnBackPress: Boolean get() = false
+override val dismissOnClickOutside: Boolean get() = false
+override val sheetGesturesEnabled: Boolean get() = false
+```
 - **Guardrail (root, runtime):** modal kind'lı entry stack'te tek başına kalamaz — Nav3 `OverlayScene` `require(overlaidEntries.isNotEmpty())` (doğrulandı). `rememberNavigator(start)` kuruluşta modal-start'ı reddeder (§12).
 - **`@QuitAndGoTo(modal)` — KSP-okunamaz, dokümante sınır (Task 4.3 adjudication):** Bu guard'ın "KSP uyarısı" olması **kanonik cross-module mimaride (§3.3) İMKANSIZ.** Sebep: `@QuitAndGoTo(X)` **edge**'i route interface'inde (nav modülü, `GraphModel`) yaşar; X'in modal-**kind**'ı ise `@Dialog`/`@BottomSheet`/`@FullscreenModal` **composable**'ında (ayrı feature modülü, `EntryFunctionModel`) yaşar. Nav-modülünün KSP çalıştırması edge'i görür ama hedefin kind'ını GÖREMEZ (composable başka modülde, resolver'da yok); feature-modülünün çalıştırması kind'ı görür ama `model.graphs.isEmpty()` → edge doğrulaması orada koşmaz. Yalnız tek-modül (monolit) kurulumda join mümkün, cross-module'da değil → topolojiye göre tutarsız sinyal olurdu; bu yüzden **best-effort monolit-only uyarısı da ŞİPLENMEZ.** Ayrıca `@QuitAndGoTo(modal)` runtime'da **çökmez**: `[.., Caller, X]` → Caller X'in altında kalır → `OverlayScene` overlaidEntries dolu (geçerli overlay). Yani bu yalnız advisory bir tasarım-smell; correctness ihlali değil. **Sonuç: §7'nin TÜM modal guard'ları runtime'dır** — modal props route-instance değeri (KSP-görünmez, §2.4) ve modal kind feature-modülü composable'ında (nav-modülü edge/graph'ından ayrık); KSP'nin hiçbirine erişimi yok.
 - **Back:** dialog entry'sinde back'i dialog'un kendi window'u tüketir (`dismissOnBackPress` → pop = `Canceled`); predictive preview yok. Back authority modal'larda window'dadır (§4.2 carve-out).
@@ -218,70 +225,62 @@ sealed interface CheckoutFlow : AppGraph, ResultFlow<OrderId> {
 
 ## 9. Transition
 - Runtime değer: route'ta `override val transition get() = transition { forward; back; predictive }` (**getter zorunlu** — backing field yok → kotlinx.serialization'a takılmaz; initializer'lı hâli serializable-olmayan property yüzünden derlenmez) — doğrudan ya da **opsiyonel `ScreenContract`** üzerinden (contract = route'un runtime sunum değerlerinin tipli evi; §7 `DialogContract`/`BottomSheetContract`'ın paraleli, **hepsi opsiyonel**). App/graph seviyesi = ağaç boyunca devralınan değer. Predictive yazılmazsa = back (platform notu: predictive preview Android; iOS edge-swipe, desktop/web Esc=back — §2.2).
-- **Per-call override (N1):** typed navigator metotlarında **yok** (davranış annotation'dan); tek-seferlik farklı transition **yalnız** `raw.navigate(route) { transition = … }` escape-hatch'iyle.
+- **Per-call override (N1):** typed navigator metotlarında **yok**; davranış annotation'dan gelir. Maintained sözleşme ad-hoc dispatch veya per-call transition override önermiyor.
 - Codegen değil; `route` (NavKey) → entry metadata'sındaki `NavDisplay.TransitionKey` ailesine iner. Cascade en içteki (screen) > graph > app.
 
 ---
 
-## 10. MVI scoping, VM-driven nav & state observability
-- **Gezgin state-holder dünyasına girmez** (store/intent/event tanımlamaz). Scoping Nav3'ten: `GezginDisplay` `rememberViewModelStoreNavEntryDecorator` (+ saveable + savedState) → sıradan `koinViewModel()` otomatik **entry-scoped**, pop'ta `onCleared`, config/PD dayanıklı.
-- **Route + nav VM'e** `parametersOf` ile: `koinViewModel { parametersOf(route, nav) }` (ikisi de entry'den).
-- **Navigation iki şekilde** (dayatma yok): **(A) VM-driven (önerilen)** — `nav` VM'e enjekte, `handleIntent` doğrudan `nav.goToX()`; result-edge'de VM `init`'te `nav.xResults.collect { … }` kurar (PD re-attach, §6), tetik `nav.launchX()`; `UiEvent` yalnız nav-olmayan efektler. **(B) composable-driven** — VM `UiEvent.NavigateX` yayar, binder `nav.goToX()` çağırır.
-- **Tipli navigator = stable `RawNavigator` üstünde stateless facade** → VM'de tutmak config-change'te güvenli; testte `testNav.from<Source>()` aynı sınıfı test-çekirdeği üstünde verir. PD'de route restore edilmiş back stack'ten `parametersOf`'la döner. `SavedStateHandle` = VM'in kendi UI-state save'i için (ortogonal).
-- **State takibi:** `navigator.events: Flow<NavEvent>` + `navigator.backStack: StateFlow<...>` (log/analytics/devtools). Middleware = **observe-only** (N7: events/backStack stream'ini gözler; log/analytics). Veto/rewrite (interceptor) → V2.
+## 10. MVI scoping, strict navigation boundary & state observability
 
-### 10.1 Binder modeli (stateful↔stateless boilerplate) — iki yol, `@Screen` imzası seçer
-- **Core (`gezgin-core`) — kendin bağla:** `@Screen fun XScreen(route, nav)` → codegen `entry<Route> { XScreen(route, nav) }`. VM'i içeride sen resolve edersin (herhangi MVI/DI, hatta VM'siz). Tam esneklik.
-- **MVI add-on (`gezgin-mvi`) — codegen bağlar:** stateless `@Screen(Route::class) fun XContent(state, onIntent)` + `@MviViewModel(Route::class)` işaretli, `GezginMvi<S,I,E>` implement eden bir VM. Codegen üretir:
+- **Gezgin state-holder dünyasına girmez.** `GezginDisplay` Nav3 ViewModel/saveable/saved-state decorator'larını kurar; `@MviViewModel(route)` ile eşlenen VM entry-scoped'dur.
+- **Maintained ZAD biçimi tektir:** `Intent -> onIntent -> effect -> @EffectHandler(route) -> typed navigator`.
+- ViewModel navigator tutmaz ve doğrudan navigasyon çağırmaz. State'i günceller veya route-specific Effect emit eder.
+- Route-bound handler `Flow<E>`'yi gözler ve yalnız o route'un üretilmiş typed navigator metodunu çağırır.
+- `navigator.events` ve `navigator.backStack` observe-only log/analytics/devtools yüzeyleridir; veto/rewrite middleware V2'dir.
+
+### 10.1 Binder modeli
+
+Core-mode genel Gezgin kullanımı için mevcut kalır: `@Screen fun XScreen(route, nav)` içeriğini kullanıcı bağlar. `gezgin-mvi` kullanan maintained örnekler ise aşağıdaki strict sözleşmeyi izler:
 
 ```kotlin
-// gezgin-mvi sözleşmesi (opt-in; variance = polish, artık yük taşımıyor):
 interface GezginMvi<out S, in I, out E> {
     val uiState: StateFlow<S>
-    val effects: Flow<E> get() = emptyFlow()       // opsiyonel
+    val effects: Flow<E> get() = emptyFlow()
     fun onIntent(intent: I)
 }
 
-// VM: @MviViewModel route'a bağlar + GezginMvi implement eder (İKİSİ DE ZORUNLU)
-@MviViewModel(OrderChainRoute::class)
-class OrderChainViewModel(route: OrderChainRoute, nav: OrderChainNavigator, repo: Repo)
-    : BaseViewModel<OrderChainState, OrderChainIntent, OrderChainEvent>()   // : GezginMvi<S,I,E>
+@Screen(HomeRoute::class)
+@Screen(FeaturedRoute::class)
+@Composable
+fun ColumnScope.SharedContent(state: SharedState, onIntent: (SharedIntent) -> Unit) { /* ... */ }
 
-@Screen(OrderChainRoute::class) @Composable
-fun OrderChainContent(state: OrderChainState, onIntent: (OrderChainIntent) -> Unit) { /* ... */ }
-
-// codegen ürettiği provider — GezginEntryScope extension; kayıt Gezgin registry'sine gider,
-// GezginDisplay Nav3 NavEntry'sini contentKey = GezginKey.id ile kurar (§2.1).
-// viewModel default'u @MviViewModel'in DI-detection'ından gelir (Hilt/Koin annotation + ctor @Assisted).
-fun GezginEntryScope.provideOrderChainEntry(
-    viewModel: @Composable (nav: OrderChainNavigator, args: OrderChainRoute) -> OrderChainViewModel
-        = { nav, args -> koinViewModel { parametersOf(args, nav) } }   // algılanan DI (Koin örn.)
-) {
-    register<OrderChainRoute> { route ->
-        val raw = LocalGezginNavigator.current
-        val nav = remember(raw) { raw.orderChainNavigator() }          // core:navigation public factory (§3.3)
-        val vm  = viewModel(nav, route)
-        val state by vm.uiState.collectAsStateWithLifecycle()
-        OrderChainEffects(vm.effects)              // @ScreenEffect varsa
-        OrderChainContent(state, vm::onIntent)     // @Screen (stateless)
+@MviViewModel(HomeRoute::class)
+class HomeViewModel : ViewModel(), GezginMvi<SharedState, SharedIntent, HomeEffect> {
+    private val effectSink = GezginEffects<HomeEffect>()
+    override val effects: Flow<HomeEffect> = effectSink.flow
+    override fun onIntent(intent: SharedIntent) {
+        if (intent == SharedIntent.OpenNext) effectSink.send(HomeEffect.OpenFeatured)
     }
 }
 
-// KULLANICI yazar (feature modülü) — override noktası; codegen ÜRETMEZ:
-fun GezginEntryScope.orderFeatureEntries() {
-    provideOrderChainEntry()                        // default resolver (algılanan DI)
-    // provideOrderDetailEntry { nav, args -> ... } // gerekirse override
+@EffectHandler(HomeRoute::class)
+@Composable
+fun HomeEffectHandler(effects: Flow<HomeEffect>, nav: HomeNavigator) {
+    ObserveEffects(effects) { effect ->
+        if (effect == HomeEffect.OpenFeatured) nav.goToFeatured()
+    }
 }
-
-// app — GezginDisplay'in trailing lambda'sı GezginEntryScope:
-GezginDisplay(navigator = nav) { orderFeatureEntries(); homeFeatureEntries() }
 ```
 
-- **`@MviViewModel(Route::class)` + `GezginMvi<S,I,E>` (ikisi de zorunlu):** codegen VM'in **somut tipini** `@MviViewModel`'den, **S/I/E'yi VM'in `GezginMvi` supertype arg'larından** okur (content'ten türetme yok, E-kaynağı problemi yok). Üçlü (`@MviViewModel`/`@Screen`/`@ScreenEffect`) route'a göre eşlenir ve **aynı modülde olmalı** (per-module KSP eşleşmesi; aksi derleme hatası: "`@MviViewModel(X)` var ama `@Screen(X)` bu modülde yok"). **Guardrail:** `@MviViewModel` var ama `GezginMvi` **yok** → **derleme hatası.** Codegen ayrıca content'in `(state, onIntent)` + `@ScreenEffect`'in `Flow<E>` tiplerini VM sözleşmesine **karşı doğrular.**
-- **DI-detection + default resolver (B2, Problem 1):** `@MviViewModel` VM class'ını verdiği için codegen DI annotation'ını (`@HiltViewModel`/`@KoinViewModel`) + ctor `@Assisted`/`@InjectedParam`'ını **tipe göre** okur. Gezgin yalnız **route + nav** tiplerini sağlayabilir → **default resolver yalnız tüm assisted param'lar {route, nav} tipindeyse üretilir** (`provideXEntry()` boş çağrılabilir; Hilt/Koin, yoksa androidx `viewModel()`). Sağlayamadığı bir assisted varsa (örn. `@Assisted userId: String`) → **default YOK, `viewModel` zorunlu** → kullanıcı resolver'ı yazıp ekstrayı verir (genelde route'ta olmalıydı). Her hâlde override edilebilir; ayrı gezgin-koin/hilt add-on'una gerek yok.
-- **Bilinmeyen content param (Problem 2):** `@Screen` content Gezgin'in rol-bazlı sağladıkları (`state`/`onIntent`/`controller`) dışında bir param alırsa (örn. `imageLoader: ImageLoader`) → codegen onu `provideXEntry`'ye **ek resolver param** olarak ekler (content imzasından tipli, `@Composable () -> T`); kullanıcı kurulumda verir: `provideProductEntry(imageLoader = { koinInject() })`. **Compile-safe + DI-neutral + content saf.** (CD bunu host'ta tip-anahtarlı container + eşleşmezse **runtime crash** ile yapar; Gezgin bilinçle compile-safe tarafı seçer.) Alternatif: dep'i content içinde `koinInject()` ile çöz.
-- **Kullanıcıya wrapper tip yok** — `provideXEntry` = `GezginEntryScope` extension, Gezgin registry'sine kayıt yapar; `NavEntry` kurulumu (contentKey = `GezginKey.id`, scene metadata) `GezginDisplay` adapter'ında (§2.1). **Bundle = kullanıcı yazar:** codegen bireysel `provideXEntry`'leri üretir; feature-başına `xFeatureEntries()` bundle'ını **kullanıcı** yazar (resolver override noktası; codegen üretirse override kapanır). VM resolution ekranda değil kurulumda (Ktorfit) → ekranda DI yok, kontrol tam.
-- **Effect:** opsiyonel `@ScreenEffect fun XEffects(effects: Flow<E>[, nav])` composable; kendi `ObserveEffects`'ini yapar. Google state-first önerisi → effect dayatılmaz. Analiz: [gezgin-binder-location.md](gezgin-binder-location.md).
+- `@Screen` repeatable'dır. Her route kendi `@MviViewModel(route)` binding'ine sahiptir. Paylaşılan content'in State ve Intent tipleri tüm bağlı route'larla uyumlu olmalı; Effect ve Navigator route'a göre farklı olabilir.
+- `@EffectHandler(route)` repeatable ve route-explicit'tir. Handler `Flow<E>` ve isteğe bağlı, o route'a ait `nav: XNavigator` alır. Duplicate, eksik, yanlış effect tipi veya yanlış navigator tipi fail-loud processor hatasıdır.
+- `@MviViewModel(route)` ve `GezginMvi<S,I,E>` birlikte zorunludur. Content/handler/VM aynı KSP modülünde route'a göre eşlenir; content'in `(state, onIntent)` ve handler'ın `Flow<E>` tipleri VM sözleşmesine karşı doğrulanır.
+- DI detection Hilt/Koin/androidx resolver'ı üretebilir. Assisted parametreler Gezgin'in sağlayabildiği route alanlarıyla sınırlıdır; ekstra content dependency'leri `provideXEntry` üzerinde açık resolver param'ı olur.
+- Route-bound `@TopBar`/`@BottomBar`, yalnız ZAD geçişi için temporary `gezgin-mvi` API'leridir. Generated entry sırası: dış `Column` -> top -> `Column(Modifier.fillMaxWidth().weight(1f)) { Screen(...) }` -> yalnız `!imeVisible` iken bottom. Bu API kalıcı container/scroll/screen-scope sözleşmesi değildir ve migration sonunda kaldırılır.
+
+**Route ownership:** Effect binding yalnız `@EffectHandler(Route::class)` ile yapılır. Processor route'un ekran/VM sahipliğini, `Flow<E>` tipini, optional navigator tipini ve optional owner-`onIntent` tipini fail-loud doğrular; route inference yapmaz.
+
+Güncel binder açıklaması: [gezgin-binder-location.md](gezgin-binder-location.md).
 
 ---
 
@@ -298,10 +297,11 @@ class OrderChainFragment : Fragment() {
     // onViewCreated: nav.goToOrderDetail(...) ; nav.back()
 }
 ```
-- Parametreli Fragment ctor **yasak** (framework no-arg ctor + Bundle ile yeniden yaratır → parametreli ctor çöker/arg'ı sessizce kaybeder). Tipli arg `gezginArgs<Route>()` accessor'ından: route Fragment'ın kendi `arguments: Bundle`'ından decode edilir (**registry değil — Bundle-backed**, PD-safe), `onUpdate` zamanlamasından bağımsız; `onCreateView`/`onViewCreated`'dan itibaren güvenle okunur (`onAttach`/`onCreate` yalnız ilk-yaratım instance'ında güvenli, taze-process FragmentManager-restore branch'inde değil).
+- `@FragmentScreen` kullanan uygulama `Application.onCreate()` içinde, FragmentManager restore başlamadan önce `Gezgin.initFragmentInterop(gezginJson)` çağırır. Bu erken kurulum gerçek process-death restore yolu için zorunludur ve mevcut, tamamlanmış screen-restore sözleşmesidir.
+- Parametreli Fragment ctor **yasak** (framework no-arg ctor + Bundle ile yeniden yaratır → parametreli ctor çöker/arg'ı sessizce kaybeder). Tipli arg `gezginArgs<Route>()` accessor'ından: route Fragment'ın kendi `arguments: Bundle`'ından decode edilir (**registry değil — Bundle-backed**, PD-safe), `onUpdate` zamanlamasından bağımsız; `onCreateView`/`onViewCreated`'dan itibaren güvenle okunur.
 - Codegen: `androidx.fragment.compose.AndroidFragment` + `arguments = route.toBundle()` (PD-safe) + `onUpdate { bindGezgin(route, nav) }` (canlı ref re-attach).
 - **Lifecycle sözleşmesi (iki delege = iki farklı kaynak = iki farklı geçerlilik penceresi):** `gezginArgs` **Bundle-backed**'dir (yukarı bkz.) → `onCreateView`/`onViewCreated`'dan itibaren PD-safe, `onUpdate`'e bağlı DEĞİL. `gezginNav` ise **canlı-instance registry**'sinden okur; bu registry'yi `AndroidFragment.onUpdate` doldurur (canlı navigator serileştirilemez, Bundle'a giremez) → `gezginNav` bind (= ilk `onUpdate`) tamamlanana dek geçersizdir, bind öncesi erişim açıklayıcı hata fırlatır (pratikte `nav` yalnız kullanıcı etkileşiminde okunur → bind kesin bitmiştir). Legacy fragment'ın kendi `OnBackPressedDispatcher` callback'i NavDisplay'i LIFO'da geçer → migration'da kaldırılmalı (dokümante edilir).
-- **Migration swap:** `@FragmentScreen class XFragment {…}` → `@Screen @Composable fun XScreen(route, nav) {…}`. Graph/edge/navigator/deeplink sabit.
+- **Migration swap:** `@FragmentScreen class XFragment {…}` → `@Screen @Composable fun XScreen(route, nav) {…}`. Graph/edge/typed navigator sabit kalır. Deep-link dispatch bu artefaktta yoktur.
 
 ### 11.2 Dialog / BottomSheet — fragment interop YOK (bilinçli kesim, M5)
 Legacy `DialogFragment`/`BottomSheetDialogFragment` için **köprü yok**. Bir dialog'u taşıyacaksan içeriğini (zaten sadece `Surface`/`Column`) native `@Dialog`/`@BottomSheet` composable'a çevirirsin — dialog en yaprak, en ucuz çevrilen UI parçası (§7).
@@ -318,10 +318,17 @@ fun App() {
     // core rememberNavigator'ı çağırır. Graph modülü düz-JVM (Compose compiler plugin YOK) olduğundan oraya
     // @Composable ÜRETİLMEZ — üretilse Compose-lowering almadan derlenir (bytecode'da Composer/$changed/$default
     // yok) ve tüketici ilk ekranda runtime'da NoSuchMethodError alır. gezginJson düz bir `val` olduğu için güvenli.
-    val navigator = rememberNavigator(start = HomeRoute, topology = gezginTopology, json = gezginJson)
+    val navigator = rememberNavigator(
+        start = HomeRoute,
+        topology = gezginTopology,
+        json = gezginJson,
+        restoreKey = "$sessionGeneration:$appMode",
+    )
     // Özel Json istenirse gezginJson yerine kendi Json'unu geçir:
     //   val json = remember { Json { serializersModule = gezginSerializersModule } }
-    //   val navigator = rememberNavigator(start = HomeRoute, topology = gezginTopology, json = json)
+    //   val navigator = rememberNavigator(
+    //       start = HomeRoute, topology = gezginTopology, json = json, restoreKey = restoreKey,
+    //   )
 
     // Observe-only middleware (§10.1): navigator.events akışını DIŞARIDAN collect edersin —
     // GezginDisplay'in bir constructor param'ı DEĞİL. Akışı hiçbir şekilde etkilemez (log/analytics).
@@ -341,8 +348,9 @@ fun App() {
 - Codegen ekran başına `GezginEntryScope.provideXEntry(...)` üretir — Gezgin registry'sine kayıt; Nav3 `NavEntry`'sini `GezginDisplay` kurar (contentKey = `GezginKey.id`, §2.1). Modül-başına `xFeatureEntries()` bundle'ını **kullanıcı** yazar (resolver override noktası; codegen üretmez).
 - `provideXEntry`'nin `viewModel` default'u `@MviViewModel` DI-detection'ından (Hilt/Koin); override için custom lambda. Core-mode `@Screen(route,nav)` de aynı scope-extension şeklini üretir.
 - `GezginDisplay`'in trailing lambda'sı `GezginEntryScope`; gizli plumbing'i (decorators, scene strategies, `GezginKey`→`NavEntry` adapter'ı, predictive-back) kurar. Fragment host ediliyorsa Activity `FragmentActivity`/`AppCompatActivity` olmalı.
+- **Restore namespace:** aynı boş-olmayan `restoreKey`, aynı saved stack'i ve Android holder kimliğini restore eder; farklı key supplied `start` ile bağımsız/fresh navigator kurar. Eski overload stabil legacy namespace ile source-compatible'dır, fakat session/account/app-mode sınırı olan uygulamalar persistent generation + mode key'i açıkça vermelidir.
 - **Kuruluş guard'ları (runtime):** `rememberNavigator(start)` — start bir `ResultFlow` üyesi olamaz (bekleyen caller yok, §8.1) ve modal kind olamaz (§7). Root flow'da `quit`/entry-`back` → `onRootBack` (§8.1).
-- **Koşullu start (N6):** `start` tek route; runtime-bağımlı açılış (onboarding mı login mi) = **decider route** — argsız bir start ekranı `LaunchedEffect`'te karar verip `replaceTo(...)` eder (if-else navigasyonu buraya iner, Guardrail 1 kırılmaz).
+- **Koşullu start:** startup state hazır olmadan navigator kurulmaz. Uygulama gerçek `start` ve `restoreKey` değerlerini önce belirler, sonra `rememberNavigator` çağırır; placeholder/decider route oluşturup sonradan replace etmek maintained ZAD sözleşmesi değildir.
 
 ---
 
@@ -351,7 +359,7 @@ State-as-data → **UI/Compose'suz, saf Kotlin**:
 ```kotlin
 val nav = GezginTestNavigator(start = HomeRoute, topology = gezginTopology)   // gezginTopology: codegen üretir (§14)
 nav.navigate(ProductRoute("42")); nav.back(); nav.replaceTo(HomeRoute)
-nav.backStack; nav.current                          // switchTo/activeTab/stackOf/handleDeepLink → V2
+nav.backStack; nav.current                          // tab/deep-link test yüzeyleri → V2
 
 runTest {
     val r = async { nav.fromCheckout().goToSelectAddressForResult() }   // tipli erişim: üretilmiş fromX() (reified from<X>() codegen'siz mümkün değil)
@@ -359,15 +367,15 @@ runTest {
     r.await() shouldBe NavResult.Value(SelectedAddress("1", "Ev"))
 }
 ```
-Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` erişimcileri `gezgin.emitTestAccessors=true` KSP seçeneğiyle üretilir; flag'i graph'ların bulunduğu **`main` KSP round'unda** açtığında (kanonik çok-modül düzeni: graph'lar `main`'de, testler `test`'te) erişimciler `main`'e üretilir ve `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — **çok-modül düzeninde de çalışır** (by-example §8). `GezginTestNavigator.raw` (`@GezginInternalApi`) + `entryIdOf(route)` yalnızca `fromX()` dışı düşük-seviye kaçış kapısı olarak kalır.
+Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` erişimcileri `gezgin.emitTestAccessors=true` KSP seçeneğiyle üretilir; flag'i graph'ların bulunduğu **`main` KSP round'unda** açtığında (kanonik çok-modül düzeni: graph'lar `main`'de, testler `test`'te) erişimciler `main`'e üretilir ve `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — **çok-modül düzeninde de çalışır** (by-example §8). Maintained davranış testleri dispatch için bu typed erişimcileri kullanır.
 
 ---
 
 ## 14. Codegen (KSP) sorumluluğu — özet
-- Tipli per-source navigator'lar: stable `RawNavigator`'ı saran **stateless facade class** (edge metotları, for-result üçlüsü `launchX`/`xResults`/suspend, `raw` escape hatch) + public factory `fun RawNavigator.xNavigator()` (ctor `internal`, §3.3). Object/DI değil.
+- Tipli per-source navigator'lar: stable `RawNavigator`'ı saran **stateless facade class** (edge metotları ve for-result üçlüsü `launchX`/`xResults`/suspend) + public factory `fun RawNavigator.xNavigator()` (ctor `internal`, §3.3). Object/DI değil.
 - Entry parçaları: `register<Route> { route -> XScreen(route, remember(raw){ raw.xNavigator() }) }` (Gezgin registry; `NavEntry` kurulumu + contentKey = `GezginKey.id` `GezginDisplay`'de, §2.1); modal'larda route contract'ından scene metadata.
 - **Geri/çıkış:** `@NoBack` → navigator'dan `back()` çıkar + entry content'i Gezgin-sahipli enabled `NavigationBackHandler` ile sarılır (preview o entry'de başlamaz; M5′, §4.2); `@BackTo`/`@BackToStart`/`@Quit`/`@QuitAndGoTo` + `quitWith(T)` → tipli metotlar.
-- **MVI-mode (§10.1):** `@MviViewModel(Route)` + stateless `@Screen(state,onIntent)` + opsiyonel `@ScreenEffect` → `GezginEntryScope.provideXEntry(viewModel = <DI-detected default>)` (Gezgin registry'sine register eder; kullanıcıya wrapper tip yok). S/I/E VM'in `GezginMvi<S,I,E>` supertype'ından; default resolver VM'in DI annotation'ı (`@HiltViewModel`/`@KoinViewModel`) + ctor `@Assisted`'ından. Bundle `xFeatureEntries()` = kullanıcı-yazımı.
+- **MVI-mode (§10.1):** `@MviViewModel(Route)` + repeatable stateless `@Screen(state,onIntent)` + route-bound `@EffectHandler(Route)` → `GezginEntryScope.provideXEntry(viewModel = <DI-detected default>)`. S/I/E VM'in `GezginMvi<S,I,E>` supertype'ından; default resolver VM'in DI annotation'ı (`@HiltViewModel`/`@KoinViewModel`) + ctor `@Assisted`/`@InjectedParam` bilgisinden gelir. Navigation intent -> effect -> handler -> typed navigator zincirindedir.
 - **Fragment (§11.1):** `gezginArgs`/`gezginNav` accessor'ları + `AndroidFragment` (view-host). Yalnız `@FragmentScreen`; dialog/bottomsheet fragment interop yok.
 - **Deep-link tablosu + placeholder doğrulaması → 🔮 V2** (§5/§17; processor'da bugün deep-link codegen'i yok) · Guardrail 1 + derleme matrisi **E1–E5** (§8.1) · Modül başına `xFeatureEntries()` · Polymorphic serialization kaydı (`GezginKey` dahil).
 
@@ -376,8 +384,15 @@ Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` eri
 ## 15. Paketleme
 - `gezgin-core` (DI-agnostik): annotations, runtime, `GezginDisplay`, üretilen kodun runtime hedef yüzeyi (navigator facade / `GezginEntryScope`), BottomSheet scene strategy.
 - `gezgin-processor` (KSP2 symbol processor, zorunlu): tipli navigator'ları, entry provider'larını, graph topology + `SerializersModule`'ü üretir (`ksp(project(":gezgin-processor"))` ile uygulanır). **Tüm codegen burada** — `gezgin-core` codegen İÇERMEZ.
-- `gezgin-mvi` (opsiyonel, `gezgin-core`'a bağımlı): `@MviViewModel`/`@ScreenEffect` + `GezginMvi<S,I,E>` sözleşmesi + codegen binder (`GezginEntryScope.provideXEntry`) + `ObserveEffects` + **DI-detection** (VM'in `@HiltViewModel`/`@KoinViewModel` annotation'ı + ctor `@Assisted`/`@InjectedParam`'ından default resolver üretir; şimdilik Hilt+Koin, androidx fallback). Bağlantı seam'i: core'un `GezginEntryScope` + navigator'ları (mvi = entry-producer add-on; `GezginEntry` wrapper tipi **yok**).
+- `gezgin-mvi` (opsiyonel, `gezgin-core`'a bağımlı): `@MviViewModel`/`@EffectHandler` + migration-only `@TopBar`/`@BottomBar`, `GezginMvi<S,I,E>` sözleşmesi, codegen binder, `ObserveEffects` ve DI-detection. Chrome annotation'ları kalıcı core API'sine taşınmaz; ZAD migration sonunda kaldırılır.
 - Ayrı `gezgin-koin`/`gezgin-hilt` add-on'una **gerek yok** — DI desteği gezgin-mvi codegen'inde. (İleride farklı DI'lar için genişletilebilir; manuel-DI → resolver override.)
+
+### Doğrulanan build sınırları
+
+| Sınır | Exact sürümler ve rol |
+|---|---|
+| Gezgin root | Gradle 9.0.0; Kotlin 2.3.21; KSP 2.3.9; AGP 8.13.2; Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop JetBrains Navigation 3 1.0.0-alpha05 + lifecycle 2.10.0-alpha05; min SDK 24. |
+| `compatibility/zad-consumer` | Kendi Gradle 9.4.1 wrapper'ı; Kotlin 2.3.21; KSP 2.3.9; AGP 9.2.1; JDK/JVM 21; compile/target SDK 37; Koin 4.2.2 + compiler plugin 1.0.1; AndroidX Navigation 3 1.0.0 + lifecycle 2.10.0. Dört `io.github.sahsenvar` artefaktını tek exclusive repository'den çözer; `includeBuild`, composite substitution, `projectDir`, Maven Local veya başka source dependency kullanmaz. |
 
 ---
 
@@ -397,8 +412,9 @@ Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` eri
 | geri/çıkış: implicit `back()` + declared `@BackTo`/`@BackToStart`/`@Quit`/`@QuitAndGoTo` + `quitWith(T)`; `@NoBack` terminal | declared sessizce silinmez; flow çıkışları katı (§8.1); `@NoBack` = entry-içi Gezgin-sahipli handler (dispatcher LIFO'sunda kazanır; M5′) |
 | back interception = non-feature | platform `BackHandler` yeterli; reinvent yok |
 | brownfield: Gezgin root + Fragment yaprak (yalnız screen) | fragment dialog interop yok → native `@Dialog`'a çevir; bridge'in PD/race kırılganlığı kesildi (M5) |
-| VM-driven nav: (route,nav) VM'e `parametersOf` | Zad `mainNavigator`+`backStack.last()` hack'ini tipli/PD-safe yapar |
-| binder: core `@Screen(route,nav)` + opsiyonel `gezgin-mvi` `provideXEntry(resolver)` | boilerplate codegen'de, VM resolution kullanıcının lambda'sında → DI-agnostik + kontrol |
+| strict MVI navigation | intent -> effect -> route-bound handler -> typed navigator; ViewModel navigator tutmaz |
+| binder: core `@Screen(route,nav)` + opsiyonel `gezgin-mvi` `provideXEntry(resolver)` | genel core capability korunur; maintained ZAD örnekleri strict MVI kullanır |
+| temporary chrome | `@TopBar`/`@BottomBar` yalnız migration compatibility; kalıcı app-owned container geldiğinde silinir |
 
 ---
 
@@ -406,7 +422,7 @@ Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` eri
 - **`@TabGraph` / `@SwitchTo` + multiple back stack (per-tab retained stacks) → V2.** V1 tek-stack; bottom-nav uygulama-yönetimli. Bu karar TabGraph'ın deep-link-ebeveyn / switch-bağlam / tab-back açıklarını V1'den kaldırdı.
 - **Deep link (tüm özellik) → V2.** Yön: path-hiyerarşisi = back stack; `@DeepLink(segment, parent, [args])` tekrarlanabilir; codegen matcher + full-URL builder + katalog; `args` küçük düzeltmeyle kalkabilir (§5).
 - **Flow-scoped shared data → flow-input** (immutable, nav-owned; "flow = fonksiyon, input = argümanı"): parkedildi. Varsayılan = value object (iyi pratik). Mutable SharedViewModel **reddedildi**.
-- **Scaffold slot convention** (topBar/bottomBar host) → **non-goal**: ekran kendi `Scaffold`'unu yazar.
+- **Kalıcı scaffold/container sözleşmesi** → V2. Mevcut `gezgin-mvi` top/bottom chrome yalnız migration-only köprüdür.
 - Two-pane / adaptive (Nav3 Scene + Material3 adaptive).
 - Deep link giriş stratejileri (app açıkken replace/append), `@FlowEntryResolver`.
 - Keyfi runtime Nav3 metadata escape hatch (custom scene strategy).
@@ -414,5 +430,6 @@ Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` eri
 
 ---
 
-## 18. Sonraki adım
-Bu spec'ten **implementation planı** (modül iskeleti → core runtime/state → KSP processor → `GezginDisplay` → özellikler → test). Doğrulama: §13 test API ile navigasyon davranışı UI'sız assert edilebilir.
+## 18. Maintained acceptance sınırı
+
+Bu artefaktın current sözleşmesi: API dump'ları Android/JVM'de aynı public yüzeyi taşır; maintained docs/sample strict MVI'ı önerir; Fragment interop yalnız screen'dir; deep-link route dispatch mevcut değildir ve V2'de kalır. Full Phase A publication/handoff doğrulaması ayrı görevdir; bu belge source commit veya yayınlanmış artefakt iddiası yapmaz.

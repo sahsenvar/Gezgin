@@ -22,47 +22,48 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface ProfileGraph : Route {
 
-    override val transition: GezginTransition?
-        get() = transition { forward { fadeIn() togetherWith fadeOut() } }
+  override val transition: GezginTransition?
+    get() = transition { forward { fadeIn() togetherWith fadeOut() } }
 
-    @GoForResult(EditNameDialogRoute::class)
-    @GoTo(SettingsScreenRoute::class)
-    @GoForResult(AvatarFlow::class, name = "pickAvatar")
-    @GoForResult(NotificationsSheetRoute::class, name = "pickNotifications")
-    @Serializable
-    data object ProfileScreenRoute : ProfileGraph
+  @GoForResult(EditNameDialogRoute::class)
+  @GoTo(SettingsScreenRoute::class)
+  @GoForResult(AvatarFlow::class, name = "pickAvatar")
+  @GoForResult(NotificationsSheetRoute::class, name = "pickNotifications")
+  @Serializable
+  data object ProfileScreenRoute : ProfileGraph
 
-    @ReplaceTo(
-        AuthGraph.LoginScreenRoute::class,
-        clearUpTo = HomeGraph.DashboardScreenRoute::class,
-        inclusive = true,
-        name = "logout",
-    )
-    @Serializable
-    data object SettingsScreenRoute : ProfileGraph {
-        override val transition: GezginTransition
-            get() = transition {
-                forward { slideInHorizontally() togetherWith slideOutHorizontally() }
-            }
-    }
+  @ReplaceTo(
+    AuthGraph.LoginScreenRoute::class,
+    clearUpTo = HomeGraph.DashboardScreenRoute::class,
+    inclusive = true,
+    name = "logout",
+  )
+  @Serializable
+  data object SettingsScreenRoute : ProfileGraph {
+    override val transition: GezginTransition
+      get() = transition { forward { slideInHorizontally() togetherWith slideOutHorizontally() } }
+  }
 
-    @GoForResult(ConfirmResetDialogRoute::class, name = "confirmReset")
-    @Serializable
-    data class EditNameDialogRoute(val current: String) : ProfileGraph, ResultRoute<String>,
-        DialogContract {
-        override val dismissOnClickOutside: Boolean get() = current.isNotBlank()
-    }
+  @GoForResult(ConfirmResetDialogRoute::class, name = "confirmReset")
+  @Serializable
+  data class EditNameDialogRoute(val current: String) :
+    ProfileGraph, ResultRoute<String>, DialogContract {
+    override val dismissOnClickOutside: Boolean
+      get() = current.isNotBlank()
+  }
 
-    // Dialog-over-dialog: EditName'in ÜSTÜne açılır (N8 stacked LIFO + nested result). Tüm DialogContract
-    // varsayılanları (dismissOnBackPress=true) → sistem-back yalnız bu üst dialog'u kapatır (LIFO).
-    @Serializable
-    data object ConfirmResetDialogRoute : ProfileGraph, ResultRoute<Boolean>, DialogContract
+  // Dialog-over-dialog: EditName'in ÜSTÜne açılır (N8 stacked LIFO + nested result). Tüm
+  // DialogContract
+  // varsayılanları (dismissOnBackPress=true) → sistem-back yalnız bu üst dialog'u kapatır (LIFO).
+  @Serializable
+  data object ConfirmResetDialogRoute : ProfileGraph, ResultRoute<Boolean>, DialogContract
 
-    // @MviViewModel/@BottomSheet-content/@ScreenEffect üçlüsü :feature:profile'da olmalı (per-module KSP, §10.1).
-    @Serializable
-    data class NotificationsSheetRoute(
-        val current: NotificationLevel
-    ) : ProfileGraph, ResultRoute<NotificationLevel>, BottomSheetContract {
-        override val skipPartiallyExpanded: Boolean get() = true
-    }
+  // @MviViewModel/@BottomSheet-content/@EffectHandler üçlüsü :feature:profile'da olmalı (per-module
+  // KSP, §10.1).
+  @Serializable
+  data class NotificationsSheetRoute(val current: NotificationLevel) :
+    ProfileGraph, ResultRoute<NotificationLevel>, BottomSheetContract {
+    override val skipPartiallyExpanded: Boolean
+      get() = true
+  }
 }

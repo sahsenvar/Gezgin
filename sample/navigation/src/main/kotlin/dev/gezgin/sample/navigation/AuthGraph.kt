@@ -13,16 +13,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface AuthGraph : Route {
 
-    @GoForResult(ForgotPasswordDialogRoute::class)
-    @GoTo(SignUpFlow::class)
-    @ReplaceTo(HomeGraph.DashboardScreenRoute::class, name = "loginSuccess")
-    @Serializable
-    data object LoginScreenRoute : AuthGraph
+  @GoForResult(ForgotPasswordDialogRoute::class)
+  @GoTo(SignUpFlow::class)
+  @ReplaceTo(HomeGraph.DashboardScreenRoute::class, name = "loginSuccess")
+  @Serializable
+  data object LoginScreenRoute : AuthGraph
 
-    @Serializable
-    data class ForgotPasswordDialogRoute(
-        val email: String? = null
-    ) : AuthGraph, ResultRoute<Boolean>, DialogContract {
-        override val dismissOnClickOutside: Boolean get() = false
-    }
+  @Serializable
+  data class ForgotPasswordDialogRoute(val email: String? = null) :
+    AuthGraph, ResultRoute<Boolean>, DialogContract {
+    override val dismissOnClickOutside: Boolean
+      get() = false
+  }
 }

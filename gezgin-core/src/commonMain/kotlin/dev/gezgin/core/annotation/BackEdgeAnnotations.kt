@@ -5,26 +5,38 @@ import kotlin.annotation.Repeatable
 import kotlin.reflect.KClass
 
 /**
- * Back edge (§4.2): pops the stack up to `target` (also pops `target` when `inclusive = true`). Codegen
- * emits a typed `backToX()`; if `target` is not on the stack, `NavEvent.BackToTargetMissing` is emitted and
- * nothing is popped.
+ * Back edge: pops the stack up to `target` (also pops `target` when `inclusive = true`). Codegen
+ * emits a typed `backToX()`; if `target` is not on the stack, `NavEvent.BackToTargetMissing` is
+ * emitted and nothing is popped.
+ *
+ * @property target the route type to pop back to
+ * @property inclusive whether the target itself is also removed
+ * @author @sahsenvar
  */
 @Target(AnnotationTarget.CLASS)
 @Repeatable
 public annotation class BackTo(val target: KClass<out Route>, val inclusive: Boolean = false)
 
-/** Back edge (§4.2): pops the stack down to the start destination. Codegen emits a typed `backToStart()`. */
-@Target(AnnotationTarget.CLASS)
-public annotation class BackToStart
-
-/** Flow-exit edge (§8.1): tears the current flow down with Canceled (at root → `onRootBack`). Codegen emits a typed `quit()`. */
-@Target(AnnotationTarget.CLASS)
-public annotation class Quit
+/**
+ * Back edge: pops the stack down to the start destination. Codegen emits a typed `backToStart()`.
+ *
+ * @author @sahsenvar
+ */
+@Target(AnnotationTarget.CLASS) public annotation class BackToStart
 
 /**
- * Terminal marker (§4.2): while this route is on top, back (including system-back/predictive) is SWALLOWED —
- * a Gezgin-owned handler wins the dispatcher's LIFO. The root is exempt (back at the bottom = `onRootBack`;
- * the user is never trapped in the app).
+ * Flow-exit edge: tears the current flow down with Canceled (at root → `onRootBack`). Codegen emits
+ * a typed `quit()`.
+ *
+ * @author @sahsenvar
  */
-@Target(AnnotationTarget.CLASS)
-public annotation class NoBack
+@Target(AnnotationTarget.CLASS) public annotation class Quit
+
+/**
+ * Terminal marker: while this route is on top, back (including system-back/predictive) is SWALLOWED
+ * — a Gezgin-owned handler wins the dispatcher's LIFO. The root is exempt (back at the bottom =
+ * `onRootBack`; the user is never trapped in the app).
+ *
+ * @author @sahsenvar
+ */
+@Target(AnnotationTarget.CLASS) public annotation class NoBack

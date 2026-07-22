@@ -12,10 +12,10 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun ScreenChrome(title: String, content: @Composable () -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title)
-            content()
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text(title)
+      content()
     }
+  }
 }

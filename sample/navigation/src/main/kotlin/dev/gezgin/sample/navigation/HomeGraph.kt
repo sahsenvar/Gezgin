@@ -17,45 +17,41 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed interface HomeGraph : Route {
 
-    @GoTo(ItemDetailScreenRoute::class, ProfileGraph.ProfileScreenRoute::class, HelpScreenRoute::class)
-    @GoForResult(FilterBottomSheetRoute::class, name = "pickSort")
-    @Serializable
-    data object DashboardScreenRoute : HomeGraph
+  @GoTo(
+    ItemDetailScreenRoute::class,
+    ProfileGraph.ProfileScreenRoute::class,
+    HelpScreenRoute::class,
+  )
+  @GoForResult(FilterBottomSheetRoute::class, name = "pickSort")
+  @Serializable
+  data object DashboardScreenRoute : HomeGraph
 
-    @GoTo(ItemDetailScreenRoute::class, singleTop = false, name = "goToRelated")
-    @GoTo(ItemImageViewerRoute::class)
-    @BackTo(DashboardScreenRoute::class)
-    @Serializable
-    data class ItemDetailScreenRoute(
-        val id: String
-    ) : HomeGraph
+  @GoTo(ItemDetailScreenRoute::class, singleTop = false, name = "goToRelated")
+  @GoTo(ItemImageViewerRoute::class)
+  @BackTo(DashboardScreenRoute::class)
+  @Serializable
+  data class ItemDetailScreenRoute(val id: String) : HomeGraph
 
+  @BackTo(ItemDetailScreenRoute::class)
+  @Serializable
+  data class ItemImageViewerRoute(val id: String) : HomeGraph, FullscreenModalContract {
+    override val dismissOnClickOutside: Boolean
+      get() = false
+  }
 
-    @BackTo(ItemDetailScreenRoute::class)
-    @Serializable
-    data class ItemImageViewerRoute(
-        val id: String
-    ) : HomeGraph, FullscreenModalContract {
-        override val dismissOnClickOutside: Boolean get() = false
-    }
+  @Serializable
+  data class FilterBottomSheetRoute(val current: String) :
+    HomeGraph, ResultRoute<SortOrder>, BottomSheetContract {
+    override val skipPartiallyExpanded: Boolean
+      get() = true
+  }
 
-    @Serializable
-    data class FilterBottomSheetRoute(
-        val current: String
-    ) : HomeGraph, ResultRoute<SortOrder>, BottomSheetContract {
-        override val skipPartiallyExpanded: Boolean get() = true
-    }
+  @NoBack
+  @ReplaceTo(DashboardScreenRoute::class, name = "continueToDashboard")
+  @Serializable
+  data class WelcomeScreenRoute(val name: String? = null) : HomeGraph
 
-    @NoBack
-    @ReplaceTo(DashboardScreenRoute::class, name = "continueToDashboard")
-    @Serializable
-    data class WelcomeScreenRoute(
-        val name: String? = null
-    ) : HomeGraph
-
-    @BackTo(DashboardScreenRoute::class)
-    @Serializable
-    data class HelpScreenRoute(
-        val topic: String
-    ) : HomeGraph
+  @BackTo(DashboardScreenRoute::class)
+  @Serializable
+  data class HelpScreenRoute(val topic: String) : HomeGraph
 }

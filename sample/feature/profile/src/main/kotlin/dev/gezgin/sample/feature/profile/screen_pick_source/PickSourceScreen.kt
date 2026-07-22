@@ -16,11 +16,11 @@ import dev.gezgin.sample.navigation.AvatarFlow.PickSourceScreenRoute
 @Screen(PickSourceScreenRoute::class)
 @Composable
 fun PickSourceScreen(state: PickSourceUiState, onIntent: (PickSourceIntent) -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Avatar kaynağı seç")
-            Button(onClick = { onIntent(PickSourceIntent.PickGallery) }) { Text("Galeri") }
-            Button(onClick = { onIntent(PickSourceIntent.PickCamera) }) { Text("Kamera") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Avatar kaynağı seç")
+      Button(onClick = { onIntent(PickSourceIntent.PickGallery) }) { Text("Galeri") }
+      Button(onClick = { onIntent(PickSourceIntent.PickCamera) }) { Text("Kamera") }
     }
+  }
 }

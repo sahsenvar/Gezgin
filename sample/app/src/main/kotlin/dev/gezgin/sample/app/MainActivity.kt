@@ -22,42 +22,51 @@ import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
 import dev.gezgin.sample.navigation.gezginJson
 import dev.gezgin.sample.navigation.gezginTopology
 
-// @FragmentScreen yaprakları AndroidFragment ile host edilir → host bir AppCompatActivity/FragmentActivity
-// OLMALI (aksi halde runtime'da fırlatır) ve AppCompat teması gerektirir (bkz. res/values/themes.xml).
+internal const val SHOWCASE_RESTORE_KEY = "sample-showcase"
+
+// @FragmentScreen yaprakları AndroidFragment ile host edilir → host bir
+// AppCompatActivity/FragmentActivity
+// OLMALI (aksi halde runtime'da fırlatır) ve AppCompat teması gerektirir (bkz.
+// res/values/themes.xml).
 class MainActivity : AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent { GezginShowcaseApp(onRootBack = { finish() }) }
-    }
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContent { GezginShowcaseApp(onRootBack = { finish() }) }
+  }
 }
 
 @Composable
 private fun GezginShowcaseApp(onRootBack: () -> Unit) {
-    // Generated gezginTopology + stable gezginJson bundled into the core @Composable rememberNavigator
-    // (which lives in gezgin-core — a Compose module, so it is lowered correctly; a generated @Composable
-    // in the plain-JVM graph module would not be, see TopologyCodegen.generateRememberNavigator).
-    val navigator = rememberNavigator(
-        start = LoginScreenRoute,
-        topology = gezginTopology,
-        json = gezginJson,
-        onRootBack = onRootBack,
+  // Generated gezginTopology + stable gezginJson bundled into the core @Composable
+  // rememberNavigator
+  // (which lives in gezgin-core — a Compose module, so it is lowered correctly; a generated
+  // @Composable
+  // in the plain-JVM graph module would not be, see TopologyCodegen.generateRememberNavigator).
+  val navigator =
+    rememberNavigator(
+      start = LoginScreenRoute,
+      topology = gezginTopology,
+      json = gezginJson,
+      restoreKey = SHOWCASE_RESTORE_KEY,
+      onRootBack = onRootBack,
     )
 
-    LaunchedEffect(navigator) {
-        navigator.events.collect { event -> Log.d("GezginNav", event.toString()) }
-    }
+  LaunchedEffect(navigator) {
+    navigator.events.collect { event -> Log.d("GezginNav", event.toString()) }
+  }
 
-    MaterialTheme {
-        GezginDisplay(
-            navigator = navigator,
-            transitions = navTransitions {
-                forward { fadeIn() togetherWith fadeOut() }
-                backward { slideInHorizontally() togetherWith slideOutHorizontally() }
-            },
-        ) {
-            authGraphEntries()
-            homeGraphEntries()
-            profileGraphEntries()
-        }
+  MaterialTheme {
+    GezginDisplay(
+      navigator = navigator,
+      transitions =
+        navTransitions {
+          forward { fadeIn() togetherWith fadeOut() }
+          backward { slideInHorizontally() togetherWith slideOutHorizontally() }
+        },
+    ) {
+      authGraphEntries()
+      homeGraphEntries()
+      profileGraphEntries()
     }
+  }
 }

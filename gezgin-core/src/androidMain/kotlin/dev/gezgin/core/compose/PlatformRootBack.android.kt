@@ -1,5 +1,4 @@
 package dev.gezgin.core.compose
 
-// Bilinçli no-op: bu default-arg pozisyonu (Composable-DIŞI) LocalContext/Activity'ye erişemez —
-// Activity'si olan çağıran kendi `onRootBack`'ini açıkça geçmeli.
+// A non-composable default cannot access an Activity; hosts must pass an explicit root action.
 internal actual fun platformDefaultRootBack(): () -> Unit = {}

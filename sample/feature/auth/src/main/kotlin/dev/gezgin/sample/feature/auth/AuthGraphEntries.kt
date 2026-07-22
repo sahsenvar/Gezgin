@@ -8,9 +8,9 @@ import dev.gezgin.sample.feature.auth.screen_profile_info.provideProfileInfoEntr
 import dev.gezgin.sample.feature.auth.screen_terms.provideTermsEntry
 
 fun GezginEntryScope.authGraphEntries() {
-    provideLoginEntry()
-    provideForgotPasswordDialogEntry()
-    provideCredentialsEntry()
-    provideProfileInfoEntry()
-    provideTermsEntry()
+  provideLoginEntry()
+  provideForgotPasswordDialogEntry()
+  provideCredentialsEntry()
+  provideProfileInfoEntry()
+  provideTermsEntry()
 }

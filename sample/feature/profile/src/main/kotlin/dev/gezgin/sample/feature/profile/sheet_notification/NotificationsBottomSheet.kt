@@ -23,30 +23,34 @@ import kotlinx.coroutines.launch
 @BottomSheet(ProfileGraph.NotificationsSheetRoute::class)
 @Composable
 fun NotificationsBottomSheet(
-    state: NotificationsUiState,
-    onIntent: (NotificationsIntent) -> Unit,
-    controller: GezginSheetController,
+  state: NotificationsUiState,
+  onIntent: (NotificationsIntent) -> Unit,
+  controller: GezginSheetController,
 ) {
-    val scope = rememberCoroutineScope()
-    var dispatched by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Bildirim düzeyi — seçili: ${state.selected}")
-        NotificationLevel.entries.forEach { level ->
-            Button(
-                onClick = { onIntent(NotificationsIntent.Preview(level)) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(level.name) }
-        }
-        Button(
-            onClick = onClick@{
-                if (dispatched) return@onClick
-                dispatched = true
-                scope.launch {
-                    controller.hide()
-                    onIntent(NotificationsIntent.Confirm)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Kaydet") }
+  val scope = rememberCoroutineScope()
+  var dispatched by remember { mutableStateOf(false) }
+  Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Text("Bildirim düzeyi — seçili: ${state.selected}")
+    NotificationLevel.entries.forEach { level ->
+      Button(
+        onClick = { onIntent(NotificationsIntent.Preview(level)) },
+        modifier = Modifier.fillMaxWidth(),
+      ) {
+        Text(level.name)
+      }
     }
+    Button(
+      onClick = onClick@{
+          if (dispatched) return@onClick
+          dispatched = true
+          scope.launch {
+            controller.hide()
+            onIntent(NotificationsIntent.Confirm)
+          }
+        },
+      modifier = Modifier.fillMaxWidth(),
+    ) {
+      Text("Kaydet")
+    }
+  }
 }

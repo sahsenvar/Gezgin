@@ -5,32 +5,31 @@ import dev.gezgin.mvi.GezginEffects
 import dev.gezgin.mvi.GezginMvi
 import dev.gezgin.mvi.annotation.MviViewModel
 import dev.gezgin.sample.navigation.AvatarFlow.PickSourceScreenRoute
-import dev.gezgin.sample.navigation.PickSourceNavigator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @MviViewModel(PickSourceScreenRoute::class)
-class PickSourceViewModel(
-    private val nav: PickSourceNavigator,
-) : ViewModel(), GezginMvi<PickSourceUiState, PickSourceIntent, PickSourceEffect> {
+class PickSourceViewModel :
+  ViewModel(), GezginMvi<PickSourceUiState, PickSourceIntent, PickSourceEffect> {
 
-    private val _uiState = MutableStateFlow(PickSourceUiState)
-    override val uiState: StateFlow<PickSourceUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(PickSourceUiState)
+  override val uiState: StateFlow<PickSourceUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<PickSourceEffect>()
-    override val effects: Flow<PickSourceEffect> = _effects.flow
+  private val _effects = GezginEffects<PickSourceEffect>()
+  override val effects: Flow<PickSourceEffect> = _effects.flow
 
-    // Giriş ipucu entry yaratılırken gönderilir (goToCrop'tan önce DEĞİL); lossless kanal STARTED'da toplar.
-    init {
-        _effects.send(PickSourceEffect.ShowMessage("Avatar kaynağı seçin"))
+  // Giriş ipucu entry yaratılırken gönderilir (goToCrop'tan önce DEĞİL); lossless kanal STARTED'da
+  // toplar.
+  init {
+    _effects.send(PickSourceEffect.ShowMessage("Avatar kaynağı seçin"))
+  }
+
+  override fun onIntent(intent: PickSourceIntent) {
+    when (intent) {
+      PickSourceIntent.PickGallery -> _effects.send(PickSourceEffect.OpenCrop("gallery"))
+      PickSourceIntent.PickCamera -> _effects.send(PickSourceEffect.OpenCrop("camera"))
     }
-
-    override fun onIntent(intent: PickSourceIntent) {
-        when (intent) {
-            PickSourceIntent.PickGallery -> nav.goToCrop("gallery")
-            PickSourceIntent.PickCamera -> nav.goToCrop("camera")
-        }
-    }
+  }
 }

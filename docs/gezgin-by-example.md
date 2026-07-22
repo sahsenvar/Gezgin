@@ -289,7 +289,7 @@ data class ProductRoute(val id: String) : HomeGraph
 
 ## 8. UI'sız test — saf Kotlin
 
-State-as-data çekirdek sayesinde navigasyon davranışını **Compose/emülatör olmadan** assert edersin. `GezginTestNavigator` (`dev.gezgin:gezgin-test`) raw çekirdeği ince bir katmanla sarar; codegen her kaynak için tipli `fromX()` erişimcisini üretir (metot adı `@Screen(route)`'un navigator adından türer — `CheckoutRoute` → `fromCheckout()`; reified `from<X>()` codegen'siz mümkün değil). Sonuç, tipli navigator'ın `backWithResult(...)`'ıyla teslim edilir.
+State-as-data çekirdek sayesinde navigasyon davranışını **Compose/emülatör olmadan** assert edersin. `GezginTestNavigator` (`io.github.sahsenvar:gezgin-test:0.1.0`) raw çekirdeği ince bir katmanla sarar; codegen her kaynak için tipli `fromX()` erişimcisini üretir (metot adı `@Screen(route)`'un navigator adından türer — `CheckoutRoute` → `fromCheckout()`; reified `from<X>()` codegen'siz mümkün değil). Sonuç, tipli navigator'ın `backWithResult(...)`'ıyla teslim edilir.
 
 ```kotlin
 @Test

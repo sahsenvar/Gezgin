@@ -11,39 +11,42 @@ import kotlin.test.assertTrue
 
 class GezginLocalsTest {
 
-    @Test
-    fun `LocalGezginEntryId outside entry content throws`() {
-        val error = assertFailsWith<IllegalStateException> {
-            runComposeUiTest {
-                setContent { LocalGezginEntryId.current }
-                waitForIdle()
-            }
+  @Test
+  fun `LocalGezginEntryId outside entry content throws`() {
+    val error =
+      assertFailsWith<IllegalStateException> {
+        runComposeUiTest {
+          setContent { LocalGezginEntryId.current }
+          waitForIdle()
         }
+      }
 
-        assertTrue(error.message?.contains("LocalGezginEntryId") == true, error.message)
-    }
+    assertTrue(error.message?.contains("LocalGezginEntryId") == true, error.message)
+  }
 
-    @Test
-    fun `LocalGezginRawNavigator outside entry content throws`() {
-        val error = assertFailsWith<IllegalStateException> {
-            runComposeUiTest {
-                setContent { LocalGezginRawNavigator.current }
-                waitForIdle()
-            }
+  @Test
+  fun `LocalGezginRawNavigator outside entry content throws`() {
+    val error =
+      assertFailsWith<IllegalStateException> {
+        runComposeUiTest {
+          setContent { LocalGezginRawNavigator.current }
+          waitForIdle()
         }
+      }
 
-        assertTrue(error.message?.contains("LocalGezginRawNavigator") == true, error.message)
-    }
+    assertTrue(error.message?.contains("LocalGezginRawNavigator") == true, error.message)
+  }
 
-    @Test
-    fun `LocalGezginSheetController outside bottom sheet content throws`() {
-        val error = assertFailsWith<IllegalStateException> {
-            runComposeUiTest {
-                setContent { LocalGezginSheetController.current }
-                waitForIdle()
-            }
+  @Test
+  fun `LocalGezginSheetController outside bottom sheet content throws`() {
+    val error =
+      assertFailsWith<IllegalStateException> {
+        runComposeUiTest {
+          setContent { LocalGezginSheetController.current }
+          waitForIdle()
         }
+      }
 
-        assertTrue(error.message?.contains("LocalGezginSheetController") == true, error.message)
-    }
+    assertTrue(error.message?.contains("LocalGezginSheetController") == true, error.message)
+  }
 }

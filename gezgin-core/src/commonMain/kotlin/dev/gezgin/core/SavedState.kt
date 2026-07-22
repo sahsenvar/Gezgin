@@ -4,11 +4,16 @@ import kotlinx.serialization.Serializable
 
 /**
  * PD-safe snapshot of a [RawNavigator]: stack + id counter + in-flight/undelivered result slots.
- * `internal` (K1): the process-death snapshot schema is not part of the public ABI — only the same-module
- * `rememberNavigator` restore path reads it, so adding a slot field later stays a non-breaking change.
+ * `internal`: the process-death snapshot schema is not part of the public ABI — only the
+ * same-module `rememberNavigator` restore path reads it, so adding a slot field later stays a
+ * non-breaking change.
  */
 @Serializable
-internal class SavedState(val keys: List<GezginKey>, val nextId: Long, val pendingSlots: List<SavedSlot>)
+internal class SavedState(
+  val keys: List<GezginKey>,
+  val nextId: Long,
+  val pendingSlots: List<SavedSlot>,
+)
 
 /**
  * Wire form of [ResultBus.Slot]. Payload states:
@@ -18,9 +23,9 @@ internal class SavedState(val keys: List<GezginKey>, val nextId: Long, val pendi
  */
 @Serializable
 internal class SavedSlot(
-    val callerEntryId: Long,
-    val edgeId: String,
-    val targetEntryId: Long,
-    val payloadJson: String?,
-    val canceled: Boolean,
+  val callerEntryId: Long,
+  val edgeId: String,
+  val targetEntryId: Long,
+  val payloadJson: String?,
+  val canceled: Boolean,
 )

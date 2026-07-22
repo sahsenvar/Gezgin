@@ -146,7 +146,7 @@ keysState fix load-bearing" — saved-state yarısı zaten kapandı, VM-store ya
 
 ---
 
-## 4. PD — Compose "Don't keep activities" dev-option recipe (process-death round-trip)
+## 4. PD + `restoreKey` namespace — recreation round-trip
 
 Desktop `StateRestorationTester` (Task 3.2/3.3) process-death'i **simüle** ediyor (aynı JVM içinde
 encode/decode); gerçek bir **Activity'nin process'inin öldürülüp yeniden yaratılması** yalnız cihazda
@@ -178,6 +178,10 @@ adım 4 sonrası `Payment`→tamamla→`Catalog` akışı hâlâ `NavResult.Valu
 (`navigatorSaver`/`encodeNavigatorState`/`decodeNavigatorState`), `gezgin-core/.../SavedState.kt`.
 
 **Durum:** [x] Maestro ile doğrulandı (emülatör) — `maestro/run-04-process-death.sh` ("Etkinlikleri saklama"=`always_finish_activities 1` + Home + launcher ile geri getir): `Feed→Catalog→Cart→Payment` derin stack **aynı derinlikte** restore edildi (Feed'e sıfırlanma YOK, "Kataloğa git" görünmüyor); restore SONRASI "Ödemeyi tamamla" → Catalog'un `checkoutResults` collector'ı sonucu HÂLÂ aldı → terminal OrderPlaced (Value; "Ödeme iptal edildi" GÖRÜNMEDİ, crash yok). `pendingSlots` (ResultBus) re-attach kanıtlandı. **Kapsam notu (DKA ≠ gerçek process-death):** bu reçete `always_finish_activities` (DKA) — Activity'yi yok eder ama **process YAŞAR** (statikler/singleton'lar hayatta kalır), dolayısıyla bugün doğrulanan şey **activity-recreation (DKA) round-trip'i**dir; gerçek cold-process process-death (`am kill` + pid-değişimi) **henüz koşulmadı** — planlı (bkz. gap raporu P0.2). "PD-safe kanıtlandı" iddiası bugün yalnızca activity-recreation düzeyindedir.
+
+**Current keyed extension:** host `restoreKey = "$sessionGeneration:$appMode"` verdiğinde aynı key ile yukarıdaki recreation aynı stack'i restore etmelidir. Sonra yalnız key'i değiştirip host'u yeniden kur: önceki snapshot/Android holder yeniden kullanılmamalı ve supplied `start` görünmelidir. Blank key kuruluşta fail-loud olmalıdır. Bu iki assertion default legacy-overload sonucundan ayrı tutulur.
+
+**Keyed durum:** [ ] aynı-key restore + changed-key fresh cihazda ayrıca koşulacak; common/Desktop ve Android holder-identity otomatik testleri implementation kapısıdır.
 
 ---
 
@@ -296,9 +300,12 @@ hemen sheet aç) eski scrim'den kalıntı/flicker olmamalı.
 3. Dashboard → "Sırala" aç (BottomSheet); aşağı swipe et — kapanmalı, `order` state'i DEĞİŞMEMELİ
    (Canceled — seçim yapılmadı). Tekrar aç, scrim'e tıkla — aynı sonuç. Tekrar aç, bir sıralama seçeneğine
    dokun — sheet ÖNCE kapanma animasyonuyla inmeli, SONRA `order` güncellenmiş görünmeli (hide-then-result).
+4. Üçlü-kilit örneğini aç (`dismissOnBackPress=false`, `dismissOnClickOutside=false`,
+   `sheetGesturesEnabled=false`). Sistem back, scrim tap ve aşağı swipe dene; üçü de sheet'i açık bırakmalı.
 
-**Beklenen:** Yukarıdaki her dismiss yolu ilgili caller'a `Canceled` teslim eder (state değişmez);
-`dismissOnClickOutside=false` olan durumlarda dışarı tık HİÇBİR ŞEY yapmaz (dialog açık kalır).
+**Beklenen:** İzin verilen dismiss yolları ilgili caller'a `Canceled` teslim eder (state değişmez);
+`dismissOnClickOutside=false` olan durumda dışarı tık no-op'tur. Üçlü-kilit route'unda back, outside ve
+drag/swipe'ın hiçbiri dismiss etmez. `sheetGesturesEnabled` yalnız gesture'ı kontrol eder; diğer iki switch'ten bağımsızdır.
 
 **İlgili spec §:** `docs/gezgin-design.md` §7; `gezgin-core` `Contracts.kt` (`DialogContract`/
 `BottomSheetContract`).
@@ -401,14 +408,13 @@ dış-tık kapatmaz, geri tuşu/gesture ve "Kapat" düğmesi kapatır ve her iki
 
 ---
 
-## 14. MVI-mode (`SettingsScreen`) — VM ömrü, tek-seferlik efekt, MVI'dan logout (Faz 5.3)
+## 14. Strict MVI (`SettingsScreen`) — VM ömrü, handler ve typed navigation
 
-Faz 5.3, `sample:app`'in `SettingsScreen`'ini MVI-mode'a çevirdi (`@MviViewModel(SettingsScreenRoute)` +
-stateless `@Screen` `SettingsScreen(state, onIntent, buildInfo)` + `@ScreenEffect SettingsEffectHandler`, androidx-fallback
-resolver — bkz. `sample/feature/profile/src/main/.../screen_settings/` ve `sample/README.md` "Faz 5 —
-MVI-mode"). Faz 10 yapı refactor'ünden sonra artık TÜM ekranlar MVI'dır; `SettingsScreen` yine en zengin örnek. Bu, MVI-mode'un ilk GERÇEK (kctfork-dışı) uçtan-uca kanıtı: `assembleDebug` yeşil ve
-`GezginMviEntries.kt` üretiliyor, ama aşağıdaki üç davranış **yalnız gerçek cihazda/emülatörde** —
-gerçek `ViewModelStore` + `Lifecycle` + Android runtime ile — gözlenebilir; derleme bunları KANITLAMAZ.
+Current binding: `@MviViewModel(SettingsScreenRoute)` + stateless `@Screen` +
+`@EffectHandler(SettingsScreenRoute)`. ViewModel navigator tutmaz. Logout zinciri
+`SettingsIntent.Logout -> onIntent -> SettingsEffect.Logout -> SettingsEffectHandler -> nav.logout()`
+olarak route-bound handler'da tamamlanır. Derleme binding/type doğruluğunu kanıtlar; VM/lifecycle ve effect
+replay davranışı gerçek Android runtime'da ayrıca gözlenir.
 
 **Ön koşul:** `sample:app` cihaza/emülatöre kurulu (`./gradlew :sample:app:installDebug`); `adb logcat`
 erişilebilir (efekt Log/Toast'unu gözlemek için).
@@ -420,20 +426,19 @@ erişilebilir (efekt Log/Toast'unu gözlemek için).
    kaydedildi") görünmeli; (c) `adb logcat -d -t 200 | grep SettingsMvi` bir kez `effect: Tema tercihi
    kaydedildi` yazmalı.
 3. Cihazı DÖNDÜR (portrait↔landscape — configuration change). Switch AÇIK kalmalı (state VM'de tutuluyor,
-   `remember`'da değil → sıfırlanmaz); dönme sırasında Toast/log TEKRAR tetiklenmemeli (efekt tek-seferlik,
-   Channel-tabanlı `GezginEffects` (`Channel(UNLIMITED).receiveAsFlow()`, kayıpsız) + `ObserveEffects`
-   STARTED-collect → tüketilen efekt kuyruktan düşer, recomposition/rotation'da replay YOK).
-4. "Çıkış yap"a bas — VM'in `onIntent(Logout)`'u `nav.logout()`'u çağırır.
+   `remember`'da değil → sıfırlanmaz); tüketilmiş effect Toast/log olarak tekrar oynamamalı.
+4. "Çıkış yap"a bas — intent VM'de logout effect'ine dönüşmeli; route-bound handler typed `logout()`
+   çağrısını yapmalı. ViewModel'de navigator alanı veya doğrudan navigation call olmamalı.
 
 **Beklenen / Pas kriteri:**
 - 2: Switch açılır, Toast + tek `SettingsMvi` log satırı; **toggle başına tam bir** efekt (birden fazla değil).
 - 3: `darkTheme` AÇIK korunur (rotation sonrası sıfırlanmaz — VM survives config change); Toast/log rotation'da
   **tekrar oynamaz** (recomposition/config-change replay yok).
-- 4: `logout()` core-mode dönüşüm-öncesiyle BİREBİR aynı davranır — stack Dashboard'a kadar (dahil) temizlenir,
+- 4: Handler'ın typed `logout()` çağrısı stack'i Dashboard'a kadar (dahil) temizler,
   Login gelir; geri tuşu Dashboard'a/Settings'e dönmez (davranış testi
   `logoutClearUpToDashboardInclusive_stacksASecondLoginEntry`'nin pinlediği çift-Login sonucu MVI-mode'da da aynı).
 
-**İlgili spec §:** `docs/gezgin-design.md` §10.1 (MVI-mode binding); `gezgin-mvi` `GezginMvi`/`ObserveEffects`;
+**İlgili spec §:** `docs/gezgin-design.md` §10.1 (strict MVI binding); `gezgin-mvi` `GezginMvi`/`ObserveEffects`;
 kod: `sample/feature/profile/.../screen_settings/` (6-dosya MVI üçlüsü), üretilen `.../GezginMviEntries.kt`.
 
 **Durum:** [x] Maestro ile doğrulandı (emülatör) — `maestro/run-14-settings-mvi.sh` (Maestro + adb rotation + logcat):
@@ -562,7 +567,7 @@ M5′ ile aynı `OnBackPressedDispatcher` LIFO mekanizması, bu kez legacy-callb
 ## 17. Migration-swap — `@FragmentScreen` → `@Screen` (aynı navigasyon pozisyonu, sabit graph)
 
 Spec §11.1 kapanış satırı brownfield migration'ın çekirdek vaadi: `@FragmentScreen class XFragment {…}` →
-`@Screen @Composable fun XScreen(route, nav) {…}`, GRAPH/EDGE/NAVIGATOR/DEEPLINK sabit kalarak. Bu madde, bir
+`@Screen @Composable fun XScreen(route, nav) {…}`, GRAPH/EDGE/TYPED-NAVIGATOR sabit kalarak. Bu madde, bir
 yaprağı Fragment-host'ludan Composable-host'luya çevirmenin — route/graph bildiriminde HİÇBİR değişiklik
 olmadan — navigasyon grafiği açısından AYNI pozisyonda çalışan bir ekran ürettiğini doğrular.
 
@@ -573,7 +578,7 @@ değişikliği değil (commit'lenmez).
 
 **Adımlar:**
 1. Ekranın koordinatlarını NOT ET: route `HomeGraph.HelpScreenRoute(topic)`, `HomeGraph` üyesi,
-   `@BackTo(DashboardScreenRoute)` edge'i → `HelpNavigator`, deeplink yok; açan edge Dashboard'ın
+   `@BackTo(DashboardScreenRoute)` edge'i → `HelpNavigator`; açan edge Dashboard'ın
    `@GoTo(HelpScreenRoute)` → `goToHelp(topic)`.
 2. `HelpFragment.kt`'deki `@FragmentScreen class HelpFragment : Fragment() { val args by
    gezginArgs<HelpScreenRoute>(); val nav by gezginNav<HelpNavigator>() }`'i geçici olarak
@@ -583,15 +588,15 @@ değişikliği değil (commit'lenmez).
    `HelpScreenRoute`/`HomeGraph`/`@BackTo`/`HelpNavigator` bildirimlerine DOKUNMA.
 3. KSP + `assembleDebug` yeniden derle; aynı edge'le (`nav.goToHelp("navigasyon")`) ekrana git.
 
-**Beklenen:** (a) Route/graph/navigator/deeplink bildirimi DEĞİŞMEDEN proje derlenir (codegen artık
+**Beklenen:** (a) Route/graph/typed-navigator bildirimi DEĞİŞMEDEN proje derlenir (codegen artık
 `FragmentEntryCodegen` yerine core `EntryCodegen` yolundan `provideXEntry` üretir — grafik açısından fark
 yok); (b) ekran AYNI navigasyon pozisyonunda açılır (aynı edge, aynı stack derinliği, aynı geri davranışı);
 (c) route argümanları ve navigator edge'leri Fragment sürümüyle BİREBİR aynı davranır. Bu, "Fragment yaprağı
 ↔ Composable yaprağı" swap'ının navigasyon grafiğine ŞEFFAF olduğunu — brownfield migration'ın çekirdek
 vaadini — kanıtlar.
 
-**İlgili spec §:** `docs/gezgin-design.md` §11.1 (migration swap satırı: "Graph/edge/navigator/deeplink
-sabit"); kod: `gezgin-processor/.../codegen/FragmentEntryCodegen.kt` vs `.../codegen/EntryCodegen.kt` (iki
+**İlgili spec §:** `docs/gezgin-design.md` §11.1 (migration swap satırı: "Graph/edge/typed navigator
+sabit"); deep-link route dispatch bu artefaktta mevcut değildir. Kod: `gezgin-processor/.../codegen/FragmentEntryCodegen.kt` vs `.../codegen/EntryCodegen.kt` (iki
 entry codegen'in AYNI `register<XRoute>(SCREEN, …)` yüzeyini ürettiği — grafik-şeffaflığın codegen kanıtı).
 
 **Durum:** [ ] Otomatikleştirilemez (Maestro kapsamı dışı) — KOD DÖNÜŞÜMÜ (`@FragmentScreen`→`@Screen`) + KSP/rebuild gerektirir; bu suite gradle çalıştırmaz. Grafik-şeffaflığın codegen kanıtı `FragmentEntryCodegen` vs `EntryCodegen` ile derleme düzeyinde pinli; çalışma-zamanı davranış-eşdeğerliği (madde 15'in Fragment yolu ile madde 3/13'ün Composable yolu ZATEN Maestro ile doğrulandı — ikisi aynı nav pozisyonunda çalışıyor). Gerçek dönüşüm-koşusu insan-doğrulaması bekliyor.

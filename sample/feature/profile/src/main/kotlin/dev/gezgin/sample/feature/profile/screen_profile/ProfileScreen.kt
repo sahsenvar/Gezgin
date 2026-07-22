@@ -16,15 +16,15 @@ import dev.gezgin.sample.navigation.ProfileGraph.ProfileScreenRoute
 @Screen(ProfileScreenRoute::class)
 @Composable
 fun ProfileScreen(state: ProfileUiState, onIntent: (ProfileIntent) -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Profil: ${state.name}")
-            Text("Avatar: ${state.avatarUri ?: "(seçilmedi)"}")
-            Text("Bildirimler: ${state.notifications}")
-            Button(onClick = { onIntent(ProfileIntent.EditName) }) { Text("Adı düzenle") }
-            Button(onClick = { onIntent(ProfileIntent.OpenSettings) }) { Text("Ayarlar") }
-            Button(onClick = { onIntent(ProfileIntent.PickAvatar) }) { Text("Avatar seç") }
-            Button(onClick = { onIntent(ProfileIntent.PickNotifications) }) { Text("Bildirimler") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Profil: ${state.name}")
+      Text("Avatar: ${state.avatarUri ?: "(seçilmedi)"}")
+      Text("Bildirimler: ${state.notifications}")
+      Button(onClick = { onIntent(ProfileIntent.EditName) }) { Text("Adı düzenle") }
+      Button(onClick = { onIntent(ProfileIntent.OpenSettings) }) { Text("Ayarlar") }
+      Button(onClick = { onIntent(ProfileIntent.PickAvatar) }) { Text("Avatar seç") }
+      Button(onClick = { onIntent(ProfileIntent.PickNotifications) }) { Text("Bildirimler") }
     }
+  }
 }

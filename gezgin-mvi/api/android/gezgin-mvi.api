@@ -15,10 +15,31 @@ public final class dev/gezgin/mvi/ObserveEffectsKt {
 	public static final fun ObserveEffects (Lkotlinx/coroutines/flow/Flow;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)V
 }
 
+public abstract interface annotation class dev/gezgin/mvi/annotation/BottomBar : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/mvi/annotation/BottomBar$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/mvi/annotation/BottomBar;
+}
+
+public abstract interface annotation class dev/gezgin/mvi/annotation/EffectHandler : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/mvi/annotation/EffectHandler$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/mvi/annotation/EffectHandler;
+}
+
 public abstract interface annotation class dev/gezgin/mvi/annotation/MviViewModel : java/lang/annotation/Annotation {
 	public abstract fun route ()Ljava/lang/Class;
 }
 
-public abstract interface annotation class dev/gezgin/mvi/annotation/ScreenEffect : java/lang/annotation/Annotation {
+public abstract interface annotation class dev/gezgin/mvi/annotation/TopBar : java/lang/annotation/Annotation {
+	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/mvi/annotation/TopBar$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/mvi/annotation/TopBar;
 }
 

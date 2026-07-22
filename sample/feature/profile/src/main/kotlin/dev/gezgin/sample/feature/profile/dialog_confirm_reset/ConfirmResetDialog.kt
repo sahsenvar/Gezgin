@@ -20,15 +20,15 @@ import dev.gezgin.sample.navigation.ProfileGraph.ConfirmResetDialogRoute
 @Dialog(ConfirmResetDialogRoute::class)
 @Composable
 fun ConfirmResetDialog(route: ConfirmResetDialogRoute, nav: ConfirmResetDialogNavigator) {
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 6.dp,
-        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-    ) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Adı sıfırla?")
-            Button(onClick = { nav.backWithResult(true) }) { Text("Evet") }
-            TextButton(onClick = { nav.backWithResult(false) }) { Text("Hayır") }
-        }
+  Surface(
+    shape = MaterialTheme.shapes.large,
+    tonalElevation = 6.dp,
+    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+  ) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Adı sıfırla?")
+      Button(onClick = { nav.backWithResult(true) }) { Text("Evet") }
+      TextButton(onClick = { nav.backWithResult(false) }) { Text("Hayır") }
     }
+  }
 }

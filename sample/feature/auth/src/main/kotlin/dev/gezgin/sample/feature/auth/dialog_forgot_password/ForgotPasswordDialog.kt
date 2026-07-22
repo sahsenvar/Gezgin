@@ -27,23 +27,23 @@ import dev.gezgin.sample.navigation.ForgotPasswordDialogNavigator
 @Dialog(ForgotPasswordDialogRoute::class)
 @Composable
 fun ForgotPasswordDialog(route: ForgotPasswordDialogRoute, nav: ForgotPasswordDialogNavigator) {
-    var email by remember { mutableStateOf(route.email.orEmpty()) }
-    // Dialog içeriği fillMaxSize DEĞİL — scrim üstünde wrap-content/ortalanmış görünmeli.
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 6.dp,
-        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-    ) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Şifre sıfırlama")
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("E-posta") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(onClick = { nav.backWithResult(true) }) { Text("Gönder") }
-            TextButton(onClick = { nav.back() }) { Text("Vazgeç") }
-        }
+  var email by remember { mutableStateOf(route.email.orEmpty()) }
+  // Dialog içeriği fillMaxSize DEĞİL — scrim üstünde wrap-content/ortalanmış görünmeli.
+  Surface(
+    shape = MaterialTheme.shapes.large,
+    tonalElevation = 6.dp,
+    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+  ) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Şifre sıfırlama")
+      OutlinedTextField(
+        value = email,
+        onValueChange = { email = it },
+        label = { Text("E-posta") },
+        modifier = Modifier.fillMaxWidth(),
+      )
+      Button(onClick = { nav.backWithResult(true) }) { Text("Gönder") }
+      TextButton(onClick = { nav.back() }) { Text("Vazgeç") }
     }
+  }
 }

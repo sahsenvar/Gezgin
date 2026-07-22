@@ -1,0 +1,39 @@
+name: Stale Warnings
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: stale-warnings
+  cancel-in-progress: false
+
+jobs:
+  warn:
+    name: warn-without-closing
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Mark inactive issues and pull requests
+        uses: actions/stale@1e223db275d687790206a7acac4d1a11bd6fe629 # v10
+        with:
+          days-before-stale: 60
+          days-before-close: -1
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: pinned,security
+          exempt-pr-labels: pinned,security
+          stale-issue-message: >
+            This issue has been inactive for 60 days and is now marked stale. It will not be
+            closed automatically; add an update when there is new information.
+          stale-pr-message: >
+            This pull request has been inactive for 60 days and is now marked stale. It will not
+            be closed automatically; push or comment when work resumes.
+          close-issue-reason: not_planned
+          delete-branch: false
+          remove-stale-when-updated: true

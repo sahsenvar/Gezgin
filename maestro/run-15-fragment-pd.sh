@@ -9,6 +9,7 @@ set -uo pipefail
 export PATH="$PATH:$HOME/Library/Android/sdk/platform-tools:$HOME/.maestro/bin"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 PKG="dev.gezgin.sample.app"
+ACTIVITY="$PKG/.MainActivity"
 fail=0
 
 mt() { if [ -n "${ANDROID_SERIAL:-}" ]; then maestro --device "$ANDROID_SERIAL" test "$@"; else maestro test "$@"; fi; }
@@ -18,13 +19,23 @@ orig_dka=$(adb shell settings get global always_finish_activities 2>/dev/null | 
 case "$orig_dka" in 0|1) ;; *) orig_dka=0 ;; esac
 trap 'adb shell settings put global always_finish_activities "${orig_dka:-0}" >/dev/null 2>&1 || true' EXIT
 
-relaunch() {  # launcher ile geri getir (FragmentState + Gezgin backstack restore); re-install YOK
-  adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+relaunch() {  # mevcut task'i launcher intent'iyle geri getir; re-install/clear-state YOK
+  # Android 16 emulator'da `monkey -p ... -c LAUNCHER 1` exit -5 ile event üretmeden dönebiliyor.
+  # Explicit launcher Activity aynı mevcut task'i öne getirir ve onun saved instance state'ini restore eder.
   for _r in 1 2 3 4 5 6; do
+    adb shell am start -W \
+      -a android.intent.action.MAIN \
+      -c android.intent.category.LAUNCHER \
+      -n "$ACTIVITY" >/dev/null 2>&1 || true
     sleep 1
-    [ -n "$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')" ] && return 0
-    adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+    pid=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
+    resumed=$(adb shell dumpsys activity activities 2>/dev/null | sed -n '/topResumedActivity=/p' | head -1)
+    if [ -n "$pid" ] && printf '%s' "$resumed" | grep -Fq "$ACTIVITY"; then
+      return 0
+    fi
   done
+  echo "   HATA: uygulama relaunch sonrası foreground'a gelmedi"
+  return 1
 }
 
 # =========================== CASE A — DKA (activity-recreation) ===========================
@@ -38,7 +49,7 @@ if [ "$(adb shell settings get global always_finish_activities 2>/dev/null | tr 
   echo "   DKA etkin — arka plana at (Activity onDestroy) + geri getir"
   adb shell input keyevent KEYCODE_HOME
   sleep 2
-  relaunch
+  relaunch || fail=1
   echo "== [A/restore] args decode + nav re-bind doğrula =="
   mt "$DIR/app-15b-help-after-restore.yaml" || fail=1
 else
@@ -66,7 +77,7 @@ for _i in 1 2 3 4 5 6; do
   if [ -z "$cur" ] || [ "$cur" != "$pid1" ]; then break; fi
   adb shell am kill "$PKG" >/dev/null 2>&1
 done
-relaunch
+relaunch || fail=1
 pid2=$(adb shell pidof -s "$PKG" 2>/dev/null | tr -d '\r')
 # P0.2 — process GERÇEKTEN öldü mü? (pid1 vardı ve yeni pid2 ondan farklı).
 if [ -n "$pid1" ] && [ "$pid1" != "$pid2" ]; then   # pid2 boş=öldü+geç cold-start (yük); rebirth'i restore flow kanıtlar

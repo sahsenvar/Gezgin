@@ -16,11 +16,11 @@ import dev.gezgin.sample.navigation.AvatarFlow.ZoomFlow.ZoomScreenRoute
 @Screen(ZoomScreenRoute::class)
 @Composable
 fun ZoomScreen(state: ZoomUiState, onIntent: (ZoomIntent) -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Yakınlaştır (nested ZoomFlow)")
-            Button(onClick = { onIntent(ZoomIntent.UseFrame) }) { Text("Bu kareyi kullan") }
-            Button(onClick = { onIntent(ZoomIntent.Back) }) { Text("Geri") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Yakınlaştır (nested ZoomFlow)")
+      Button(onClick = { onIntent(ZoomIntent.UseFrame) }) { Text("Bu kareyi kullan") }
+      Button(onClick = { onIntent(ZoomIntent.Back) }) { Text("Geri") }
     }
+  }
 }
