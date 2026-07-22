@@ -2,7 +2,7 @@
 kotlin = "2.3.21"
 ksp = "2.3.9"
 agp = "8.13.2"
-compose-multiplatform = "1.11.0"
+compose-multiplatform = "1.11.1"
 # CMP material3 (BottomSheet) — org.jetbrains.compose plugin 1.11.0'ın BUNDLE ettiği material3
 # sürümü composeVersion'dan (1.11.0) FARKLI (`ComposeBuildConfig.composeMaterial3Version = 1.9.0`);
 # `org.jetbrains.compose.material3:material3` yalnız 1.9.0'a kadar stable yayınlıyor (1.11.0 stable YOK,
