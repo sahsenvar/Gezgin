@@ -122,6 +122,25 @@ class PublishingConfigurationContractTest {
         val verificationScript = projectRoot.resolve("gradle/verify-release-publications.sh")
         assertTrue(Files.isRegularFile(verificationScript), "Missing behavioral release verification script")
         assertTrue(Files.isExecutable(verificationScript), "Release verification script must be executable")
+
+        val script = verificationScript.readText()
+        assertContains(script, "verify_home")
+        assertContains(script, "--export")
+        assertContains(script, "--import")
+        assertContains(script, "gpg --homedir \"\$verify_home\" --batch --verify")
+        assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=53")
+        assertContains(script, "CORRUPTION_NEGATIVE=PASS")
+    }
+
+    @Test
+    fun `runs release hardening commands in CI without repository secrets`() {
+        val workflow = text(".github/workflows/ci.yml")
+        assertContains(workflow, "./gradlew -p buildSrc test")
+        assertContains(workflow, "./gradle/verify-release-publications.sh")
+        assertContains(workflow, "gpg --version")
+        assertContains(workflow, "java-version: '21'")
+        assertFalse(workflow.contains("MAVEN_CENTRAL_USERNAME"))
+        assertFalse(workflow.contains("MAVEN_CENTRAL_PASSWORD"))
     }
 
     private fun properties(relativePath: String): Properties =

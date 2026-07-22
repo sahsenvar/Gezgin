@@ -55,6 +55,7 @@ configure(publishedProjects) {
                     developer {
                         id.set("sahsenvar")
                         name.set("Şahan Şenvar")
+                        url.set("https://github.com/sahsenvar")
                     }
                 }
                 scm {

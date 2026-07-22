@@ -55,6 +55,77 @@ class ReleasePublicationVerifierTest {
     }
 
     @Test
+    fun `rejects incomplete Central POM metadata`() {
+        val repository = publicationRepository(signatures = false)
+        val pom = pomPath(repository, "gezgin-core")
+        pom.writeText(
+            pom.toFile().readText()
+                .replace("https://www.apache.org/licenses/LICENSE-2.0.txt", "https://example.invalid/license")
+                .replace("<name>Şahan Şenvar</name>", "<name>Wrong Developer</name>"),
+        )
+
+        val failure = assertFailsWith<IllegalStateException> {
+            verifyRepository(repository, requireSignatures = false)
+        }
+
+        assertContains(failure.message.orEmpty(), "POM metadata")
+        assertContains(failure.message.orEmpty(), "gezgin-core")
+    }
+
+    @Test
+    fun `rejects duplicate internal dependencies`() {
+        val repository = publicationRepository(signatures = false)
+        val pom = pomPath(repository, "gezgin-mvi-jvm")
+        val internalDependency = dependencyXml(
+            PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.1.0", "compile"),
+        )
+        pom.writeText(
+            pom.toFile().readText().replace("</dependencies>", "$internalDependency\n</dependencies>"),
+        )
+
+        val failure = assertFailsWith<IllegalStateException> {
+            verifyRepository(repository, requireSignatures = false)
+        }
+
+        assertContains(failure.message.orEmpty(), "duplicate POM dependency")
+        assertContains(failure.message.orEmpty(), "gezgin-core-jvm")
+    }
+
+    @Test
+    fun `rejects the wrong internal dependency scope`() {
+        val repository = publicationRepository(signatures = false)
+        val pom = pomPath(repository, "gezgin-mvi-jvm")
+        val expected = dependencyXml(
+            PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.1.0", "compile"),
+        )
+        val wrongScope = dependencyXml(
+            PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.1.0", "runtime"),
+        )
+        pom.writeText(pom.toFile().readText().replace(expected, wrongScope))
+
+        val failure = assertFailsWith<IllegalStateException> {
+            verifyRepository(repository, requireSignatures = false)
+        }
+
+        assertContains(failure.message.orEmpty(), "POM project dependencies")
+        assertContains(failure.message.orEmpty(), "gezgin-mvi-jvm")
+    }
+
+    @Test
+    fun `rejects a changed required external dependency`() {
+        val repository = publicationRepository(signatures = false)
+        val pom = pomPath(repository, "gezgin-processor")
+        pom.writeText(pom.toFile().readText().replace("<version>2.3.9</version>", "<version>0.0.0</version>"))
+
+        val failure = assertFailsWith<IllegalStateException> {
+            verifyRepository(repository, requireSignatures = false)
+        }
+
+        assertContains(failure.message.orEmpty(), "required external POM dependencies")
+        assertContains(failure.message.orEmpty(), "gezgin-processor")
+    }
+
+    @Test
     fun `rejects empty sources or Dokka jars`() {
         val repository = publicationRepository(signatures = false)
         val sources = repository.resolve(
@@ -119,18 +190,14 @@ class ReleasePublicationVerifierTest {
     }
 
     private fun pom(artifact: ExpectedArtifact): String {
-        val dependency = artifact.pomProjectDependency?.let { dependencyArtifact ->
-            """
-            <dependencies>
-              <dependency>
-                <groupId>io.github.sahsenvar</groupId>
-                <artifactId>$dependencyArtifact</artifactId>
-                <version>0.1.0</version>
-                <scope>compile</scope>
-              </dependency>
-            </dependencies>
-            """.trimIndent()
-        }.orEmpty()
+        val dependencies = buildList {
+            artifact.pomProjectDependency?.let { dependencyArtifact ->
+                add(PomDependency("io.github.sahsenvar", dependencyArtifact, "0.1.0", artifact.internalPomScope))
+            }
+            addAll(requiredExternalDependencies(artifact.artifactId))
+        }.joinToString(separator = "\n", prefix = "<dependencies>\n", postfix = "\n</dependencies>") {
+            dependencyXml(it)
+        }
         return """
             <?xml version="1.0" encoding="UTF-8"?>
             <project xmlns="http://maven.apache.org/POM/4.0.0">
@@ -138,16 +205,29 @@ class ReleasePublicationVerifierTest {
               <groupId>io.github.sahsenvar</groupId>
               <artifactId>${artifact.artifactId}</artifactId>
               <version>0.1.0</version>
-              <name>${artifact.artifactId}</name>
-              <description>Gezgin publication fixture.</description>
+              <name>${artifact.projectName}</name>
+              <description>${artifact.description}</description>
               <url>https://github.com/sahsenvar/Gezgin</url>
-              <licenses><license><name>The Apache License, Version 2.0</name></license></licenses>
-              <developers><developer><id>sahsenvar</id></developer></developers>
-              <scm><connection>scm:git:https://github.com/sahsenvar/Gezgin.git</connection></scm>
-              $dependency
+              <licenses><license><name>The Apache License, Version 2.0</name><url>https://www.apache.org/licenses/LICENSE-2.0.txt</url><distribution>repo</distribution></license></licenses>
+              <developers><developer><id>sahsenvar</id><name>Şahan Şenvar</name><url>https://github.com/sahsenvar</url></developer></developers>
+              <scm><url>https://github.com/sahsenvar/Gezgin</url><connection>scm:git:https://github.com/sahsenvar/Gezgin.git</connection><developerConnection>scm:git:ssh://git@github.com/sahsenvar/Gezgin.git</developerConnection></scm>
+              $dependencies
             </project>
         """.trimIndent()
     }
+
+    private fun dependencyXml(dependency: PomDependency): String =
+        """
+        <dependency>
+          <groupId>${dependency.group}</groupId>
+          <artifactId>${dependency.artifact}</artifactId>
+          <version>${dependency.version}</version>
+          <scope>${dependency.scope}</scope>
+        </dependency>
+        """.trimIndent()
+
+    private fun pomPath(repository: Path, artifactId: String): Path =
+        repository.resolve("io/github/sahsenvar/$artifactId/0.1.0/$artifactId-0.1.0.pom")
 
     private fun moduleMetadata(artifact: ExpectedArtifact): String {
         val dependencies = artifact.moduleProjectDependency?.let { dependencyArtifact ->
@@ -221,9 +301,100 @@ class ReleasePublicationVerifierTest {
         val targets: Set<String> = emptySet(),
         val componentArtifactId: String = artifactId,
         val moduleProjectDependency: String? = pomProjectDependency,
+        val internalPomScope: String = if (targets.isNotEmpty()) "runtime" else "compile",
+        val projectName: String = componentArtifactId,
+        val description: String = descriptionFor(componentArtifactId),
+    )
+
+    private data class PomDependency(
+        val group: String,
+        val artifact: String,
+        val version: String,
+        val scope: String,
     )
 
     private companion object {
+        fun descriptionFor(projectName: String): String = when (projectName) {
+            "gezgin-core" -> "DI-agnostic Kotlin Multiplatform navigation runtime and Compose display layer."
+            "gezgin-mvi" -> "Optional MVI bindings and generated route effect handlers for Gezgin."
+            "gezgin-test" -> "UI-free typed navigation test utilities for Gezgin applications."
+            "gezgin-processor" -> "KSP2 processor that generates typed Gezgin navigators and entry providers."
+            else -> error("Unknown published project: $projectName")
+        }
+
+        fun requiredExternalDependencies(artifactId: String): List<PomDependency> = when (artifactId) {
+            "gezgin-core" -> listOf(
+                PomDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2", "runtime"),
+                PomDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0", "runtime"),
+                PomDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0", "runtime"),
+                PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0", "runtime"),
+                PomDependency("org.jetbrains.compose.material3", "material3", "1.9.0", "runtime"),
+                PomDependency("androidx.navigation3", "navigation3-runtime", "1.0.0", "runtime"),
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"),
+            )
+            "gezgin-core-android" -> listOf(
+                PomDependency("androidx.navigation3", "navigation3-ui-android", "1.0.0", "compile"),
+                PomDependency("androidx.lifecycle", "lifecycle-viewmodel-navigation3-android", "2.10.0", "compile"),
+                PomDependency("androidx.lifecycle", "lifecycle-viewmodel-compose-android", "2.10.0", "compile"),
+                PomDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core-jvm", "1.10.2", "compile"),
+                PomDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json-jvm", "1.9.0", "compile"),
+                PomDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0", "compile"),
+                PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0", "compile"),
+                PomDependency("org.jetbrains.compose.material3", "material3", "1.9.0", "compile"),
+                PomDependency("androidx.navigation3", "navigation3-runtime-android", "1.0.0", "compile"),
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+                PomDependency("androidx.fragment", "fragment-compose", "1.8.9", "runtime"),
+            )
+            "gezgin-core-jvm" -> listOf(
+                PomDependency("org.jetbrains.androidx.navigation3", "navigation3-ui-desktop", "1.0.0-alpha05", "compile"),
+                PomDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-viewmodel-navigation3-desktop",
+                    "2.10.0-alpha05",
+                    "compile",
+                ),
+                PomDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-viewmodel-compose-desktop",
+                    "2.10.0-alpha05",
+                    "compile",
+                ),
+                PomDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core-jvm", "1.10.2", "compile"),
+                PomDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json-jvm", "1.9.0", "compile"),
+                PomDependency("org.jetbrains.compose.runtime", "runtime-desktop", "1.11.0", "compile"),
+                PomDependency("org.jetbrains.compose.foundation", "foundation-desktop", "1.11.0", "compile"),
+                PomDependency("org.jetbrains.compose.material3", "material3-desktop", "1.9.0", "compile"),
+                PomDependency("androidx.navigation3", "navigation3-runtime-desktop", "1.0.0", "compile"),
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+            )
+            "gezgin-mvi" -> listOf(
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"),
+            )
+            "gezgin-mvi-android" -> listOf(
+                PomDependency("androidx.lifecycle", "lifecycle-viewmodel-compose-android", "2.10.0", "compile"),
+                PomDependency("androidx.lifecycle", "lifecycle-runtime-compose-android", "2.10.0", "compile"),
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+            )
+            "gezgin-mvi-jvm" -> listOf(
+                PomDependency("org.jetbrains.androidx.lifecycle", "lifecycle-viewmodel-compose-desktop", "2.10.0-alpha05", "compile"),
+                PomDependency("org.jetbrains.androidx.lifecycle", "lifecycle-runtime-compose-desktop", "2.10.0-alpha05", "compile"),
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+            )
+            "gezgin-test" -> listOf(
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"),
+            )
+            "gezgin-test-android", "gezgin-test-jvm" -> listOf(
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+            )
+            "gezgin-processor" -> listOf(
+                PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+                PomDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.9", "runtime"),
+                PomDependency("com.squareup", "kotlinpoet-jvm", "2.2.0", "runtime"),
+                PomDependency("com.squareup", "kotlinpoet-ksp", "2.2.0", "runtime"),
+            )
+            else -> error("Unknown publication: $artifactId")
+        }
+
         val expectedArtifacts = listOf(
             ExpectedArtifact("gezgin-core", ".jar", targets = setOf("gezgin-core-android", "gezgin-core-jvm")),
             ExpectedArtifact("gezgin-core-android", ".aar", componentArtifactId = "gezgin-core"),
