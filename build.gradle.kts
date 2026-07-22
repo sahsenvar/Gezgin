@@ -1,4 +1,6 @@
 import dev.gezgin.buildlogic.kdoc.CheckPublicApiKDocTask
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
+import org.gradle.api.publish.PublishingExtension
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform) apply false
@@ -14,6 +16,63 @@ plugins {
     // kendisi kurar ve `apiCheck`'i `check` yaşam-döngüsüne bağlar (varsayılan davranış).
     alias(libs.plugins.binary.compatibility.validator)
     alias(libs.plugins.dokka) apply false
+    alias(libs.plugins.maven.publish) apply false
+}
+
+val releaseGroup = providers.gradleProperty("GROUP").get()
+val releaseVersion = providers.gradleProperty("VERSION_NAME").get()
+
+allprojects {
+    group = releaseGroup
+    version = releaseVersion
+}
+
+val publishedModuleDescriptions = mapOf(
+    "gezgin-core" to "DI-agnostic Kotlin Multiplatform navigation runtime and Compose display layer.",
+    "gezgin-mvi" to "Optional MVI bindings and generated route effect handlers for Gezgin.",
+    "gezgin-test" to "UI-free typed navigation test utilities for Gezgin applications.",
+    "gezgin-processor" to "KSP2 processor that generates typed Gezgin navigators and entry providers.",
+)
+
+subprojects {
+    pluginManager.withPlugin("com.vanniktech.maven.publish") {
+        extensions.configure<MavenPublishBaseExtension>("mavenPublishing") {
+            publishToMavenCentral()
+            signAllPublications()
+            pom {
+                name.set(project.name)
+                description.set(publishedModuleDescriptions.getValue(project.name))
+                url.set("https://github.com/sahsenvar/Gezgin")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                        distribution.set("repo")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("sahsenvar")
+                        name.set("Şahan Şenvar")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/sahsenvar/Gezgin")
+                    connection.set("scm:git:https://github.com/sahsenvar/Gezgin.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/Gezgin.git")
+                }
+            }
+        }
+
+        providers.gradleProperty("releaseVerificationRepository").orNull?.let { repositoryPath ->
+            extensions.configure<PublishingExtension> {
+                repositories.maven {
+                    name = "ReleaseVerification"
+                    url = uri(repositoryPath)
+                }
+            }
+        }
+    }
 }
 
 val publicApiSourceRoots = mapOf(

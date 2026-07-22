@@ -6,12 +6,19 @@ pluginManagement {
     }
 }
 
+val releaseVerificationRepository = providers.gradleProperty("releaseVerificationRepository").orNull
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
         mavenCentral()
-        mavenLocal()
+        if (releaseVerificationRepository != null) {
+            val repositoryPath = releaseVerificationRepository
+            maven { url = uri(repositoryPath) }
+        } else {
+            mavenLocal()
+        }
     }
 }
 

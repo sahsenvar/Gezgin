@@ -1,7 +1,11 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinJvm
+import com.vanniktech.maven.publish.SourcesJar
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.dokka)
-    `maven-publish`
+    alias(libs.plugins.maven.publish)
 }
 
 dokka {
@@ -13,11 +17,6 @@ dokka {
         suppressGeneratedFiles.set(true)
     }
 }
-
-// Faz 7.4 — versiyonlama: proje ilk sürümü (bkz. gezgin-core/build.gradle.kts gerekçesi — modül-başına
-// açık `version`, root gradle.properties'e konmaz ki gezgin-test/sample'a sızmasın).
-group = "dev.gezgin"
-version = "0.1.0-alpha04"
 
 kotlin {
     // Faz 9.1 — açık API yüzeyi. Processor'ın yayınlanan tek public tipi KSP giriş noktası
@@ -50,40 +49,11 @@ tasks.test {
     useJUnitPlatform()
 }
 
-// İskelet — gerçek bir Maven repository/credentials YOK; `./gradlew publish` çalıştırılmaz, yalnız
-// `assemble`/`build`'in bu bloktan etkilenmediği doğrulanır. Düz JVM modülü → tek `java`-bileşenli
-// publication elle tanımlanır (KMP'nin aksine otomatik değil). Repository/signing bilinçle EKLENMEDİ.
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            from(components["java"])
-            pom {
-                name.set("gezgin-processor")
-                description.set(
-                    "Gezgin KSP2 symbol processor — tipli navigator'ları ve entry provider'larını " +
-                        "üretir; ksp(project(\":gezgin-processor\")) ile uygulanır.",
-                )
-                // Faz 9.1 — Maven Central'ın zorunlu kıldığı POM metadata'sı (url/licenses/developers/scm).
-                // repository{}/signing HÂLÂ YOK: bu blok iskelet kalır, `publish` çalıştırılmaz (yukarıdaki nota bkz.).
-                url.set("https://github.com/sahsenvar/Gezgin")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("sahsenvar")
-                        name.set("Şahan Şenvar")
-                    }
-                }
-                scm {
-                    url.set("https://github.com/sahsenvar/Gezgin")
-                    connection.set("scm:git:https://github.com/sahsenvar/Gezgin.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/Gezgin.git")
-                }
-            }
-        }
-    }
+mavenPublishing {
+    configure(
+        KotlinJvm(
+            javadocJar = JavadocJar.Dokka(tasks.named("dokkaGeneratePublicationHtml")),
+            sourcesJar = SourcesJar.Sources(),
+        ),
+    )
 }

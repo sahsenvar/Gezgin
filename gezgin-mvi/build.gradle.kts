@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinMultiplatform
+import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -6,7 +9,7 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.dokka)
-    `maven-publish`
+    alias(libs.plugins.maven.publish)
 }
 
 dokka {
@@ -25,11 +28,6 @@ tasks.withType<KotlinCompile>().configureEach {
     compilerOptions.freeCompilerArgs.add("-Xjvm-default=all")
 }
 
-// Faz 7.4 — versiyonlama: proje ilk sürümü (bkz. gezgin-core/build.gradle.kts gerekçesi — modül-başına
-// açık `version`, root gradle.properties'e konmaz ki gezgin-test/sample'a sızmasın).
-group = "dev.gezgin"
-version = "0.1.0-alpha04"
-
 kotlin {
     // Faz 9.1 — yayınlanan modüller için açık API yüzeyi (her public bildirim explicit visibility +
     // dönüş tipi ister; kasıtlı-olmayan yüzey `internal`'a çekilir). BCV .api dump'ıyla birlikte çalışır.
@@ -39,9 +37,7 @@ kotlin {
     // Hilt Android-only olduğundan Hilt default resolver'ı yalnız androidTarget'ta anlamlı (spike task-5.0);
     // gezgin-mvi'nin KENDİSİ DI-agnostik (§15) — Hilt/Koin RUNTIME dep'i YOK, codegen string-FQN okur.
     jvm()
-    androidTarget {
-        publishLibraryVariants("release")
-    }
+    androidTarget()
     sourceSets {
         commonMain.dependencies {
             // gezgin-core: Route/annotation'lar (@Screen) + GezginEntryScope.register + navigator seam'i.
@@ -79,39 +75,12 @@ kotlin {
 }
 android { namespace = "dev.gezgin.mvi"; compileSdk = 36; defaultConfig { minSdk = 24 } }
 
-// İskelet — gerçek bir Maven repository/credentials YOK; `./gradlew publish` çalıştırılmaz, yalnız
-// `assemble`/`build`'in bu bloktan etkilenmediği doğrulanır. KMP publication'ları `maven-publish` ile
-// otomatik kurulur; yalnız POM metadata'sı tembel (`configureEach`) eklenir. Repository/signing YOK.
-// Android release varyantı Maven Local tüketicilerinin JVM varyantına düşmemesi için yayınlanır.
-publishing {
-    publications.withType<MavenPublication>().configureEach {
-        pom {
-            name.set("gezgin-mvi")
-            description.set(
-                "Opsiyonel MVI binder add-on'u (gezgin-core'a bağımlı): @MviViewModel/@EffectHandler + " +
-                    "GezginMvi<S,I,E> sözleşmesi + codegen binder + ObserveEffects + DI-detection " +
-                    "(Hilt/Koin, androidx fallback).",
-            )
-            // Faz 9.1 — Maven Central'ın zorunlu kıldığı POM metadata'sı (url/licenses/developers/scm).
-            // repository{}/signing HÂLÂ YOK: bu blok iskelet kalır, `publish` çalıştırılmaz (yukarıdaki nota bkz.).
-            url.set("https://github.com/sahsenvar/Gezgin")
-            licenses {
-                license {
-                    name.set("The Apache License, Version 2.0")
-                    url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-                }
-            }
-            developers {
-                developer {
-                    id.set("sahsenvar")
-                    name.set("Şahan Şenvar")
-                }
-            }
-            scm {
-                url.set("https://github.com/sahsenvar/Gezgin")
-                connection.set("scm:git:https://github.com/sahsenvar/Gezgin.git")
-                developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/Gezgin.git")
-            }
-        }
-    }
+mavenPublishing {
+    configure(
+        KotlinMultiplatform(
+            javadocJar = JavadocJar.Dokka(tasks.named("dokkaGeneratePublicationHtml")),
+            sourcesJar = SourcesJar.Sources(),
+            androidVariantsToPublish = listOf("release"),
+        ),
+    )
 }

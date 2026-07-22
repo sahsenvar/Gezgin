@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinMultiplatform
+import com.vanniktech.maven.publish.SourcesJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -7,7 +10,7 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.dokka)
-    `maven-publish`
+    alias(libs.plugins.maven.publish)
 }
 
 dokka {
@@ -28,13 +31,6 @@ tasks.withType<KotlinCompile>().configureEach {
     compilerOptions.freeCompilerArgs.add("-Xjvm-default=all")
 }
 
-// Faz 7.4 — versiyonlama: proje ilk sürümü. Convention-plugin bilinçle kullanılmıyor (sample netliği
-// gerekçesi, bkz. sample/feature/*/build.gradle.kts) → yayınlanabilir 3 modülün (core/processor/mvi) her
-// birine AÇIKÇA yazılır. Root gradle.properties'e koymak gezgin-test + sample modüllerine de sızardı
-// (yayınlanmamalı) — bu yüzden modül-başına açık `version` tercih edildi.
-group = "dev.gezgin"
-version = "0.1.0-alpha04"
-
 kotlin {
     // Faz 9.1 — açık API yüzeyi (her public bildirim explicit visibility + dönüş tipi ister). Codegen'in
     // ürettiği kodun dokunduğu tipler (RawNavigator/GezginEntryScope/Local*/topology tipleri/fragment
@@ -45,9 +41,7 @@ kotlin {
     // jvm() = desktop Compose hedefi (Faz 3 GezginDisplay); compose.desktop.currentOs çalıştırma zamanı
     // yalnız desktop uiTest'te gerekebilir (Faz 3.2+), burada eklenmedi.
     jvm()
-    androidTarget {
-        publishLibraryVariants("release")
-    }
+    androidTarget()
     sourceSets {
         commonMain.dependencies {
             api(libs.kotlinx.coroutines.core)
@@ -117,42 +111,12 @@ android {
     testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
-// İskelet — gerçek bir Maven repository/credentials YOK; `./gradlew publish` çalıştırılmaz, yalnız
-// `assemble`/`build`'in bu bloktan etkilenmediği doğrulanır. Kotlin-multiplatform plugin'i `maven-publish`
-// uygulanınca hedef-başına publication'ları (kotlinMultiplatform/jvm/android/metadata) otomatik kurar;
-// burada yalnız POM metadata'sı (group=dev.gezgin project'ten gelir) `configureEach` ile tembel eklenir.
-// Repository/signing bilinçle EKLENMEDİ → yalnız `publishToMavenLocal`/`generatePomFile*` görevleri mümkün,
-// gerçek uzak yayın yolu yok.
-// Android release publication is enabled above with `publishLibraryVariants("release")`; remote repository
-// and signing configuration intentionally remain absent, so only local publication is supported here.
-publishing {
-    publications.withType<MavenPublication>().configureEach {
-        pom {
-            name.set("gezgin-core")
-            description.set(
-                "DI-agnostik runtime + core codegen + Compose display katmanı (GezginDisplay) + " +
-                    "modal scene strategy'leri — Gezgin'in zorunlu temeli.",
-            )
-            // Faz 9.1 — Maven Central'ın zorunlu kıldığı POM metadata'sı (url/licenses/developers/scm).
-            // repository{}/signing HÂLÂ YOK: bu blok iskelet kalır, `publish` çalıştırılmaz (yukarıdaki nota bkz.).
-            url.set("https://github.com/sahsenvar/Gezgin")
-            licenses {
-                license {
-                    name.set("The Apache License, Version 2.0")
-                    url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
-                }
-            }
-            developers {
-                developer {
-                    id.set("sahsenvar")
-                    name.set("Şahan Şenvar")
-                }
-            }
-            scm {
-                url.set("https://github.com/sahsenvar/Gezgin")
-                connection.set("scm:git:https://github.com/sahsenvar/Gezgin.git")
-                developerConnection.set("scm:git:ssh://git@github.com/sahsenvar/Gezgin.git")
-            }
-        }
-    }
+mavenPublishing {
+    configure(
+        KotlinMultiplatform(
+            javadocJar = JavadocJar.Dokka(tasks.named("dokkaGeneratePublicationHtml")),
+            sourcesJar = SourcesJar.Sources(),
+            androidVariantsToPublish = listOf("release"),
+        ),
+    )
 }

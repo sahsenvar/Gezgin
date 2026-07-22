@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.3.21"
 ksp = "2.3.9"
-agp = "8.11.0"
+agp = "8.13.2"
 compose-multiplatform = "1.11.0"
 # CMP material3 (Faz 4.2 BottomSheet) — org.jetbrains.compose plugin 1.11.0'ın BUNDLE ettiği material3
 # sürümü composeVersion'dan (1.11.0) FARKLI (`ComposeBuildConfig.composeMaterial3Version = 1.9.0`);
@@ -46,6 +46,7 @@ androidx-hilt = "1.4.0" # androidx.hilt:hilt-navigation-compose — latest stabl
 # (apiCheck `check`'e otomatik bağlanır). Latest stable (Maven Central, 2026-07-10).
 binary-compatibility-validator = "0.18.1"
 dokka = "2.2.0"
+vanniktech-maven-publish = "0.37.0"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -105,3 +106,4 @@ compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-m
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 binary-compatibility-validator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compatibility-validator" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }

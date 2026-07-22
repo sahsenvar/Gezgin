@@ -1,0 +1,117 @@
+package dev.gezgin.buildlogic.publishing
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Properties
+import kotlin.io.path.inputStream
+import kotlin.io.path.readText
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+class PublishingConfigurationContractTest {
+    private val projectRoot: Path =
+        Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize().let { workingDirectory ->
+            if (workingDirectory.fileName.toString() == "buildSrc") workingDirectory.parent else workingDirectory
+        }
+
+    @Test
+    fun `uses the supported release toolchain and publishing plugin`() {
+        val wrapperProperties = properties("gradle/wrapper/gradle-wrapper.properties")
+        assertEquals(
+            "https://services.gradle.org/distributions/gradle-9.0.0-bin.zip",
+            wrapperProperties.getProperty("distributionUrl"),
+        )
+
+        val catalog = text("gradle/libs.versions.toml")
+        assertContains(catalog, "agp = \"8.13.2\"")
+        assertContains(catalog, "vanniktech-maven-publish = \"0.37.0\"")
+        assertContains(
+            catalog,
+            "maven-publish = { id = \"com.vanniktech.maven.publish\", version.ref = \"vanniktech-maven-publish\" }",
+        )
+        assertContains(text("build.gradle.kts"), "alias(libs.plugins.maven.publish) apply false")
+    }
+
+    @Test
+    fun `centralizes release coordinates and removes module-local copies`() {
+        val rootProperties = properties("gradle.properties")
+        assertEquals("io.github.sahsenvar", rootProperties.getProperty("GROUP"))
+        assertEquals("0.1.0", rootProperties.getProperty("VERSION_NAME"))
+
+        val rootBuild = text("build.gradle.kts")
+        assertContains(rootBuild, "providers.gradleProperty(\"GROUP\")")
+        assertContains(rootBuild, "providers.gradleProperty(\"VERSION_NAME\")")
+
+        publishedModules.forEach { module ->
+            val build = text("$module/build.gradle.kts")
+            assertFalse(Regex("(?m)^group\\s*=").containsMatchIn(build), "$module must inherit GROUP")
+            assertFalse(Regex("(?m)^version\\s*=").containsMatchIn(build), "$module must inherit VERSION_NAME")
+        }
+    }
+
+    @Test
+    fun `configures four Central-ready signed publications without manual skeletons`() {
+        val rootBuild = text("build.gradle.kts")
+        assertContains(rootBuild, "publishToMavenCentral()")
+        assertContains(rootBuild, "signAllPublications()")
+        assertContains(rootBuild, "The Apache License, Version 2.0")
+        assertContains(rootBuild, "https://github.com/sahsenvar/Gezgin")
+        assertContains(rootBuild, "Şahan Şenvar")
+
+        publishedModules.forEach { module ->
+            val build = text("$module/build.gradle.kts")
+            assertContains(build, "alias(libs.plugins.maven.publish)")
+            assertContains(build, "mavenPublishing")
+            assertFalse(build.contains("`maven-publish`"), "$module must not keep the manual publishing plugin")
+            assertFalse(build.contains("publishing {\n    publications"), "$module must not keep a manual publication skeleton")
+        }
+    }
+
+    @Test
+    fun `publishes KMP release variants and the processor JVM component with Dokka docs`() {
+        kmpModules.forEach { module ->
+            val build = text("$module/build.gradle.kts")
+            assertContains(build, "KotlinMultiplatform(")
+            assertContains(build, "JavadocJar.Dokka(")
+            assertContains(build, "SourcesJar.Sources()")
+            assertContains(build, "androidVariantsToPublish = listOf(\"release\")")
+        }
+
+        val processorBuild = text("gezgin-processor/build.gradle.kts")
+        assertContains(processorBuild, "KotlinJvm(")
+        assertContains(processorBuild, "JavadocJar.Dokka(")
+        assertContains(processorBuild, "SourcesJar.Sources()")
+    }
+
+    @Test
+    fun `compatibility consumer resolves the release coordinates from an isolated repository`() {
+        val consumerBuild = text("compatibility/zad-consumer/build.gradle.kts")
+        assertContains(consumerBuild, "implementation(\"io.github.sahsenvar:gezgin-core:0.1.0\")")
+        assertContains(consumerBuild, "implementation(\"io.github.sahsenvar:gezgin-mvi:0.1.0\")")
+        assertContains(consumerBuild, "ksp(\"io.github.sahsenvar:gezgin-processor:0.1.0\")")
+        assertFalse(consumerBuild.contains("dev.gezgin:"), "consumer must not use pre-release coordinates")
+
+        val consumerSettings = text("compatibility/zad-consumer/settings.gradle.kts")
+        assertContains(consumerSettings, "providers.gradleProperty(\"releaseVerificationRepository\")")
+        assertContains(consumerSettings, "maven { url = uri(repositoryPath) }")
+    }
+
+    private fun properties(relativePath: String): Properties =
+        Properties().apply {
+            projectRoot.resolve(relativePath).inputStream().use(::load)
+        }
+
+    private fun text(relativePath: String): String {
+        val path = projectRoot.resolve(relativePath)
+        assertTrue(Files.isRegularFile(path), "Missing project file: $relativePath")
+        return path.readText()
+    }
+
+    private companion object {
+        val kmpModules = listOf("gezgin-core", "gezgin-mvi", "gezgin-test")
+        val publishedModules = kmpModules + "gezgin-processor"
+    }
+}
