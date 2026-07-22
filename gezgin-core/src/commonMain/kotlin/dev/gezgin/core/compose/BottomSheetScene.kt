@@ -100,11 +100,10 @@ internal data class GezginBottomSheetProps(
 )
 
 /**
- * El-yazımı BottomSheet `OverlayScene` (§7) — Nav3'te hazır `BottomSheetSceneStrategy` YOK (4.0
- * raporu §3) → material3 `ModalBottomSheet` ile `DialogScene` şablonundan yazıldı.
- * `overlaidEntries` = alttaki entry'ler (arka SCREEN görünür kalır); `content` sheet'i overlay
- * olarak çizer ve `entry.Content()`'i [LocalGezginSheetController] ile sararak controller'ı
- * content'e enjekte eder.
+ * El-yazımı BottomSheet `OverlayScene` (§7) — Nav3'te hazır `BottomSheetSceneStrategy` YOK;
+ * material3 `ModalBottomSheet` ile `DialogScene` şablonundan yazıldı. `overlaidEntries` = alttaki
+ * entry'ler (arka SCREEN görünür kalır); `content` sheet'i overlay olarak çizer ve
+ * `entry.Content()`'i [LocalGezginSheetController] ile sararak controller'ı content'e enjekte eder.
  *
  * **swipe-dismiss→Canceled + entry-pin (C-MJ-1):** `onDismissRequest = onBack` — burada [onBack]
  * strateji tarafından sahip-entry'ye PİNLENMİŞ `{ navigator.back(entryId) }` ile beslenir (tekil
@@ -120,8 +119,7 @@ internal data class GezginBottomSheetProps(
  * (swipe/scrim/back) kapatmada material3 `ModalBottomSheet` hide-animation'ı `onDismissRequest`'ten
  * ÖNCE oynar (görsel slide-down). Ama PROGRAMATİK `navigator.back()` doğrudan entry'yi
  * backstack'ten düşürür → scene SinglePane'e recompose olur, sheet animasyonsuz kaybolur. İleride
- * `OverlayScene.onRemove()` override'ı programatik pop'a da slide-down ekleyebilir (bu görev
- * kapsamı dışı — 4.4/gelecek notu).
+ * Gelecekte `OverlayScene.onRemove()` override'ı programatik pop'a da slide-down ekleyebilir.
  */
 internal class GezginBottomSheetScene(
   override val key: Any,

@@ -8,6 +8,7 @@ import dev.gezgin.processor.fixtures.ENTRY_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
@@ -49,9 +50,12 @@ class EntryCodegenTest {
       "unexpected KSP/frontend error: ${result.messages}",
     )
 
-    val generated = result.generatedSourceFor("GezginEntries.kt")
-    assertTrue(generated != null, "GezginEntries.kt was not generated: ${result.messages}")
-    val text = generated!!.readText()
+    val generated =
+      assertNotNull(
+        result.generatedSourceFor("GezginEntries.kt"),
+        "GezginEntries.kt was not generated: ${result.messages}",
+      )
+    val text = generated.readText()
 
     assertTrue(
       text.contains("register<HomeGraph.Feed>(kind = EntryKind.SCREEN, noBack = false) { route ->"),
@@ -168,9 +172,12 @@ class EntryCodegenTest {
       !feature.messages.contains("[SC") && !feature.messages.contains("[PKG]"),
       "unexpected KSP error in feature module: ${feature.messages}",
     )
-    val entries = feature.generatedSourceFor("GezginEntries.kt")
-    assertTrue(entries != null, "feature module emitted no GezginEntries.kt: ${feature.messages}")
-    val text = entries!!.readText()
+    val entries =
+      assertNotNull(
+        feature.generatedSourceFor("GezginEntries.kt"),
+        "feature module emitted no GezginEntries.kt: ${feature.messages}",
+      )
+    val text = entries.readText()
 
     // K4 — a nav-wired entry file opts in to the generated-code gate.
     assertTrue(text.startsWith("@file:OptIn(GezginInternalApi::class)"), text)
@@ -452,10 +459,13 @@ class EntryCodegenTest {
       !result.messages.contains("[SC") && !result.messages.contains("unresolved reference"),
       "unexpected KSP/frontend error: ${result.messages}",
     )
-    val text = result.generatedSourceFor("GezginEntries.kt")?.readText()
-    assertTrue(text != null, "GezginEntries.kt not generated: ${result.messages}")
+    val text =
+      assertNotNull(
+        result.generatedSourceFor("GezginEntries.kt")?.readText(),
+        "GezginEntries.kt not generated: ${result.messages}",
+      )
     assertTrue(
-      text!!.contains(
+      text.contains(
         "register<HomeGraph.About>(kind = EntryKind.SCREEN, noBack = false) { route ->"
       ),
       text,

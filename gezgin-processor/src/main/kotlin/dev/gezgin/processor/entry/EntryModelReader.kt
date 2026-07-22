@@ -345,7 +345,7 @@ internal class EntryModelReader(
       return null
     }
 
-    val routeFq = requireNotNull(routeDecl?.qualifiedName?.asString())
+    val routeFq = requireNotNull(routeDecl.qualifiedName?.asString())
     val routeModel = routesByFq[routeFq]
 
     val previousOwner = seenRouteFqs[routeFq]
@@ -359,10 +359,10 @@ internal class EntryModelReader(
     seenRouteFqs[routeFq] = fnName
 
     val packageName = fn.packageName.asString()
-    val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
+    val x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString())
 
     // SC8 (kind↔contract) + SC7 (@NoBack × modal) — shared, statically decidable (see the helper).
-    if (!checkKindContractAndNoBack(fnName, routeDecl!!, kind)) return null
+    if (!checkKindContractAndNoBack(fnName, routeDecl, kind)) return null
 
     if (navParam != null) {
       // Cross-module'de (routeModel == null) eski `?: true` kör iyimserliği yerine
@@ -375,7 +375,7 @@ internal class EntryModelReader(
           resolver,
           routeModel,
           graphsByFq,
-          routeDecl!!.packageName.asString(),
+          routeDecl.packageName.asString(),
           x,
           routeFq,
         )
@@ -396,8 +396,7 @@ internal class EntryModelReader(
       // wrong-typed param.
       val navParamType = navParam.type.resolve()
       val navParamFq = navParamType.declaration.qualifiedName?.asString()
-      val expectedNavigatorFq =
-        VmDiClassifier.navigatorTypeFq(routeDecl!!.packageName.asString(), x)
+      val expectedNavigatorFq = VmDiClassifier.navigatorTypeFq(routeDecl.packageName.asString(), x)
       if (!navParamType.isError && navParamFq != expectedNavigatorFq) {
         error(
           "SC2",
@@ -437,7 +436,7 @@ internal class EntryModelReader(
       // resolvable via KSP regardless of which module the route was compiled in — is what
       // lets EntryCodegen qualify the factory import cross-module (a feature module's own
       // model has no graphs, so its `targetPackage` is empty and useless here). See §3.3.
-      routePackageName = routeDecl!!.packageName.asString(),
+      routePackageName = routeDecl.packageName.asString(),
       // Declaration-tabanlı okuma: `routeModel` YALNIZ bu modülün
       // GraphModel'inde bilinen route'lar için var olur (cross-module route'larda null) — model
       // fallback'i bu yüzden cross-module @NoBack'i SESSİZCE düşürüyordu. `routeDecl` KSP'de
@@ -446,9 +445,8 @@ internal class EntryModelReader(
       // kendi annotation'larından okunur. Sınır: kctfork tek derleme birimi olduğu için gerçek
       // cross-module senaryo bu testlerle simüle edilemiyor — mevcut golden (Product, aynı modül)
       // bu okuma-yolunun declaration-tabanlı olduğunu pinler, cross-module davranışı
-      // manuel/on-device
-      // doğrulamaya kalıyor (bkz. validation raporu).
-      noBack = routeDecl!!.hasAnnotation(NO_BACK_FQ),
+      // manuel/on-device doğrulama gerektirir.
+      noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
       x = x,
     )
   }
@@ -488,7 +486,7 @@ internal class EntryModelReader(
       return null
     }
 
-    val routeFq = requireNotNull(routeDecl?.qualifiedName?.asString())
+    val routeFq = requireNotNull(routeDecl.qualifiedName?.asString())
     val routeModel = routesByFq[routeFq]
     declaredMviScreenRoutes += routeFq
 
@@ -504,7 +502,7 @@ internal class EntryModelReader(
     seenRouteFqs[routeFq] = fnName
 
     // SC8 (kind↔contract) + SC7 (@NoBack × modal) — shared with core-mode, statically decidable.
-    if (!checkKindContractAndNoBack(fnName, routeDecl!!, kind)) return null
+    if (!checkKindContractAndNoBack(fnName, routeDecl, kind)) return null
 
     // MV2 — the content's route must have a @MviViewModel in THIS module (§10.1 same-module
     // triple).
@@ -534,7 +532,7 @@ internal class EntryModelReader(
     // or a Gezgin-supplied resolver.
     if (
       vm.di == VmDiKind.HILT_PLAIN &&
-        routeDecl!!.primaryConstructor?.parameters.orEmpty().isNotEmpty()
+        routeDecl.primaryConstructor?.parameters.orEmpty().isNotEmpty()
     ) {
       error(
         "MV12",
@@ -677,7 +675,7 @@ internal class EntryModelReader(
     if (bottomChrome != null && bottomBar == null) return null
 
     val packageName = fn.packageName.asString()
-    val x = NavigatorCodegen.navigatorX(routeDecl!!.simpleName.asString())
+    val x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString())
 
     // MV7 — MVI-mode SC2 parity. Nav is wired into the generated `provideXEntry` when the VM ctor
     // declares a `nav` (DI-relevant, via the SHARED classifier MviEntryCodegen also uses) OR the
@@ -687,7 +685,7 @@ internal class EntryModelReader(
     // navigator ([NavigatorCodegen.hasNavigator]). Without this check a nav-wanting VM/effect on a
     // navigator-less route would sail through validation and emit an unresolved-reference call in
     // generated code (mirrors core-mode's SC2 at the top of [buildCoreEntry]).
-    val navigatorTypeFq = VmDiClassifier.navigatorTypeFq(routeDecl!!.packageName.asString(), x)
+    val navigatorTypeFq = VmDiClassifier.navigatorTypeFq(routeDecl.packageName.asString(), x)
     val vmWantsNav = VmDiClassifier.classify(vm, routeFq, navigatorTypeFq).vmHasNav
     val effectWantsNav = effect != null && effect.hasNavParam
     if (vmWantsNav || effectWantsNav) {
@@ -699,7 +697,7 @@ internal class EntryModelReader(
           resolver,
           routeModel,
           graphsByFq,
-          routeDecl!!.packageName.asString(),
+          routeDecl.packageName.asString(),
           x,
           routeFq,
         )
@@ -763,8 +761,8 @@ internal class EntryModelReader(
       hasRouteParam = false,
       hasNavParam = false,
       routeInModel = routeModel != null,
-      routePackageName = routeDecl!!.packageName.asString(),
-      noBack = routeDecl!!.hasAnnotation(NO_BACK_FQ),
+      routePackageName = routeDecl.packageName.asString(),
+      noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
       x = x,
       mvi =
         MviEntryModel(

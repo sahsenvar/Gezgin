@@ -112,7 +112,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
           error(
             "E1",
             "@${edge.kind.annotationName()} target ${simple(target)} is the start route of " +
-              "ResultFlow ${simple(parent!!.fqName)}; only @GoForResult may enter it (source: " +
+              "ResultFlow ${simple(parent.fqName)}; only @GoForResult may enter it (source: " +
               "${route.simpleName})",
           )
         }
@@ -385,7 +385,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
    * here so a same-source `@GoTo(name = "backToStart")` override OR a `@BackTo` to a route whose
    * stripped name is `Start` (both → `backToStart()`) collides with it via the `size >= 2` path.
    *
-   * devir: `name=` overrides are also checked against the navigator class's FIXED members
+   * `name=` overrides are also checked against the navigator class's fixed members
    * ([RESERVED_MEMBER_NAMES] — `back`/`quit`/`quitWith`/`backWithResult`/`raw`/`entryId`) — these
    * exist independent of any single edge, so an override that happens to spell one out (e.g.
    * `@GoTo(X::class, name = "back")` or `name = "entryId"`) would silently shadow/duplicate a real
