@@ -39,9 +39,8 @@ internal object NavigatorProbe {
     }
 
   /**
-   * `${routePackageName}.${x}Navigator` classpath'te var VE `GezginNavigatorFor` damgası
-   * `routeFq`'yi gösteriyorsa `true`. Sınıf yoksa (edge'siz route → hiç navigator yok) ya da damga
-   * başka bir route'u gösteriyorsa (ada-çakışan decoy) `false`.
+   * Returns true only when the compiled navigator exists and its `GezginNavigatorFor` marker names
+   * [routeFq], rejecting missing navigators and same-name decoys.
    */
   private fun probeCompiledNavigator(
     resolver: Resolver,

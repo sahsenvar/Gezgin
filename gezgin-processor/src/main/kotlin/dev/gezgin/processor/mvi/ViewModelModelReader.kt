@@ -68,9 +68,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     val vmSimpleName = decl.simpleName.asString()
     val annotation = decl.annotations.first { it.fqName() == VIEW_MODEL_FQ }
 
-    // `@MviViewModel(route)` is a mandatory KClass arg (no sentinel) — but stay defensive if
-    // it
-    // somehow fails to resolve to a class type.
+    // The route argument is mandatory, but keep a defensive unresolved-type diagnostic.
     val routeType = annotation.classArg("route")
     val routeFq = routeType?.declaration?.qualifiedName?.asString()
     if (routeFq == null) {
@@ -78,7 +76,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
       return null
     }
 
-    // MV1 — the VM must implement GezginMvi<S,I,E> (transitively). Its S/I/E are the whole source
+    // `MV1` — the VM must implement GezginMvi<S,I,E> (transitively). Its S/I/E are the whole source
     // of truth for MVI-mode (content/effect types are validated AGAINST these, never derive them),
     // so a VM without the supertype has no readable contract → reject, emit no model.
     val mviArgs = gezginMviArgs(decl)
@@ -92,23 +90,14 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     }
     val (state, intent, effect) = mviArgs
 
-    // MN3 — `walkForGezginMvi` substitutes only DIRECT type-param forwarding
-    // (`Base<S,I,E> : GezginMvi<S,I,E>`). A NESTED forward (`Base<S,I,E> :
-    // GezginMvi<Wrapped<S>,I,E>`)
-    // leaves an unbound `S` inside `Wrapped<S>`. Resolving/`toTypeName()`-ing that dangling
-    // parameter
-    // trips the SAME KSP transitive-substitution bug the walk avoids: KSP throws exactly
-    // `NoSuchElementException("No TypeParameter found for index …")`, which would ESCAPE the
-    // processor
-    // and fail the round with an opaque internal error instead of a diagnostic. Materialize the
-    // S/I/E
-    // TypeNames here, in one guarded spot, catching ONLY that specific exception → clean `MV1`
+    // KSP cannot materialize nested generic forwarding such as Wrapped<S>. Convert type names in
+    // one guarded location and turn that specific substitution failure into an actionable error.
     // reject
-    // with the MN3 diagnostic. Any OTHER exception (a genuinely broken/transient KSP
+    // with the `MN3` diagnostic. Any OTHER exception (a genuinely broken/transient KSP
     // state,
     // unrelated to nested forwarding) is NOT swallowed — it propagates so it can't be mis-diagnosed
     // as
-    // MV1. The direct-forwarding and concrete cases materialize without incident.
+    // `MV1`. The direct-forwarding and concrete cases materialize without incident.
     val sie: Triple<TypeName, TypeName, TypeName> =
       try {
         Triple(state.toTypeName(), intent.toTypeName(), effect.toTypeName())
@@ -124,7 +113,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
       }
     val (stateTypeName, intentTypeName, effectTypeName) = sie
 
-    // MV4 — two @MviViewModel classes on the same route would both try to register the same MVI
+    // `MV4` — two @MviViewModel classes on the same route would both try to register the same MVI
     // entry.
     val previousOwner = seenRouteFqs[routeFq]
     if (previousOwner != null) {
@@ -142,17 +131,8 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     // decide whether a default is even possible (only when every DI-relevant param is route/nav).
     val (di, assistedFactoryFq) = detectDi(decl)
 
-    // MV13 — androidx-mode instantiability (Fragment FS1 parity). Only the ANDROIDX resolver
-    // constructs the VM DIRECTLY (`initializer { VM(...) }`, MviEntryCodegen.defaultResolver);
-    // Hilt/Koin
-    // hand off to hiltViewModel()/koinViewModel(), which never call `VM(...)`. When the class has
-    // NO
-    // primary constructor (only parameterized secondary ctors), `ctorParams` is empty → the default
-    // resolver emits a no-arg `VM()`, which is uncompilable unless an accessible no-arg constructor
-    // exists. A public/internal `constructor()` (or a normal primary ctor) is fine; a
-    // route-carrying
-    // secondary-only VM is rejected here with an actionable message instead of a cryptic
-    // "no value passed for parameter" surfacing inside the generated GezginMviEntries.kt.
+    // Only the androidx resolver constructs the ViewModel directly. Secondary-only classes must
+    // therefore expose a usable no-argument constructor or generated code could not instantiate it.
     if (di == VmDiKind.ANDROIDX && decl.primaryConstructor == null) {
       val hasNoArgCtor =
         decl.getConstructors().any { it.parameters.isEmpty() && (it.isPublic() || it.isInternal()) }
@@ -176,7 +156,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
           name = p.name?.asString().orEmpty(),
           // Best-effort: a same-module `nav: XNavigator` type isn't generated yet in this KSP
           // round, so it may be unresolved — codegen matches nav by NAME in that case (only when
-          // [isError], per MJ1 — a RESOLVED non-navigator `nav` is NOT hijacked by the name).
+          // [isError], per `MJ1` — a RESOLVED non-navigator `nav` is NOT hijacked by the name).
           typeFq = resolved.fqOrString(),
           diAnnotated =
             p.annotations.any { it.fqName() == ASSISTED_FQ || it.fqName() == INJECTED_PARAM_FQ },

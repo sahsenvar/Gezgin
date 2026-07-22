@@ -18,7 +18,7 @@ import kotlin.test.assertEquals
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
- * Task 8.0 spike gate — proves KSP2 can discover a sealed graph's members that are declared in
+ * Task 8.0 spike gate — proves `KSP2` can discover a sealed graph's members that are declared in
  * OTHER files (routes AND flow sub-interfaces) within one compilation, so Task 8.1 can switch
  * membership derivation from lexical nesting to the supertype relationship (spec design-notes §3:
  * "Alt-graph'lar ayrı dosyada, `: ParentGraph` ile bağlanır (subtyping = nesting)").

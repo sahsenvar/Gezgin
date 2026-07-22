@@ -580,7 +580,7 @@ class MviModelReaderTest {
 
   // endregion
 
-  // region Guardrails MV1-MV7
+  // region Guardrails `MV1`-`MV7`
 
   @Test
   fun `MV1 — @MviViewModel that does not implement GezginMvi is rejected`() {
@@ -821,13 +821,13 @@ class MviModelReaderTest {
 
   @Test
   fun `MV7 — nav wired (VM ctor wants nav) but target route has no navigator`() {
-    // MVI-mode SC2 parity: a bare @NoBack route is the explicit no-navigator case.
+    // MVI-mode `SC2` parity: a bare @NoBack route is the explicit no-navigator case.
     assertViolates("MV7", MV7_NO_NAV_SOURCE)
   }
 
   // endregion
 
-  // region Guardrails MV8-MV10 (Faz 5 final review) + TypeName-compare (MV5/MV6) regression
+  // region Guardrails `MV8`-`MV10` (Faz 5 final review) + TypeName-compare (`MV5`/`MV6`) regression
 
   @Test
   fun `MV8 — sheetState param on a non-BottomSheet (Screen) MVI content is rejected`() {
@@ -949,7 +949,7 @@ class MviModelReaderTest {
 
   @Test
   fun `MV5 — generic-argument state mismatch (Wrapper Int vs Wrapper String) is caught by TypeName`() {
-    // The flattened FQ of both is `…Wrapper`, so an FQ-based MV5 would PASS and only surface as a
+    // The flattened FQ of both is `…Wrapper`, so an FQ-based `MV5` would PASS and only surface as a
     // Kotlin type error inside the generated GezginMviEntries.kt. TypeName comparison catches it
     // here.
     assertViolates(
@@ -988,7 +988,7 @@ class MviModelReaderTest {
 
   @Test
   fun `MV16 — route-explicit generic effect mismatch is caught by TypeName`() {
-    // Same flattening trap as MV5, on the @EffectHandler Flow<E> arg. TypeName catches Int vs
+    // Same flattening trap as `MV5`, on the @EffectHandler Flow<E> arg. TypeName catches Int vs
     // String.
     assertViolates(
       "MV16",
@@ -1033,7 +1033,8 @@ class MviModelReaderTest {
 
   // endregion
 
-  // region SC7 (@NoBack × modal) + SC8 (kind↔contract mismatch) — MVI-mode parity (Faz-4 recheck)
+  // region `SC7` (@NoBack × modal) + `SC8` (kind↔contract mismatch) — MVI-mode parity (Faz-4
+  // recheck)
 
   @Test
   fun `SC7 — MVI @BottomSheet content on a @NoBack route is rejected`() {
@@ -1117,7 +1118,7 @@ class MviModelReaderTest {
   fun `MV11 — route-explicit EffectHandler with an extra param beyond Flow and nav is rejected`() {
     // An extra `extra: SomeState` has no wiring path (no effect-binder resolver mechanism); codegen
     // would emit `Effects(effects = vm.effects)` and die with "No value passed for parameter".
-    // MV11.
+    // `MV11`.
     assertViolates(
       "MV11",
       """
@@ -1162,7 +1163,7 @@ class MviModelReaderTest {
 
   @Test
   fun `MV11 — route-explicit EffectHandler nav param typed as a non-navigator is rejected`() {
-    // `Home` earns a HomeNavigator (via @GoTo), so MV7 passes; but the effect's `nav:
+    // `Home` earns a HomeNavigator (via @GoTo), so `MV7` passes; but the effect's `nav:
     // SomethingElse` is
     // a RESOLVED non-navigator type → the generated `HEffects(effects = …, nav = nav)` would
     // type-clash.
@@ -1220,7 +1221,7 @@ class MviModelReaderTest {
   fun `MN3 — nested generic forwarding (Base S colon GezginMvi Wrapped S) is rejected with MV1`() {
     // walkForGezginMvi substitutes only DIRECT type-param forwarding; a NESTED `Wrapped<S>` leaves
     // an
-    // unbound `S` that would otherwise leak a dangling type variable into the state TypeName. MV1
+    // unbound `S` that would otherwise leak a dangling type variable into the state TypeName. `MV1`
     // reject.
     assertViolates(
       "MV1",
@@ -1299,7 +1300,7 @@ class MviModelReaderTest {
 
   // endregion
 
-  // region MV13 — androidx-mode instantiability (Fragment FS1 parity)
+  // region `MV13` — androidx-mode instantiability (Fragment `FS1` parity)
 
   @Test
   fun `MV13 — androidx VM with no primary ctor and only a parameterized secondary is rejected`() {
@@ -1336,7 +1337,7 @@ class MviModelReaderTest {
 
   @Test
   fun `MV13 positive — androidx VM with a public no-arg secondary ctor is NOT rejected`() {
-    // primaryConstructor is null but a public `constructor()` exists → `Vm()` compiles → no MV13.
+    // primaryConstructor is null but a public `constructor()` exists → `Vm()` compiles → no `MV13`.
     // (A full compile ICEs kctfork's plugin-less backend, so assert only the absence of the guard.)
     val result =
       compileGezgin(

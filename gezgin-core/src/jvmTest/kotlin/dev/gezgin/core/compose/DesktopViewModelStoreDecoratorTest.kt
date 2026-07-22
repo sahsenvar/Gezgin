@@ -28,7 +28,7 @@ import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
 /**
- * Faz 5 recheck — C1 / MJ3: desktop (jvm) actual'ının per-entry `ViewModelStore` decorator'ını
+ * Faz 5 recheck — C1 / `MJ3`: desktop (jvm) actual'ının per-entry `ViewModelStore` decorator'ını
  * ([rememberPlatformEntryDecorators]) Android ile birebir semantiğe getirdiğinin uçtan-uca
  * (GezginDisplay üzerinden) kanıtı. Üretilen MVI entry'lerinin VM'i `viewModel(factory = …)` ile
  * çözer; bu test aynı çözümleyiciyi kullanır.

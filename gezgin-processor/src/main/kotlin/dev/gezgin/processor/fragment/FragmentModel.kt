@@ -1,14 +1,16 @@
 package dev.gezgin.processor.fragment
 
 /**
- * One `@FragmentScreen(Route::class)`-annotated legacy `androidx.fragment.app.Fragment`, resolved
- * and validated by [FragmentModelReader] into everything the `FragmentEntryCodegen` needs to emit a
- * `provideXEntry()` that hosts the Fragment via `androidx.fragment.compose.AndroidFragment`.
+ * A legacy `androidx.fragment.app.Fragment` annotated with `@FragmentScreen(Route::class)`,
+ * resolved and validated by [FragmentModelReader] into everything the `FragmentEntryCodegen` needs
+ * to emit a `provideXEntry()` that hosts the Fragment via
+ * `androidx.fragment.compose.AndroidFragment`.
  *
  * This is a THIRD kind of entry model — distinct from core-mode's `EntryFunctionModel` (a `(route,
  * nav)`/`(state, onIntent)` composable FUNCTION) and the `ViewModelModel` (a `@MviViewModel` VM
  * class). A `@FragmentScreen` binds a Fragment CLASS to a route with no composable content at all;
- * the route/navigator reach it through the `gezginArgs`/`gezginNav` delegates , not a ctor.
+ * the route and navigator reach it through the `gezginArgs` and `gezginNav` delegates, not a
+ * constructor.
  *
  * All `androidx.fragment.*` symbols are read as **string FQNs** — `gezgin-processor` has (and per
  * will keep) NO compile dependency on `androidx.fragment`, exactly like the `dev.gezgin.mvi.*`

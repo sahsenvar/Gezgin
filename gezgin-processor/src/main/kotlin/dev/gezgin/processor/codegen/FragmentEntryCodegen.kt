@@ -36,13 +36,13 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
 /**
  * Emits `fun GezginEntryScope.provideXEntry()` for every [FragmentEntryModel]
  * [dev.gezgin.processor.fragment.FragmentModelReader] resolved for brownfield Fragment interop. The
- * THIRD entry codegen, alongside core-mode [EntryCodegen] and MVI-mode [MviEntryCodegen]: same
- * `GezginEntryScope` extension + `register<Route>(...)` shape, grouped one [FileSpec] per Fragment
- * package — but into a SEPARATE `GezginFragmentEntries.kt` (mirrors `MviEntryCodegen`'s own
- * separate-file rationale) so a module mixing entry styles gets `GezginEntries.kt` /
- * `GezginMviEntries.kt` / `GezginFragmentEntries.kt` with NO same-name-same-package collision by
- * construction (function-name clashes across the kinds are prevented by `SC6` for core/MVI and by
- * `FS4` for Fragment).
+ * third entry code generator, alongside core-mode [EntryCodegen] and MVI-mode [MviEntryCodegen]. It
+ * uses the same `GezginEntryScope` extension + `register<Route>(...)` shape, grouped one [FileSpec]
+ * per Fragment package — but into a SEPARATE `GezginFragmentEntries.kt` (mirrors
+ * `MviEntryCodegen`'s own separate-file rationale) so a module mixing entry styles gets
+ * `GezginEntries.kt` / `GezginMviEntries.kt` / `GezginFragmentEntries.kt` with NO
+ * same-name-same-package collision by construction (function-name clashes across the kinds are
+ * prevented by `SC6` for core/MVI and by `FS4` for Fragment).
  *
  * ```kotlin
  * fun GezginEntryScope.provideOrderChainEntry() {
@@ -60,7 +60,7 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * **Screen-only.** Fragment interop has no dialog/bottom-sheet/fullscreen variant — every emitted
  * `register` is `kind = EntryKind.SCREEN`, unconditionally.
  *
- * **Navigator wiring — CONDITIONAL (SC2/MV7 parity, one stage later).** A Fragment wires `nav`
+ * **Navigator wiring — CONDITIONAL (`SC2`/`MV7` parity, one stage later).** A Fragment wires `nav`
  * (`val nav = raw.xNavigator(entryId)` + the 3-arg `bindGezgin(fragment, route, nav)`) **only when
  * the route actually earns a navigator** — the `navWired` flag [generate]'s `hasNavigator`
  * predicate supplies per entry (computed at the [dev.gezgin.processor.GezginProcessor] dispatch
@@ -74,8 +74,8 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * brownfield leaf like Settings/About that only reads `gezginArgs` and never navigates). For that
  * leaf the emitted body SUPPRESSES the `val nav = ...` line (which would be an unresolved
  * reference) and binds via the no-nav `bindGezgin(fragment, route)` overload; `gezginNav` then
- * throws the actionable `[FS5]` runtime error (gezgin-core `FragmentBinding.android.kt`) rather
- * than the codegen calling a factory that doesn't exist. The leaf is NOT rejected at KSP time (that
+ * throws the actionable `FS5` runtime error (gezgin-core `FragmentBinding.android.kt`) rather than
+ * the codegen calling a factory that doesn't exist. The leaf is NOT rejected at KSP time (that
  * would forbid a legitimate display-only Fragment). The factory call, when wired, is qualified
  * against [FragmentEntryModel.routePackageName] — cross-module-safe, exactly like [EntryCodegen].
  */
@@ -142,7 +142,7 @@ internal object FragmentEntryCodegen {
           if (navWired) {
             add("onUpdate = { fragment -> %M(fragment, route, nav) },\n", BIND_GEZGIN)
           } else {
-            // No navigator for this route → no-nav bindGezgin overload; gezginNav throws [FS5].
+            // No navigator for this route → no-nav bindGezgin overload; gezginNav throws [`FS5`].
             add("onUpdate = { fragment -> %M(fragment, route) },\n", BIND_GEZGIN)
           }
         }

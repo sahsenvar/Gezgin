@@ -32,9 +32,7 @@ private val WINDOW_INSETS = ClassName("androidx.compose.foundation.layout", "Win
 private val MODIFIER = ClassName("androidx.compose.ui", "Modifier")
 private val LOCAL_DENSITY = ClassName("androidx.compose.ui.platform", "LocalDensity")
 
-// State/effect observation — the JB `androidx.lifecycle.*` coordinates pinned in gezgin-mvi
-// ;
-// emitted as FQ strings only (gezgin-processor gains no dep on them), mirroring EntryCodegen.
+// Emit lifecycle observation calls as FQ strings so the processor gains no lifecycle dependency.
 private val COLLECT_AS_STATE =
   MemberName("androidx.lifecycle.compose", "collectAsStateWithLifecycle")
 
@@ -45,16 +43,8 @@ private val INITIALIZER = MemberName("androidx.lifecycle.viewmodel", "initialize
 private val KOIN_VIEW_MODEL = MemberName("org.koin.compose.viewmodel", "koinViewModel")
 private val PARAMETERS_OF = MemberName("org.koin.core.parameter", "parametersOf")
 
-// Hilt package pin: androidx.hilt:hilt-navigation-compose 1.4.0 deprecates
-// this
-// FQ in favor of androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel (new artifact). The OLDER
-// FQ
-// is chosen deliberately — it RESOLVES on today's typical (pre-1.4.0) Hilt-BOM pin with no warning;
-// the
-// new FQ would be an *unresolved reference* there. Worst case on a 1.4.0+ pin is a deprecation
-// warning,
-// which the user silences/migrates in their own module (never here — gezgin-processor emits a
-// string).
+// Retain the legacy Hilt FQ because it resolves on older BOMs. Newer consumers may see a
+// deprecation warning, while emitting the replacement would break older dependency sets.
 private val HILT_VIEW_MODEL = MemberName("androidx.hilt.navigation.compose", "hiltViewModel")
 
 // The @BottomSheet role extra is Gezgin's own `GezginSheetController` (fed from
@@ -145,11 +135,8 @@ internal object MviEntryCodegen {
     val navigatorClass = ClassName(entry.routePackageName, "${entry.x}Navigator")
     val navigatorTypeFq = VmDiClassifier.navigatorTypeFq(entry.routePackageName, entry.x)
 
-    // Shared route/nav/other classification (also used by EntryModelReader's MV7 guardrail so the
-    // two
-    // never drift). `emitDefault` already folds in Problem-1 (an OTHER param) AND the dup-role
-    // guard
-    // (two route- or two nav-typed relevant params → no default, never a silent `VM(args, args)`).
+    // Share route/nav/other classification with EntryModelReader so default generation and
+    // validation cannot drift.
     fun roleOf(p: VmCtorParam) = VmDiClassifier.roleOf(p, entry.routeFq, navigatorTypeFq)
     val classification = VmDiClassifier.classify(vm, entry.routeFq, navigatorTypeFq)
     val vmHasNav = classification.vmHasNav
@@ -178,8 +165,7 @@ internal object MviEntryCodegen {
 
     val funBuilder =
       FunSpec.builder("provide${entry.x}Entry").receiver(ENTRY_SCOPE).addParameter(viewModelParam)
-    // Problem-2 resolver params — required (no sensible default), threaded as `name()` into
-    // content.
+    // Resolver extras are required and invoked by name at the content call site.
     mvi.resolverExtraParams.forEach { extra ->
       funBuilder.addParameter(
         ParameterSpec.builder(
@@ -207,16 +193,8 @@ internal object MviEntryCodegen {
     roleOf: (VmCtorParam) -> VmDiClassifier.Role,
   ): CodeBlock {
     val header = if (vmHasNav) "nav, args" else "args"
-    // Values Gezgin supplies. The fixed (args, nav) order here is SAFE regardless of the user's
-    // declared param order — NOT because the user must match a convention:
-    // • Koin's parametersOf/@InjectedParam resolves injected params by TYPE, not position (route
-    // and
-    //    nav are always distinct types), so this list's order is irrelevant to the Koin lookup.
-    // • Hilt's `factory.create(args, nav)` is a plain, compiler-type-checked call against the
-    // user's
-    //    own @AssistedFactory method — a wrong-order factory declaration fails to COMPILE, it never
-    //    silently miswires. (androidx uses `ctorArgs` below, which follows the VM's declared
-    // order.)
+    // Koin resolves these distinct values by type, Hilt compiler-checks the assisted-factory call,
+    // and the androidx path below follows declared constructor order.
     val suppliedArgs =
       buildList {
           if (vmHasRoute) add("args")
@@ -227,7 +205,7 @@ internal object MviEntryCodegen {
     return when (vm.di) {
       VmDiKind.ANDROIDX -> {
         // NAMED constructor call  over the route/nav params ONLY — order-independent, and any
-        // defaulted OTHER param (MN4, e.g. `retries: Int = 3`) is OMITTED so the VM's own default
+        // defaulted OTHER param (`MN4`, e.g. `retries: Int = 3`) is OMITTED so the VM's own default
         // applies. `emitDefault` guarantees there are no NON-defaulted OTHER params here.
         val ctorArgs =
           vm.ctorParams
@@ -268,7 +246,8 @@ internal object MviEntryCodegen {
       }
 
       // Plain Hilt supplies nothing itself — Hilt injects everything; Gezgin passes no route/nav
-      // (a route-data-carrying route is rejected as MV12, since Nav3 can't feed SavedStateHandle).
+      // (a route-data-carrying route is rejected as `MV12`, since Nav3 can't feed
+      // SavedStateHandle).
       VmDiKind.HILT_PLAIN -> CodeBlock.of("{ %M<%T>() }", HILT_VIEW_MODEL, vmClass)
     }
   }
@@ -311,7 +290,7 @@ internal object MviEntryCodegen {
 
     if (mvi.effectFunSimpleName != null) {
       val effectFun = MemberName(requireNotNull(mvi.effectFunPackageName), mvi.effectFunSimpleName)
-      // MN1 — NAMED args so a `fun XEffects(nav: …, effects: Flow<E>)` (nav-first) binder wires
+      // `MN1` — NAMED args so a `fun XEffects(nav: …, effects: Flow<E>)` (nav-first) binder wires
       // correctly regardless of declared order. Flow param name is captured off the binder.
       val flowName = requireNotNull(mvi.effectFlowParamName)
       val effectArgs = CodeBlock.builder().add("%L = vm.effects", flowName)
@@ -357,7 +336,7 @@ internal object MviEntryCodegen {
   private fun chromeArgs(): CodeBlock = CodeBlock.of("state = state, onIntent = vm::onIntent")
 
   /**
-   * `state = state, onIntent = vm::onIntent[, <extra> = <value>…]` — ALL NAMED (MN1,
+   * `state = state, onIntent = vm::onIntent[, <extra> = <value>…]` — ALL NAMED (`MN1`,
    * order-independent).
    */
   private fun contentArgs(mvi: MviEntryModel): CodeBlock {
@@ -367,10 +346,7 @@ internal object MviEntryCodegen {
     return args.build()
   }
 
-  /**
-   * Role extras are Gezgin-provided; the only role type is a `GezginSheetController`, read from its
-   * Local.
-   */
+  /** Resolves the Gezgin-provided sheet-controller role from its composition local. */
   private fun roleExtraArg(role: MviExtraParam): CodeBlock =
     if (role.typeFq == SHEET_CONTROLLER_FQ) {
       CodeBlock.of(", %L = %M.current", role.name, LOCAL_SHEET_CONTROLLER)

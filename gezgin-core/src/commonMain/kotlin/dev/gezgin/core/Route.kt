@@ -3,7 +3,7 @@ package dev.gezgin.core
 import dev.gezgin.core.compose.GezginTransition
 
 /**
- * The root of every graph interface. The app's root sealed graph extends this (AppGraph : Route).
+ * The root of every graph interface. The application's root sealed graph extends this interface.
  *
  * [transition] — the runtime transition value, **getter required**: `override val transition get()
  * = transition { forward { .. } }` — the initializer form (`val transition = transition { .. }`)

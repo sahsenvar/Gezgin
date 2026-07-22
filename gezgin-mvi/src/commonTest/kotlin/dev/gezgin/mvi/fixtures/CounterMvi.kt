@@ -55,7 +55,7 @@ class CounterViewModel(route: CounterRoute) :
   private val _uiState = MutableStateFlow(CounterState(route.start))
   override val uiState: StateFlow<CounterState> = _uiState.asStateFlow()
 
-  // Kayıpsız backing (MJ2): gözlemci yokken (örtülen/STOPPED entry) emit edilen efekt Channel'da
+  // Kayıpsız backing (`MJ2`): gözlemci yokken (örtülen/STOPPED entry) emit edilen efekt Channel'da
   // tutulur,
   // re-observe'de teslim edilir — MutableSharedFlow(replay=0)+tryEmit deseninin sessiz-düşürmesi
   // YOK.

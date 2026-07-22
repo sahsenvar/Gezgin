@@ -1,5 +1,4 @@
 package dev.gezgin.core.compose
 
-// Desktop/JVM: kök geri no-op (pencere kapatma politikası host uygulamaya bırakılır — sample'da
-// gerekirse ExitApplication ile override edilebilir).
+// Window-closing policy belongs to the desktop host, which may provide ExitApplication explicitly.
 internal actual fun platformDefaultRootBack(): () -> Unit = {}

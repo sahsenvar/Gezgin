@@ -92,7 +92,7 @@ class FragmentModelReaderTest {
 
   // endregion
 
-  // region Guardrails FS1-FS3
+  // region Guardrails `FS1`-`FS3`
 
   @Test
   fun `FS1 — @FragmentScreen Fragment with a parameterized constructor is rejected`() {
@@ -162,7 +162,8 @@ class FragmentModelReaderTest {
     // The load-bearing cross-kind case: a route registered by BOTH a @FragmentScreen and a @Screen
     // would compile two register<R> calls and crash at runtime. FragmentModelReader cross-checks
     // the
-    // already-built EntryModelReader entries, so FS3 fires (mirrors SC4/MV4 for the other kinds).
+    // already-built EntryModelReader entries, so `FS3` fires (mirrors `SC4`/`MV4` for the other
+    // kinds).
     assertViolates(
       "FS3",
       """
@@ -190,13 +191,13 @@ class FragmentModelReaderTest {
 
   @Test
   fun `FS3 — a @FragmentScreen and an MVI-mode @Screen(state,onIntent) on the same route are rejected`() {
-    // Coverage nicety (task-6.1 review Minor): FS3 vs the OTHER cross-kind — an MVI-mode content
+    // Coverage nicety (task-6.1 review Minor): `FS3` vs the OTHER cross-kind — an MVI-mode content
     // @Screen (paired with a @MviViewModel by route) registers R, and a @FragmentScreen(R) would be
     // a
     // second register<R>. Structurally identical to the core-@Screen case; the built `entries` list
     // FragmentModelReader cross-checks already carries MVI-mode content (EntryModelReader shares
     // one
-    // seenRouteFqs across core + MVI), so FS3 fires here too.
+    // seenRouteFqs across core + MVI), so `FS3` fires here too.
     assertViolates(
       "FS3",
       """
@@ -238,10 +239,10 @@ class FragmentModelReaderTest {
   @Test
   fun `FS6 — @FragmentScreen on a class that does not extend Fragment is rejected`() {
     // The annotated class is a PLAIN class (no `: Fragment()`). Its route arg IS a valid Route →
-    // FS2
-    // passes; ctor is no-arg → FS1 passes. Only FS6's ANNOTATED-CLASS supertype check can catch
+    // `FS2`
+    // passes; ctor is no-arg → `FS1` passes. Only `FS6`'s ANNOTATED-CLASS supertype check can catch
     // this
-    // (FS2 checks the ROUTE arg, a structurally different thing). Without FS6 the mistake would
+    // (`FS2` checks the ROUTE arg, a structurally different thing). Without `FS6` the mistake would
     // surface
     // as a confusing `T : Fragment` type-bound error inside the generated AndroidFragment<X> call.
     assertViolates(
@@ -263,12 +264,13 @@ class FragmentModelReaderTest {
 
   @Test
   fun `FS4 — two @FragmentScreen classes in one package resolving to the same X (provideXEntry clash)`() {
-    // `Detail` and `DetailRoute` are DIFFERENT routes (no FS3), but the X derivation strips the
+    // `Detail` and `DetailRoute` are DIFFERENT routes (no `FS3`), but the X derivation strips the
     // "Route"
     // suffix — both resolve to X="Detail" i.e. the SAME `provideDetailEntry()` name in the SAME
     // package.
-    // Without FS4, FragmentEntryCodegen would emit two identical-signature functions → conflicting
-    // overloads. Mirrors core-mode's SC6 (same-kind, Fragment vs Fragment).
+    // Without `FS4`, FragmentEntryCodegen would emit two identical-signature functions →
+    // conflicting
+    // overloads. Mirrors core-mode's `SC6` (same-kind, Fragment vs Fragment).
     assertViolates(
       "FS4",
       """
@@ -299,7 +301,8 @@ class FragmentModelReaderTest {
     // GezginFragmentEntries.kt)
     // sit in the SAME package — Kotlin package-level fn names collide across files, so this is a
     // real
-    // clash. Different routes (Detail vs DetailRoute) → no FS3/SC4; caught solely by FS4's (pkg, x)
+    // clash. Different routes (Detail vs DetailRoute) → no `FS3`/`SC4`; caught solely by `FS4`'s
+    // (pkg, x)
     // key.
     assertViolates(
       "FS4",
@@ -377,7 +380,7 @@ class FragmentModelReaderTest {
 
   // endregion
 
-  // region FS1 instantiability gaps + FS2 bare-Route + FS7 modal-contract (Faz-6 recheck)
+  // region `FS1` instantiability gaps + `FS2` bare-Route + `FS7` modal-contract (Faz-6 recheck)
 
   @Test
   fun `FS1 — abstract @FragmentScreen class is rejected`() {

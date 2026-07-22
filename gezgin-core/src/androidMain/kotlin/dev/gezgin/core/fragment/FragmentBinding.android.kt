@@ -48,8 +48,8 @@ import kotlin.reflect.KProperty
  * navigator type is the generated `XNavigator`, gezgin-core does not know it → `Any?`; `gezginNav`
  * casts to the reified type. If [nav] is `null`, the route gains NO navigator (an edge-less leaf —
  * no edge/back-edge/result-contract → no generated `XNavigator`): the Fragment IS bound but
- * `gezginNav` cannot be read ([gezginBoundNav] throws FS5) — this is DISTINCT from "not bound yet"
- * (NO record at all in the registry).
+ * `gezginNav` cannot be read ([gezginBoundNav] throws `FS5`) — this is DISTINCT from "not bound
+ * yet" (NO record at all in the registry).
  */
 private class BoundGezgin(val nav: Any?)
 
@@ -57,12 +57,12 @@ private class BoundGezgin(val nav: Any?)
  * Post-bind hook for a `@FragmentScreen` Fragment whose route declares a `@GoForResult` edge. The
  * Fragment must collect the generated `xResults` flow after its navigator is available.
  *
- * **Why this is needed:** `gezginNav` is bound inside `AndroidFragment.onUpdate`, which runs AFTER
- * the internal `commitNow()` (fragment-compose 1.8.9 fact). So `gezginNav` is NOT yet bound in
- * `onCreateView`/`onViewCreated` — a fragment cannot start a `nav.xResults` collector there, and
- * there was no callback that says "binding is complete". Without this hook a `@GoForResult`
- * launcher fragment compiles but is practically broken (the delivered result is never observed
- * until some later interaction re-reads it).
+ * `gezginNav` is bound inside `AndroidFragment.onUpdate`, which runs after the internal
+ * `commitNow()`. Therefore, `gezginNav` is not yet bound in `onCreateView`/`onViewCreated` — a
+ * fragment cannot start a `nav.xResults` collector there, and there was no callback that says
+ * "binding is complete". Without this hook a `@GoForResult` launcher fragment compiles but is
+ * practically broken (the delivered result is never observed until some later interaction re-reads
+ * it).
  *
  * **Contract:** [bindGezgin] calls [onGezginBound] on the MAIN thread right after it registers the
  * navigator — which is after `commitNow`, so `onCreateView`/`onViewCreated` have already run and
@@ -81,11 +81,12 @@ private class BoundGezgin(val nav: Any?)
  * }
  * ```
  *
- * On config-change/PD the fragment is a NEW instance and `bindGezgin` (hence [onGezginBound]) runs
- * again for it → the collector is re-attached against the fresh `viewLifecycleOwner`. It fires ONCE
- * per live instance because binding runs once per instance, so it does not duplicate collectors. If
- * the route is an edge-less leaf (NO navigator), [onGezginBound] is still invoked, but `gezginNav`
- * throws `[FS5]` — a display-only leaf should NOT implement this interface.
+ * After configuration change or process recreation, the fragment is a new instance and `bindGezgin`
+ * (hence [onGezginBound]) runs again. The collector is reattached to the fresh
+ * `viewLifecycleOwner`. It fires once per live instance because binding runs once per instance, so
+ * it does not duplicate collectors. If the route is an edge-less leaf (NO navigator),
+ * [onGezginBound] is still invoked, but `gezginNav` throws `FS5`; a display-only leaf should not
+ * implement this interface.
  *
  * @author @sahsenvar
  */
@@ -128,36 +129,29 @@ public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
 }
 
 /**
- * The navigator-free overload of [bindGezgin] handles an edge-less route with no
- * `@GoTo`/`@ReplaceTo`/`@BackTo` edge or result contract, for which `NavigatorCodegen` does not
- * generate an `XNavigator`. In this case the generated `provideXEntry` never binds `nav` and calls
- * `onUpdate = { fragment -> bindGezgin(fragment, route) }` (it NEVER calls a non-existent factory
- * because the condition is computed in `GezginProcessor` via `NavigatorCodegen.hasNavigator`). It
- * binds the Fragment without a navigator: `gezginArgs` (from the Bundle) still works; but if
- * `gezginNav` is read, [gezginBoundNav] throws an `[FS5]` error — not "not bound" but "NO
- * navigator". A legitimate display-only brownfield screen (Settings/About) follows this path; it is
- * NOT REJECTED at KSP time.
+ * The navigator-free overload of [bindGezgin] handles an edge-less route with no navigation edge or
+ * result contract. Such a route has no generated `XNavigator`, so the generated entry binds the
+ * Fragment without a navigator. `gezginArgs` still works because it reads from the Bundle, while
+ * `gezginNav` fails with `FS5`. This permits display-only brownfield screens such as Settings or
+ * About.
  *
- * **UNCONDITIONAL put** — the same idempotency contract as the nav-ful overload (NO bind-once
- * guard): a new instance after config-change/PD must re-bind. `public`: the generated code lives in
- * the consumer module.
+ * The registry write is unconditional so a new instance after configuration change or process
+ * recreation can bind again. This function is public because generated code runs in the consumer
+ * module.
  */
 @GezginInternalApi
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route) {
   boundRegistry[fragment] = BoundGezgin(nav = null)
   // A navigator-free leaf is still bound and receives the completion callback. Reading gezginNav
-  // remains invalid for such a leaf and produces the documented FS5 error.
+  // remains invalid for such a leaf and produces the documented `FS5` error.
   (fragment as? GezginBindingObserver)?.onGezginBound()
 }
 
 /**
- * `gezginNav`'s registry read + TWO separate descriptive errors (the non-inline real body;
- * [gezginNav] only inlines the reified cast → `boundRegistry`/`BoundGezgin` can stay private):
- * - if there is NO record in the registry → "not bound yet" (`onUpdate` has not run).
- * - if there is a record but `nav == null` → `[FS5]` "the route has NO navigator" (an edge-less
- *   leaf, bound via the nav-less [bindGezgin]). These two cases are DELIBERATELY separated with
- *   distinct messages.
+ * Reads the registry for [gezginNav] while keeping the registry implementation private. A missing
+ * record means `onUpdate` has not bound the Fragment yet. A record with a null navigator means the
+ * bound route is an edge-less leaf; this fails with `FS5`.
  */
 @PublishedApi
 internal fun gezginBoundNav(fragment: Fragment): Any {
@@ -179,12 +173,10 @@ internal fun gezginBoundNav(fragment: Fragment): Any {
 }
 
 /**
- * The Fragment counterpart of `@Screen`'s `nav` param. `by gezginNav<XNavigator>()` — returns the
- * post-bind live navigator cast to the reified type. [gezginBoundNav] separates two cases with
- * distinct errors: if not bound yet, "not bound"; if the route has no navigator (a bare `@NoBack`
- * leaf, bound via the nav-less [bindGezgin]), `[FS5]` "NO navigator". (Usually the second is
- * already caught at compile time: a route without a navigator has NO `XNavigator` type generated →
- * `gezginNav<XNavigator>()` cannot resolve; FS5 is a residual runtime net.)
+ * Returns the live generated navigator after the Fragment has been bound. [gezginBoundNav]
+ * distinguishes a Fragment that is not yet bound from an edge-less route that has no navigator. The
+ * latter normally fails at compile time because no `XNavigator` type is generated; `FS5` remains as
+ * a runtime safeguard.
  */
 public inline fun <reified N> gezginNav(): ReadOnlyProperty<Fragment, N> =
   ReadOnlyProperty { fragment, _ ->

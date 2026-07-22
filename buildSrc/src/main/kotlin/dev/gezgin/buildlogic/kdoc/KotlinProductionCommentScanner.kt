@@ -34,7 +34,8 @@ class KotlinProductionCommentScanner : AutoCloseable {
             )
           )
         }
-        if (TURKISH_HISTORY.containsMatchIn(text)) {
+        val prose = WITHOUT_INLINE_CODE.replace(text, "")
+        if (TURKISH_UNICODE.containsMatchIn(prose) || TURKISH_HISTORY.containsMatchIn(prose)) {
           add(
             ProductionCommentFinding(
               input.path,
@@ -95,7 +96,8 @@ class KotlinProductionCommentScanner : AutoCloseable {
   private fun String.containsInternalHistory(): Boolean =
     WITHOUT_INLINE_CODE.replace(this, "").let { prose ->
       STALE_REFERENCE.containsMatchIn(prose) ||
-        COMPACT_TOKEN.findAll(prose).any { token -> token.value.looksLikeCompactInternalId() }
+        COMPACT_TOKEN.findAll(prose).any { token -> token.value.looksLikeCompactInternalId() } ||
+        PLAIN_INTERNAL_ID.findAll(prose).any { it.value !in SAFE_TECHNICAL_IDS }
     }
 
   private fun String.looksLikeCompactInternalId(): Boolean {
@@ -118,6 +120,8 @@ class KotlinProductionCommentScanner : AutoCloseable {
         hasDoubledCommentPrefixWhitespace() ||
         INTERNAL_DOUBLE_HYPHEN.containsMatchIn(prose) ||
         MALFORMED_RULE_LABEL.containsMatchIn(prose) ||
+        SPACED_PUNCTUATION.containsMatchIn(prose) ||
+        prose.hasOrphanFragment() ||
         DUPLICATE_FUTURE.containsMatchIn(prose) ||
         prose.containsLowercaseSentenceFragment()
     ) {
@@ -154,6 +158,37 @@ class KotlinProductionCommentScanner : AutoCloseable {
     return KDoc_DOUBLED_PREFIX_WHITESPACE.containsMatchIn(firstContentLine)
   }
 
+  private fun String.hasOrphanFragment(): Boolean =
+    lineSequence()
+      .map { line ->
+        line
+          .trim()
+          .removePrefix("/**")
+          .removePrefix("/*")
+          .removePrefix("//")
+          .removePrefix("*")
+          .removeSuffix("*/")
+          .trim()
+      }
+      .filter(String::isNotEmpty)
+      .toList()
+      .let { lines ->
+        lines.any(PUNCTUATION_FRAGMENT::matches) ||
+          (startsWith("//") &&
+            lines.withIndex().any { (index, line) ->
+              val normalized = line.lowercase()
+              val standalone = lines.size == 1
+              val consecutiveSentence =
+                index > 0 &&
+                  SENTENCE_END.containsMatchIn(lines[index - 1]) &&
+                  SENTENCE_END.containsMatchIn(line)
+              normalized !in STRUCTURAL_COMMENT_LINES &&
+                !line.startsWith("KDOCSPAN") &&
+                ONE_WORD_FRAGMENT.matches(line) &&
+                (standalone || consecutiveSentence)
+            })
+      }
+
   private companion object {
     val COMMENT_TOKENS = setOf(KtTokens.EOL_COMMENT, KtTokens.BLOCK_COMMENT, KtTokens.DOC_COMMENT)
     val LINE_COMMENT_GAP = Regex("[ \\t]*\\r?\\n[ \\t]*")
@@ -165,12 +200,16 @@ class KotlinProductionCommentScanner : AutoCloseable {
           "(?i:\\b(?:final[- ]review|jar[- ](?:verified|doğrulandı)|test provenance|review provenance)\\b)"
       )
     val COMPACT_TOKEN = Regex("\\b[A-Z0-9]{1,2}(?:-[A-Z0-9]{1,2})+\\b|\\bm[A-Z]{1,2}\\d+\\b")
+    val PLAIN_INTERNAL_ID = Regex("\\b[A-Z]{2,3}\\d+\\b")
+    val SAFE_TECHNICAL_IDS = setOf("UTF8", "HTTP2", "SHA256")
     val TURKISH_HISTORY =
       Regex(
         "\\b(?:faz|görev|gorev|aşama|asama|rapor|bulgu|inceleme|devir|spike|karar|" +
-          "kanıt|kanit|doğrulandı|dogrulandi)\\b",
+          "kanıt|kanit|doğrulandı|dogrulandi|yalniz|yalnız|ayni|aynı|deger|değer|durumda|" +
+          "kullanilir|kullanılır|gercek|gerçek|davranis|davranış|burada|korunur)\\b",
         RegexOption.IGNORE_CASE,
       )
+    val TURKISH_UNICODE = Regex("[çğıöşüÇĞİÖŞÜ]")
     val DUPLICATE_WORD = Regex("\\b([A-Za-z]{3,})\\s+\\1\\b", RegexOption.IGNORE_CASE)
     val EMPTY_PUNCTUATION = Regex("[,;:]\\s*\\)")
     val EMPTY_PARENTHESES = Regex("(?<=\\s)\\(\\s*\\)")
@@ -183,6 +222,11 @@ class KotlinProductionCommentScanner : AutoCloseable {
     val INTERNAL_DOUBLE_HYPHEN =
       Regex("\\b(?:spec|review|test|phase)--[A-Za-z]", RegexOption.IGNORE_CASE)
     val MALFORMED_RULE_LABEL = Regex("\\b(?:problem|rule)\\s+\\d+\\b", RegexOption.IGNORE_CASE)
+    val SPACED_PUNCTUATION = Regex("[ \\t]+[,.;:!?]")
+    val PUNCTUATION_FRAGMENT = Regex("[,:;.!?]+")
+    val ONE_WORD_FRAGMENT = Regex("[A-Za-zÀ-ž][A-Za-zÀ-ž'-]*[.!?]?")
+    val SENTENCE_END = Regex("[.!?]$")
+    val STRUCTURAL_COMMENT_LINES = setOf("region", "endregion")
     val LOWERCASE_SENTENCE_FRAGMENT = Regex("[.!?]\\s+([a-z])\\w*\\b")
     val SAFE_ABBREVIATIONS = setOf("e.g", "i.e", "etc", "vs", "cf", "bkz")
     val DUPLICATE_FUTURE =

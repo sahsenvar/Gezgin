@@ -80,7 +80,7 @@ class FragmentEntryCodegenTest {
     // branch
     // PROBES the classpath, finds the `OrderChainNavigator` stub (models an already-compiled
     // cross-module
-    // navigator) → nav wiring emitted (SC2/MV7 parity, now deterministic instead of `?: true`
+    // navigator) → nav wiring emitted (`SC2`/`MV7` parity, now deterministic instead of `?: true`
     // optimism).
     assertContains(text, "public fun GezginEntryScope.provideOrderChainEntry()")
     assertContains(
@@ -105,10 +105,10 @@ class FragmentEntryCodegenTest {
   }
 
   /**
-   * Fix-round (FS5 / SC2-MV7 parity): nav wiring is CONDITIONAL on the route earning a navigator.
-   * Compiled with [SHOP_SOURCE] so `Feed` (has edges → `FeedNavigator`) and `About` (bare
-   * `@NavGraph` member → no navigator) are both IN the model with a KNOWN navigator status — the
-   * two branches of the guard.
+   * Fix-round (`FS5` / `SC2`-`MV7` parity): nav wiring is CONDITIONAL on the route earning a
+   * navigator. Compiled with [SHOP_SOURCE] so `Feed` (has edges → `FeedNavigator`) and `About`
+   * (bare `@NavGraph` member → no navigator) are both IN the model with a KNOWN navigator status —
+   * the two branches of the guard.
    */
   @Test
   fun `nav wiring is conditional — edge-less route emits no nav, route with navigator keeps it`() {
@@ -149,11 +149,11 @@ class FragmentEntryCodegenTest {
   }
 
   /**
-   * Fix-round (Important 3 — cross-module display-only gap FS5's own tests never caught). A
+   * Fix-round (Important 3 — cross-module display-only gap `FS5`'s own tests never caught). A
    * display-only `@FragmentScreen` whose route is cross-module (graph-less here) AND has NO
    * compiled navigator must emit NO nav wiring — the cross-module classpath probe returns false, so
-   * the FS5 no-nav path applies. The OLD `?: true` optimism nav-wired this leaf → a call to a
-   * nonexistent `settingsNavigator()` factory (unresolved reference), the exact FS5 bug relocated
+   * the `FS5` no-nav path applies. The OLD `?: true` optimism nav-wired this leaf → a call to a
+   * nonexistent `settingsNavigator()` factory (unresolved reference), the exact `FS5` bug relocated
    * to the cross-module case.
    */
   @Test

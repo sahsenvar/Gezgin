@@ -703,7 +703,7 @@ class ValidationTest {
 
   // endregion
 
-  // region NB1 — @NoBack and @StartDestination are mutually exclusive
+  // region `NB1` — @NoBack and @StartDestination are mutually exclusive
 
   @Test
   fun `NB1 - NoBack together with StartDestination is rejected`() {
@@ -730,7 +730,7 @@ class ValidationTest {
 
   // endregion
 
-  // region SD1 — exactly one start per FlowGraph, none in a NavGraph
+  // region `SD1` — exactly one start per FlowGraph, none in a NavGraph
 
   @Test
   fun `SD1 - a FlowGraph with two StartDestinations is rejected`() {
@@ -798,7 +798,7 @@ class ValidationTest {
 
   // endregion
 
-  // region FX1 — @BackToStart/@Quit need an enclosing flow
+  // region `FX1` — @BackToStart/@Quit need an enclosing flow
 
   @Test
   fun `FX1 - Quit outside any flow is rejected`() {
@@ -823,7 +823,7 @@ class ValidationTest {
 
   // endregion
 
-  // region FX2 — @QuitAndGoTo inside a ResultFlow drops the expected result
+  // region `FX2` — @QuitAndGoTo inside a ResultFlow drops the expected result
 
   @Test
   fun `FX2 - QuitAndGoTo from a ResultFlow member is rejected`() {

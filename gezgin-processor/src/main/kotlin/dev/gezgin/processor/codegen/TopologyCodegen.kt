@@ -22,12 +22,8 @@ private val SERIALIZERS_MODULE = ClassName(SERIALIZATION_MODULES_PKG, "Serialize
 private val POLYMORPHIC = MemberName(SERIALIZATION_MODULES_PKG, "polymorphic")
 private val SUBCLASS = MemberName(SERIALIZATION_MODULES_PKG, "subclass")
 
-// The stable, process-wide `gezginJson` (`Json(gezginSerializersModule)`) deliberately has
-// NO
-// generated `@Composable`: the graph module is plain-JVM (no Compose compiler plugin), so a
-// `@Composable`
-// emitted there would compile WITHOUT Compose lowering and crash consumers at runtime (see
-// [TopologyCodegen.generateRememberNavigator]).
+// Generate only a stable process-wide Json value here. Graph modules may lack the Compose compiler,
+// so emitting a composable would produce an unlowered and unusable function.
 private val JSON = ClassName(JSON_PKG, "Json")
 private val JSON_FUN = MemberName(JSON_PKG, "Json")
 
@@ -40,7 +36,7 @@ private val JSON_FUN = MemberName(JSON_PKG, "Json")
 private val SERIALIZER = MemberName("kotlinx.serialization", "serializer")
 
 /**
- * : emits the two generated-code artifacts derived from a validated [GraphModel] via KotlinPoet.
+ * Emits generated artifacts derived from a validated [GraphModel] via KotlinPoet.
  * - [generateTopology] → `GezginGenerated.kt`: the loadable, executable `GezginTopology` — safe to
  *   generate unconditionally, since every result type is serializable (either `@Serializable` or a
  *   kotlinx builtin), resolved uniformly through the reified [SERIALIZER] lookup.
@@ -121,18 +117,11 @@ internal object TopologyCodegen {
    * comment + [generateRememberNavigator]).
    */
   fun generateRememberNavigator(packageName: String): FileSpec {
-    // gezginJson — process-wide stable Json(gezginSerializersModule) so app call sites don't
-    // hand-assemble
-    // a `remember { Json { … } }` (the encode/decode symmetry the PD-restore Saver needs). Call
-    // sites use
-    // the core `rememberNavigator(start, gezginTopology, gezginJson, onRootBack)`.
+    // Emit one process-wide Json instance so save and restore use the same serializers module.
     //
     // NO generated `@Composable rememberGezginNavigator` convenience: this file is emitted into the
-    // graph
-    // module, which in the canonical layout is a plain `kotlin.jvm` module WITHOUT the
-    // Compose
-    // compiler plugin. A `@Composable` FUNCTION compiled there gets a NON-lowered bytecode
-    // signature (no
+    // graph module may be plain Kotlin/JVM without the Compose compiler. A composable compiled
+    // there gets a non-lowered bytecode signature (no
     // `Composer`/`$changed`/`$default` params) → a Compose consumer calling it crashes at runtime
     // with
     // `NoSuchMethodError` (compiles fine; only fails when the app actually runs). `gezginJson` is a

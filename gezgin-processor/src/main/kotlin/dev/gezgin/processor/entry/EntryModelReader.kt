@@ -29,10 +29,7 @@ private const val FULLSCREEN_MODAL_FQ = "dev.gezgin.core.annotation.FullscreenMo
 private const val ROUTE_FQ = "dev.gezgin.core.Route"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
 
-// Modal presentation contracts — read as string FQs (no compile dep beyond gezgin-core, which
-// is
-// already a dep). SC8 (kind↔contract mismatch) + SC7 (@NoBack × modal) key off the route's
-// supertypes.
+// Read modal contracts as string FQs; kind and no-back validation uses route supertypes.
 private const val DIALOG_CONTRACT_FQ = "dev.gezgin.core.DialogContract"
 private const val FULLSCREEN_MODAL_CONTRACT_FQ = "dev.gezgin.core.FullscreenModalContract"
 private const val BOTTOM_SHEET_CONTRACT_FQ = "dev.gezgin.core.BottomSheetContract"
@@ -49,9 +46,8 @@ private val CONTRACT_BY_KIND =
   )
 private val ALL_KIND_CONTRACT_FQS = CONTRACT_BY_KIND.values.toSet()
 
-// MVI-mode FQ constants — read as strings, no compile dep on gezgin-mvi.
-// The @BottomSheet role extra is Gezgin's own GezginSheetController, not Material3
-// SheetState.
+// Read MVI types as strings to avoid a processor dependency on gezgin-mvi. Bottom sheets use
+// GezginSheetController rather than Material3 SheetState.
 private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetController"
 private const val TOP_BAR_FQ = "dev.gezgin.mvi.annotation.TopBar"
 private const val BOTTOM_BAR_FQ = "dev.gezgin.mvi.annotation.BottomBar"
@@ -59,16 +55,8 @@ private const val FLOW_FQ = "kotlinx.coroutines.flow.Flow"
 private const val FUNCTION1_FQ = "kotlin.Function1"
 private const val UNIT_FQ = "kotlin.Unit"
 
-// Content-extra names that collide with identifiers introduced by `MviEntryCodegen` are
-// emitted
-// `provideXEntry` introduces: the resolver param `viewModel`, and the register-body locals `route`
-// (lambda param), `nav` (nav-wired factory), `vm` (the resolved VM). An extra colliding with one of
-// these would emit broken generated code (e.g. an extra `nav: XNavigator` → `nav = nav()`, calling
-// the
-// navigator instance as if it were the resolver lambda) — MV10 rejects it at model-read time.
-// (`state`/
-// `onIntent` are the MVI signature params, filtered out BEFORE the extras loop, so they never reach
-// it.)
+// Reserve resolver and register-body names introduced by MviEntryCodegen. A colliding extra would
+// produce a reference to the wrong generated local; state and onIntent are filtered beforehand.
 private val RESERVED_EXTRA_NAMES = setOf("viewModel", "nav", "route", "vm")
 
 private val KIND_BY_ANNOTATION_FQ =
@@ -80,7 +68,7 @@ private val KIND_BY_ANNOTATION_FQ =
   )
 
 /**
- * (MVI-mode) — reads every `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`- annotated
+ * In MVI mode, reads every `@Screen`-, `@Dialog`-, `@BottomSheet`-, or `@FullscreenModal`-annotated
  * composable FUNCTION and validates it into an [EntryFunctionModel] list, reporting every violation
  * as a bracketed-code KSP error via [logger]. [read] never throws — like the graph validator, it
  * collects every violation in one pass and returns whether the read was clean alongside whatever
@@ -146,7 +134,7 @@ private val KIND_BY_ANNOTATION_FQ =
  * - `MV10` — a Problem-2 content extra whose name collides with an emitted identifier
  *   (`viewModel`/`nav`/`route`/`vm`), which would produce broken generated code.
  *
- * **MVI guardrails :**
+ * **MVI guardrails:**
  * - `MV11` — an `@EffectHandler` whose signature isn't a subset of `{Flow<E>, nav: XNavigator}`: an
  *   EXTRA param (e.g. `SnackbarHostState` — no wiring path, unlike content's extra resolvers) or a
  *   `nav` param whose RESOLVED type isn't the matched route's `${x}Navigator`. Both would otherwise
@@ -177,8 +165,8 @@ internal class EntryModelReader(
     mutableMapOf<String, String>() // routeFq -> first function's simple name
   private val seenProvideNames =
     mutableMapOf<Pair<String, String>, String>() // (package, x) -> first function's simple name
-  private val matchedVmRoutes =
-    mutableSetOf<String>() // routes whose @MviViewModel got a matching content (for MV3)
+  // Routes whose `@MviViewModel` has matching content; used by the `MV3` validation.
+  private val matchedVmRoutes = mutableSetOf<String>()
   private val declaredMviScreenRoutes = mutableSetOf<String>()
 
   fun read(): Pair<List<EntryFunctionModel>, Boolean> {
@@ -255,7 +243,7 @@ internal class EntryModelReader(
         )
       }
 
-    // MV3 — every @MviViewModel must have matching content in this module (same-module
+    // `MV3` — every @MviViewModel must have matching content in this module (same-module
     // triple).
     vmModels.forEach { vm ->
       if (vm.routeFq !in matchedVmRoutes) {
@@ -360,15 +348,13 @@ internal class EntryModelReader(
     val packageName = fn.packageName.asString()
     val x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString())
 
-    // SC8 (kind↔contract) + SC7 (@NoBack × modal) — shared, statically decidable (see the helper).
+    // `SC8` (kind↔contract) + `SC7` (@NoBack × modal) — shared, statically decidable (see the
+    // helper).
     if (!checkKindContractAndNoBack(fnName, routeDecl, kind)) return null
 
     if (navParam != null) {
-      // Cross-module'de (routeModel == null) eski `?: true` kör iyimserliği yerine
-      // kimlik-doğrulamalı
-      // classpath probe'u (fragment FS5 ile PAYLAŞILAN tek yardımcı) — navigator'sız cross-module
-      // route
-      // artık üretilen kodda `raw.xNavigator()` unresolved reference'ı yerine temiz [SC2] verir.
+      // Use the shared identity-verified classpath probe for cross-module routes. A missing
+      // navigator then produces `SC2` instead of an unresolved generated reference.
       val hasNavigator =
         NavigatorProbe.routeEarnsNavigator(
           resolver,
@@ -388,7 +374,7 @@ internal class EntryModelReader(
       }
       // The `nav:` parameter type must be the route's own `${x}Navigator`; otherwise the
       // generated `XScreen(route, nav)` call site would type-mismatch inside GezginEntries.kt
-      // (a confusing generated-code error instead of a clean [SC2]). Same technique as
+      // (a confusing generated-code error instead of a clean [`SC2`]). Same technique as
       // VmDiClassifier:
       // a same-module navigator type isn't generated yet in this KSP round (its FQ resolves to an
       // error type), so we accept an unresolved type by NAME `nav` and only reject a RESOLVED,
@@ -435,15 +421,8 @@ internal class EntryModelReader(
       // lets EntryCodegen qualify the factory import cross-module (a feature module's own
       // model has no graphs, so its `targetPackage` is empty and useless here).
       routePackageName = routeDecl.packageName.asString(),
-      // Declaration-tabanlı okuma: `routeModel` YALNIZ bu modülün
-      // GraphModel'inde bilinen route'lar için var olur (cross-module route'larda null) — model
-      // fallback'i bu yüzden cross-module @NoBack'i SESSİZCE düşürüyordu. `routeDecl` KSP'de
-      // modülden bağımsız her zaman erişilebilir (Route implement eden herhangi bir sınıf, hangi
-      // modülde derlenmiş olursa olsun), bu yüzden noBack HER ZAMAN doğrudan route declaration'ın
-      // kendi annotation'larından okunur. Sınır: kctfork tek derleme birimi olduğu için gerçek
-      // cross-module senaryo bu testlerle simüle edilemiyor — mevcut golden (Product, aynı modül)
-      // bu okuma-yolunun declaration-tabanlı olduğunu pinler, cross-module davranışı
-      // manuel/on-device doğrulama gerektirir.
+      // Read @NoBack directly from the declaration because the local model omits cross-module
+      // routes while KSP still resolves their annotations.
       noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
       x = x,
     )
@@ -465,9 +444,7 @@ internal class EntryModelReader(
     val stateParam = params.first { it.name?.asString() == "state" }
     val onIntentParam = params.first { it.name?.asString() == "onIntent" }
 
-    // Route resolution — MVI-mode has no route: param (the state param's TYPE is NOT the route), so
-    // the
-    // route comes solely from the mandatory annotation arg. Sentinel/missing → SC9.
+    // MVI content has no route parameter, so the mandatory annotation is its only route source.
     val resolvedRouteType = resolveMandatoryRoute(annotation, fnName) ?: return null
 
     val routeDecl = resolvedRouteType.declaration as? KSClassDeclaration
@@ -488,7 +465,7 @@ internal class EntryModelReader(
     val routeModel = routesByFq[routeFq]
     declaredMviScreenRoutes += routeFq
 
-    // SC4 — shared with core-mode: a route may have only ONE content registration.
+    // `SC4` — shared with core-mode: a route may have only ONE content registration.
     val previousOwner = seenRouteFqs[routeFq]
     if (previousOwner != null) {
       error(
@@ -499,10 +476,11 @@ internal class EntryModelReader(
     }
     seenRouteFqs[routeFq] = fnName
 
-    // SC8 (kind↔contract) + SC7 (@NoBack × modal) — shared with core-mode, statically decidable.
+    // `SC8` (kind↔contract) + `SC7` (@NoBack × modal) — shared with core-mode, statically
+    // decidable.
     if (!checkKindContractAndNoBack(fnName, routeDecl, kind)) return null
 
-    // MV2 — the content's route must have a @MviViewModel in THIS module (same-module
+    // `MV2` — the content's route must have a @MviViewModel in THIS module (same-module
     // triple).
     val vm = vmByRouteFq[routeFq]
     if (vm == null) {
@@ -514,20 +492,13 @@ internal class EntryModelReader(
       )
       return null
     }
-    // Mark matched as soon as a VM pairs with a content (even if MV5 fails below) so MV3 doesn't
-    // also fire for the same VM — MV3 is strictly "no content at all", not "invalid content".
+    // Mark matched as soon as a VM pairs with a content (even if `MV5` fails below) so `MV3`
+    // doesn't
+    // also fire for the same VM — `MV3` is strictly "no content at all", not "invalid content".
     matchedVmRoutes += routeFq
 
-    // MV12 (MJ4) — a plain `@HiltViewModel` (no assisted factory) receives NOTHING
-    // from
-    // Gezgin: the old premise "route arrives via SavedStateHandle" is FALSE in Nav3 (no mechanism
-    // writes the route into the handle → `ssh.get("id")` is silently null). So a plain-Hilt VM
-    // whose
-    // ROUTE carries data (parameterized ctor) can never read that data → reject with an actionable
-    // message rather than emit code that compiles and silently reads null. A parameterless route is
-    // fine (the VM needs no route data). Route-data-carrying screens must use HILT_ASSISTED
-    // (factory)
-    // or a Gezgin-supplied resolver.
+    // Plain Hilt receives no route data through SavedStateHandle in Navigation 3. Parameterized
+    // routes therefore require an assisted factory or an explicit resolver.
     if (
       vm.di == VmDiKind.HILT_PLAIN &&
         routeDecl.primaryConstructor?.parameters.orEmpty().isNotEmpty()
@@ -543,16 +514,8 @@ internal class EntryModelReader(
       return null
     }
 
-    // MV5 — content (state, onIntent) must satisfy the VM's GezginMvi<S,I,E> contract. Compare by
-    // KotlinPoet TypeName (structural, generics-preserving) NOT flattened FQ: an FQ compare
-    // collapses
-    // `Wrapper<Int>` and `Wrapper<String>` to the same `…Wrapper` and would let a generic-arg
-    // mismatch
-    // slip through to a downstream Kotlin error inside the generated GezginMviEntries.kt instead of
-    // a
-    // clean [MV5]. The content's param types are ordinary already-compiled types here, so
-    // `toTypeName()`
-    // resolves fully (unlike a same-module navigator type — cf. VmCtorParam's FQ-only note).
+    // Compare generics-preserving TypeNames so Wrapper<Int> cannot match Wrapper<String> merely by
+    // flattened FQ name.
     val stateTypeName = stateParam.type.resolve().toTypeName()
     if (stateTypeName != vm.stateTypeName) {
       error(
@@ -585,10 +548,9 @@ internal class EntryModelReader(
     }
 
     // Record content parameters beyond {state, onIntent}. A GezginSheetController (by TYPE) is
-    // role-provided (Local-injected via LocalGezginSheetController); everything else becomes a 5.2
-    // resolver param. Deliberately NOT SC3-rejected here — that hard-reject is core-mode only
-    // —
-    // but MV10 (reserved name) and MV8 (controller off a @BottomSheet) ARE rejected: both would
+    // role-provided (Local-injected via LocalGezginSheetController); everything else becomes a
+    // resolver param. Deliberately NOT `SC3`-rejected here — that hard-reject is core-mode only —
+    // but `MV10` (reserved name) and `MV8` (controller off a @BottomSheet) ARE rejected: both would
     // otherwise reach codegen and emit compile-clean-but-broken/crashing code (compile-safe
     // philosophy).
     val roleExtras = mutableListOf<MviExtraParam>()
@@ -598,9 +560,7 @@ internal class EntryModelReader(
       .filter { it.name?.asString() != "state" && it.name?.asString() != "onIntent" }
       .forEach { p ->
         val pName = p.name?.asString().orEmpty()
-        // MV10 — an extra colliding with an emitted identifier (`viewModel`/`nav`/`route`/`vm`)
-        // would
-        // emit broken generated code. Reject at read time rather than letting codegen produce it.
+        // Reject extras that collide with generated register-body identifiers.
         if (pName in RESERVED_EXTRA_NAMES) {
           error(
             "MV10",
@@ -614,13 +574,8 @@ internal class EntryModelReader(
         val t = p.type.resolve()
         val extra = MviExtraParam(pName, t.fqOf(), t.toTypeName())
         if (t.declaration.qualifiedName?.asString() == SHEET_CONTROLLER_FQ) {
-          // MV8 — a GezginSheetController is a @BottomSheet-ONLY role extra (Local-injected via
-          // LocalGezginSheetController, whose default `error()`s outside a @BottomSheet content).
-          // On a
-          // SCREEN/DIALOG/FULLSCREEN_MODAL kind, codegen would still emit
-          // `<param> = LocalGezginSheetController.current` → compiles clean, crashes at first
-          // render.
-          // Classify as a valid role extra ONLY on BOTTOM_SHEET; else reject.
+          // LocalGezginSheetController is valid only inside bottom-sheet content; elsewhere its
+          // default fails at first render.
           if (kind == EntryKindModel.BOTTOM_SHEET) {
             roleExtras += extra
           } else {
@@ -674,21 +629,12 @@ internal class EntryModelReader(
     val packageName = fn.packageName.asString()
     val x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString())
 
-    // MV7 — MVI-mode SC2 parity. Nav is wired into the generated `provideXEntry` when the VM ctor
-    // declares a `nav` (DI-relevant, via the SHARED classifier MviEntryCodegen also uses) OR the
-    // matched @EffectHandler takes a `nav` param. Either way, wiring emits a `<x>Navigator()`
-    // factory
-    // call — but NavigatorCodegen only generates that factory when the route actually earns a
-    // navigator ([NavigatorCodegen.hasNavigator]). Without this check a nav-wanting VM/effect on a
-    // navigator-less route would sail through validation and emit an unresolved-reference call in
-    // generated code (mirrors core-mode's SC2 at the top of [buildCoreEntry]).
+    // Nav wiring requires a generated navigator whether requested by the VM or effect handler.
     val navigatorTypeFq = VmDiClassifier.navigatorTypeFq(routeDecl.packageName.asString(), x)
     val vmWantsNav = VmDiClassifier.classify(vm, routeFq, navigatorTypeFq).vmHasNav
     val effectWantsNav = effect != null && effect.hasNavParam
     if (vmWantsNav || effectWantsNav) {
-      // SC2 ile aynı paylaşılan probe: cross-module'de kimlik-doğrulamalı classpath lookup, eski
-      // `?: true` yerine (navigator'sız cross-module route → temiz [MV7], üretilen kodda unresolved
-      // DEĞİL).
+      // Reuse the identity-verified probe so a missing cross-module navigator produces `MV7`.
       val hasNavigator =
         NavigatorProbe.routeEarnsNavigator(
           resolver,
@@ -709,15 +655,8 @@ internal class EntryModelReader(
       }
     }
 
-    // MV11 (MJ5) — a matched @EffectHandler's `nav` param TYPE must be THIS route's
-    // own
-    // `${x}Navigator`; otherwise the generated `XEffects(effects = …, nav = nav)` call
-    // type-mismatches
-    // inside GezginMviEntries.kt. A same-module navigator isn't generated yet in this round, so KSP
-    // exposes its type as `<ERROR TYPE: XNavigator>`; compare that declared name instead of
-    // skipping
-    // validation. This accepts the expected same-round navigator and still rejects a different
-    // route's.
+    // An effect handler's navigator must belong to this route. Same-round navigator types remain
+    // error types, so compare their declared simple name while retaining exact FQ checks otherwise.
     val effectNavigatorMatches =
       effect?.navParamTypeFq?.let { actual ->
         if (effect.navParamIsError) {
@@ -781,14 +720,9 @@ internal class EntryModelReader(
   private data class EffectFun(
     val simpleName: String,
     val packageName: String,
-    /**
-     * `E`'s KotlinPoet TypeName (generics-preserving) — the join key against `vm.effectTypeName`.
-     */
+    /** Generics-preserving effect type used to join the binder with its ViewModel. */
     val effectTypeName: TypeName?,
-    /**
-     * The `Flow<E>` param's NAME — codegen emits the effect call named . Null if the binder has
-     * none.
-     */
+    /** Name of the `Flow<E>` parameter, or null when the binder has none. */
     val flowParamName: String?,
     val hasNavParam: Boolean,
     val hasIntentParam: Boolean,
@@ -1064,7 +998,7 @@ internal class EntryModelReader(
         .toSet()
     val expectedContract = CONTRACT_BY_KIND[kind] // null for SCREEN
 
-    // SC8 — every implemented kind-contract that isn't THIS kind's contract is a silent-drop
+    // `SC8` — every implemented kind-contract that isn't THIS kind's contract is a silent-drop
     // mismatch.
     val mismatched = implementedContracts.filter { it != expectedContract }
     if (mismatched.isNotEmpty()) {
@@ -1080,7 +1014,7 @@ internal class EntryModelReader(
       return false
     }
 
-    // SC7 — @NoBack × modal (route's own @NoBack, cross-module-safe like `noBack`).
+    // `SC7` — @NoBack × modal (route's own @NoBack, cross-module-safe like `noBack`).
     if (routeDecl.hasAnnotation(NO_BACK_FQ)) {
       when (kind) {
         EntryKindModel.BOTTOM_SHEET -> {
@@ -1148,7 +1082,7 @@ internal class EntryModelReader(
    * Reads the kind annotation's now-MANDATORY `route` arg (shared by both modes). The
    * `Route::class` inference sentinel was removed — a bare `Route::class` (or a missing arg,
    * defensively) names no concrete destination and is rejected as `SC9`. Returns the resolved route
-   * KSType, or null (after reporting SC9) when it is sentinel/absent.
+   * KSType, or null (after reporting `SC9`) when it is sentinel/absent.
    */
   private fun resolveMandatoryRoute(annotation: KSAnnotation, fnName: String): KSType? {
     val routeType = annotation.classArg("route")

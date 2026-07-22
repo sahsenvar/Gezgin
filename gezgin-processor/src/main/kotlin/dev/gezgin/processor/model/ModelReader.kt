@@ -285,10 +285,8 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
           EdgeModel(
             kind = kind,
             targetFq = targetFq,
-            // `?: false` fallback'leri savunma amaçlı — gerçek default'lar
-            // arguments+defaultArguments
-            // merge'ünden gelir; buraya sadece annotation'da o parametre hiç yoksa düşülür
-            // (ör. @GoForResult'ta singleTop/inclusive olmaması).
+            // Merged annotation arguments normally provide defaults; false is defensive when this
+            // annotation type does not declare the parameter.
             singleTop = annotation.boolArg("singleTop") ?: false,
             clearUpToFq = clearUpToFq,
             inclusive = annotation.boolArg("inclusive") ?: false,
@@ -306,7 +304,7 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
             BackEdgeModel(
               kind = BackEdgeKind.BACK_TO,
               targetFq = annotation.classArg("target")?.declaration?.qualifiedName?.asString(),
-              // Savunma fallback'i — gerçek default arguments+defaultArguments merge'ünden gelir.
+              // Defensive fallback; merged annotation arguments normally provide the default.
               inclusive = annotation.boolArg("inclusive") ?: false,
             )
 

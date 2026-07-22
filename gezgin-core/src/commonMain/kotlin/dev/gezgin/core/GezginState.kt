@@ -20,7 +20,7 @@ internal class GezginState(
     if (enterFlow && target.isNotEmpty()) common = minOf(common, target.size - 1)
     val flowPath =
       (top?.flowPath ?: emptyList()).take(common) +
-        List(target.size - common) { nextId++ } // her yeni flow segmenti taze id
+        List(target.size - common) { nextId++ } // Each new flow segment receives a fresh id.
     return GezginKey(route, nextId++, flowPath).also { _stack += it }
   }
 
@@ -44,12 +44,7 @@ internal class GezginState(
     )!! // A non-single-top push always creates an entry.
   }
 
-  /**
-   * `replaceUpTo`'nun MUTASYON YAPMADAN sonuçtaki kök (dip) route'unu hesaplar: temizleme tüm
-   * stack'i kaldıracaksa (`cutFrom == 0`) yeni kök `route` olur, aksi halde mevcut dip korunur.
-   * [RawNavigator.replaceTo] bunu modal-kind-at-root reddi için state'i değiştirmeden önce
-   * kullanır.
-   */
+  /** Computes the resulting root before [RawNavigator.replaceTo] mutates the stack. */
   fun resultingRootAfterReplace(
     route: Route,
     clearUpTo: KClass<out Route>?,
@@ -64,10 +59,7 @@ internal class GezginState(
   fun hasOnStack(clearUpTo: KClass<out Route>?): Boolean =
     clearUpTo == null || _stack.any { clearUpTo.isInstance(it.route) }
 
-  /**
-   * `replaceUpTo`/`resultingRootAfterReplace` ortak kesme-indeksi: dip=0'a kadar korunacak entry
-   * sayısı.
-   */
+  /** Returns the number of entries retained by replacement. */
   private fun cutIndex(clearUpTo: KClass<out Route>?, inclusive: Boolean): Int =
     if (clearUpTo == null) _stack.lastIndex
     else {
@@ -77,7 +69,7 @@ internal class GezginState(
     }
 
   fun backTo(target: KClass<out Route>, inclusive: Boolean): List<GezginKey>? {
-    val i = _stack.dropLast(1).indexOfLast { target.isInstance(it.route) } // top hariç ara
+    val i = _stack.dropLast(1).indexOfLast { target.isInstance(it.route) } // Exclude the top.
     if (i < 0) return null
     val keepUntil =
       maxOf(
@@ -94,13 +86,10 @@ internal class GezginState(
   fun quitFlow(flowInstanceId: Long): List<GezginKey>? {
     val top = _stack.lastOrNull() ?: return null
     if (flowInstanceId !in top.flowPath)
-      return null // quit yalnız içinde bulunulan flow için — orta-stack pop yok
+      return null // Quit applies only to the flow that contains the current top.
     val first = _stack.indexOfFirst { flowInstanceId in it.flowPath }
-    if (first <= 0) return null // dipte (root flow) → üst katman onRootBack'e çevirir
-    // Invariant (push'un miras kuralından): id'yi taşıyan entry'ler daima bitişik bir blok
-    // oluşturur
-    // ve top-guard sayesinde bu blok stack'in tepesinde biter → filter+removeAll = tepeden atomik
-    // pop.
+    if (first <= 0) return null // The caller maps a root-flow quit to onRootBack.
+    // Flow ids are inherited as one contiguous block ending at the top, so removal is atomic.
     val removed = _stack.filter { flowInstanceId in it.flowPath }
     _stack.removeAll { flowInstanceId in it.flowPath }
     return removed

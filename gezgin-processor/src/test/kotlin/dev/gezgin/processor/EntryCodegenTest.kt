@@ -357,9 +357,10 @@ class EntryCodegenTest {
 
   @Test
   fun `SC6 — two entries in the same package resolving to the same X (provideXEntry clash)`() {
-    // `Detail` and `DetailRoute` are DIFFERENT routes (no SC4), but the X derivation strips the
+    // `Detail` and `DetailRoute` are DIFFERENT routes (no `SC4`), but the X derivation strips the
     // "Route" suffix — both resolve to X="Detail", i.e. the SAME `provideDetailEntry()` name in the
-    // SAME package. Without SC6, EntryCodegen would emit two identical-signature functions into one
+    // SAME package. Without `SC6`, EntryCodegen would emit two identical-signature functions into
+    // one
     // GezginEntries.kt and the build would die later with an opaque "conflicting overloads".
     val source =
       """
@@ -393,7 +394,7 @@ class EntryCodegenTest {
     assertTrue(result.messages.contains("[SC6]"), result.messages)
   }
 
-  // SC5 (route type does not implement Route) is no longer reachable through the public API: the
+  // `SC5` (route type does not implement Route) is no longer reachable through the public API: the
   // kind
   // annotations' `route` arg is typed `KClass<out Route>`, so the frontend rejects a non-Route
   // class
@@ -405,7 +406,8 @@ class EntryCodegenTest {
   fun `SC10 — route param type differs from the annotation route (mismatch)`() {
     // The `route:` param carries route DATA, so its type must equal the annotation's route. `Feed`
     // and
-    // `About` are both real routes but different — the composable would bind the wrong one → SC10.
+    // `About` are both real routes but different — the composable would bind the wrong one →
+    // `SC10`.
     val source =
       """
           package dev.gezgin.shopui
@@ -474,7 +476,7 @@ class EntryCodegenTest {
     assertTrue(text.contains("AboutScreen(route)"), text)
   }
 
-  // region SC7 (@NoBack × modal) + SC8 (kind↔contract mismatch) — Faz-4 recheck M1/M2
+  // region `SC7` (@NoBack × modal) + `SC8` (kind↔contract mismatch) — Faz-4 recheck M1/M2
 
   /** Compiles a single self-contained source and returns the full KSP/compiler messages. */
   private fun messagesOf(source: String): String =
@@ -571,7 +573,7 @@ class EntryCodegenTest {
   @Test
   fun `SC7 allow — @NoBack + @Dialog WITH DialogContract is accepted (override not KSP-known)`() {
     // The route implements DialogContract and CAN set dismissOnBackPress=false (a runtime value KSP
-    // can't read) → SC7 must NOT fire; the runtime requireBackDismissCompatible stays as the net.
+    // can't read) → `SC7` must NOT fire; the runtime requireBackDismissCompatible stays as the net.
     val msg =
       messagesOf(
         """
@@ -714,7 +716,7 @@ class EntryCodegenTest {
     // `RawNavigator` — a real, already-compiled type (NOT an as-yet-ungenerated same-round
     // navigator, so
     // NOT an error type). The generated `FeedScreen(route, nav)` would type-mismatch inside
-    // GezginEntries.kt; SC2's type check catches it up front instead.
+    // GezginEntries.kt; `SC2`'s type check catches it up front instead.
     val result =
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),

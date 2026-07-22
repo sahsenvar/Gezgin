@@ -70,41 +70,31 @@ public fun GezginDisplay(
     GezginEntryScope().apply(entries).also { registered ->
       val rootRoute = navigator.keys.first().route
       val rootKind = registered.registry[rootRoute::class]?.kind
-      // NOT: Bu YALNIZ start route'u kapsayan erken/redundant güvenlik ağıdır. ASIL
-      // modal-kind-at-root
-      // guard'ı [toNavEntry]'dedir (her entry kurulurken `isRoot` ile) — o TÜM dinamik yolları da
-      // (replaceTo/quitAndGoTo ile modal'ı köke koyma) kapatır. Bu check yine de erken/açık kalır.
+      // This early guard covers the start route. `toNavEntry` remains authoritative for dynamic
+      // replacement and quit-and-navigate paths.
       require(rootKind == null || rootKind == EntryKind.SCREEN) {
         "GezginDisplay: start route cannot be a modal kind (kind=$rootKind); §12 setup " +
           "guard is permanent because a modal cannot be root and OverlayScene requires at " +
           "least one underlaid entry (§7). route: ${rootRoute::class.simpleName}"
       }
-      // kind-lookup kancasını navigator'a enjekte et: replaceTo (clearUpTo=root) MUTASYONDAN
-      // ÖNCE, sonuçtaki kök modal olacaksa reddedebilsin. Kind yalnız burada (registry) bilinir;
-      // kayıtsız route → `false` (modal değil varsay; kayıtsızlığın açık hatası toNavEntry'de).
+      // Inject kind lookup so replacement can reject a modal result root before mutation. Missing
+      // registrations are reported later by toNavEntry with a more specific error.
       navigator.modalRootGuard = { route ->
         registered.registry[route::class]?.kind?.let { it != EntryKind.SCREEN } ?: false
       }
     }
   }
   val keys by
-    navigator.keysState.collectAsState() // id taşır → id-only değişim de recompose eder (4a)
-  // Transition cascade PER-ENTRY metadata'yla iner (bkz. dosya başı KDoc) — `transitions` remember
-  // anahtarı: app-seviyesi default değişirse entry metadata'ları yeniden kurulmalı.
+    navigator.keysState.collectAsState() // Entry ids make identity-only changes observable.
+  // Rebuild per-entry metadata when the app-level transition default changes.
   val entryList =
     remember(keys, transitions) {
       keys.map { key ->
         scope.toNavEntry(key, navigator, transitions, isRoot = isRootEntry(keys, key.id))
       }
     }
-  // `remember` ile sabitlenmiş kimlik (Important 3, validation): decorator @Composable'ları
-  // ([rememberSaveableStateHolderNavEntryDecorator]/[rememberPlatformEntryDecorators]) her ikisi de
-  // KENDİ içeriklerini `remember`'lasa da, bu ikisini birleştiren `listOf(...) + ...` HER
-  // recomposition'da taze bir `List` instance'ı üretiyordu — `rememberDecoratedNavEntries`'e her
-  // seferinde "değişti" görünen bir liste geçiyordu (referans-eşitliği yoksa cache miss).
-  // Anahtarlar
-  // decorator'ların kendileri: onlar stabilse (normal durum — navigator/scope her recomposition'da
-  // değişmez) bu liste artık stabil kalır.
+  // Remember the combined list as well as its decorators so entry decoration does not see a fresh
+  // collection identity on every recomposition.
   val saveableDecorator = rememberSaveableStateHolderNavEntryDecorator<Route>()
   val platformDecorators = rememberPlatformEntryDecorators()
   val decorators: List<NavEntryDecorator<Route>> =
@@ -112,24 +102,11 @@ public fun GezginDisplay(
       listOf(saveableDecorator) + platformDecorators
     }
   val decoratedEntries = rememberDecoratedNavEntries(entryList, decorators)
-  // `gezginOnBack(navigator, scope)` de bir kurucu fonksiyon çağrısı — SABİT `navigator`/`scope`
-  // (aynı composition boyunca) için `remember` olmadan her recomposition'da yeni bir lambda
-  // instance'ı
-  // üretiyordu (NavDisplay'in `onBack` parametresi identity ile karşılaştırılabilir call-site'lar
-  // için gereksiz iş). Davranış AYNI — sadece kimlik stabilize edildi.
+  // Keep callback identity stable while navigator and registration scope remain unchanged.
   val onBack = remember(navigator, scope) { gezginOnBack(navigator, scope) }
-  // modal (dialog/sheet) dismiss'ini sahip-entry'ye pinleyen back kancası:
-  // `navigator.back(id)`
-  // yalnız o entry HÂLÂ top ise pop eder, değilse no-op → çifte-dismiss / hide-animasyon penceresi
-  // / geç
-  // async back ALTTAKİ ekranı poplamaz. `remember(navigator)` → stabil kimlik (GezginNavDisplay'in
-  // `remember(pinnedBack)` scene-strateji anahtarı stabil kalsın).
+  // Pin modal dismissal to its owner so duplicate or late callbacks cannot pop the next screen.
   val pinnedBack: (Long) -> Unit = remember(navigator) { { id -> navigator.back(id) } }
-  // scene wiring: `NavDisplay` çağrısı platform-özel sarmalayıcıda ([GezginNavDisplay]) —
-  // sceneStrategy imzası android/desktop uzlaşmaz (expect/actual, bkz. PlatformDisplay.kt KDoc).
-  // GezginDialogSceneStrategy/GezginBottomSheetSceneStrategy modal-metadata'lı entry'yi overlay
-  // render
-  // eder; dismiss `pinnedBack` ile sahip-entry'ye pinli.
+  // The platform wrapper reconciles Android and desktop scene-strategy signatures.
   GezginNavDisplay(
     entries = decoratedEntries,
     modifier = modifier,
@@ -158,17 +135,12 @@ internal fun gezginOnBack(navigator: RawNavigator, scope: GezginEntryScope): () 
   val isRoot = top == null || isRootEntry(keys, top.id)
   val topNoBack = top != null && scope.registry[top.route::class]?.noBack == true
   if (topNoBack && !isRoot) {
-    // @NoBack top entry (kök değil): Gezgin-sahipli geri-yutma — pop YOK (′).
+    // Consume back for a non-root @NoBack entry without popping it.
   } else {
     navigator.back()
   }
 }
 
-/**
- * Consolidation — [GezginDisplay]'s per-entry `isRoot` (`key.id == keys.first().id`) and
- * [gezginOnBack]'s old `keys.size <= 1` predicate were asking the SAME thing (when the
- * bottom-of-stack entry is the TOP, both were equal for a single entry — `size<=1` ⟺ top.id ==
- * first.id): merged into a single helper.
- */
+/** Returns whether [entryId] belongs to the bottom entry that defines root behavior. */
 private fun isRootEntry(keys: List<GezginKey>, entryId: Long): Boolean =
   keys.firstOrNull()?.id == entryId

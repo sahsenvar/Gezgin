@@ -73,7 +73,7 @@ val FRAGMENT_SOURCE =
  * verifies IDENTITY via the `@GezginNavigatorFor` marker before emitting nav wiring. The
  * single-compilation kctfork harness has no separate module, so these hand-written source classes
  * model that "already compiled elsewhere" navigator — they MUST carry the same
- * `@GezginNavigatorFor(route)` stamp NavigatorCodegen emits, else the identity check (FS5/M1)
+ * `@GezginNavigatorFor(route)` stamp NavigatorCodegen emits, else the identity check (`FS5`/M1)
  * rejects them as name-only decoys. Paired with [FRAGMENT_ROUTES]/[FRAGMENT_SOURCE] (routes
  * `OrderChain`/`Archived`) this exercises the cross-module WITH-navigator branch deterministically
  * (replacing the old `?: true` optimism, which nav-wired blindly whether or not a navigator
@@ -94,13 +94,13 @@ val FRAGMENT_ROUTE_NAVIGATOR_STUBS =
     .trimIndent()
 
 /**
- * Cross-module DISPLAY-ONLY leaf — the exact case FS5 exists to legitimize, and the gap the
+ * Cross-module DISPLAY-ONLY leaf — the exact case `FS5` exists to legitimize, and the gap the
  * nav-wiring PROBE closes. `SettingsRoute` is graph-less (absent from any `GraphModel` → the
  * `routesByFq[routeFq] == null` cross-module branch) AND has NO compiled `SettingsNavigator` class
  * anywhere → the probe returns false → nav wiring MUST be suppressed (no `val nav`, no
  * `settingsNavigator`, 2-arg `bindGezgin(fragment, route)`). Under the OLD `?: true` optimism this
  * leaf was wrongly nav-wired → a `raw.settingsNavigator()` call to a nonexistent factory
- * (unresolved reference) — the relocated FS5 bug this test pins as fixed.
+ * (unresolved reference) — the relocated `FS5` bug this test pins as fixed.
  */
 val FRAGMENT_DISPLAY_ONLY_SOURCE =
   """
@@ -118,7 +118,7 @@ val FRAGMENT_DISPLAY_ONLY_SOURCE =
     .trimIndent()
 
 /**
- * Fix-round fixture pinning the CONDITIONAL nav-wiring guard (the FS5 / SC2-MV7-parity fix).
+ * Fix-round fixture pinning the CONDITIONAL nav-wiring guard (the `FS5` / `SC2`-`MV7`-parity fix).
  * Compiled ALONGSIDE [SHOP_SOURCE] so its two `@FragmentScreen` leaves target routes that ARE in
  * this module's model with a KNOWN navigator status (unlike [FRAGMENT_ROUTES], whose graph-less
  * routes fall to the `?: true` cross-module-optimistic fallback):

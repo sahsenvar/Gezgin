@@ -31,12 +31,12 @@ private val FLOW = ClassName(FLOW_PKG, "Flow")
 private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavigatorFor")
 
 /**
- * : emits a typed per-source `<X>Navigator` for every route that permits implicit back navigation,
- * or declares at least one forward edge (`@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo`),
+ * Emits a typed per-source `<X>Navigator` for every route that permits implicit back navigation, or
+ * declares at least one forward edge (`@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo`),
  * back-navigation annotation (`@BackTo`/`@BackToStart`/`@Quit`), result contract
  * (`ResultRoute<T>`), or membership in a `ResultFlow`'s chain (which earns a `quitWith`) — this is
- * the "çekirdek değer önermesi": an undeclared edge simply has no corresponding method, so calling
- * it is an unresolved reference (a compile error), not a runtime failure.
+ * the core guarantee: an undeclared edge simply has no corresponding method, so calling it is an
+ * unresolved reference (a compile error), not a runtime failure.
  *
  * A bare route still gets a navigator whose single operation is `back()`. This is the uniform
  * one-step dismissal API used by screens and modal routes. `@NoBack` is the explicit opt-out; an
@@ -53,12 +53,8 @@ private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavi
  */
 internal object NavigatorCodegen {
 
-  // Route-kind sonek token'ları — türetilmiş X adından
-  // (`XNavigator`/`provideXEntry`/`goToX`/`fromX`)
-  // atılır. "Screen"/"Flow" atılır (LoginScreenRoute → Login, SignUpFlow → SignUp); "Dialog"/
-  // "BottomSheet" KASITEN korunur (ForgotPasswordDialogRoute → ForgotPasswordDialog) — modal
-  // kind'lar
-  // türetilen adda görünür kalır (tarihsel @Dialog davranışı).
+  // Strip Screen and Flow from derived names while retaining Dialog and BottomSheet so modal kind
+  // remains visible in generated APIs.
   private val KIND_SUFFIXES = listOf("Screen", "Flow")
 
   fun generate(model: GraphModel, packageName: String): List<FileSpec> {
@@ -368,7 +364,7 @@ internal object NavigatorCodegen {
       .build()
   }
 
-  /** Target = the START of the source's EN İÇTEKİ (innermost) enclosing flow. */
+  /** Targets the start of the source route's innermost enclosing flow. */
   private fun backToStartFun(route: RouteModel, graphsByFq: Map<String, GraphModelNode>): FunSpec {
     val innermostFlowFq = route.flowChainFq.last()
     val startFq = requireNotNull(graphsByFq.getValue(innermostFlowFq).startFq)
@@ -390,10 +386,8 @@ internal object NavigatorCodegen {
   private fun backWithResultFun(resultTypeFq: String): FunSpec {
     val resultType = ClassName.bestGuess(resultTypeFq)
     // The constructor's `entryId` pins the entry that owns this typed navigator.
-    // `raw.backWithResult(
-    // entryId, result)`: sonuç yalnız o entry HÂLÂ top iken teslim edilir (call-time-top DEĞİL) →
-    // sheet/dialog jest'le kapandıktan sonra geç gelen async sonuç, altındaki yabancı-tipli slota
-    // teslim edilmez ve o entry yanlışlıkla pop edilmez (kirli-teslim/çifte-back yarışı önlenir).
+    // raw.backWithResult delivers only while the owning entry remains top, preventing a late modal
+    // result from reaching or popping the unrelated entry underneath it.
     return FunSpec.builder("backWithResult")
       .addParameter("result", resultType)
       .addStatement("raw.backWithResult(entryId, result)")
@@ -456,11 +450,8 @@ internal object NavigatorCodegen {
     return block.add(")").build()
   }
 
-  // Bileşik sonek: önce tek bir trailing "Route", ARDINDAN tek bir kind token'ı ("Screen"/"Flow")
-  // atılır. Böylece `-ScreenRoute` konvansiyonu türetilmiş adları DEĞİŞTİRMEDEN okunurluk
-  // kazandırır
-  // (LoginScreenRoute → Login → aynı `goToLogin`/`LoginNavigator`/`provideLoginEntry`). Her adım
-  // uzunluk korumalı (adı asla boşaltmaz). "Dialog"/"BottomSheet" KIND_SUFFIXES'te YOK → korunur.
+  // Strip one trailing Route and then one Screen or Flow token without ever emptying the name.
+  // Dialog and BottomSheet are intentionally retained.
   private fun stripSuffix(simpleName: String): String {
     var name = simpleName
     if (name.length > "Route".length && name.endsWith("Route")) {

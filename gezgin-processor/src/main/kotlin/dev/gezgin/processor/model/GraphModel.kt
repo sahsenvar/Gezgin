@@ -56,7 +56,7 @@ internal data class BackEdgeModel(
 
 /**
  * A single navigable destination: a class/object that is a member of a graph — a direct subtype (`:
- * Graph`), whether declared inside the graph interface or in a separate file .
+ * Graph`), whether declared inside the graph interface or in a separate file.
  */
 internal data class RouteModel(
   val fqName: String,

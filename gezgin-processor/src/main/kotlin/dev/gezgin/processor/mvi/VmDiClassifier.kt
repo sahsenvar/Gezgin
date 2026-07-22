@@ -51,10 +51,8 @@ internal object VmDiClassifier {
     when {
       param.typeFq == routeFq -> Role.ROUTE
       param.typeFq == navigatorTypeFq -> Role.NAV
-      // Name is a fallback ONLY for an unresolvable type (a same-module, not-yet-generated
-      // navigator);
-      // a RESOLVED `nav`-named param that isn't the navigator type is OTHER , never
-      // NAV-by-name.
+      // Use the name only when a same-round generated navigator type is unresolved. A resolved
+      // non-navigator remains OTHER regardless of its parameter name.
       param.name == "nav" && param.isError -> Role.NAV
       else -> Role.OTHER
     }
@@ -78,23 +76,13 @@ internal object VmDiClassifier {
     val roles = relevant.map { it to roleOf(it, routeFq, navigatorTypeFq) }
     val routeCount = roles.count { it.second == Role.ROUTE }
     val navCount = roles.count { it.second == Role.NAV }
-    // MN4 — an OTHER param WITH a Kotlin default is NOT Gezgin-supplied and NOT
-    // blocking:
-    // the default ctor call (androidx, named args) simply omits it → the VM's own default applies.
-    // Only
-    // a NON-defaulted OTHER (`@Assisted userId: String`) blocks the default. This keeps
-    // `class Vm(nav: XNavigator, retries: Int = 3)` on the default resolver path (`Vm(nav = nav)`).
+    // An OTHER parameter with a Kotlin default is omitted from named constructor calls; only a
+    // non-defaulted OTHER parameter blocks automatic resolution.
     val blockingOtherCount = roles.count { it.second == Role.OTHER && !it.first.hasDefault }
     return VmDiClassification(
       vmHasNav = navCount > 0,
       vmHasRoute = routeCount > 0,
-      // A default is emittable only when every NON-defaulted relevant param is route/nav (no
-      // blocking
-      // OTHER) AND neither role is duplicated: two route- (or two nav-) typed params
-      // can't
-      // be positionally disambiguated, so a default would silently emit `VM(args, args)`. In that
-      // case
-      // fall back to "no default" — the `viewModel` param becomes required (user resolves it).
+      // Emit a default only when every required value has a unique route or navigator role.
       emitDefault = blockingOtherCount == 0 && routeCount <= 1 && navCount <= 1,
     )
   }

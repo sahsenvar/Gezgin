@@ -11,7 +11,7 @@ import java.io.File
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
- * Shared compile-test harness for every later `:gezgin-processor` task. Spins up a real KSP2
+ * Shared compile-test harness for every later `:gezgin-processor` task. Spins up a real `KSP2`
  * compilation (via kctfork) with [GezginProcessorProvider] registered and `:gezgin-core`'s jvm
  * classes visible on the classpath (through `inheritClassPath`).
  */

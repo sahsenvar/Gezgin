@@ -39,33 +39,23 @@ internal fun adaptAndroidNavDisplayEntries(entries: List<NavEntry<Route>>): Andr
 }
 
 /**
- * Android: per-entry `ViewModelStore` decorator'ı (host `ComponentActivity`
- * `LocalViewModelStoreOwner`'ı sağlar). Saveable-state-holder decorator'ından SONRA sıralanır (o
- * `LocalSavedStateRegistryOwner`'ı sağlar; VM store decorator'ı `SavedStateHandle` için ona ihtiyaç
- * duyar — [GezginDisplay] listeyi `[saveable] + platform` sırasıyla kurar).
+ * Provides Android's per-entry `ViewModelStore` decorator. [GezginDisplay] places it after the
+ * saveable-state decorator because `SavedStateHandle` creation needs that registry owner.
  */
 @Composable
 internal actual fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Route>> =
   listOf(rememberViewModelStoreNavEntryDecorator())
 
-/**
- * Android: gerçek sistem-back tüketici (entry-scoped, OUTER). `enabled=true` → back yutulur (pop
- * yok).
- */
+/** Consumes Android system back for an entry without popping it or starting predictive back. */
 @Composable
 internal actual fun GezginNoBackHandler() {
   BackHandler(enabled = true) { /* Consume back without popping or starting predictive preview. */ }
 }
 
 /**
- * Android (Google 1.0.0): `NavDisplay` ham bir back stack ve entry provider alır. Gezgin'in önceki
- * katmanda oluşturduğu/decorate ettiği entry'ler, decoration tekrar uygulanmadan stabil özel route
- * anahtarlarıyla bu API'ye uyarlanır. Scene strategy zinciri `GezginDialogSceneStrategy(pinnedBack)
- * then GezginBottomSheetSceneStrategy(pinnedBack) then SinglePaneSceneStrategy()` — dialog- ve
- * sheet-metadata'lı entry'ler overlay (dismiss'i sahip-entry'ye pinli), kalanı tek-pane (default
- * `SinglePaneSceneStrategy` fallback'ı en sonda açıkça korunur; her overlay stratejisi ilgili
- * metadata key'i yoksa null döner). Nav3 built-in `DialogSceneStrategy` BIRAKILDI (entry-pin
- * edilemezdi).
+ * Adapts decorated Gezgin entries to Android Navigation 3's back-stack/provider API. Dialog and
+ * sheet strategies run before the single-pane fallback and pin dismissal to the owning entry. The
+ * built-in dialog strategy is unsuitable because it cannot preserve that ownership.
  */
 @Composable
 internal actual fun GezginNavDisplay(
@@ -74,10 +64,8 @@ internal actual fun GezginNavDisplay(
   onBack: () -> Unit,
   pinnedBack: (Long) -> Unit,
 ) {
-  // strateji instance'ları/list'i stateless ama HER recomposition'da yeniden kurulmasın
-  // (GezginDisplay'in decorator/onBack için uyguladığı kimlik-stabilizasyonuyla tutarlı):
-  // `remember`.
-  // `pinnedBack` GezginDisplay'de navigator'a `remember`'lı → stabil anahtar.
+  // Keep the stateless strategy chain stable across recompositions. GezginDisplay also remembers
+  // pinnedBack, making it a stable key.
   val sceneStrategy =
     remember(pinnedBack) {
       GezginDialogSceneStrategy(pinnedBack) then

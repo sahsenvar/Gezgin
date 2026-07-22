@@ -27,14 +27,9 @@ internal class GezginValidator(private val model: GraphModel, private val logger
   private var ok = true
 
   /**
-   * [NavigatorCodegen]'in HER navigator sınıfında koşulsuz taşıdığı üye adları — bkz.
-   * [checkN10Members]. `raw`/`entryId` her navigator'da SABİT property olarak taşınır
-   * (NavigatorCodegen.kt:152-155); `back` (`@NoBack` hariç) da fiilen koşulsuz.
-   * `quit`/`quitWith`/`backWithResult` koşullu ama hiçbir edge'in TÜRETMEDİĞİ ad'lar olduğundan
-   * rezerve tutulur (yalnız `name=` override'ı çakışabilir). NOT: `backToStart` KASITEN burada
-   * DEĞİL — `@BackTo(routeNamedStart)` onu meşru şekilde tek üye olarak türetebildiğinden rezerve
-   * etmek yanlış-pozitif olur; çakışması [checkN10Members]'daki `size >= 2` (BACK_TO_START kaydı)
-   * mekanizmasıyla — yalnız gerçekten iki `backToStart()` varsa — yakalanır.
+   * Member names emitted directly by navigator generation. `backToStart` is deliberately excluded
+   * because one derived `@BackTo` method may legitimately use it; collision counting handles the
+   * case where two operations actually produce that name.
    */
   private val RESERVED_MEMBER_NAMES =
     setOf("back", "quit", "quitWith", "backWithResult", "raw", "entryId")
@@ -155,7 +150,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
    * from outside AvatarFlow, `@GoTo(ZoomRoute)` (start of the nested ZoomFlow) exempts ZoomFlow but
    * still crosses AvatarFlow's boundary → E3 (the old single-level parent check let it slip past
    * both E3 and E1, silently bypassing AvatarFlow's result contract). From INSIDE AvatarFlow the
-   * same edge stays legal (AvatarFlow is in the source's chain — "içeride serbest @GoTo").
+   * same edge stays legal because AvatarFlow is already in the source chain.
    *
    * Back-edges (`@BackTo`) are intentionally out of scope here: forward edges define topology, back
    * edges walk existing history (a `@BackTo` whose target isn't on the back stack is a runtime
@@ -272,9 +267,9 @@ internal class GezginValidator(private val model: GraphModel, private val logger
   }
 
   /**
-   * An öksüz (orphan) `@FlowGraph`: lexically NESTED inside a non-graph declaration yet declaring
-   * no annotated graph/flow supertype, so neither subtyping (`: ParentGraph`) nor nesting connects
-   * it to a graph and its members float free. A TOP-LEVEL `@FlowGraph` is a legitimate
+   * An orphan `@FlowGraph`: lexically NESTED inside a non-graph declaration yet declaring no
+   * annotated graph/flow supertype, so neither subtyping (`: ParentGraph`) nor nesting connects it
+   * to a graph and its members float free. A TOP-LEVEL `@FlowGraph` is a legitimate
    * root/independent flow (entered by an edge, e.g. `@GoForResult`) — [GraphModelNode.isNested] is
    * false there, so it is exempt.
    */
@@ -295,10 +290,10 @@ internal class GezginValidator(private val model: GraphModel, private val logger
    * ([dev.gezgin.processor.model.ModelReader]) uses `getSealedSubclasses`, which per the KSP
    * contract returns EMPTY for a non-sealed declaration — so a route/flow declaring `: G` in
    * ANOTHER file silently drops out of the model (no navigator/serializer), surfacing later as a
-   * misleading SD1/E6 or pure silence. A lexically-nested member survives via the fallback, hiding
-   * the gap; enforcing `sealed interface` universally makes the derivation sound. A non-interface
-   * graph is rejected too (an `object`/`class` can't be the `: G` supertype its routes need) — not
-   * covered by any E-rule.
+   * misleading `SD1`/E6 or pure silence. A lexically-nested member survives via the fallback,
+   * hiding the gap; enforcing `sealed interface` universally makes the derivation sound. A
+   * non-interface graph is rejected too (an `object`/`class` can't be the `: G` supertype its
+   * routes need) — not covered by any E-rule.
    */
   private fun checkN13(graph: GraphModelNode) {
     if (!graph.isSealedInterface) {
@@ -318,7 +313,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   /**
    * Every `@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo` target must be either a route in the
-   * model or a `@FlowGraph` (whose `@StartDestination` SD1 guarantees exists, so codegen can push
+   * model or a `@FlowGraph` (whose `@StartDestination` `SD1` guarantees exists, so codegen can push
    * it). A `@NavGraph` target has no start to navigate to, and a model-external/unresolved class is
    * not navigable at all — both would make codegen crash (`getValue`/`requireNotNull`) with an
    * ICE + half-written output, so they're rejected here first. `@BackTo`'s target must likewise be
@@ -504,7 +499,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   // endregion
 
-  // region NB1 — @NoBack and @StartDestination are mutually exclusive
+  // region `NB1` — @NoBack and @StartDestination are mutually exclusive
 
   private fun checkNB1(route: RouteModel) {
     if (route.noBack && route.isStart) {
@@ -514,7 +509,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   // endregion
 
-  // region SD1 — exactly one start per FlowGraph, no start in a NavGraph
+  // region `SD1` — exactly one start per FlowGraph, no start in a NavGraph
 
   private fun checkSD1(graph: GraphModelNode) {
     val starts = model.routes.filter { it.graphFq == graph.fqName && it.isStart }
@@ -537,7 +532,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   // endregion
 
-  // region FX1/FX2 — flow-scoped back-navigation guardrails
+  // region `FX1`/`FX2` — flow-scoped back-navigation guardrails
 
   /** `@BackToStart`/`@Quit` need a flow to return to/quit out of. */
   private fun checkFX1(route: RouteModel) {

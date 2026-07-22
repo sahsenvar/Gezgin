@@ -34,10 +34,8 @@ internal class ResultBus {
   }
 
   /**
-   * (callerEntryId, edgeId) slotunun sonuç akışı — replay-until-consumed. Her teslim EN FAZLA BİR
-   * collector'a gider (CAS ile). Sözleşme: anahtar başına aynı anda TEK canlı collector tutun
-   * (VM-init deseni bunu doğal sağlar). Birden çok collector varsa teslimler sırayla dağıtılır —
-   * sızdırılmış eski bir collector sonraki isteğin sonucunu alabilir.
+   * Replay-until-consumed result flow for one caller and edge. Compare-and-set consumption sends
+   * each delivery to at most one collector; callers should keep one live collector per key.
    */
   @Suppress("UNCHECKED_CAST")
   fun <T> results(callerEntryId: Long, edgeId: String): Flow<NavResult<T>> =
@@ -47,7 +45,7 @@ internal class ResultBus {
           it.callerEntryId == callerEntryId && it.edgeId == edgeId && it.result != null
         }
       }
-      .filter { slot -> state.value.contains(slot) && consume(slot) } // ilk tüketici kazanır
+      .filter { slot -> state.value.contains(slot) && consume(slot) } // The first consumer wins.
       .map { it.result as NavResult<T> }
 
   private fun consume(slot: Slot): Boolean {

@@ -53,7 +53,7 @@ class GezginMviContractTest {
   }
 
   /**
-   * MJ2 kayıpsızlık kanıtı: gözlemci YOKKEN (Nav3'te örtülen / STOPPED entry'yi taklit eder) emit
+   * `MJ2` kayıpsızlık kanıtı: gözlemci YOKKEN (Nav3'te örtülen / STOPPED entry'yi taklit eder) emit
    * edilen efektler, yeniden gözlenince (STARTED'a dönüş) SIRAYLA teslim edilir.
    * `MutableSharedFlow(replay=0)` backing'iyle bu iki efekt SESSİZCE DÜŞERDİ; [GezginEffects]
    * (`Channel(UNLIMITED)`) ile kayıpsız.

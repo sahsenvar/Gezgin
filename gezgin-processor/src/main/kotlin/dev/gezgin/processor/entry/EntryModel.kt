@@ -41,8 +41,8 @@ internal data class MviEntryModel(
   /** Matched route-bound effect composable's simple name, or null if none. */
   val effectFunSimpleName: String?,
   /**
-   * The effect function's own package (may differ from the content's), if [effectFunSimpleName] !=
-   * null.
+   * The effect function's own package, which may differ from the content package, or `null` when
+   * [effectFunSimpleName] is `null`.
    */
   val effectFunPackageName: String?,
   /**

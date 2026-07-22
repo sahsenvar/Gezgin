@@ -169,6 +169,55 @@ class KotlinProductionCommentScannerTest {
     assertEquals(emptyList(), findings)
   }
 
+  @Test
+  fun `rejects Turkish prose punctuation fragments and plain internal ids`() {
+    val findings =
+      scan(
+        """
+            // Gerçek sistem geri davranışı burada korunur.
+            private fun unicodeTurkish(): Unit = Unit
+
+            // Yalniz bu durumda ayni deger yeniden kullanilir.
+            private fun asciiTurkish(): Unit = Unit
+
+            // The value is stable , process-wide.
+            private fun spacedPunctuation(): Unit = Unit
+
+            // ;
+            private fun punctuationFragment(): Unit = Unit
+
+            // is
+            private fun wordFragment(): Unit = Unit
+
+            // Decoder state.
+            // stays.
+            private fun consecutiveFragments(): Unit = Unit
+
+            // MV7 wires navigation while SC2 rejects an invalid route.
+            private fun internalIds(): Unit = Unit
+            """
+      )
+
+    assertEquals(7, findings.size)
+  }
+
+  @Test
+  fun `allows technical ids inline diagnostics and structural markers`() {
+    val findings =
+      scan(
+        """
+            /** Supports UTF8, HTTP2, SHA256, and the diagnostic `MV7`. */
+            private fun technicalIds(): Unit = Unit
+
+            // region Resolution
+            // endregion
+            private fun structuralMarkers(): Unit = Unit
+            """
+      )
+
+    assertEquals(emptyList(), findings)
+  }
+
   private fun scan(source: String): List<ProductionCommentFinding> =
     scanner.scan(
       KotlinSourceInput(path = "src/commonMain/kotlin/Fixture.kt", content = source.trimIndent())

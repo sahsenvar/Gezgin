@@ -392,9 +392,9 @@ val DUP_ROUTE_MVI_SOURCE =
     .trimIndent()
 
 /**
- * MV7 — MVI-mode SC2 parity. A bare `@NoBack` route earns no navigator. The ViewModel constructor
- * still requests one, so the processor must reject the binding instead of emitting an unresolved
- * factory call.
+ * `MV7` — MVI-mode `SC2` parity. A bare `@NoBack` route earns no navigator. The ViewModel
+ * constructor still requests one, so the processor must reject the binding instead of emitting an
+ * unresolved factory call.
  */
 val MV7_NO_NAV_SOURCE =
   """

@@ -51,23 +51,17 @@ internal constructor(
     onRootBack: () -> Unit = {},
   ) : this(start, topology, onRootBack, Json, restored = null)
 
-  // `var`: identity-stabil facade — config-change'te [adoptRestored] AYNI instance'ın
-  // `state`'ini
-  // re-point eder (yeni RawNavigator KURMAZ). VM ctor'unda yakalanan navigator referansı böylece
-  // rotasyondan sonra da display'in gözlemlediği aynı akışları sürer ("stable
-  // RawNavigator").
+  // Mutable state lets restoration update this identity-stable facade without replacing the
+  // navigator reference captured by ViewModels or the flows observed by the display.
   private var state =
     if (restored != null) GezginState(restored.keys, restored.nextId, topology)
     else GezginState(emptyList(), nextId = 0, topology = topology)
   private val bus = ResultBus()
 
   /**
-   * Modal-kind-at-root reddi için display'in enjekte ettiği kanca: bir route'un kayıtlı kind'ı
-   * `SCREEN` DIŞINDA (Dialog/BottomSheet/FullscreenModal) ise `true` döner. Varsayılan `{ false }`
-   * — display kablolamadan (saf RawNavigator birim testleri) hiçbir op reddedilmez. `GezginDisplay`
-   * registry'yi kurduktan SONRA set eder; [replaceTo] mutasyondan ÖNCE bununla kontrol eder →
-   * sonuçtaki stack'in kökü bir modal olacaksa state MUTATE EDİLMEDEN fırlatır (composition-zamanı
-   * `toNavEntry` guard'ı emniyet ağı olarak KALIR).
+   * Display-provided predicate that identifies modal routes. [replaceTo] checks it before mutation
+   * so a modal can never become the stack root; the default keeps standalone unit use independent
+   * of display registration.
    */
   internal var modalRootGuard: (Route) -> Boolean = { false }
 
@@ -80,12 +74,8 @@ internal constructor(
 
   private val _keysState = MutableStateFlow<List<GezginKey>>(emptyList())
   /**
-   * Display-katmanı için `id` TAŞIYAN entry görünümü. [backStack] yalnız `Route` (id'siz) taşır →
-   * `StateFlow` eşit-değer dedup'ı yüzünden `replaceTo` ile aynı-değer-farklı-id bir hedefe geçiş
-   * [backStack]'te YENİ emit ÜRETMEZ (route listesi değişmez), dolayısıyla recompose tetiklemez.
-   * `GezginKey` benzersiz `id` taşıdığından bu akış her id değişiminde (yeni instance push/replace)
-   * farklı bir liste yayar → `GezginDisplay` bunu `collectAsState` ederek contentKey'i (id) değişen
-   * entry'yi yeniden kurar. `internal`: zarf public API'ye sızmaz.
+   * Id-aware entry stream for the display. Unlike [backStack], it emits when an equal route value
+   * is replaced by a new entry identity, ensuring Compose rebuilds the corresponding content key.
    */
   internal val keysState: StateFlow<List<GezginKey>> = _keysState.asStateFlow()
 
@@ -97,7 +87,7 @@ internal constructor(
    */
   public val events: Flow<NavEvent> = _events
 
-  /** GezginDisplay adapter'ı için raw entry görünümü. */
+  /** Raw entry view consumed by the GezginDisplay adapter. */
   internal val keys: List<GezginKey>
     get() = state.stack
 
@@ -116,8 +106,7 @@ internal constructor(
   }
 
   /**
-   * Slot payload'ı `topology.edges[edgeId].resultSerializer` ile encode → PD-güvenli anlık görüntü.
-   * ctor'daki [json] kullanılır (encode/decode simetrisi için tek kaynak).
+   * Encodes pending slot payloads with topology serializers and the constructor's shared [json].
    */
   @Suppress("UNCHECKED_CAST")
   internal fun save(): SavedState {
@@ -179,27 +168,13 @@ internal constructor(
   }
 
   /**
-   * PD (process death) restore: bu AYNI facade'in underlying state'ini [restored]'a re-point eder.
-   * Android'de YALNIZ taze holder'ın PD-adopt yolunda çağrılır (config-change'te holder + canlı
-   * navigator retained kalır → re-adopt YOK). Yeni bir `RawNavigator` KURULMAZ → bu instance'ı
-   * ctor'da yakalamış her sahip (özellikle rotasyondan sağ çıkan bir ViewModel) restore'dan sonra
-   * da display'in gözlemlediği state'i sürmeye devam eder ("stable RawNavigator"). `bus`/StateFlow
-   * instance'ları KORUNUR (aynı `keysState`/`backStack` → mevcut collector'lar kopmaz), yalnız
-   * içerikleri restore edilmiş snapshot'a döner. Ctor'un `restored != null` yolunun birebir
-   * eşleniği; İDEMPOTENT (aynı snapshot'la tekrar çağrı state'i aynı değere sabitler, bkz.
-   * NavigatorIdentityRestoreTest) ve event yayınlamaz — bu bir kuruluş, navigasyon değil.
+   * Atomically adopts process-restored state into this existing facade. The result bus and flow
+   * objects retain their identity so current collectors remain attached. Re-adopting the same
+   * snapshot is idempotent and emits no navigation event.
    */
   internal fun adoptRestored(restored: SavedState) {
-    // Decode risky slot data before mutation so restoration remains atomic: `decodeSlot` can
-    // silinmiş/
-    // yeniden-adlandırılmışsa (IllegalArgumentException) ya da şema değişmişse
-    // (SerializationException)
-    // fırlatabilir. Decode'u önce yaparak, fırlatırsa `state` (ve dolayısıyla navigator)
-    // DOKUNULMADAN
-    // `start`'ta kalır → çağıran (Android adopt yolu) istisnayı yutup graceful fresh-start
-    // yapabilir
-    // (yarı-adopt edilmiş tutarsız bir stack bırakmaz; desktop ctor'unun bütün-ya-hiç semantiğiyle
-    // simetrik).
+    // Decode every slot before mutation. Missing edges or incompatible schemas can then fail
+    // without leaving the navigator partially restored.
     val decodedSlots = restored.pendingSlots.map(::decodeSlot)
     state = GezginState(restored.keys, restored.nextId, topology)
     bus.restore(decodedSlots)
@@ -224,11 +199,11 @@ internal constructor(
    */
   public fun back() {
     val top = state.stack.last()
-    if (isFlowEntry(top)) { // (1) flow entry → quit() (settleRemoved Canceled'ı teslim eder)
+    if (isFlowEntry(top)) { // Flow-entry back delegates to quit and settles pending results.
       quit()
       return
     }
-    popTopAndEmit() // (2) düz pop — pending-target Canceled'ı da settleRemoved verir
+    popTopAndEmit() // A plain pop also cancels any pending target on the removed entry.
   }
 
   /**
@@ -240,19 +215,14 @@ internal constructor(
     clearUpTo: KClass<out Route>? = null,
     inclusive: Boolean = true,
   ) {
-    // clearUpTo hedefi stack'te YOKSA MUTASYONDAN/`require`'dan ÖNCE zarif no-op (backTo'nun
-    // BackToTargetMissing deseni): aksi halde cutIndex'in require(i >= 0)'ı fırlardı → bir
-    // @ReplaceTo
-    // edge'ine hızlı çift-tık (ilk çağrı clearUpTo'yu zaten kaldırmış) main-thread'de app'i
-    // ÇÖKERTİRDİ.
+    // Treat an absent clear target as a reported no-op before cutIndex can fail. This also makes
+    // repeated replacement requests safe after the first request removes the target.
     if (!state.hasOnStack(clearUpTo)) {
       _events.tryEmit(NavEvent.ReplaceToTargetMissing(clearUpTo?.simpleName ?: "?"))
       return
     }
-    // modal-kind-at-root reddi MUTASYONDAN ÖNCE: replaceTo kökü temizleyip yerine bir modal
-    // koyacaksa (sonuçtaki stack'in dibi = bir modal route) state hiç değiştirilmeden fırlat.
-    // Aksi halde eski davranış (state önce `[modal]`'a döner, guard SONRAKİ composition'da patlar)
-    // error-boundary'li host'ta navigator'ı kalıcı geçersiz bir stack'te bırakırdı.
+    // Reject a modal result root before mutation so an error boundary cannot retain an invalid
+    // stack after composition reports the problem.
     val resultingRoot = state.resultingRootAfterReplace(route, clearUpTo, inclusive)
     require(!modalRootGuard(resultingRoot)) {
       "replaceTo: resulting stack root cannot be a modal kind (${resultingRoot::class.simpleName}); " +
@@ -295,7 +265,7 @@ internal constructor(
     }
     refreshBackStack()
     _events.tryEmit(NavEvent.FlowQuit(flowId, canceled = true))
-    settleRemoved(removed) // deliverValue=null → hayatta-kalan caller'lı target'lara Canceled
+    settleRemoved(removed) // Surviving callers receive Canceled for removed pending targets.
   }
 
   /**
@@ -304,11 +274,9 @@ internal constructor(
    * while quit() stays on the innermost.
    */
   public fun quitWith(result: Any?) {
-    // quitWith hedef seçimi: en içteki KAPSAYAN ResultFlow;
-    // hiç ResultFlow yoksa fallback = en içteki flow (typed katman quitWith'i zaten yalnız
-    // ResultFlow'da üretir).
+    // Prefer the innermost enclosing ResultFlow; the typed layer only exposes quitWith there.
     val top = state.stack.last()
-    val chain = topology.flowChain(top.route::class) // flowPath ile paralel (aynı uzunluk)
+    val chain = topology.flowChain(top.route::class) // Parallel to flowPath with equal length.
     val idx = chain.indexOfLast { it.isResultFlow }
     val flowId =
       (if (idx >= 0) top.flowPath.getOrNull(idx) else top.flowPath.lastOrNull()) ?: return
@@ -320,10 +288,8 @@ internal constructor(
     }
     refreshBackStack()
     _events.tryEmit(NavEvent.FlowQuit(flowId, canceled = false))
-    // Value YALNIZ flow'un KENDİ entry slotuna (removed.first() = flow entry — contiguous blok
-    // garanti);
-    // diğer hayatta-kalan caller'lı slotlar Canceled; caller'ı da kalkan iç slotlar
-    // dropFor→ResultDropped.
+    // Deliver the value only to the removed flow entry's slot. Other surviving callers are
+    // canceled, while slots whose caller was also removed are dropped.
     settleRemoved(removed, deliverValue = result, valueTargetId = removed.first().id)
   }
 
@@ -335,20 +301,16 @@ internal constructor(
    * accidentally popped (a dirty-delivery/double-back race is prevented). The typed
    * `backWithResult(result)` that codegen generates binds the ctor's `entryId` to this overload.
    *
-   * **owner top ama pending-target DEĞİL:** owner top iken (`top.id == entryId`) ama onu hedefleyen
-   * bekleyen bir slot yoksa (bir `ResultRoute` düz `@GoTo`/`navigate` ile ya da core-mode raw
-   * kullanımla açılmışsa), eskiden bu hem teslimi hem pop'u atlar → ekran kapanmaz, kullanıcı
-   * sıkışırdı. Artık en güvenli davranış: değeri düşür (kimse dinlemiyor) ama owner ekranı yine de
-   * KAPAT (`popTopAndEmit`). `bus.deliver` yalnız gerçek bir pending-target varken çağrılır;
-   * ardından `popTopAndEmit`'in [settleRemoved]'ı zaten teslim edilmiş (result != null) slotu atlar
-   * (çift-teslim yok).
+   * If the owner is still top but has no pending slot, the result is discarded and the owner still
+   * closes. This covers result-capable routes opened without a result request and avoids trapping
+   * the user on screen. Delivered slots are not settled twice during the subsequent pop.
    */
   @GezginInternalApi
   public fun backWithResult(entryId: Long, result: Any?) {
     val top = state.stack.last()
-    if (top.id != entryId) return // sahip entry artık top değil → teslim etme, pop etme
+    if (top.id != entryId) return // Never deliver or pop after ownership moves away from the top.
     if (isPendingTarget(top.id)) bus.deliver(top.id, NavResult.Value(result))
-    popTopAndEmit() // owner top → değer düşse bile ekranı kapat (mn-1)
+    popTopAndEmit() // Close the owning top entry even when no receiver exists.
   }
 
   /**
@@ -358,16 +320,12 @@ internal constructor(
   public fun backWithResult(result: Any?): Unit = backWithResult(currentEntryId, result)
 
   /**
-   * Entry-pinned `back`: [backWithResult]`(entryId, …)` deseninin sonuçsuz eşleniği. Yalnız
-   * [entryId] HÂLÂ top ise normal [back]'i uygular; değilse SESSİZ NO-OP. Modal (dialog/sheet)
-   * dismiss'i kendi sahip-entry'sine pinlemek için kullanılır: çifte-dismiss / hide-animasyon
-   * penceresinde geç gelen / app-scope coroutine'den gelen bir `back`, modal artık top değilken
-   * ALTTAKİ ekranı poplamaz — no-op olur (fail-loud/sahibe-pin felsefesi). Ek: modal artık top
-   * değilse (kullanıcı zaten kapattı) bu no-op'tur; canlı top'a etki etmez.
+   * Entry-pinned result-free back. It acts only while [entryId] remains top, preventing late or
+   * duplicate modal dismissal callbacks from popping the screen underneath the former owner.
    */
   @GezginInternalApi
   public fun back(entryId: Long) {
-    if (state.stack.last().id != entryId) return // sahip entry artık top değil → no-op
+    if (state.stack.last().id != entryId) return // Ignore callbacks from entries that lost the top.
     back()
   }
 
@@ -395,19 +353,16 @@ internal constructor(
    */
   @GezginInternalApi
   public fun launchForResult(callerEntryId: Long, edgeId: String, route: Route) {
-    // Pre-guard, bus.launch'un predicate'iyle birebir aynı (HERHANGİ bir slot — result durumu fark
-    // etmez):
-    // teslim edilmiş ama tüketilmemiş slot varken re-launch, slotsuz öksüz bir entry push'lardı.
+    // Match ResultBus launch idempotence before pushing, including delivered but unconsumed slots.
     if (bus.slots.any { it.callerEntryId == callerEntryId && it.edgeId == edgeId }) return
-    // @GoForResult edge'i DAİMA container-entry'dir → hedef flow için taze instance mint (
-    // re-entrancy sınırı: aynı flow tipine içten re-entry, dış instance'ın id'sini miras ALMAZ).
+    // A result launch always creates a fresh flow instance instead of inheriting an outer id.
     val enterFlow = topology.flowChain(route::class).isNotEmpty()
     val pushed =
       state.push(
         route,
         enterFlow = enterFlow,
         singleTop = false,
-      )!! // result isteği = daima yeni entry (singleTop=false → null dönemez)
+      )!! // A non-single-top result launch always creates an entry.
     bus.launch(callerEntryId, edgeId, pushed.id)
     refreshBackStack()
     _events.tryEmit(NavEvent.Pushed(pushed.route))
@@ -471,13 +426,8 @@ internal constructor(
       _events.tryEmit(NavEvent.FlowQuit(flowId, canceled = true))
       settleRemoved(removed)
     }
-    // singleTop=true: bir @QuitAndGoTo edge'ine çift-tık idempotent olsun. İkinci çağrıda
-    // (flow
-    // zaten yıkıldı, top = route) navigate no-op döner → aksi halde ikinci bir (çoğu zaman @NoBack)
-    // `route`
-    // entry'si push edilir ve back stale entry'de yutulur → kullanıcı sıkışırdı. Meşru durum
-    // (post-quit
-    // top'tan FARKLI bir hedef) top.route != route olduğundan yine normal push'lanır.
+    // Single-top makes repeated quit-and-navigate requests idempotent after the first tears down
+    // the flow. A different target still pushes normally.
     navigate(route, singleTop = true)
   }
 
@@ -521,10 +471,9 @@ internal constructor(
   }
 
   /**
-   * Stack'ten kalkan entry'lerin slot/event muhasebesi — tüm removal path'lerinin TEK kapısı. Value
-   * YALNIZ [valueTargetId]'nin slotuna (quit edilen flow'un KENDİ entry'si) teslim edilir; diğer
-   * hayatta-kalan caller'lı pending target'lar Canceled alır — açık out-of-flow caller'lı
-   * yabancı-tipli bir slota asla Value sızmaz. [valueTargetId] == null ise hepsi Canceled.
+   * Settles result slots for every removal path. A value goes only to [valueTargetId]; other
+   * pending targets with surviving callers receive Canceled. With no value target, all receive
+   * Canceled, preventing values from leaking into unrelated result types.
    */
   private fun settleRemoved(
     removed: List<GezginKey>,
@@ -537,12 +486,8 @@ internal constructor(
       if (
         slot.result == null && slot.targetEntryId in removedIds && slot.callerEntryId !in removedIds
       ) {
-        // "değer taşıyor muyuz"u [valueTargetId]'in VARLIĞINDAN oku, [deliverValue]'nun
-        // içeriğinden DEĞİL: quitWith DAİMA non-null valueTargetId geçirir (Canceled-only
-        // çağıranlar —
-        // quit/replaceTo/backTo/quitAndGoTo — DAİMA null). Böylece meşru bir `null` DEĞER
-        // (ResultFlow<T?>.quitWith(null)) flow-entry slotuna Value(null) teslim eder, Canceled'a
-        // çökmez (backWithResult(null) ile tutarlı).
+        // The presence of valueTargetId, not the payload, distinguishes Value from Canceled. This
+        // preserves a legitimate Value(null) for nullable result flows.
         bus.deliver(
           slot.targetEntryId,
           if (valueTargetId != null && slot.targetEntryId == valueTargetId)

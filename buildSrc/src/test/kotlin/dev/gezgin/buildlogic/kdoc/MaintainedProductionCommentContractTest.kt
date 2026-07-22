@@ -38,7 +38,12 @@ class MaintainedProductionCommentContractTest {
         }
       }
     val summaries =
-      findings.map { finding -> "${finding.path}:${finding.line}: ${finding.kind}" }.sorted()
+      findings
+        .map { finding ->
+          val excerpt = finding.text.lineSequence().joinToString(" ") { it.trim() }.take(240)
+          "${finding.path}:${finding.line}: ${finding.kind}: $excerpt"
+        }
+        .sorted()
 
     assertEquals(emptyList<String>(), summaries, summaries.joinToString(separator = "\n"))
   }

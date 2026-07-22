@@ -26,14 +26,14 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
  * }
  * ```
  *
- * One [FileSpec] (`GezginEntries.kt`) PER composable's own package (binding: "aynı pakete") — a
- * composable may live in a different module/package than the routes it registers, so (unlike
- * [NavigatorCodegen]/[TestApiCodegen], which share the single nav-topology package) this groups by
- * [EntryFunctionModel.packageName] instead. The navigator FACTORY call (`xNavigator(entryId)`) is
- * qualified against each entry's own [EntryFunctionModel.routePackageName] — the package the route
- * DECLARATION (and thus [NavigatorCodegen]'s factory) lives in. Reading it per-entry off the route
- * (rather than off one shared nav-topology package) is what makes the factory import resolve in a
- * cross-module feature, whose own model has no graphs and hence no target package of its own.
+ * One [FileSpec] (`GezginEntries.kt`) per composable package — a composable may live in a different
+ * module/package than the routes it registers, so (unlike [NavigatorCodegen]/[TestApiCodegen],
+ * which share the single nav-topology package) this groups by [EntryFunctionModel.packageName]
+ * instead. The navigator FACTORY call (`xNavigator(entryId)`) is qualified against each entry's own
+ * [EntryFunctionModel.routePackageName] — the package the route DECLARATION (and thus
+ * [NavigatorCodegen]'s factory) lives in. Reading it per-entry off the route (rather than off one
+ * shared nav-topology package) is what makes the factory import resolve in a cross-module feature,
+ * whose own model has no graphs and hence no target package of its own.
  */
 internal object EntryCodegen {
 

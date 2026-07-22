@@ -196,7 +196,7 @@ class MviEntryCodegenTest {
     assertFalse(text.contains("LocalGezginRawNavigator"), text)
     assertContains(text, "val vm = viewModel(route)")
     assertContains(text, "val state by vm.uiState.collectAsStateWithLifecycle()")
-    // @EffectHandler matched by route → wired (no nav param on the binder), NAMED arg (MN1).
+    // @EffectHandler matched by route → wired (no nav param on the binder), NAMED arg (`MN1`).
     assertContains(text, "CounterEffects(effects = vm.effects)")
     assertContains(text, "CounterContent(state = state, onIntent = vm::onIntent)")
   }
@@ -321,7 +321,7 @@ class MviEntryCodegenTest {
     // SheetState),
     // so no @ExperimentalMaterial3Api opt-in leaks into the generated file.
     assertFalse("ExperimentalMaterial3Api" in text, text)
-    // Role extra reads its Local; resolver extra is invoked — all content args NAMED (MN1).
+    // Role extra reads its Local; resolver extra is invoked — all content args NAMED (`MN1`).
     assertContains(
       text,
       "SheetContent(state = state, onIntent = vm::onIntent, controller = LocalGezginSheetController.current, " +
@@ -333,7 +333,7 @@ class MviEntryCodegenTest {
   fun `route-explicit EffectHandler with nav wires navigator solely for the effect`() {
     val text = generateMvi(SourceFile.kotlin("EffNav.kt", EFFECT_NAV_MVI_SOURCE))
 
-    // (a) The effect binder is invoked WITH nav, NAMED args (MN1).
+    // (a) The effect binder is invoked WITH nav, NAMED args (`MN1`).
     assertContains(text, "HomeEffects(effects = vm.effects, nav = nav)")
     // The navigator IS wired (the effect needs it) even though the VM ctor takes no nav.
     assertContains(
@@ -424,8 +424,10 @@ class MviEntryCodegenTest {
   @Test
   fun `MJ1 — nav-named non-navigator @InjectedParam is OTHER not NAV (no spurious MV7, no default)`() {
     // `About` (SHOP_SOURCE) is in-model but earns NO navigator. Under the OLD name-over-type rule a
-    // `nav`-named param classified NAV → vmHasNav=true → a SPURIOUS [MV7] (and, in Koin, a default
-    // that crashes at runtime). Now the RESOLVED `AnalyticsTracker` type wins → OTHER → no MV7, and
+    // `nav`-named param classified NAV → vmHasNav=true → a SPURIOUS [`MV7`] (and, in Koin, a
+    // default
+    // that crashes at runtime). Now the RESOLVED `AnalyticsTracker` type wins → OTHER → no `MV7`,
+    // and
     // no
     // default resolver (the `viewModel` param becomes required). generateMvi throws if any [MV*]
     // fires.

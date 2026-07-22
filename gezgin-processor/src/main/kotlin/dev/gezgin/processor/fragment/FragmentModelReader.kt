@@ -19,9 +19,8 @@ private const val ROUTE_FQ = "dev.gezgin.core.Route"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
 private const val FRAGMENT_FQ = "androidx.fragment.app.Fragment"
 
-// Modal presentation contracts — a @FragmentScreen route implementing one is FS7 (fragment
-// interop
-// is screen-only ; would be silently ignored).
+// Fragment interop is screen-only, so modal presentation contracts are rejected rather than
+// silently ignored.
 private val MODAL_CONTRACT_FQS =
   setOf(
     "dev.gezgin.core.DialogContract",
@@ -30,12 +29,11 @@ private val MODAL_CONTRACT_FQS =
   )
 
 /**
- * Reads every `@FragmentScreen(Route::class)`-annotated CLASS for brownfield Fragment interop into
- * a validated [FragmentEntryModel] list, mirroring
- * [dev.gezgin.processor.mvi.ViewModelModelReader]'s structure — both read a CLASS-target,
- * mandatory-route-arg annotation and use the collect-all-then-fail, bracketed-code error idiom
- * (`logger.error("[FS…] …")`). [read] never throws — it reports every violation in one pass and
- * returns whether the read was clean alongside whatever models DID resolve.
+ * Reads each class annotated with `@FragmentScreen(Route::class)` into a validated
+ * [FragmentEntryModel] list. Like [dev.gezgin.processor.mvi.ViewModelModelReader], it reads a
+ * class-target annotation with a required route argument and reports bracketed validation errors.
+ * [read] reports every violation in one pass and returns both the resolved models and success
+ * state.
  *
  * All `androidx.fragment.*` symbols are read as **string FQNs** — `gezgin-processor` gains NO
  * compile dependency on `androidx.fragment` (only the test source set stubs a local `Fragment` for
@@ -48,7 +46,7 @@ private val MODAL_CONTRACT_FQS =
  *   `abstract` class (`InstantiationException`); an `inner` class (its ctor carries the outer
  *   instance); a parameterized primary ctor (the common case — a tailored gezginArgs/gezginNav
  *   message); and a class with only secondary ctors or a private/protected ctor (no accessible
- *   no-arg ctor → `NoSuchMethodException`). Route/nav arrive through `gezginArgs`/`gezginNav` ,
+ *   no-arg ctor → `NoSuchMethodException`). Route/nav arrive through `gezginArgs`/`gezginNav`,
  *   never the ctor. → no model emitted.
  * - **`FS2` — route type sanity + no bare `Route`.** The resolved route type must implement
  *   `dev.gezgin.core.Route` (mirrors `SC5` — same [getAllSuperTypes] walk) AND must not be the bare
@@ -79,25 +77,25 @@ private val MODAL_CONTRACT_FQS =
  * - **`FS5` — nav-wiring guard (dispatch-site + RUNTIME, NOT a KSP rejection here).** Core-mode's
  *   `SC2` and MVI-mode's `MV7` REJECT a nav-wanting entry whose `@NoBack` route earns no navigator.
  *   A `@FragmentScreen` can't be rejected the same way: an edge-less leaf (a display-only
- *   brownfield screen that only reads `gezginArgs` and never navigates) is LEGITIMATE. So `FS5` is
+ *   brownfield screen that only reads `gezginArgs` and never navigates) is legitimate. `FS5` is
  *   split and lives OUTSIDE this graph-unaware reader: the whether-the-route-earns-a-navigator
  *   predicate (`NavigatorCodegen.hasNavigator` for a same-module route — exactly like `SC2`/`MV7`;
  *   a classpath probe for the compiled `XNavigator` class for a cross-module route, replacing the
  *   earlier `?: true` optimism) is computed at [dev.gezgin.processor.GezginProcessor]'s codegen
  *   dispatch site, [dev.gezgin.processor.codegen.FragmentEntryCodegen] SUPPRESSES nav wiring (no
  *   `val nav = raw.xNavigator(...)`, binds via the no-nav `bindGezgin(fragment, route)` overload)
- *   when it's false, and `gezginNav` throws the actionable `[FS5]` error at runtime (gezgin-core
+ *   when it's false, and `gezginNav` throws the actionable `FS5` error at runtime (gezgin-core
  *   `FragmentBinding.android.kt`). This reader is untouched (no `GraphModel` in its ctor).
  * - **`FS6` — annotated class must BE a `Fragment`.** The annotated CLASS must extend
  *   `androidx.fragment.app.Fragment` ([getAllSuperTypes] string-FQN walk against [FRAGMENT_FQ], the
  *   EXACT mechanism `FS2` uses for its Route check). This covers a case `FS2` **structurally
- *   cannot**: `FS2` validates the annotation's `route` ARG type, `FS6` validates the ANNOTATED
+ *   cannot**: `FS2` validates the annotation's `route` argument type, `FS6` validates the annotated
  *   CLASS's own supertype — two different things. The frontend's `route: KClass<out Route>` bound
  *   leaves the class type unconstrained, so annotating a plain class / an `Activity` by mistake
  *   would otherwise surface as a confusing `T : Fragment` type-bound error inside the GENERATED
- *   `AndroidFragment<XFragment>` call, not an actionable `[FS6]`. → no model emitted.
+ *   `AndroidFragment<XFragment>` call, not an actionable `FS6`. → no model emitted.
  *
- * **FS3/FS4 wiring choice (post-hoc cross-check, not shared-map seeding):** rather than seeding
+ * **`FS3`/`FS4` wiring choice (post-hoc cross-check, not shared-map seeding):** rather than seeding
  * `EntryModelReader`'s private `seenRouteFqs` (which would require changing its constructor and
  * would classify the cross-kind collision under `SC4`), this reader runs AFTER the entry reader and
  * cross-checks the already-built [entries] list — the materialized output of that shared map. This
@@ -127,7 +125,7 @@ internal class FragmentModelReader(
   private val resolver: Resolver,
   private val logger: KSPLogger,
   /**
-   * The core-mode + MVI-mode entries already resolved by `EntryModelReader` — the FS3 cross-check
+   * The core-mode + MVI-mode entries already resolved by `EntryModelReader` — the `FS3` cross-check
    * set.
    */
   private val entries: List<EntryFunctionModel> = emptyList(),
@@ -135,19 +133,14 @@ internal class FragmentModelReader(
 
   private var ok = true
 
-  // routeFq -> the registration that already owns it (an entry's fn name, or an earlier Fragment's
-  // simple name). Seeded from the built entries so a Fragment colliding with a core/MVI content is
-  // caught (FS3 cross-kind) exactly like two Fragments colliding (FS3 same-kind).
+  // Map each route to its current owner. Seed from built entries so a Fragment collision with
+  // core/MVI content is
+  // caught (`FS3` cross-kind) exactly like two Fragments colliding (`FS3` same-kind).
   private val ownerByRouteFq: MutableMap<String, String> =
     entries.associate { it.routeFq to it.functionSimpleName }.toMutableMap()
 
-  // (packageName, x) -> the entry that already emits `provideXEntry()` there (a core/MVI fn name,
-  // or an
-  // earlier Fragment's simple name). Seeded from the built entries — same `SC6` key
-  // ([EntryFunctionModel]
-  // carries both `packageName` and `x`) — so a Fragment `provideXEntry` clashing with a core/MVI
-  // one is
-  // caught (FS4 cross-kind) exactly like two Fragments clashing (FS4 same-kind).
+  // Map each generated provide function to its owner. EntryFunctionModel exposes the same package
+  // and derived-name key used for core/MVI output.
   private val ownerByProvideName: MutableMap<Pair<String, String>, String> =
     entries.associate { (it.packageName to it.x) to it.functionSimpleName }.toMutableMap()
 
@@ -165,15 +158,8 @@ internal class FragmentModelReader(
     val fragmentFq = decl.qualifiedName?.asString() ?: return null
     val fragmentSimpleName = decl.simpleName.asString()
 
-    // FS1 — the Fragment must be FragmentFactory-instantiable: Android recreates it after
-    // PD/config-
-    // change via a PUBLIC no-arg constructor (`clazz.getConstructor().newInstance()`). Four shapes
-    // otherwise pass the frontend but crash at first display inside FragmentFactory.instantiate:
-    //   abstract → InstantiationException; inner → ctor carries the outer instance →
-    // NoSuchMethodException;
-    //   parameterized primary ctor / secondary-ctor-only / private ctor → no accessible no-arg
-    // ctor.
-    // route/nav arrive through gezginArgs/gezginNav, never the ctor.
+    // FragmentFactory recreation requires a concrete class with a public no-argument constructor;
+    // route and navigator values arrive through delegates rather than constructor parameters.
     if (Modifier.ABSTRACT in decl.modifiers) {
       error(
         "FS1",
@@ -193,7 +179,7 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS1 — parametreli primary ctor yasak — en sık hata, özel/aksiyonel mesaj.
+    // Reject a parameterized primary constructor with the most specific diagnostic.
     val ctorParams = decl.primaryConstructor?.parameters.orEmpty()
     if (ctorParams.isNotEmpty()) {
       error(
@@ -206,10 +192,7 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS1 — erişilebilir (public) argümansız ctor şart (yalnız-secondary-ctor'lu ya da
-    // private-ctor'lu
-    // sınıfları yakalar; bunlarda `getConstructor()` public argsız ctor bulamaz →
-    // NoSuchMethodException).
+    // Require a public no-argument constructor, including for secondary-only constructor shapes.
     val hasPublicNoArgCtor = decl.getConstructors().any { it.parameters.isEmpty() && it.isPublic() }
     if (!hasPublicNoArgCtor) {
       error(
@@ -222,18 +205,8 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS6 — the annotated CLASS must actually extend `androidx.fragment.app.Fragment`. This checks
-    // the
-    // ANNOTATED CLASS's own supertype — structurally DIFFERENT from FS2, which checks the
-    // annotation's
-    // ROUTE ARG type; FS2 cannot cover it. The Kotlin frontend does NOT block a non-Fragment class
-    // here
-    // (@FragmentScreen's only type bound is on `route: KClass<out Route>`), so without FS6 a
-    // realistic
-    // mistake — annotating a plain class or an Activity — surfaces as a confusing `T : Fragment`
-    // type-bound error deep inside the GENERATED `AndroidFragment<XFragment>` call rather than an
-    // actionable [FS*] KSP diagnostic pointing at the user's own annotation. Same string-FQN
-    // `getAllSuperTypes()` walk FS2 uses for its Route-implementation check.
+    // Validate the annotated class itself as a Fragment so mistakes fail at the annotation instead
+    // of a generated AndroidFragment type bound.
     val extendsFragment =
       decl.getAllSuperTypes().any { it.declaration.qualifiedName?.asString() == FRAGMENT_FQ }
     if (!extendsFragment) {
@@ -247,9 +220,7 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS2 — route type sanity (mirrors SC5). The `route: KClass<out Route>` bound normally
-    // guarantees
-    // this at the frontend; the null-resolve / non-Route branches are defensive.
+    // The KClass bound normally guarantees a Route; unresolved and invalid branches are defensive.
     val annotation = decl.annotations.first { it.fqName() == FRAGMENT_SCREEN_FQ }
     val routeType = annotation.classArg("route")
     val routeDecl = routeType?.declaration as? KSClassDeclaration
@@ -258,9 +229,7 @@ internal class FragmentModelReader(
       return null
     }
     val routeFq = routeDecl.qualifiedName?.asString()
-    // FS2 — the bare `Route` interface itself is NOT a valid destination. @FragmentScreen's route
-    // arg is
-    // MANDATORY and concrete — as is every kind annotation's now — so
+    // The bare Route interface is not a concrete destination.
     // `@FragmentScreen(Route::class)` would
     // emit `register<Route>` which no concrete-class push (`key.route::class`) ever matches → DEAD
     // registration (runtime "no entry").
@@ -285,13 +254,7 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS7 — Fragment interop is screen-only. A route implementing a modal
-    // presentation contract (Dialog/BottomSheet/FullscreenModal) would be registered as a plain
-    // SCREEN
-    // (FragmentEntryCodegen unconditionally `kind = SCREEN`) with SILENTLY ignored —
-    // the
-    // user asked for a modal but gets a full-screen fragment, no diagnostic. Rejected like SC8/MV8
-    // (silent-drop → hard error): fragment interop cannot present modals.
+    // Reject modal contracts because FragmentEntryCodegen always emits a screen registration.
     val modalContract =
       routeDecl
         .getAllSuperTypes()
@@ -309,8 +272,7 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS3 — duplicate route registration (cross-kind: vs core/MVI entries; same-kind: vs earlier
-    // @FragmentScreen). Two registrations on one route → two register<Route> calls → runtime crash.
+    // Reject duplicate route registration across Fragment and composable entry kinds.
     val previousOwner = ownerByRouteFq[routeFq]
     if (previousOwner != null) {
       error(
@@ -325,12 +287,8 @@ internal class FragmentModelReader(
     val packageName = decl.packageName.asString()
     val x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString())
 
-    // FS4 — provide-name clash (cross-kind: vs core/MVI provideXEntry; same-kind: vs earlier
-    // @FragmentScreen). Same (packageName, x) as an existing entry → two provideXEntry() with the
-    // same
-    // name in one package (Kotlin fn names collide across files too) → "conflicting overloads".
-    // Mirrors
-    // SC6 exactly. Checked AFTER FS3 so a same-route pair reports the more specific FS3 first.
+    // Reject derived provide-function collisions across files and entry kinds. Check route
+    // duplication first so it retains the more specific diagnostic.
     val provideKey = packageName to x
     val previousProvideOwner = ownerByProvideName[provideKey]
     if (previousProvideOwner != null) {
@@ -352,8 +310,8 @@ internal class FragmentModelReader(
       fragmentSimpleName = fragmentSimpleName,
       packageName = packageName,
       routeFq = routeFq,
-      // Read off the route DECLARATION (KSP-resolvable cross-module), not this module's model —
-      // same reasoning as EntryFunctionModel.routePackageName / .noBack.
+      // Read from the route declaration so cross-module routes resolve correctly, rather than from
+      // this module's model.
       routePackageName = routeDecl.packageName.asString(),
       noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
       x = x,

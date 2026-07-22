@@ -15,8 +15,8 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
  * build on [CompileHarness]:
  * 1. A source implementing `dev.gezgin.core.Route` compiles OK — proves `inheritClassPath` actually
  *    exposes `:gezgin-core`'s jvm classes to the in-memory compilation.
- * 2. The processor's log message shows up in the compilation output — proves KSP2 actually invoked
- *    [GezginProcessor], not just that the provider was registered.
+ * 2. The processor's log message shows up in the compilation output — proves `KSP2` actually
+ *    invoked [GezginProcessor], not just that the provider was registered.
  */
 class SpikeTest {
 

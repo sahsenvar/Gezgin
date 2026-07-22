@@ -16,15 +16,16 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 /**
  * Fix-round gate for the UNIFIED cross-module navigator probe
  * ([dev.gezgin.processor.codegen.NavigatorProbe]) — the `@GezginNavigatorFor` identity marker
- * (Faz-6 M1) + the SC2/MV7 backport of the fragment classpath probe (Faz-5 MN2 / Integ M1). The
- * probe replaces two defects at once:
+ * (Faz-6 M1) + the `SC2`/`MV7` backport of the fragment classpath probe (Faz-5 `MN2` / Integ M1).
+ * The probe replaces two defects at once:
  * - **M1 (false positive):** the old cross-module probe matched a navigator BY NAME only.
  *   `stripSuffix` collides (`HelpRoute`/`HelpScreenRoute` → `x=Help` → both name-match
  *   `HelpNavigator`), so a display-only route was silently wired to a FOREIGN route's navigator.
  *   The marker makes the probe verify IDENTITY.
- * - **MN2/Integ M1 (false negative):** core-mode `SC2` and MVI-mode `MV7` assumed `?: true` for
+ * - **`MN2`/Integ M1 (false negative):** core-mode `SC2` and MVI-mode `MV7` assumed `?: true` for
  *   cross-module routes → a nav-wanting entry/VM on a navigator-less cross-module route emitted
- *   `raw.xNavigator()` (unresolved reference in GENERATED code) instead of a clean `[SC2]`/`[MV7]`.
+ *   `raw.xNavigator()` (unresolved reference in GENERATED code) instead of a clean
+ *   `[`SC2`]`/`[`MV7`]`.
  *
  * **kctfork caveat (same as [EntryCodegenTest]/[FragmentEntryCodegenTest]):** the emitted bodies
  * call compose-runtime inline accessors / `AndroidFragment` / an unresolved cross-module factory
@@ -35,7 +36,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 @OptIn(ExperimentalCompilerApi::class)
 class NavigatorProbeTest {
 
-  // region Fragment (FS5) — M1 identity, plus the two-module COMPILED-classpath proof
+  // region Fragment (`FS5`) — M1 identity, plus the two-module COMPILED-classpath proof
 
   /**
    * M1 false-positive killer. `HelpRoute` (edged → earns `HelpNavigator`) and `HelpScreenRoute`
@@ -105,8 +106,8 @@ class NavigatorProbeTest {
    * `HelpScreenRoute` earns a REAL `HelpNavigator` that `NavigatorCodegen` STAMPS with
    * `@GezginNavigatorFor`; it compiles to bytecode. Module 2 (fragment feature) probes that route
    * cross-module — so the probe must read the marker (and its `KClass` arg) off a genuinely
-   * COMPILED declaration on the classpath (KSP2), match identity, and wire the navigator. Exercises
-   * the full real pipeline: stamp → compile → classpath read → identity match.
+   * COMPILED declaration on the classpath (`KSP2`), match identity, and wire the navigator.
+   * Exercises the full real pipeline: stamp → compile → classpath read → identity match.
    */
   @Test
   fun `FS5 — probe reads @GezginNavigatorFor off a COMPILED classpath navigator (two-module)`() {
@@ -174,7 +175,7 @@ class NavigatorProbeTest {
 
   // endregion
 
-  // region Core-mode (SC2) cross-module × (exists / doesn't / decoy)
+  // region Core-mode (`SC2`) cross-module × (exists / doesn't / decoy)
 
   @Test
   fun `SC2 cross-module — nav wired when a compiled navigator's marker matches the route`() {
@@ -218,7 +219,7 @@ class NavigatorProbeTest {
   fun `SC2 cross-module — no compiled navigator now rejects (old blind pass emitted unresolved code)`() {
     // BareRoute graph-less, NO compiled BareNavigator (the nav param type stays an error type). Old
     // `?: true` sailed through and emitted `raw.bareNavigator()`; the probe now yields a clean
-    // [SC2].
+    // [`SC2`].
     val src =
       """
           package dev.gezgin.scbare
@@ -244,7 +245,7 @@ class NavigatorProbeTest {
   fun `SC2 cross-module — name-matching decoy navigator (foreign marker) is rejected (identity)`() {
     // FooScreenRoute → x=Foo; the compiled FooNavigator (name matches, so m4's type check passes)
     // is
-    // stamped for a DIFFERENT FooRoute → the probe's identity check rejects it with [SC2].
+    // stamped for a DIFFERENT FooRoute → the probe's identity check rejects it with [`SC2`].
     val src =
       """
           package dev.gezgin.scdecoy
@@ -277,7 +278,7 @@ class NavigatorProbeTest {
 
   // endregion
 
-  // region MVI-mode (MV7) cross-module × (exists / doesn't / decoy)
+  // region MVI-mode (`MV7`) cross-module × (exists / doesn't / decoy)
 
   private fun mviSource(
     pkg: String,
@@ -349,9 +350,9 @@ class NavigatorProbeTest {
 
   @Test
   fun `MV7 cross-module — no compiled navigator now rejects (old blind pass emitted unresolved code)`() {
-    // nav: BareNavigator is unresolved → classified NAV by name (isError) → MV7 fires; the probe
+    // nav: BareNavigator is unresolved → classified NAV by name (isError) → `MV7` fires; the probe
     // finds
-    // no compiled BareNavigator → clean [MV7] instead of the old `?: true` unresolved
+    // no compiled BareNavigator → clean [`MV7`] instead of the old `?: true` unresolved
     // `raw.bareNavigator()`.
     val src =
       mviSource(
@@ -367,7 +368,7 @@ class NavigatorProbeTest {
   @Test
   fun `MV7 cross-module — name-matching decoy navigator (foreign marker) is rejected (identity)`() {
     // WidgetScreenRoute → x=Widget; the compiled WidgetNavigator (type matches → classified NAV) is
-    // stamped for a DIFFERENT WidgetRoute → identity check rejects with [MV7].
+    // stamped for a DIFFERENT WidgetRoute → identity check rejects with [`MV7`].
     val src =
       mviSource(
         pkg = "dev.gezgin.mvdecoy",

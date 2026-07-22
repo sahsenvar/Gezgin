@@ -192,15 +192,7 @@ internal class GezginBottomSheetScene(
     "GezginBottomSheetScene(key=$key, entry=$entry, overlaidEntries=$overlaidEntries, props=$props)"
 }
 
-/**
- * BottomSheet `SceneStrategy` — top entry'nin `NavEntry.metadata`'sında [GEZGIN_BOTTOM_SHEET_KEY]
- * (adapter [toNavEntry] `kind == BOTTOM_SHEET` iken yazar) varsa bir [GezginBottomSheetScene]
- * döndürür, yoksa `null` (zincirdeki sonraki stratejiye devret). [GezginDialogSceneStrategy]
- * deseni; `overlaidEntries = entries.dropLast(1)` (arka SCREEN görünür). Dismiss, [onDismiss] ile
- * sahip-entry id'sine (`lastEntry.contentKey`) pinlenir → sheet artık top değilken pop no-op.
- * [GezginNavDisplay] actual'larında GezginDialogSceneStrategy'nin YANINA (fallback
- * `SinglePaneSceneStrategy`'den ÖNCE) eklenir.
- */
+/** Selects a bottom-sheet overlay from top-entry metadata and pins dismissal to its owner. */
 internal class GezginBottomSheetSceneStrategy(private val onDismiss: (Long) -> Unit) :
   SceneStrategy<Route> {
   override fun SceneStrategyScope<Route>.calculateScene(

@@ -37,8 +37,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
   override fun process(resolver: Resolver): List<KSAnnotated> {
     if (!invoked) {
       invoked = true
-      // `info` KSP logging seviyesine göre yutulabilir (kctfork messageOutputStream) → `warn`
-      // fallback.
+      // Some KSP hosts suppress info output, so warn provides an observable fallback.
       environment.logger.info("Gezgin processor alive")
       environment.logger.warn("Gezgin processor alive")
 
@@ -79,10 +78,8 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
             return emptyList()
           }
 
-          // [PKG]  — navigator'lar targetPackage'a üretilir ama cross-module probe route'un
-          // DECLARATION paketinde (routePackageName) arar; alt-paketler ayrışırsa probe sessizce
-          // ıskalar. "Her graph/route paketi == targetPackage" şartı bu varsayımı sözleşmeye
-          // çevirir.
+          // Navigators are emitted into the target package while cross-module probes search the
+          // route declaration package. Require equality so a probe cannot silently miss output.
           val strayPackages = TopologyCodegen.declaredPackages(model).filter { it != packageName }
           if (strayPackages.isNotEmpty()) {
             environment.logger.error(
@@ -137,7 +134,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
 
         // @FragmentScreen read cross-checks each route against the already-built `entries` so a
         // route
-        // can't be registered by BOTH a @FragmentScreen and a @Screen/MVI content (FS3). Post-hoc
+        // can't be registered by BOTH a @FragmentScreen and a @Screen/MVI content (`FS3`). Post-hoc
         // cross-check, not a shared-map change (see FragmentModelReader KDoc).
         val (fragmentModels, fragOk) =
           FragmentModelReader(resolver, environment.logger, entries).read()
@@ -172,7 +169,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
         // package,
         // not this module's. Core-mode → `GezginEntries.kt`, MVI-mode → separate
         // `GezginMviEntries.kt`
-        // (same package, distinct file; SC6 keeps names unique). `fragOk` joins the gate so an FS
+        // (same package, distinct file; `SC6` keeps names unique). `fragOk` joins the gate so an FS
         // guardrail violation fails the build instead of emitting the surviving registration.
         val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
         if (emitEntries && vmOk && entriesOk && fragOk) {
