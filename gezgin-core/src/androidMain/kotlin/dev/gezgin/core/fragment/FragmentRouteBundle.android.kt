@@ -56,7 +56,10 @@ public object Gezgin {
      * ```
      * A fresh process can restore a Fragment and invoke `onViewCreated` before Compose calls [Route.toBundle].
      * Without this early initialization, `gezginArgs` has no Json instance with which to decode the route.
-     * The call is unnecessary for applications that use only `@Screen`, and repeated calls are harmless.
+     * The call is unnecessary for applications that use only `@Screen`. A later call replaces the
+     * process-global [Json] instance; repeated initialization is safe only when every call supplies the same
+     * compatible Json and serializers-module configuration. Reconfiguring it while restored Fragments may
+     * decode routes is unsupported.
      */
     public fun initFragmentInterop(json: Json) {
         gezginFragmentJson = json
