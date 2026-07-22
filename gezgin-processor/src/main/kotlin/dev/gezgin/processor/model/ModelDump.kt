@@ -2,8 +2,7 @@ package dev.gezgin.processor.model
 
 /**
  * Deterministic, line-based textual dump of a [GraphModel], written by the processor under the
- * `gezgin.dumpModel=true` KSP option for test assertions (see Task 2.2 brief for the exact
- * grammar).
+ * `gezgin.dumpModel=true` KSP option for test assertions. The format below is the exact grammar.
  *
  * Sections are emitted in a fixed order (graphs, routes, edges, back-edges); within each section
  * entries are sorted by the owning declaration's fully-qualified name so the output never depends

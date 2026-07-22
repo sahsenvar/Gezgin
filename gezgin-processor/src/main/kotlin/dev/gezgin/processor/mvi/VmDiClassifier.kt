@@ -2,7 +2,7 @@ package dev.gezgin.processor.mvi
 
 /**
  * The route/nav/other classification of a [ViewModelModel]'s primary-constructor params, aggregated
- * into the three booleans both MVI-mode consumers key off (Faz 5.2, §10.1).
+ * into the three booleans both MVI-mode consumers key off (§10.1).
  * - [vmHasNav] — a DI-relevant ctor param is a `nav` (drives the resolver's `nav:` param +
  *   `viewModel(nav, route)`).
  * - [vmHasRoute] — a DI-relevant ctor param is the route (drives `args` in the supplied-args list).
@@ -16,22 +16,21 @@ internal data class VmDiClassification(
 )
 
 /**
- * Shared DI-param classification for a `@MviViewModel`'s primary constructor (§10.1, Faz 5.2). Both
+ * Shared DI-param classification for a `@MviViewModel`'s primary constructor (§10.1). Both
  * [dev.gezgin.processor.entry.EntryModelReader] (for the `MV7` nav-presence guardrail) and
  * [dev.gezgin.processor.codegen.MviEntryCodegen] (for the default `viewModel` resolver) must agree
  * on whether a VM's ctor needs `nav`/`route` and whether a default resolver is even emittable — so
- * that logic lives here ONCE rather than being duplicated in each (a drift hazard flagged in
- * review).
+ * that logic lives here once rather than being duplicated in each.
  *
- * **Classification precedence (Faz-5 recheck MJ1): TYPE decides, name is only a fallback.** A param
- * is NAV when its type IS the route's `${x}Navigator` ([VmCtorParam.typeFq] == [navigatorTypeFq]).
- * The `nav` NAME classifies NAV *only* when the type failed to resolve ([VmCtorParam.isError]) —
- * the one legitimate case being a same-module `nav: XNavigator` whose navigator class isn't
- * generated yet in this KSP round. A RESOLVED non-navigator param named `nav` (e.g. a Koin
- * `@InjectedParam nav: AnalyticsTracker`) is classified by its type (OTHER) — NOT hijacked by the
- * name, which previously produced a default resolver that compiled but crashed in Koin's by-TYPE
- * param lookup at first render (and a spurious `MV7`). The route type always resolves
- * (user-defined), so ROUTE is matched by type.
+ * **Classification precedence (MJ1):** type decides; name is only a fallback. A param is NAV when
+ * its type IS the route's `${x}Navigator` ([VmCtorParam.typeFq] == [navigatorTypeFq]). The `nav`
+ * NAME classifies NAV *only* when the type failed to resolve ([VmCtorParam.isError]) — the one
+ * legitimate case being a same-module `nav: XNavigator` whose navigator class isn't generated yet
+ * in this KSP round. A RESOLVED non-navigator param named `nav` (e.g. a Koin `@InjectedParam nav:
+ * AnalyticsTracker`) is classified by its type (OTHER) — NOT hijacked by the name, which previously
+ * produced a default resolver that compiled but crashed in Koin's by-TYPE param lookup at first
+ * render (and a spurious `MV7`). The route type always resolves (user-defined), so ROUTE is matched
+ * by type.
  */
 internal object VmDiClassifier {
 
@@ -81,7 +80,7 @@ internal object VmDiClassifier {
     val roles = relevant.map { it to roleOf(it, routeFq, navigatorTypeFq) }
     val routeCount = roles.count { it.second == Role.ROUTE }
     val navCount = roles.count { it.second == Role.NAV }
-    // MN4 (Faz-5 recheck) — an OTHER param WITH a Kotlin default is NOT Gezgin-supplied and NOT
+    // MN4 — an OTHER param WITH a Kotlin default is NOT Gezgin-supplied and NOT
     // blocking:
     // the default ctor call (androidx, named args) simply omits it → the VM's own default applies.
     // Only

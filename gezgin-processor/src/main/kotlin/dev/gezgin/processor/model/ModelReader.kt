@@ -31,13 +31,12 @@ private const val RESULT_FLOW_FQ = "dev.gezgin.core.ResultFlow"
  * Reads every `@NavGraph`/`@FlowGraph`-annotated interface reachable from [resolver], plus the
  * routes (classes/objects) that belong to them, into a semantic [GraphModel].
  *
- * MEMBERSHIP (Task 8.1): a route/sub-graph belongs to the annotated graph/flow it DIRECTLY
- * implements (`: ParentGraph`) — "subtyping = nesting" (design-notes §3), so a member declared in a
- * SEPARATE file is attributed correctly. Member enumeration uses
- * [KSClassDeclaration.getSealedSubclasses] (proven cross-file in the Task 8.0 spike), unioned with
- * lexical children so a member written `: Route` (declaring no annotated supertype but nested
- * inside an annotated graph — e.g. an intervening `@NavGraph`) keeps its pre-8.0 nesting membership
- * byte-for-byte. See [membershipParent].
+ * MEMBERSHIP : a route/sub-graph belongs to the annotated graph/flow it DIRECTLY implements (`:
+ * ParentGraph`) — "subtyping = nesting" (design-notes §3), so a member declared in a SEPARATE file
+ * is attributed correctly. Member enumeration uses [KSClassDeclaration.getSealedSubclasses] (proven
+ * cross-file), unioned with lexical children so a member written `: Route` (declaring no annotated
+ * supertype but nested inside an annotated graph — e.g. an intervening `@NavGraph`) keeps its
+ * lexical nesting membership. See [membershipParent].
  *
  * Flow-chain and result-type rules are documented on the individual model types in `GraphModel.kt`.
  */
@@ -52,8 +51,8 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
   fun read(): GraphModel {
     val graphDecls = collectGraphDeclarations()
 
-    // Candidate members: cross-file sealed subtypes (flat-file, Task 8.0 spike) UNION lexical
-    // children (pre-8.0 nesting for `: Route` members). Deduped by fqName — a member reachable
+    // Candidate members: cross-file sealed subtypes (flat-file) UNION lexical
+    // children for `: Route` members. Deduped by fqName — a member reachable
     // both ways is attributed once via [membershipParent].
     val memberDecls =
       graphDecls
@@ -105,13 +104,13 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
 
   // endregion
 
-  // region Membership derivation (Task 8.1 — supertype-primary, lexical-fallback)
+  // region Membership derivation (supertype-primary, lexical-fallback)
 
   /**
    * The single annotated graph/flow `decl` is a member of. Primary source is the DIRECT annotated
    * supertype (`: ParentGraph`) so a member declared in a separate file resolves correctly
    * (design-notes §3: "subtyping = nesting"). Fallback is the lexically-enclosing annotated graph,
-   * preserving pre-8.0 nesting for a member that declares no annotated supertype (e.g. an
+   * preserving lexical nesting for a member that declares no annotated supertype (e.g. an
    * intervening `@NavGraph : Route`). When both agree — the lexical parent is itself a declared
    * supertype (the normal nested route) — the lexical parent is chosen, so an E5-style route
    * implementing a SECOND graph still reports its nesting graph as `graphFq`. `null` = no parent by

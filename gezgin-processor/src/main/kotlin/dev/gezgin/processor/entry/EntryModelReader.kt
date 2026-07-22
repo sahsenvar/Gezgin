@@ -80,12 +80,11 @@ private val KIND_BY_ANNOTATION_FQ =
   )
 
 /**
- * Task 3.4 (+ Faz 5.1 MVI-mode) — reads every
- * `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`- annotated composable FUNCTION (spec §10.1)
- * and validates it into an [EntryFunctionModel] list, reporting every violation as a bracketed-code
- * KSP error via [logger]. [read] never throws — like the graph validator, it collects every
- * violation in one pass and returns whether the read was clean alongside whatever models DID
- * resolve.
+ * (MVI-mode) — reads every `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`- annotated
+ * composable FUNCTION (spec §10.1) and validates it into an [EntryFunctionModel] list, reporting
+ * every violation as a bracketed-code KSP error via [logger]. [read] never throws — like the graph
+ * validator, it collects every violation in one pass and returns whether the read was clean
+ * alongside whatever models DID resolve.
  *
  * **Two modes, selected by the composable's parameter shape (§10.1) — the annotation is
  * unchanged:**
@@ -126,7 +125,7 @@ private val KIND_BY_ANNOTATION_FQ =
  * are rejected, because MVI entry codegen calls content by simple name and Kotlin cannot select an
  * overload from the generated `(state, onIntent[, extras])` call.
  *
- * **MVI guardrails (Faz 5.1):**
+ * **MVI guardrails :**
  * - `MV2` — an MVI-mode content whose route has no `@MviViewModel` in THIS module (route-linked,
  *   not state/onIntent-type-matched).
  * - `MV3` — a `@MviViewModel` with no matching MVI-mode content in this module (symmetric to
@@ -140,7 +139,7 @@ private val KIND_BY_ANNOTATION_FQ =
  *   ([NavigatorCodegen.hasNavigator] false) — otherwise codegen would emit an unresolved
  *   `<x>Navigator()` factory call.
  *
- * **MVI guardrails (Faz 5 final review):**
+ * **MVI guardrails :**
  * - `MV8` — a `controller: GezginSheetController` extra on a non-`BOTTOM_SHEET`-kind MVI content:
  *   role-injected `LocalGezginSheetController.current` `error()`s outside a `@BottomSheet`, so
  *   codegen would emit compile-clean code that crashes at first render. Classified as a role extra
@@ -148,7 +147,7 @@ private val KIND_BY_ANNOTATION_FQ =
  * - `MV10` — a Problem-2 content extra whose name collides with an emitted identifier
  *   (`viewModel`/`nav`/`route`/`vm`), which would produce broken generated code.
  *
- * **MVI guardrails (Faz 5 recheck):**
+ * **MVI guardrails :**
  * - `MV11` — an `@EffectHandler` whose signature isn't a subset of `{Flow<E>, nav: XNavigator}`: an
  *   EXTRA param (e.g. `SnackbarHostState` — no wiring path, unlike content's Problem-2 resolvers)
  *   or a `nav` param whose RESOLVED type isn't the matched route's `${x}Navigator`. Both would
@@ -289,7 +288,7 @@ internal class EntryModelReader(
     }
   }
 
-  // region Core-mode (Task 3.4 — UNCHANGED)
+  // region Core-mode (UNCHANGED)
 
   private fun buildCoreEntry(
     fn: KSFunctionDeclaration,
@@ -439,7 +438,7 @@ internal class EntryModelReader(
       // lets EntryCodegen qualify the factory import cross-module (a feature module's own
       // model has no graphs, so its `targetPackage` is empty and useless here). See §3.3.
       routePackageName = routeDecl!!.packageName.asString(),
-      // Declaration-tabanlı okuma (Important 2, review): `routeModel` YALNIZ bu modülün
+      // Declaration-tabanlı okuma: `routeModel` YALNIZ bu modülün
       // GraphModel'inde bilinen route'lar için var olur (cross-module route'larda null) — model
       // fallback'i bu yüzden cross-module @NoBack'i SESSİZCE düşürüyordu. `routeDecl` KSP'de
       // modülden bağımsız her zaman erişilebilir (Route implement eden herhangi bir sınıf, hangi
@@ -448,7 +447,7 @@ internal class EntryModelReader(
       // cross-module senaryo bu testlerle simüle edilemiyor — mevcut golden (Product, aynı modül)
       // bu okuma-yolunun declaration-tabanlı olduğunu pinler, cross-module davranışı
       // manuel/on-device
-      // doğrulamaya kalıyor (bkz. final-review raporu).
+      // doğrulamaya kalıyor (bkz. validation raporu).
       noBack = routeDecl!!.hasAnnotation(NO_BACK_FQ),
       x = x,
     )
@@ -456,7 +455,7 @@ internal class EntryModelReader(
 
   // endregion
 
-  // region MVI-mode (Faz 5.1, §10.1)
+  // region MVI-mode (§10.1)
 
   private fun buildMviEntry(
     fn: KSFunctionDeclaration,
@@ -523,7 +522,7 @@ internal class EntryModelReader(
     // also fire for the same VM — MV3 is strictly "no content at all", not "invalid content".
     matchedVmRoutes += routeFq
 
-    // MV12 (Faz-5 recheck MJ4) — a plain `@HiltViewModel` (no assisted factory) receives NOTHING
+    // MV12 ( MJ4) — a plain `@HiltViewModel` (no assisted factory) receives NOTHING
     // from
     // Gezgin: the old premise "route arrives via SavedStateHandle" is FALSE in Nav3 (no mechanism
     // writes the route into the handle → `ssh.get("id")` is silently null). So a plain-Hilt VM
@@ -637,7 +636,7 @@ internal class EntryModelReader(
             extrasInvalid = true
           }
         } else if (p.hasDefault) {
-          // MN4 (Faz-5 recheck) — a resolver extra WITH a Kotlin default need NOT be
+          // MN4 — a resolver extra WITH a Kotlin default need NOT be
           // Gezgin-supplied:
           // the generated content call passes NAMED args (MN1), so an omitted defaulted param falls
           // back to the composable's own default. Don't force a mandatory `@Composable () -> T`
@@ -715,7 +714,7 @@ internal class EntryModelReader(
       }
     }
 
-    // MV11 (Faz-5 recheck MJ5) — a matched @EffectHandler's `nav` param TYPE must be THIS route's
+    // MV11 ( MJ5) — a matched @EffectHandler's `nav` param TYPE must be THIS route's
     // own
     // `${x}Navigator`; otherwise the generated `XEffects(effects = …, nav = nav)` call
     // type-mismatches
@@ -1081,7 +1080,7 @@ internal class EntryModelReader(
           "presentation contract must match (@Dialog↔DialogContract, @FullscreenModal↔" +
           "FullscreenModalContract, @BottomSheet↔BottomSheetContract). The adapter reads only the " +
           "contract for the kind, so the wrong contract becomes null through `route as? …` and overrides " +
-          "(for example dismissOnClickOutside=false) are silently dropped. Fix the kind or remove the contract (§7)",
+          "(for example dismissOnClickOutside=false) are silently dropped. Fix the kind or remove (§7)",
       )
       return false
     }

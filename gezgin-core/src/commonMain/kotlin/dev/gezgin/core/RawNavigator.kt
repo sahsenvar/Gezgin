@@ -13,34 +13,23 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * Raw facade over [GezginState] + [ResultBus] + [NavEvent] — the untyped integration layer Faz 2
- * (codegen) and Faz 3 (display) wrap. Single-writer: all mutation happens through the methods
- * below, each of which keeps [backStack] and [events] in sync with the underlying state.
+ * Untyped navigation runtime used by generated typed navigators and
+ * [GezginDisplay][dev.gezgin.core.compose.GezginDisplay]. Every mutation keeps [backStack] and
+ * [events] synchronized with the underlying state and pending-result slots.
  *
- * **Threading contract (main-thread confinement, integ-m3):** this type is NOT thread-safe. The
- * inner [GezginState] `_stack` is a plain `MutableList`; all mutation ops
- * (navigate/back/replaceTo/quit/…) AND the display's reads (`keysState`/`backStack` collect) must
- * run on the SAME thread — the app's UI/main thread. Because the Faz-5 pattern moves the navigator
- * into the VM ctor, this boundary matters especially: a VM must NOT write
- * `viewModelScope.launch(Dispatchers.IO) { nav.quit() }` — an off-main mutation races with the
- * composition's reads and silently corrupts the stack. If navigation must happen after background
- * work finishes, the call must be moved to the main thread (e.g. `withContext(Dispatchers.Main) { …
- * }`, or from a main-threaded `viewModelScope` directly). There is no portable, cheap main-thread
- * assert mechanism in commonMain (KMP) (a hook like Android's `Looper` is not available in common)
- * → the contract is carried only by this KDoc; a runtime guard was NOT added.
+ * This type is not thread-safe. Navigation mutations and display reads must run on the
+ * application's UI thread. If navigation follows background work, switch back to the main
+ * dispatcher before calling this API; an off-main mutation can race with Compose reads.
  *
- * [restored] — the PD (process death) simulation: if non-null, the stack + nextId + pending result
- * slots are restored from [SavedState] and `start` is NOT PUSHED (§1.10). That is, while `restored
- * != null` the [start] parameter passed to the ctor is IGNORED (it is used only on the first,
- * restore-less launch). [json] — for decoding slot payloads on restore (so result types requiring a
- * SerializersModule — open polymorphism/
+ * Process-death restoration is handled by `rememberNavigator`. A restored snapshot replaces the
+ * initial [start] route and recovers stack identifiers and pending results. The same application
+ * `Json` configuration is used for back-stack and Fragment-argument serialization, including any
+ * contextual or polymorphic serializers.
+ *
+ * The public constructor creates a fresh navigator for tests and custom hosts. It intentionally
+ * omits restoration inputs so saved-state schema details remain internal.
  *
  * @author @sahsenvar
- * @Contextual — decode SYMMETRICALLY with the module used at encode). Faz 6 (§11): made `internal`
- *   (was `private`) — Fragment interop's `androidMain` `route.toBundle(nav)` helper reuses this
- *   SAME app-Json (with the polymorphic Route module) when encoding the `arguments` Bundle (it does
- *   NOT create a second Json → symmetry with backstack PD). Visible only within the module, it does
- *   not leak to public.
  */
 public class RawNavigator
 internal constructor(
@@ -346,8 +335,7 @@ internal constructor(
    * gesture) it is a SILENT NO-OP → the value is not delivered to the slot of a foreign entry that
    * is not waiting for that slot (that expects a result of a different type) and that entry is not
    * accidentally popped (a dirty-delivery/ double-back race is prevented). The typed
-   * `backWithResult(result)` that Faz 2 codegen generates binds the ctor's `entryId` to this
-   * overload.
+   * `backWithResult(result)` that codegen generates binds the ctor's `entryId` to this overload.
    *
    * **mn-1 — owner top ama pending-target DEĞİL:** owner top iken (`top.id == entryId`) ama onu
    * hedefleyen bekleyen bir slot yoksa (bir `ResultRoute` düz `@GoTo`/`navigate` ile ya da
@@ -394,18 +382,18 @@ internal constructor(
     get() = state.stack.last().id
 
   /**
-   * Task 2.6 — a minimal public entry point for `:gezgin-test`'s typed `fromX()` access: the id of
-   * the NEAREST (topmost in the stack) entry that implements [route], or `null`. `keys` stays
-   * `internal`; this is the single [GezginInternalApi] opt-in member built on top of it.
+   * A minimal public entry point for `:gezgin-test`'s typed `fromX()` access: the id of the NEAREST
+   * (topmost in the stack) entry that implements [route], or `null`. `keys` stays `internal`; this
+   * is the single [GezginInternalApi] opt-in member built on top of it.
    */
   @GezginInternalApi
   public fun entryIdOf(route: KClass<out Route>): Long? =
     keys.lastOrNull { route.isInstance(it.route) }?.id
 
   /**
-   * Explicit-caller (the Faz 2 hook): idempotent (§6) — do NOT push while a slot exists for the
-   * same (caller, edge) (in-flight OR delivered-but-unconsumed). Otherwise a result request would
-   * ALWAYS create a new entry.
+   * Explicit-caller result launch. It is idempotent while a slot exists for the same (caller, edge)
+   * (in-flight OR delivered-but-unconsumed). Otherwise a result request would ALWAYS create a new
+   * entry.
    */
   @GezginInternalApi
   public fun launchForResult(callerEntryId: Long, edgeId: String, route: Route) {
@@ -428,15 +416,15 @@ internal constructor(
   }
 
   /**
-   * Convenience: caller = the top AT CALL TIME. Faz 2 codegen (when the caller is not the top) must
-   * use the explicit overload. Two quick top-based calls see different callers (the first push
-   * changes the top) → if you want dedupe, use the explicit-caller overload; the typed layer binds
-   * the caller to the entry.
+   * Convenience overload that captures the top entry as caller at call time. Generated bindings
+   * whose caller is not the top must use the explicit overload. Two quick top-based calls see
+   * different callers (the first push changes the top) → if you want dedupe, use the
+   * explicit-caller overload; the typed layer binds the caller to the entry.
    */
   public fun launchForResult(edgeId: String, route: Route): Unit =
     launchForResult(currentEntryId, edgeId, route)
 
-  /** Explicit-caller (the Faz 2 hook): the result stream of the (caller, edge) slot. */
+  /** The result stream for an explicit `(caller, edge)` slot. */
   @GezginInternalApi
   public fun <T> results(callerEntryId: Long, edgeId: String): Flow<NavResult<T>> =
     bus.results(callerEntryId, edgeId)
@@ -444,12 +432,12 @@ internal constructor(
   /**
    * Convenience: caller = the top entry id AT CALL TIME. A late re-attach after restore therefore
    * only works while the original caller entry is the current top (the call-time-top contract);
-   * when the caller is NOT the top (PD re-attach, Faz 2 codegen) the explicit
+   * when the caller is not the top after process-death reattachment, the explicit
    * [results]`(callerEntryId, edgeId)` overload MUST be used.
    */
   public fun <T> results(edgeId: String): Flow<NavResult<T>> = results(currentEntryId, edgeId)
 
-  /** Explicit-caller sugar = launch + results.first() (the Faz 2 hook). */
+  /** Explicit-caller convenience that launches and awaits the first result. */
   @GezginInternalApi
   public suspend fun <T> navigateForResult(
     callerEntryId: Long,
@@ -465,12 +453,12 @@ internal constructor(
     navigateForResult(currentEntryId, edgeId, route)
 
   /**
-   * @QuitAndGoTo (the Faz 2 codegen hook) — tear down the current flow without a result (exactly
-   *   the same teardown as quit(): Canceled to surviving caller-bearing pending slots,
-   *   `FlowQuit(canceled = true)`) and then navigate to the target. When the source is NOT INSIDE a
-   *   flow (no flowId) there is nothing to tear down — it is equivalent to a plain `navigate`. In
-   *   the root flow (quitFlow → null), the same rule as quit()/quitWith: fall to onRootBack() +
-   *   emit `RootBack`, do NOT navigate (the teardown itself failed).
+   * Implements `@QuitAndGoTo`: tear down the current flow without a result (exactly the same
+   * teardown as quit(): Canceled to surviving caller-bearing pending slots, `FlowQuit(canceled =
+   * true)`) and then navigate to the target. When the source is NOT INSIDE a flow (no flowId) there
+   * is nothing to tear down — it is equivalent to a plain `navigate`. In the root flow (quitFlow →
+   * null), the same rule as quit()/quitWith: fall to onRootBack() + emit `RootBack`, do NOT
+   * navigate (the teardown itself failed).
    */
   public fun quitAndGoTo(route: Route) {
     val flowId = state.currentFlowId()

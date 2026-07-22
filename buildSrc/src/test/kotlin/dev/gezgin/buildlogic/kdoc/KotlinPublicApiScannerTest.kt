@@ -322,6 +322,65 @@ class KotlinPublicApiScannerTest {
     )
   }
 
+  @Test
+  fun `rejects Turkish public KDoc with and without diacritics`() {
+    val result =
+      scan(
+        """
+            /**
+             * Gezgin durumunu kullanıcıya döndürür.
+             * @author @sahsenvar
+             */
+            public class TurkishWithDiacritics
+
+            /** Kullanici icin sonuc doner. */
+            public fun turkishWithoutDiacritics(): Unit = Unit
+            """
+      )
+
+    assertEquals(
+      setOf("TurkishWithDiacritics", "turkishWithoutDiacritics"),
+      result.findings
+        .filter { it.kind == KDocFindingKind.NON_ENGLISH_KDOC }
+        .map { it.declaration.name }
+        .toSet(),
+    )
+  }
+
+  @Test
+  fun `rejects implementation process artifacts only for included public KDoc`() {
+    val result =
+      scan(
+        """
+            import dev.gezgin.core.GezginInternalApi
+
+            /**
+             * Task 4 deliverable retained from the final-review report.
+             * @author @sahsenvar
+             */
+            public class ProcessArtifact
+
+            /** Phase migration TODO. */
+            public fun processFunction(): Unit = Unit
+
+            /** Spike report from a review checkpoint and implementation brief. */
+            public fun processReport(): Unit = Unit
+
+            /** Faz 3 internal implementation report. */
+            @GezginInternalApi public class ExcludedProcessArtifact
+            """
+      )
+
+    assertEquals(
+      setOf("ProcessArtifact", "processFunction", "processReport"),
+      result.findings
+        .filter { it.kind == KDocFindingKind.PROCESS_ARTIFACT_KDOC }
+        .map { it.declaration.name }
+        .toSet(),
+    )
+    assertTrue(result.declarations.single { it.name == "ExcludedProcessArtifact" }.excluded)
+  }
+
   private fun scan(source: String): KotlinPublicApiScanResult =
     scanner.scan(
       KotlinSourceInput(path = "src/main/kotlin/Fixture.kt", content = source.trimIndent())

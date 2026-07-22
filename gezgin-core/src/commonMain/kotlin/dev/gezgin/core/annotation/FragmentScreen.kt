@@ -22,8 +22,7 @@ import kotlin.reflect.KClass
  * `@Screen`/`@Dialog`/`@BottomSheet`/ `@FullscreenModal` and gezgin-mvi's `@MviViewModel`).** A
  * `@FragmentScreen` class has **no constructor params at all** (see below), and the route arg is
  * mandatory-explicit across the board, so the route MUST be named explicitly here. The processor
- * reads it into the fragment entry model (`FragmentModelReader`, Task 6.1) that Task 6.2's
- * `AndroidFragment` codegen consumes.
+ * reads it into the fragment entry model and generates the corresponding `AndroidFragment` entry.
  *
  * **Parameterized Fragment ctor FORBIDDEN (§11.1).** A `@FragmentScreen`-annotated Fragment MUST
  * have a no-arg primary constructor: Android's own instantiation contract recreates Fragments via

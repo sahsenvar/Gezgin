@@ -17,23 +17,23 @@ import dev.gezgin.core.Route
 
 /**
  * The Nav3 `NavDisplay` adapter (§2.1/§4.2/§12) — the `entries` trailing lambda collects the
- * `register<R> { ... }` calls (or the `provideXEntry`s that Faz 3.4 generates) on a
- * [GezginEntryScope] receiver; the content (the `GezginKey` list) is ALWAYS read from
- * `navigator.keysState` (it carries an `id`) — NOT from `backStack` (public `Route`, id-less):
- * because of `StateFlow` equal-value dedup, a `replaceTo` to a same-value-different-id target
- * produces no emit on `backStack`, whereas [keysState][RawNavigator.keysState] emits a new list by
- * the `id` difference (the R2 contentKey contract; Task 3.3 deliverable 4a).
+ * `register<R> {... }` calls, including generated `provideXEntry` bindings, on a [GezginEntryScope]
+ * receiver; the content (the `GezginKey` list) is ALWAYS read from `navigator.keysState` (it
+ * carries an `id`) — NOT from `backStack` (public `Route`, id-less): because of `StateFlow`
+ * equal-value dedup, a `replaceTo` to a same-value-different-id target produces no emit on
+ * `backStack`, whereas [keysState][RawNavigator.keysState] emits a new list by the `id` difference.
+ * Entry identity is therefore always the `contentKey`.
  *
- * **Decorators (Task 3.3 deliverable 1):** entries are decorated with `rememberDecoratedNavEntries`
- * BEFORE being handed to `NavDisplay`. COMMON: `rememberSaveableStateHolderNavEntryDecorator()`
- * (saveable state = mandatory; `rememberSaveable` runs in each entry's own `contentKey`=id slot →
- * two equal-valued routes get SEPARATE saved state; the R2 saved-state side, desktop included).
+ * **Decorators:** entries are decorated with `rememberDecoratedNavEntries` before being handed to
+ * `NavDisplay`. The common decorator is `rememberSaveableStateHolderNavEntryDecorator()` (saveable
+ * state = mandatory; `rememberSaveable` runs in each entry's own `contentKey`=id slot → two
+ * equal-valued routes get SEPARATE saved state; the R2 saved-state side, desktop included).
  * PLATFORM: [rememberPlatformEntryDecorators] — on Android
  * `rememberViewModelStoreNavEntryDecorator()` (per-entry VM store; `LocalViewModelStoreOwner` from
  * the host Activity), on desktop the SAME per-entry VM store decorator (since the owner is not
- * guaranteed from the host, with Gezgin's own window-scoped owner — Faz 5 recheck / C1). Order
- * `[saveable] + platform`: the VM store decorator depends on the `SavedStateRegistryOwner` the
- * saveable provides → saveable first/OUTER.
+ * guaranteed from the host, with Gezgin's own window-scoped owner). Order `[saveable] + platform`:
+ * the VM store decorator depends on the `SavedStateRegistryOwner` the saveable provides → saveable
+ * first/OUTER.
  *
  * **Setup guard (§12) — the part `rememberNavigator` CANNOT do:** the kind info exists only here
  * (in the entry-scope registry). AFTER the registers are collected, if the root
@@ -42,31 +42,17 @@ import dev.gezgin.core.Route
  * Nav3 `OverlayScene`'s `require(overlaidEntries.isNotEmpty())` invariant (that a modal cannot
  * exist without at least one normal entry beneath it) by starting a modal alone at the root. If the
  * route is NOT registered yet (kind lookup `null`) it does not blow up here — the more descriptive
- * error for that case already exists in [toNavEntry] (`no entry registered for route`). Faz 4 scene
- * wiring has landed ([GezginNavDisplay]/DialogSceneStrategy) BUT this guard STAYS (is not relaxed):
- * the `OverlayScene` `require(overlaidEntries.isNotEmpty())` invariant is real — a modal genuinely
- * cannot exist alone at the root (an overlaid normal entry beneath it is required). Global
- * Constraints §7.
+ * error for that case already exists in [toNavEntry] (`no entry registered for route`). The guard
+ * remains necessary even with [GezginNavDisplay] modal scenes because `OverlayScene` requires at
+ * least one normal entry beneath every modal (§7).
  *
- * **Transition cascade (Task 3.5, §9) — PER-ENTRY metadata:** as each entry is built
- * ([toNavEntry]), ITS OWN route's cascade is resolved ([resolveTransition]: `route.transition ?:
- * transitions` — the screen>graph step comes FOR FREE from [Route.transition]'s interface-override
- * chain) and written into `NavEntry.metadata` via Nav3's PUBLIC
+ * **Transition cascade (§9) — per-entry metadata:** as each entry is built, its own route's cascade
+ * is resolved by [resolveTransition] and written into `NavEntry.metadata` through Nav3's
  * `NavDisplay.transitionSpec/popTransitionSpec/predictivePopTransitionSpec` wrappers
- * ([GezginTransition.toNavEntryMetadata]). Decompile finding (a review fix — the initial "the two
- * APIs are type-incompatible" claim was WRONG): these three wrappers are PUBLIC on BOTH targets
- * (desktop alpha05 + android 1.1.4), in the SAME commonMain file, with the SAME `Map<String,
- * Any>`-returning signature; only the INTERNAL representation of the map key differs (alpha05: a
- * String constant, 1.1.4: `NavMetadataKey.toString()`) — the key is always produced by the wrapper,
- * so it is consistent within a platform. NavDisplay's AnimatedContent resolution reads
- * `Scene.metadata` (default = the LAST entry's metadata) BEFORE the NavDisplay-level parameters —
- * on a pop B→A, the `popTransitionSpec` metadata of the scene being left (B's) is used, so "the
- * innermost (screen) wins" holds in the POP direction too (the first approach, resolving the
- * NavDisplay parameter from the top-route, was reverted for exactly this reason: on pop it read A's
- * spec). `NavDisplay`'s transition parameters are now NEVER passed — if the cascade is entirely
- * null (no route, no graph, no app default → empty metadata) Nav3 falls to its own
- * `defaultTransitionSpec` family. The predictive fallback (`predictive` if not written = backward,
- * §9) is applied during metadata production.
+ * ([GezginTransition.toNavEntryMetadata]). On pop, NavDisplay reads the metadata of the scene being
+ * left, so the innermost route remains authoritative in both directions. If the cascade resolves to
+ * `null`, no metadata is written and NavDisplay uses its own defaults. A missing predictive
+ * transition falls back to the backward transition.
  *
  * **The `entries` lambda is captured only on the FIRST composition** (`remember {
  * GezginEntryScope().apply (entries) }` — `entries` is NEVER called again on later recompositions):
@@ -112,7 +98,7 @@ public fun GezginDisplay(
         scope.toNavEntry(key, navigator, transitions, isRoot = isRootEntry(keys, key.id))
       }
     }
-  // `remember` ile sabitlenmiş kimlik (Important 3, final-review): decorator @Composable'ları
+  // `remember` ile sabitlenmiş kimlik (Important 3, validation): decorator @Composable'ları
   // ([rememberSaveableStateHolderNavEntryDecorator]/[rememberPlatformEntryDecorators]) her ikisi de
   // KENDİ içeriklerini `remember`'lasa da, bu ikisini birleştiren `listOf(...) + ...` HER
   // recomposition'da taze bir `List` instance'ı üretiyordu — `rememberDecoratedNavEntries`'e her
@@ -140,7 +126,7 @@ public fun GezginDisplay(
   // async back ALTTAKİ ekranı poplamaz. `remember(navigator)` → stabil kimlik (GezginNavDisplay'in
   // `remember(pinnedBack)` scene-strateji anahtarı stabil kalsın).
   val pinnedBack: (Long) -> Unit = remember(navigator) { { id -> navigator.back(id) } }
-  // Faz 4 scene wiring: `NavDisplay` çağrısı platform-özel sarmalayıcıda ([GezginNavDisplay]) —
+  // scene wiring: `NavDisplay` çağrısı platform-özel sarmalayıcıda ([GezginNavDisplay]) —
   // sceneStrategy imzası android/desktop uzlaşmaz (expect/actual, bkz. PlatformDisplay.kt KDoc).
   // GezginDialogSceneStrategy/GezginBottomSheetSceneStrategy modal-metadata'lı entry'yi overlay
   // render
@@ -154,12 +140,12 @@ public fun GezginDisplay(
 }
 
 /**
- * The `NavDisplay` `onBack` lambda — the `@NoBack` runtime guard (M5′, §4.2; Task 3.3 deliverable
- * 3). When back is invoked it reads the LIVE top entry (`navigator.keys.last()`, not a captured
- * stale value): if the top's record has `noBack==true` AND the top is NOT the root, back is
- * SWALLOWED (no pop) — otherwise `navigator.back()`. **Root exemption:** while the stack has a
- * single entry (`keys.size <= 1`), `noBack` is ignored → `back()` (at the bottom this hits
- * `onRootBack`; the user is not trapped in the app).
+ * The `NavDisplay` `onBack` lambda — the `@NoBack` runtime guard (M5′, §4.2). When back is invoked
+ * it reads the LIVE top entry (`navigator.keys.last()`, not a captured stale value): if the top's
+ * record has `noBack==true` AND the top is NOT the root, back is SWALLOWED (no pop) — otherwise
+ * `navigator.back()`. **Root exemption:** while the stack has a single entry (`keys.size <= 1`),
+ * `noBack` is ignored → `back()` (at the bottom this hits `onRootBack`; the user is not trapped in
+ * the app).
  *
  * On desktop this is the BEHAVIORAL carrier of `@NoBack` (no system-back/predictive,
  * [GezginNoBackHandler] is a no-op on desktop). On Android a real entry-scoped
@@ -180,7 +166,7 @@ internal fun gezginOnBack(navigator: RawNavigator, scope: GezginEntryScope): () 
 }
 
 /**
- * Task 3.4 consolidation — [GezginDisplay]'s per-entry `isRoot` (`key.id == keys.first().id`) and
+ * consolidation — [GezginDisplay]'s per-entry `isRoot` (`key.id == keys.first().id`) and
  * [gezginOnBack]'s old `keys.size <= 1` predicate were asking the SAME thing (when the
  * bottom-of-stack entry is the TOP, both were equal for a single entry — `size<=1` ⟺ top.id ==
  * first.id): merged into a single helper.

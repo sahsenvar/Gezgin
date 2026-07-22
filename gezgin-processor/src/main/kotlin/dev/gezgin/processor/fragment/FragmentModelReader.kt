@@ -21,7 +21,7 @@ private const val FRAGMENT_FQ = "androidx.fragment.app.Fragment"
 
 // Modal presentation contracts (§7) — a @FragmentScreen route implementing one is FS7 (fragment
 // interop
-// is screen-only §11.2; the contract would be silently ignored).
+// is screen-only §11.2; would be silently ignored).
 private val MODAL_CONTRACT_FQS =
   setOf(
     "dev.gezgin.core.DialogContract",
@@ -30,8 +30,8 @@ private val MODAL_CONTRACT_FQS =
   )
 
 /**
- * Task 6.1 — reads every `@FragmentScreen(Route::class)`-annotated CLASS (spec §11/§11.1/§11.2
- * brownfield Fragment interop) into a validated [FragmentEntryModel] list, mirroring
+ * reads every `@FragmentScreen(Route::class)`-annotated CLASS (spec §11/§11.1/§11.2 brownfield
+ * Fragment interop) into a validated [FragmentEntryModel] list, mirroring
  * [dev.gezgin.processor.mvi.ViewModelModelReader]'s structure — both read a CLASS-target,
  * mandatory-route-arg annotation and use the collect-all-then-fail, bracketed-code error idiom
  * (`logger.error("[FS…] …")`). [read] never throws — it reports every violation in one pass and
@@ -49,7 +49,7 @@ private val MODAL_CONTRACT_FQS =
  *   (its ctor carries the outer instance); a parameterized primary ctor (the common case — a
  *   tailored gezginArgs/gezginNav message); and a class with only secondary ctors or a
  *   private/protected ctor (no accessible no-arg ctor → `NoSuchMethodException`). route/nav arrive
- *   through `gezginArgs`/`gezginNav` (Task 6.2), never the ctor. → no model emitted.
+ *   through `gezginArgs`/`gezginNav` , never the ctor. → no model emitted.
  * - **`FS2` — route type sanity + no bare `Route`.** The resolved route type must implement
  *   `dev.gezgin.core.Route` (mirrors `SC5` — same [getAllSuperTypes] walk) AND must not be the bare
  *   `Route` interface itself: `@FragmentScreen`'s route arg is mandatory and concrete — as is every
@@ -58,9 +58,9 @@ private val MODAL_CONTRACT_FQS =
  *   matches — a DEAD registration. → no model.
  * - **`FS7` — screen-only, no modal contract (§11.2).** A route implementing a modal presentation
  *   contract (`DialogContract`/`BottomSheetContract`/`FullscreenModalContract`) is rejected:
- *   fragment interop always registers `kind = SCREEN`, so the contract would be SILENTLY ignored
- *   (the user asked for a modal, got a full-screen fragment). Hard-error like `SC8`/`MV8`
- *   (silent-drop). → no model.
+ *   fragment interop always registers `kind = SCREEN`, so would be SILENTLY ignored (the user asked
+ *   for a modal, got a full-screen fragment). Hard-error like `SC8`/`MV8` (silent-drop). → no
+ *   model.
  * - **`FS3` — duplicate route registration (cross-kind aware).** A route may back only ONE
  *   registration. [FragmentModelReader] cross-checks each `@FragmentScreen`'s route against BOTH
  *   (a) the already-built [entries] (core-mode
@@ -100,11 +100,10 @@ private val MODAL_CONTRACT_FQS =
  *
  * **FS3/FS4 wiring choice (post-hoc cross-check, not shared-map seeding):** rather than seeding
  * `EntryModelReader`'s private `seenRouteFqs` (which would require changing its constructor and
- * would report the cross-kind collision under `SC4`), this reader runs AFTER the entry reader and
+ * would classify the cross-kind collision under `SC4`), this reader runs AFTER the entry reader and
  * cross-checks the already-built [entries] list — the materialized output of that shared map. This
  * keeps `EntryModelReader` UNTOUCHED (zero change to core-mode / MVI-mode behavior) and lets `FS3`
- * uniformly own every Fragment duplicate (same-kind AND cross-kind) under one code. See the
- * task-6.1 report.
+ * uniformly own every Fragment duplicate (same-kind AND cross-kind) under one code.
  *
  * **Deliberately NOT validated: `gezginArgs<R>()`/`gezginNav<N>()` type-argument matching (mN3).**
  * Unlike `@Screen`, whose generated `XScreen(route, nav)` call makes a wrong route/navigator type a
@@ -123,7 +122,7 @@ private val MODAL_CONTRACT_FQS =
  * assume it is the gezginArgs one") would false-positive on unrelated `Route` fields and
  * false-negative on inline usage — worse than no check. The actionable mitigation belongs at the
  * RUNTIME cast in gezgin-core (wrap the `as R`/`as N` to name expected-vs-actual on failure) — a
- * separate gezgin-core task, outside this processor module.
+ * gezgin-core runtime rather than this declaration-level processor.
  */
 internal class FragmentModelReader(
   private val resolver: Resolver,
@@ -175,7 +174,7 @@ internal class FragmentModelReader(
     // NoSuchMethodException;
     //   parameterized primary ctor / secondary-ctor-only / private ctor → no accessible no-arg
     // ctor.
-    // route/nav arrive through gezginArgs/gezginNav (Task 6.2), never the ctor (§11.1).
+    // route/nav arrive through gezginArgs/gezginNav, never the ctor (§11.1).
     if (Modifier.ABSTRACT in decl.modifiers) {
       error(
         "FS1",
@@ -287,10 +286,10 @@ internal class FragmentModelReader(
       return null
     }
 
-    // FS7 (Faz-6 recheck) — Fragment interop is screen-only (§11.2). A route implementing a modal
+    // FS7 — Fragment interop is screen-only (§11.2). A route implementing a modal
     // presentation contract (Dialog/BottomSheet/FullscreenModal) would be registered as a plain
     // SCREEN
-    // (FragmentEntryCodegen unconditionally `kind = SCREEN`) with the contract SILENTLY ignored —
+    // (FragmentEntryCodegen unconditionally `kind = SCREEN`) with SILENTLY ignored —
     // the
     // user asked for a modal but gets a full-screen fragment, no diagnostic. Rejected like SC8/MV8
     // (silent-drop → hard error): fragment interop cannot present modals.
@@ -305,7 +304,7 @@ internal class FragmentModelReader(
         "$fragmentSimpleName: route ${routeFq.substringAfterLast('.')} " +
           "implements ${modalContract.substringAfterLast('.')}, but @FragmentScreen entries render " +
           "only in screen-mode (§11.2); the modal contract would be silently ignored (the user asks " +
-          "for a modal but gets a plain full-screen fragment). Remove the contract from the route, " +
+          "for a modal but gets a plain full-screen fragment). Remove from the route, " +
           "or build the modal as a @Dialog/@BottomSheet/@FullscreenModal composable instead of a Fragment",
       )
       return null

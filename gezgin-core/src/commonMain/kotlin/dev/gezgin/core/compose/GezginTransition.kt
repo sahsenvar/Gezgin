@@ -8,11 +8,11 @@ import dev.gezgin.core.Route
 
 /**
  * A one-directional transition spec — the SAME signature as Nav3 `NavDisplay`'s `transitionSpec`/
- * `popTransitionSpec` parameters (§9; task-3.0-report.md "NavDisplay — real signature"): it runs on
- * an `AnimatedContentTransitionScope<Scene<T>>` receiver (extensions like `slideIntoContainer` that
- * need direction/size info therefore cannot be stored AS a receiver-less `ContentTransform` value —
- * the lambda is stored and invoked with the receiver the moment it is handed to NavDisplay). `T =
- * Route` is fixed: Gezgin works with the single `Route` type.
+ * `popTransitionSpec` parameters (§9): it runs on an `AnimatedContentTransitionScope<Scene<T>>`
+ * receiver (extensions like `slideIntoContainer` that need direction/size info therefore cannot be
+ * stored AS a receiver-less `ContentTransform` value — the lambda is stored and invoked with the
+ * receiver the moment it is handed to NavDisplay). `T = Route` is fixed: Gezgin works with the
+ * single `Route` type.
  */
 public typealias GezginTransitionSpec =
   AnimatedContentTransitionScope<Scene<Route>>.() -> ContentTransform
@@ -99,8 +99,8 @@ internal fun resolveTransition(route: Route, appTransition: GezginTransition?): 
   route.transition ?: appTransition
 
 /**
- * Lowers the resolved cascade value into Nav3 per-entry metadata (Task 3.5 fix — §9 "route (NavKey)
- * → lowers into the `NavDisplay.TransitionKey` family in the entry metadata"): the PUBLIC wrappers
+ * Lowers the resolved cascade value into Nav3 per-entry metadata ( fix — §9 "route (NavKey) →
+ * lowers into the `NavDisplay.TransitionKey` family in the entry metadata"): the PUBLIC wrappers
  * `NavDisplay.transitionSpec/popTransitionSpec/predictivePopTransitionSpec` exist on BOTH targets
  * (desktop alpha05 AND android 1.1.4 — verified via decompile, the same `Map<String,
  * Any>`-returning signature in the same commonMain file); as long as the map key is consistent

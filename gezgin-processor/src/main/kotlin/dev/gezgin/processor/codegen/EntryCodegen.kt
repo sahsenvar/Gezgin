@@ -15,7 +15,7 @@ private val LOCAL_ENTRY_ID = MemberName(COMPOSE_PKG, "LocalGezginEntryId")
 private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigator")
 
 /**
- * Task 3.4 — emits `fun GezginEntryScope.provideXEntry()` for every [EntryFunctionModel]
+ * emits `fun GezginEntryScope.provideXEntry()` for every [EntryFunctionModel]
  * [dev.gezgin.processor.entry.EntryModelReader] resolved (spec §10.1/§12/§14 core-mode):
  * ```kotlin
  * fun GezginEntryScope.provideOrderChainEntry() {

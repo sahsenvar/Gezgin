@@ -12,12 +12,12 @@ private const val TEST_PKG = "dev.gezgin.test"
 private val TEST_NAVIGATOR = ClassName(TEST_PKG, "GezginTestNavigator")
 
 /**
- * Task 2.6 — §13's typed test API: a per-source `fun GezginTestNavigator.fromX(): XNavigator`
- * extension for every route [NavigatorCodegen] actually generates a navigator for (including a bare
- * route whose navigator exposes only the implicit one-step `back()` operation). Each accessor
- * resolves the NEAREST entry of its route on the stack via `GezginTestNavigator.entryIdOf` (§2.6
- * core decision) and hands it to the same `RawNavigator.xNavigator(entryId)` factory
- * [NavigatorCodegen] already emits.
+ * §13's typed test API: a per-source `fun GezginTestNavigator.fromX(): XNavigator` extension for
+ * every route [NavigatorCodegen] actually generates a navigator for (including a bare route whose
+ * navigator exposes only the implicit one-step `back()` operation). Each accessor resolves the
+ * NEAREST entry of its route on the stack via `GezginTestNavigator.entryIdOf` (§2.6 core decision)
+ * and hands it to the same `RawNavigator.xNavigator(entryId)` factory [NavigatorCodegen] already
+ * emits.
  *
  * Emitted into a SEPARATE file (`GezginTestAccessors.kt`) and gated behind the
  * `gezgin.emitTestAccessors=true` KSP option (default `false`, mirroring the

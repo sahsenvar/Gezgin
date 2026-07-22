@@ -26,8 +26,8 @@ internal data class MviChromeProviderModel(val functionSimpleName: String, val p
  * The MVI-mode (§10.1) descriptor attached to an [EntryFunctionModel] whose content composable is
  * shaped `(state, onIntent[, extras])` (as opposed to core-mode's `(route, nav)`). Present only on
  * MVI-mode entries; a core-mode entry carries `mvi = null` and is emitted by
- * [dev.gezgin.processor.codegen.EntryCodegen] exactly as before (zero behavior change). Faz 5.2's
- * MVI codegen branches on this being non-null.
+ * [dev.gezgin.processor.codegen.EntryCodegen] exactly as before (zero behavior change). the MVI
+ * codegen branches on this being non-null.
  *
  * [vm] is the matched `@MviViewModel` (linked by shared route — see `EntryModelReader`); its
  * `S/I/E` types drove the content/effect validation (`MV5`/`MV6`) that produced this descriptor.
@@ -68,8 +68,8 @@ internal data class MviEntryModel(
 
 /**
  * One `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`-annotated composable function, resolved
- * and validated (Task 3.4, spec §10.1/§12/§14 core-mode slice) into everything `EntryCodegen` needs
- * to emit a `provideXEntry()` — no further KSP lookups happen at codegen time.
+ * and validated (spec §10.1/§12/§14 core-mode slice) into everything `EntryCodegen` needs to emit a
+ * `provideXEntry()` — no further KSP lookups happen at codegen time.
  */
 internal data class EntryFunctionModel(
   /** The composable function's own package — `provideXEntry` is emitted INTO this same package. */
@@ -103,8 +103,8 @@ internal data class EntryFunctionModel(
   val x: String,
   /**
    * MVI-mode (§10.1) descriptor when this entry's content is `(state, onIntent[, extras])`; `null`
-   * for a core-mode `(route, nav)` entry. Core-mode codegen ignores it entirely — Faz 5.2's MVI
-   * codegen keys off `mvi != null` to emit the VM-driven `provideXEntry` instead.
+   * for a core-mode `(route, nav)` entry. Core-mode codegen ignores it entirely — the MVI codegen
+   * keys off `mvi != null` to emit the VM-driven `provideXEntry` instead.
    */
   val mvi: MviEntryModel? = null,
 )

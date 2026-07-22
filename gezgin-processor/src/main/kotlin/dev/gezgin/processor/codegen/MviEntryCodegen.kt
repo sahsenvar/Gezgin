@@ -33,7 +33,7 @@ private val MODIFIER = ClassName("androidx.compose.ui", "Modifier")
 private val LOCAL_DENSITY = ClassName("androidx.compose.ui.platform", "LocalDensity")
 
 // State/effect observation — the JB `androidx.lifecycle.*` coordinates pinned in gezgin-mvi
-// (Faz-5.0);
+// ;
 // emitted as FQ strings only (gezgin-processor gains no dep on them), mirroring EntryCodegen.
 private val COLLECT_AS_STATE =
   MemberName("androidx.lifecycle.compose", "collectAsStateWithLifecycle")
@@ -63,7 +63,7 @@ private val HILT_VIEW_MODEL = MemberName("androidx.hilt.navigation.compose", "hi
 private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetController"
 
 /**
- * Faz 5.2 — emits `fun GezginEntryScope.provideXEntry(...)` for every MVI-mode [EntryFunctionModel]
+ * emits `fun GezginEntryScope.provideXEntry(...)` for every MVI-mode [EntryFunctionModel]
  * (`entry.mvi != null`, spec §10.1). The counterpart to core-mode's [EntryCodegen]: same
  * `GezginEntryScope` extension + `register<Route>(...)` shape (no wrapper type), grouped one
  * [FileSpec] per composable package — but into a SEPARATE `GezginMviEntries.kt` (see [generate]) so

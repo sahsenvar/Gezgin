@@ -56,7 +56,7 @@ internal data class BackEdgeModel(
 
 /**
  * A single navigable destination: a class/object that is a member of a graph — a direct subtype (`:
- * Graph`), whether declared inside the graph interface or in a separate file (Task 8.1).
+ * Graph`), whether declared inside the graph interface or in a separate file .
  */
 internal data class RouteModel(
   val fqName: String,
@@ -72,9 +72,9 @@ internal data class RouteModel(
   /**
    * Every `@NavGraph`/`@FlowGraph`-annotated interface this route implements DIRECTLY (declared
    * supertypes only — deliberately non-transitive so `OrderGraph : AppGraph`-style graph
-   * inheritance doesn't leak into routes), including [graphFq] itself. Task 2.3 (E5) needs this
-   * beyond the single membership relationship captured by [graphFq]: a route may additionally
-   * implement a *second*, non-membership graph interface, which is itself the violation.
+   * inheritance doesn't leak into routes), including [graphFq] itself. (E5) needs this beyond the
+   * single membership relationship captured by [graphFq]: a route may additionally implement a
+   * *second*, non-membership graph interface, which is itself the violation.
    */
   val implementedGraphFqs: List<String>,
 )
@@ -113,7 +113,7 @@ internal data class GraphModelNode(
    */
   val directParentFqs: List<String>,
   /**
-   * The single graph/flow this graph is a member of (Task 8.1): the annotated supertype it declares
+   * The single graph/flow this graph is a member of : the annotated supertype it declares
    * (`subtyping = nesting`, design-notes §3), falling back to a lexically-enclosing annotated
    * graph. `null` = no parent by either mechanism — a top-level root graph/flow (legitimate;
    * reached by an edge) OR, when [isNested], an orphan (N12). Distinct from [parentFlowFq], which

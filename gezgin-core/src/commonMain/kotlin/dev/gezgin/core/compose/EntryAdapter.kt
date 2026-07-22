@@ -24,14 +24,14 @@ import dev.gezgin.core.Route
  * İÇİNDE değil. Kayıtsız route derlenmiş bir stack'e karışmışsa hata composable invoke edilmeden,
  * entry kurulurken patlar (erken/açık başarısızlık; sessiz boş ekran yok).
  *
- * Kind (`RegisteredEntry.kind`) → scene metadata (Faz 4, §7): `DIALOG`/`FULLSCREEN_MODAL` iken
+ * Kind (`RegisteredEntry.kind`) → scene metadata (§7): `DIALOG`/`FULLSCREEN_MODAL` iken
  * `NavEntry.metadata`'ya `DialogSceneStrategy.dialog(properties)` işareti yazılır →
  * [GezginNavDisplay]'e bağlı DialogSceneStrategy o entry'yi `Dialog` overlay'inde (arka görünür)
  * render eder. `properties` route'un opsiyonel [DialogContract]/[FullscreenModalContract]'ından
  * (route-instance runtime değeri, §2.4) okunur; route implement etmemişse tip-bazlı varsayılan
  * `DialogProperties` (FULLSCREEN_MODAL'da `usePlatformDefaultWidth=false` = tam-ekran) kurulur.
- * `BOTTOM_SHEET` (Faz 4.2) [GEZGIN_BOTTOM_SHEET_KEY] işaretiyle [GezginBottomSheetSceneStrategy]'e
- * bağlanır → `ModalBottomSheet` overlay (el-yazımı OverlayScene).
+ * `BOTTOM_SHEET` [GEZGIN_BOTTOM_SHEET_KEY] işaretiyle [GezginBottomSheetSceneStrategy]'e bağlanır →
+ * `ModalBottomSheet` overlay (el-yazımı OverlayScene).
  *
  * **Guard — modal dismissal + `@NoBack` çelişkisi (§7, kuruluş-zamanı RUNTIME):** modal back
  * dismissal kapalı olmalıdır. Bottom sheet ayrıca kullanıcı drag/swipe gesture'larını da
@@ -39,21 +39,19 @@ import dev.gezgin.core.Route
  * değerlerini KSP okuyamadığı için contract-bearing route'lar entry kuruluşunda `require` ile
  * doğrulanır.
  *
- * Task 3.2 devri — **top-entry-drive** (§10.1/§12): [navigator] parametresi eklendi (additive, Task
- * 3.1'in tek-parametreli imzasının yerini alır); content [LocalGezginEntryId]/
- * [LocalGezginRawNavigator] ile sarılır — bir entry'nin içeriği YALNIZ kendi `key.id`'siyle
- * kurulmuş navigator'ı Local'den okuyabilir (Faz 3.4 `provideXEntry` bunlardan tipli navigator
- * kuracak).
+ * **Top-entry drive** (§10.1/§12): content [LocalGezginEntryId]/ [LocalGezginRawNavigator] ile
+ * sarılır — bir entry'nin içeriği YALNIZ kendi `key.id`'siyle kurulmuş navigator'ı Local'den
+ * okuyabilir ( `provideXEntry` bunlardan tipli navigator kuracak).
  *
- * Task 3.3 — **`@NoBack` entry-scoped handler** (M5′, §4.2): kayıt `noBack==true` ve entry KÖK
- * DEĞİLSE ([isRoot]==false — "root entry'de noBack yok sayılır → back = onRootBack"), content ekran
+ * **`@NoBack` entry-scoped handler** (M5′, §4.2): kayıt `noBack==true` ve entry KÖK DEĞİLSE
+ * ([isRoot]==false — "root entry'de noBack yok sayılır → back = onRootBack"), content ekran
  * içeriğinden ÖNCE [GezginNoBackHandler] ile sarılır: Gezgin'in handler'ı OUTER/önce kaydolur →
  * dispatcher LIFO'sunda ekranın kendi (daha İÇ, sonra kaydolan) `BackHandler`'ı kazanır, yoksa
  * Gezgin'inki back'i yutar. [isRoot] çağıran (`GezginDisplay`) tarafından stack'in dibi
  * (`keys.first`) bilgisinden geçirilir — call-time gerçeği, capture edilmiş stale scope değil
  * (§10.1 staleness notu).
  *
- * Task 3.5 fix — **per-entry transition metadata (§9):** entry'nin KENDİ route'unun cascade'i
+ * fix — **per-entry transition metadata (§9):** entry'nin KENDİ route'unun cascade'i
  * ([resolveTransition]: route-override > graph-mirası > app-default) çözülür ve
  * `NavEntry.metadata`'ya ([GezginTransition.toNavEntryMetadata] — Nav3'ün PUBLIC
  * `NavDisplay.transitionSpec/popTransitionSpec/ predictivePopTransitionSpec` sarmalayıcılarıyla)
@@ -86,7 +84,7 @@ internal fun GezginEntryScope.toNavEntry(
       "Do not place a modal at root with replaceTo/quitAndGoTo. route: ${key.route::class.simpleName}"
   }
   val installNoBack = registered.noBack && !isRoot
-  // Faz 4 scene wiring (§7): DIALOG/FULLSCREEN_MODAL ise [GEZGIN_DIALOG_KEY] (Gezgin-sahipli
+  // scene wiring (§7): DIALOG/FULLSCREEN_MODAL ise [GEZGIN_DIALOG_KEY] (Gezgin-sahipli
   // GezginDialogSceneStrategy) işareti, BOTTOM_SHEET ise [GEZGIN_BOTTOM_SHEET_KEY]. İkisi de
   // dismiss'i
   // sahip-entry'ye pinler (C-MJ-1). Nav3'ün built-in DialogSceneStrategy'si BIRAKILDI: dismiss'i

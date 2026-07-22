@@ -32,13 +32,12 @@ private val FLOW = ClassName(FLOW_PKG, "Flow")
 private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavigatorFor")
 
 /**
- * Task 2.5: emits a typed per-source `<X>Navigator` for every route that permits implicit back
- * navigation, or declares at least one forward edge
- * (`@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo`), back-navigation annotation
- * (`@BackTo`/`@BackToStart`/`@Quit`), result contract (`ResultRoute<T>`), or membership in a
- * `ResultFlow`'s chain (which earns a `quitWith`) — this is the "çekirdek değer önermesi": an
- * undeclared edge simply has no corresponding method, so calling it is an unresolved reference (a
- * compile error), not a runtime failure.
+ * : emits a typed per-source `<X>Navigator` for every route that permits implicit back navigation,
+ * or declares at least one forward edge (`@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo`),
+ * back-navigation annotation (`@BackTo`/`@BackToStart`/`@Quit`), result contract
+ * (`ResultRoute<T>`), or membership in a `ResultFlow`'s chain (which earns a `quitWith`) — this is
+ * the "çekirdek değer önermesi": an undeclared edge simply has no corresponding method, so calling
+ * it is an unresolved reference (a compile error), not a runtime failure.
  *
  * A bare route still gets a navigator whose single operation is `back()`. This is the uniform
  * one-step dismissal API used by screens and modal routes. `@NoBack` is the explicit opt-out; an
@@ -72,9 +71,9 @@ internal object NavigatorCodegen {
   }
 
   /**
-   * Task 2.6 hook (`TestApiCodegen`): the exact same "does this route earn a navigator at all"
-   * predicate [buildNavigatorFile] uses for its early-return, exposed so a SEPARATE codegen pass
-   * can decide whether a `fromX()` test accessor is meaningful.
+   * hook (`TestApiCodegen`): the exact same "does this route earn a navigator at all" predicate
+   * [buildNavigatorFile] uses for its early-return, exposed so a SEPARATE codegen pass can decide
+   * whether a `fromX()` test accessor is meaningful.
    */
   internal fun hasNavigator(route: RouteModel, graphsByFq: Map<String, GraphModelNode>): Boolean =
     !route.noBack ||
@@ -83,12 +82,10 @@ internal object NavigatorCodegen {
       innermostResultFlowResultTypeFq(route, graphsByFq) != null ||
       route.resultTypeFq != null
 
-  /** `X` derivation (Task 2.6 hook) — see [buildNavigatorFile]'s use for the class-name rule. */
+  /** `X` derivation ( hook) — see [buildNavigatorFile]'s use for the class-name rule. */
   internal fun navigatorX(simpleName: String): String = stripSuffix(simpleName)
 
-  /**
-   * `RawNavigator.xNavigator(entryId)` factory name (Task 2.6 hook) — mirrors [buildNavigatorFile].
-   */
+  /** `RawNavigator.xNavigator(entryId)` factory name ( hook) — mirrors [buildNavigatorFile]. */
   internal fun rawFactoryFunName(x: String): String = lowerFirst(x) + "Navigator"
 
   private fun buildNavigatorFile(
@@ -152,7 +149,7 @@ internal object NavigatorCodegen {
             .addParameter("entryId", LONG)
             .build()
         )
-        // Public escape hatch (Task 2.5 requirement) — deliberately not `private`.
+        // Public escape hatch ( requirement) — deliberately not `private`.
         .addProperty(PropertySpec.builder("raw", RAW_NAVIGATOR).initializer("raw").build())
         .addProperty(
           PropertySpec.builder("entryId", LONG)
@@ -277,7 +274,7 @@ internal object NavigatorCodegen {
     val shape =
       if (targetGraph != null) {
         // Flow-mode: target is a @FlowGraph/ResultFlow<T> — push its @StartDestination, which
-        // G1 (Task 2.3) guarantees is constructible with no REQUIRED args.
+        // G1 guarantees is constructible with no REQUIRED args.
         val resultTypeFq =
           requireNotNull(targetGraph.resultTypeFq) {
             "@GoForResult target ${edge.targetFq} has no resultTypeFq — should have failed E2 validation"
@@ -441,10 +438,10 @@ internal object NavigatorCodegen {
   }
 
   /**
-   * G1 (Task 2.3) guarantees a `@FlowGraph` start has no REQUIRED (non-default, non-nullable) ctor
-   * params. The navigator method itself exposes none of these params (the caller never chose the
-   * flow's start), so named args are used to skip every defaulted param and pass `null` explicitly
-   * for the (guaranteed-nullable) rest.
+   * G1 guarantees a `@FlowGraph` start has no REQUIRED (non-default, non-nullable) ctor params. The
+   * navigator method itself exposes none of these params (the caller never chose the flow's start),
+   * so named args are used to skip every defaulted param and pass `null` explicitly for the
+   * (guaranteed-nullable) rest.
    */
   private fun constructStartCall(start: RouteModel): CodeBlock {
     val cn = ClassName.bestGuess(start.fqName)

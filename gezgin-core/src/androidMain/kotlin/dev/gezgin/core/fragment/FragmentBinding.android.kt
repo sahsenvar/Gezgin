@@ -10,9 +10,8 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 /**
- * Task 6.2 — the LIVE-reference (`gezginNav`) and typed-arg (`gezginArgs`) access half of
- * `@FragmentScreen` interop (spec §11.1, Task 6.0 §1 "I1" split). The two delegates read from TWO
- * DIFFERENT sources:
+ * the LIVE-reference (`gezginNav`) and typed-arg (`gezginArgs`) access half of `@FragmentScreen`
+ * interop. The two delegates read from two different sources:
  * - **`gezginArgs<Route>()` → the Fragment's own `arguments` Bundle** ([decodeGezginRoute]).
  *   `arguments` is set up when the Fragment is instantiated (`setArguments`, BEFORE `onUpdate`) →
  *   it is decoded INDEPENDENTLY of `onUpdate` timing (spec 291 "route from the Bundle → PD-safe";
@@ -102,21 +101,21 @@ public interface GezginBindingObserver {
 /**
  * Fragment-instance → live navigator side-table. **Weak key (`WeakHashMap`):** a Fragment recreated
  * on config-change/PD is a DIFFERENT instance (a new weak key) → the old entry is GC'd, so the
- * registry naturally tracks the live instance (Task 6.0 §1c). Set up/read on the main thread; no
+ * registry naturally tracks the live instance ( §1c). Set up/read on the main thread; no
  * synchronization.
  */
 private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
 
 /**
- * Called from GENERATED code in `AndroidFragment.onUpdate` with the LIVE Fragment instance (Task
- * 6.0 §1b) + the route + its navigator (`onUpdate = { fragment -> bindGezgin(fragment, route, nav)
- * }`). Registers the live navigator under the instance.
+ * Called from generated `AndroidFragment.onUpdate` code with the live Fragment instance, route, and
+ * navigator (`onUpdate = { fragment -> bindGezgin(fragment, route, nav) }`). Registers the live
+ * navigator under the instance.
  *
- * **UNCONDITIONAL put — NO bind-once/skip-if-present guard (Task 6.0 review, critical):**
- * `onUpdate` runs once per live instance (§1c); for a NEW instance after config-change/PD it must
- * run again to re-bind — an "already bound, skip" defense is the one thing that BREAKS this path.
- * Overwriting with equal data is harmless (idempotent-by-construction). `public`: the generated
- * code lives in the CONSUMER module (cross-module `internal` is not visible).
+ * **Unconditional put — no bind-once/skip-if-present guard:** `onUpdate` runs once per live
+ * instance (§1c); for a NEW instance after config-change/PD it must run again to re-bind — an
+ * "already bound, skip" defense is the one thing that BREAKS this path. Overwriting with equal data
+ * is harmless (idempotent-by-construction). `public`: the generated code lives in the CONSUMER
+ * module (cross-module `internal` is not visible).
  *
  * [route] is not currently used by the registry (args are carried in the Bundle, §B4) but is KEPT
  * in the signature so it matches the generated `onUpdate { bindGezgin(fragment, route, nav) }`
@@ -141,7 +140,7 @@ public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
  * @GoTo/@ReplaceTo/@BackTo/... edge, no result-contract → `NavigatorCodegen` does NOT generate an
  *   `XNavigator` for it, §11.1). In this case the GENERATED `provideXEntry` never binds `nav` and
  *   calls `onUpdate = { fragment -> bindGezgin(fragment, route) }` (it NEVER calls a non-existent
- *   factory — the phase-later counterpart of SC2/MV7; the condition is computed in
+ *   factory — the stage-later counterpart of SC2/MV7; the condition is computed in
  *   `GezginProcessor` via `NavigatorCodegen.hasNavigator`). It BINDS the Fragment without a
  *   navigator: `gezginArgs` (from the Bundle) still works; but if `gezginNav` is read,
  *   [gezginBoundNav] throws an `[FS5]` error — not "not bound" but "NO navigator". A legitimate

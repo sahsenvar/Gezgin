@@ -70,9 +70,9 @@ public interface DialogContract {
  * `true`). **Overrides must use the `get() =` form** ([DialogContract]'s m5 warning — an
  * initializer `val` leaks into the serialized schema).
  *
- * NOTE: end-to-end on-device verification of §7 fullscreen-modal render (scrim, predictive) is in
- * Task 4.3. 4.1 sets up contract reading + metadata wiring + the guard; DialogSceneStrategy renders
- * it as a fullscreen dialog (usePlatformDefaultWidth=false; 4.0 report §6).
+ * The adapter reads this contract into entry metadata and the dialog scene renders it with
+ * `usePlatformDefaultWidth = false`. The same modal-at-root guard used by the other overlay kinds
+ * applies before rendering.
  *
  * @author @sahsenvar
  */

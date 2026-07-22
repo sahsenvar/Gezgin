@@ -40,8 +40,7 @@ private val JSON_FUN = MemberName(JSON_PKG, "Json")
 private val SERIALIZER = MemberName("kotlinx.serialization", "serializer")
 
 /**
- * Task 2.4: emits the two generated-code artifacts derived from a validated [GraphModel] via
- * KotlinPoet.
+ * : emits the two generated-code artifacts derived from a validated [GraphModel] via KotlinPoet.
  * - [generateTopology] → `GezginGenerated.kt`: the loadable, executable `GezginTopology` — safe to
  *   generate unconditionally, since every result type is serializable (either `@Serializable` or a
  *   kotlinx builtin), resolved uniformly through the reified [SERIALIZER] lookup.

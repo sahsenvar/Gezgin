@@ -3,16 +3,16 @@ package dev.gezgin.processor.mvi
 import dev.gezgin.processor.entry.EntryFunctionModel
 
 /**
- * Deterministic, line-based textual dump of the Faz-5.1 MVI model — the [ViewModelModel] list plus
- * the MVI-mode subset of the resolved [EntryFunctionModel]s — written by the processor under the
+ * Deterministic, line-based textual dump of the MVI model — the [ViewModelModel] list plus the
+ * MVI-mode subset of the resolved [EntryFunctionModel]s — written by the processor under the
  * `gezgin.dumpMvi=true` KSP option for test assertions (mirrors
  * [dev.gezgin.processor.model.dumpText]).
  *
  * Each `vm` line dumps S/I/E BOTH as flattened FQ and as KotlinPoet `TypeName` (`fq|typeName`) so a
  * golden test can prove the [com.squareup.kotlinpoet.TypeName] capture does NOT flatten generics
  * (the Sample-Showcase regression class): a `List<String>` state arg dumps as
- * `kotlin.collections.List|kotlin.collections.List<kotlin.String>`. It also dumps the Faz-5.2
- * DI-detection (`di=`, `factory=`) and primary-ctor params (`ctor=name:typeFq[(di)],…`) so the
+ * `kotlin.collections.List|kotlin.collections.List<kotlin.String>`. It also dumps the DI-detection
+ * (`di=`, `factory=`) and primary-ctor params (`ctor=name:typeFq[(di)],…`) so the
  * DI-default-resolver decision has model-level golden coverage alongside the codegen golden.
  *
  * Lines are sorted by owning FQ so the output never depends on KSP traversal order.

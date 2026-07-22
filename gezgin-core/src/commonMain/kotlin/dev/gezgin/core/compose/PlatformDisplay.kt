@@ -7,7 +7,7 @@ import androidx.navigation3.runtime.NavEntryDecorator
 import dev.gezgin.core.Route
 
 /**
- * Platform'a bağlı `NavEntryDecorator` alt-kümesi (Task 3.3, deliverable 1). [GezginDisplay] ORTAK
+ * Platform'a bağlı `NavEntryDecorator` alt-kümesi. [GezginDisplay] ORTAK
  * `rememberSaveableStateHolderNavEntryDecorator()`'i her iki platformda commonMain'de ekler
  * (saveable state = zorunlu, non-optional; `LocalViewModelStoreOwner` gerektirmez, desktop dahil
  * çalışır) ve BUNA bu expect'in döndürdüğü platform-özel decorator'ları EKLER.
@@ -19,8 +19,7 @@ import dev.gezgin.core.Route
  * VM store alır, R2'nin VM tarafı). CMP desktop host'unda `LocalViewModelStoreOwner` garanti DEĞİL
  * (özellikle `runComposeUiTest`/`setContent`) → çağrı `IllegalStateException` atardı. Bu yüzden
  * desktop actual'ı **boş liste** (no-op) döndürür; saveable-state-holder decorator'ı desktop'ta
- * R2'nin saved-state tarafını zaten karşılar (bkz. GezginDisplayR2Test). Kararın gerekçesi
- * task-3.3-report.md.
+ * R2'nin saved-state tarafını zaten karşılar (bkz. GezginDisplayR2Test).
  */
 @Composable internal expect fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Route>>
 
@@ -31,17 +30,16 @@ import dev.gezgin.core.Route
  *
  * **Platform ayrımı:** Android actual'ı gerçek `androidx.activity.compose.BackHandler(enabled =
  * true)` kurar (sistem-back'i entry düzeyinde tüketir; predictive preview o entry'de başlamaz).
- * Desktop'ta sistem-back/predictive-back kavramı YOK (task 3.2'de doğrulandı) → desktop actual'ı
- * no-op; desktop'ta geri-yutma davranışı [gezginOnBack] guard'ıyla (her iki platformda test
- * edilebilir) sağlanır.
+ * Desktop'ta sistem-back/predictive-back kavramı YOK → desktop actual'ı no-op; desktop'ta
+ * geri-yutma davranışı [gezginOnBack] guard'ıyla (her iki platformda test edilebilir) sağlanır.
  */
 @Composable internal expect fun GezginNoBackHandler()
 
 /**
- * Nav3 `NavDisplay` çağrısının platform-özel sarmalayıcısı (Faz 4 scene wiring, §7) — **NAMED RISK
- * çözümü (Task 3.0/4.0 bulgusu):** `NavDisplay`'in scene-strategy parametresi iki hedefte GERÇEKTEN
- * uzlaşmaz imzalı → `expect/actual` ZORUNLU (bir commonMain sarmalayıcı YETMEZ). Kaynak-jar kanıtı
- * (`navigation3-ui` sources, `entries`-alan non-deprecated overload):
+ * Nav3 `NavDisplay` çağrısının platform-özel sarmalayıcısı (scene wiring, §7). `NavDisplay`'in
+ * scene-strategy parametresi iki hedefte GERÇEKTEN uzlaşmaz imzalı → `expect/actual` ZORUNLU (bir
+ * commonMain sarmalayıcı YETMEZ). Kaynak-jar kanıtı (`navigation3-ui` sources, `entries`-alan
+ * non-deprecated overload):
  * - **desktop (JB `1.0.0-alpha05`)**: `sceneStrategy: SceneStrategy<T> = SinglePaneSceneStrategy()`
  *   — TEKİL; `sceneDecoratorStrategies`/`sharedTransitionScope` YOK.
  * - **android (Google `1.1.4`)**: `sceneStrategies: List<SceneStrategy<T>> =

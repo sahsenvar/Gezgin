@@ -9,7 +9,7 @@ import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
 
 /**
- * Compile-time strictness gate for Task 2.3: walks the [GraphModel] produced by
+ * Compile-time strictness gate: walks the [GraphModel] produced by
  * [dev.gezgin.processor.model.ModelReader] and reports every violation of the Global Constraints
  * rule list (`E1`-`E6`, `G1`, `N9`, `N10`, `N11`, `N12`, `N13`, `R1`, `NB1`, `SD1`, `FX1`, `FX2`)
  * as a KSP error. Each message is prefixed with its bracketed rule code (`"[E1] ..."`) so tests and
@@ -254,7 +254,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   // endregion
 
-  // region N11/N12 — graph/flow parent structure (Task 8.1 flat-file membership)
+  // region N11/N12 — graph/flow parent structure ( flat-file membership)
 
   /**
    * A graph/flow may declare AT MOST ONE annotated graph/flow supertype — the membership walk
@@ -385,7 +385,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
    * here so a same-source `@GoTo(name = "backToStart")` override OR a `@BackTo` to a route whose
    * stripped name is `Start` (both → `backToStart()`) collides with it via the `size >= 2` path.
    *
-   * Task 3.4 devir: `name=` overrides are also checked against the navigator class's FIXED members
+   * devir: `name=` overrides are also checked against the navigator class's FIXED members
    * ([RESERVED_MEMBER_NAMES] — `back`/`quit`/`quitWith`/`backWithResult`/`raw`/`entryId`) — these
    * exist independent of any single edge, so an override that happens to spell one out (e.g.
    * `@GoTo(X::class, name = "back")` or `name = "entryId"`) would silently shadow/duplicate a real
@@ -451,8 +451,8 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   /**
    * A `@FlowGraph`'s start must be constructible with no arguments: an object, or every ctor param
-   * either defaulted or nullable (spec-literal — codegen, Task 2.5, passes `null` to nullable
-   * params without defaults when constructing the start).
+   * either defaulted or nullable (spec-literal — codegen, , passes `null` to nullable params
+   * without defaults when constructing the start).
    */
   private fun checkG1(graph: GraphModelNode) {
     if (!graph.isFlow) return
@@ -570,7 +570,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   // endregion
 
-  // region Deliberately-omitted modal guards (Task 4.3 adjudication — see spec §7)
+  // region Deliberately-omitted modal guards ( adjudication — see spec §7)
   //
   // `@QuitAndGoTo(modal)` is spec'd as a KSP *warning*, but it is NOT reliably implementable in
   // Gezgin's canonical cross-module architecture (§3.3) and is therefore DELIBERATELY NOT checked

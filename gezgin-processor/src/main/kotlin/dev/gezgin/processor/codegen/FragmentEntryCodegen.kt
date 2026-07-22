@@ -24,18 +24,17 @@ private val REMEMBER = MemberName("androidx.compose.runtime", "remember")
 // MviEntryCodegen's
 // Hilt/Koin/lifecycle references; §11.2 keeps the processor fragment-free). Pinned 1.8.9 => the
 // 4-param
-// overload (arguments, onUpdate) — NO `maxLifecycle`/`fragmentState` (Task 6.0 §1a, re-verified in
-// review).
+// overload (arguments, onUpdate) — NO `maxLifecycle`/`fragmentState`.
 private val ANDROID_FRAGMENT = MemberName("androidx.fragment.compose", "AndroidFragment")
 
-// gezgin-core runtime glue (Task 6.2 Part B) — a REAL compile dependency (gezgin-core already IS
+// gezgin-core runtime glue ( Part B) — a REAL compile dependency (gezgin-core already IS
 // one for
 // every Gezgin module, unlike androidx.fragment). Emitted as ordinary imported member calls.
 private val TO_BUNDLE = MemberName(FRAGMENT_RT_PKG, "toBundle")
 private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
 
 /**
- * Task 6.2 — emits `fun GezginEntryScope.provideXEntry()` for every [FragmentEntryModel]
+ * emits `fun GezginEntryScope.provideXEntry()` for every [FragmentEntryModel]
  * [dev.gezgin.processor.fragment.FragmentModelReader] resolved (spec §11.1 brownfield Fragment
  * interop). The THIRD entry codegen, alongside core-mode [EntryCodegen] and MVI-mode
  * [MviEntryCodegen]: same `GezginEntryScope` extension + `register<Route>(...)` shape, grouped one
@@ -61,7 +60,7 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * **Screen-only (§11.2).** Fragment interop has no dialog/bottom-sheet/fullscreen variant — every
  * emitted `register` is `kind = EntryKind.SCREEN`, unconditionally.
  *
- * **Navigator wiring — CONDITIONAL (SC2/MV7 parity, one phase later).** A Fragment wires `nav`
+ * **Navigator wiring — CONDITIONAL (SC2/MV7 parity, one stage later).** A Fragment wires `nav`
  * (`val nav = raw.xNavigator(entryId)` + the 3-arg `bindGezgin(fragment, route, nav)`) **only when
  * the route actually earns a navigator** — the `navWired` flag [generate]'s `hasNavigator`
  * predicate supplies per entry (computed at the [dev.gezgin.processor.GezginProcessor] dispatch

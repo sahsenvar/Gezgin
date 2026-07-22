@@ -42,11 +42,14 @@ data class PublicApiDeclaration(
   val exclusionReason: KDocExclusionReason?,
   val hasKDoc: Boolean,
   val hasAuthor: Boolean,
+  val kDocText: String?,
 )
 
 enum class KDocFindingKind {
   MISSING_KDOC,
   MISSING_AUTHOR,
+  NON_ENGLISH_KDOC,
+  PROCESS_ARTIFACT_KDOC,
 }
 
 data class PublicApiKDocFinding(val declaration: PublicApiDeclaration, val kind: KDocFindingKind)
@@ -110,6 +113,12 @@ class KotlinPublicApiScanner : AutoCloseable {
               add(PublicApiKDocFinding(declaration, KDocFindingKind.MISSING_KDOC))
             if (declaration.topLevelType && !declaration.hasAuthor) {
               add(PublicApiKDocFinding(declaration, KDocFindingKind.MISSING_AUTHOR))
+            }
+            if (declaration.kDocText?.containsTurkishKDoc() == true) {
+              add(PublicApiKDocFinding(declaration, KDocFindingKind.NON_ENGLISH_KDOC))
+            }
+            if (declaration.kDocText?.containsProcessArtifact() == true) {
+              add(PublicApiKDocFinding(declaration, KDocFindingKind.PROCESS_ARTIFACT_KDOC))
             }
           }
         }
@@ -219,8 +228,14 @@ class KotlinPublicApiScanner : AutoCloseable {
       exclusionReason = exclusion,
       hasKDoc = kdoc != null,
       hasAuthor = kdoc.hasExactAuthor(),
+      kDocText = kdoc?.text,
     )
   }
+
+  private fun String.containsTurkishKDoc(): Boolean =
+    TURKISH_CHARACTER.containsMatchIn(this) || TURKISH_WORD.containsMatchIn(this)
+
+  private fun String.containsProcessArtifact(): Boolean = PROCESS_ARTIFACT.containsMatchIn(this)
 
   private fun KtDeclaration.effectiveKDoc(): KDoc? {
     docComment?.let {
@@ -258,4 +273,27 @@ class KotlinPublicApiScanner : AutoCloseable {
       is KtTypeAlias -> "typealias"
       else -> "declaration"
     }
+
+  private companion object {
+    val TURKISH_CHARACTER =
+      Regex("[\u00e7\u011f\u0131\u0130\u00f6\u015f\u00fc\u00c7\u011e\u00d6\u015e\u00dc]")
+    val TURKISH_WORD =
+      Regex(
+        "\\b(?:bir|bu|ve|veya|ile|icin|degil|varsa|yoksa|olur|olmaz|eder|etmez|alir|" +
+          "verir|okur|yazar|kendi|sadece|sonra|gore|yeni|eski|kullanici|kullanilan|" +
+          "kullanir|doner|dondurur|sonuc|sirasinda|yalniz|oldugu|olarak|davranis|" +
+          "davranisi|ekler|cikarir|siler|saglar|gerekir|gecerli|gecersiz|durum|deger|" +
+          "degeri|ornegin|ayni|tutulur|edilir|edilmez|olmadan|uzerinden|tarafindan|" +
+          "tanimli|zorunlu|varsayilan|hata|cagri|katman|ekran|akis|anahtar|geri|ileri|" +
+          "hedef|kaynak|islem|islemi|uygulama|modul|sinif|fonksiyon|ozellik|parametre|" +
+          "kural|kapsam|sekilde)\\b|" +
+          "\\b(?:gezgin|route|entry|navigator|flow|stack|screen|graph)'(?:in|un|nin|nun)\\b",
+        RegexOption.IGNORE_CASE,
+      )
+    val PROCESS_ARTIFACT =
+      Regex(
+        "\\b(?:task|phase|faz|deliverable|review|report|spike|brief|checkpoint|todo|fixme)\\b",
+        RegexOption.IGNORE_CASE,
+      )
+  }
 }

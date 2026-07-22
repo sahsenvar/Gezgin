@@ -116,6 +116,9 @@ abstract class CheckPublicApiKDocWorkAction : WorkAction<CheckPublicApiKDocWorkP
             when (finding.kind) {
               KDocFindingKind.MISSING_KDOC -> "missing KDoc"
               KDocFindingKind.MISSING_AUTHOR -> "missing exact @author @sahsenvar"
+              KDocFindingKind.NON_ENGLISH_KDOC -> "public KDoc must be English"
+              KDocFindingKind.PROCESS_ARTIFACT_KDOC ->
+                "public KDoc contains an implementation-process artifact"
             }
           "${declaration.path}:${declaration.line}:${declaration.column}: $reason: " +
             "${declaration.kind} ${declaration.name}"

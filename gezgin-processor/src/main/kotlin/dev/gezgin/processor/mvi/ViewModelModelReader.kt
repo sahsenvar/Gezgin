@@ -17,7 +17,7 @@ internal const val VIEW_MODEL_FQ = "dev.gezgin.mvi.annotation.MviViewModel"
 internal const val EFFECT_HANDLER_FQ = "dev.gezgin.mvi.annotation.EffectHandler"
 internal const val GEZGIN_MVI_FQ = "dev.gezgin.mvi.GezginMvi"
 
-// DI-detection FQNs (§10.1, Faz-5.0 spike) — read as strings, no compile dep on Hilt/Koin.
+// DI-detection FQNs (§10.1) — read as strings, no compile dependency on Hilt/Koin.
 private const val HILT_VIEW_MODEL_FQ = "dagger.hilt.android.lifecycle.HiltViewModel"
 private const val KOIN_VIEW_MODEL_FQ = "org.koin.core.annotation.KoinViewModel"
 private const val ASSISTED_FQ = "dagger.assisted.Assisted"
@@ -25,8 +25,8 @@ private const val INJECTED_PARAM_FQ = "org.koin.core.annotation.InjectedParam"
 private const val UNIT_FQ = "kotlin.Unit"
 
 /**
- * Faz 5.1 — reads every `@MviViewModel(Route::class)`-annotated CLASS (spec §10/§10.1 MVI add-on)
- * into a validated [ViewModelModel] list, mirroring [dev.gezgin.processor.entry.EntryModelReader]'s
+ * reads every `@MviViewModel(Route::class)`-annotated CLASS (spec §10/§10.1 MVI add-on) into a
+ * validated [ViewModelModel] list, mirroring [dev.gezgin.processor.entry.EntryModelReader]'s
  * constructor shape and its collect-all-then-fail, bracketed-code error idiom (`MV1`/`MV4`) via
  * [logger]. [read] never throws — it reports every violation in one pass and returns whether the
  * read was clean alongside whatever models DID resolve.
@@ -92,7 +92,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     }
     val (state, intent, effect) = mviArgs
 
-    // MN3 (Faz-5 recheck) — `walkForGezginMvi` substitutes only DIRECT type-param forwarding
+    // MN3 — `walkForGezginMvi` substitutes only DIRECT type-param forwarding
     // (`Base<S,I,E> : GezginMvi<S,I,E>`). A NESTED forward (`Base<S,I,E> :
     // GezginMvi<Wrapped<S>,I,E>`)
     // leaves an unbound `S` inside `Wrapped<S>`. Resolving/`toTypeName()`-ing that dangling
@@ -104,7 +104,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     // S/I/E
     // TypeNames here, in one guarded spot, catching ONLY that specific exception → clean `MV1`
     // reject
-    // (task's "reject" option for MN3). Any OTHER exception (a genuinely broken/transient KSP
+    // with the MN3 diagnostic. Any OTHER exception (a genuinely broken/transient KSP
     // state,
     // unrelated to nested forwarding) is NOT swallowed — it propagates so it can't be mis-diagnosed
     // as
@@ -137,7 +137,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     }
     seenRouteFqs[routeFq] = vmSimpleName
 
-    // DI-detection (§10.1, Faz-5.2): read the VM's own DI annotation + its ctor params so
+    // DI detection (§10.1): read the VM's own DI annotation + its ctor params so
     // MviEntryCodegen can emit the right default `viewModel` resolver (Hilt/Koin/androidx) and
     // decide whether a default is even possible (only when every DI-relevant param is route/nav).
     val (di, assistedFactoryFq) = detectDi(decl)

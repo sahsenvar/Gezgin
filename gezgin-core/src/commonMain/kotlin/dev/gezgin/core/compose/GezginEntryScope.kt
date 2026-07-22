@@ -6,12 +6,12 @@ import kotlin.reflect.KClass
 
 /**
  * The presentation kind (§3.2) — the runtime counterpart of the `@Screen`/`@Dialog`/`@BottomSheet`/
- * `@FullscreenModal` annotations. Faz 4 scene wiring: `DIALOG`/`FULLSCREEN_MODAL` get
- * DialogSceneStrategy metadata in [toNavEntry] (properties from the optional
- * DialogContract/FullscreenModalContract) → `Dialog` overlay render (see EntryAdapter.kt);
- * FULLSCREEN_MODAL uses `usePlatformDefaultWidth=false` (fullscreen). `BOTTOM_SHEET` (Faz 4.2) gets
- * GezginBottomSheetSceneStrategy metadata → `ModalBottomSheet` overlay (a hand-written
- * OverlayScene, the sheet controller injected via a Local); `SCREEN` is single-pane.
+ * `@FullscreenModal` annotations. `DIALOG` and `FULLSCREEN_MODAL` entries get DialogSceneStrategy
+ * metadata in [toNavEntry] (properties from the optional DialogContract/FullscreenModalContract) →
+ * `Dialog` overlay render (see EntryAdapter.kt); FULLSCREEN_MODAL uses
+ * `usePlatformDefaultWidth=false` (fullscreen). `BOTTOM_SHEET` gets GezginBottomSheetSceneStrategy
+ * metadata → `ModalBottomSheet` overlay (a hand-written OverlayScene, the sheet controller injected
+ * via a Local); `SCREEN` is single-pane.
  *
  * @author @sahsenvar
  */
@@ -30,16 +30,15 @@ public enum class EntryKind {
 }
 
 /**
- * A Gezgin registry record — [kind] is metadata for Faz 4 modal scene wiring, [content] is the
- * composable content narrowed to `Route` (the safe cast in register<R>).
+ * A Gezgin registry record — [kind] selects modal scene wiring, and [content] is the composable
+ * content narrowed to `Route` (the safe cast in register<R>).
  *
  * [noBack] (M5′, §4.2): the runtime counterpart of the `@NoBack` annotation. When `true` this entry
  * is TERMINAL — a Gezgin-owned back-swallower is set up: (1) the [gezginOnBack] guard turns
  * `back()` into a no-op while this entry is the top (no pop; except the root exemption), (2)
  * [toNavEntry] wraps the content with an entry-scoped back handler ([GezginNoBackHandler]) OUTER
  * (BEFORE the screen content — in the dispatcher LIFO the screen's own `BackHandler` registers more
- * INNER/later and wins). Faz 3.4 codegen reads `@NoBack` and fills this flag; in this phase it is
- * plumbed + tested as a register-time parameter.
+ * INNER/later and wins). Generated entries read `@NoBack` and set this register-time flag.
  */
 @PublishedApi
 internal class RegisteredEntry(

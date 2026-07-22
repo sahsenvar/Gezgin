@@ -11,8 +11,7 @@ import kotlinx.serialization.PolymorphicSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * Task 6.2 — the route↔Bundle serialization half of `@FragmentScreen` interop (spec §11.1, Task 6.0
- * §3).
+ * The route↔Bundle serialization half of `@FragmentScreen` interop.
  *
  * A [Route] is encoded into the `arguments` Bundle **polymorphically**
  * (`PolymorphicSerializer(Route::class)`) — this is the SAME MECHANISM that `GezginKey.route` and
@@ -93,7 +92,7 @@ public fun Route.toBundle(nav: RawNavigator): Bundle {
  * `gezginArgs`'s scope-less decode path (`gezginBoundRoute` → the captured [gezginFragmentJson])
  * calls THIS directly; there is NO separate `Bundle.toRoute(nav)` symmetric-inverse wrapper — it
  * would only forward `nav.json` to this function, was called from nowhere, and (being `Bundle`,
- * Android) could not be tested without Robolectric (Task 6.0's "no Robolectric" decision). The
+ * Android) could not be tested without Robolectric (the "no Robolectric" decision). The
  * serialization mechanism is still proven in `FragmentRouteSerializationTest` (commonTest, without
  * `Bundle`) via a polymorphic round-trip.
  */

@@ -5,8 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
- * A lossless one-shot effect primitive (§10.1, Faz 5 recheck / MJ2) — the RECOMMENDED backing for
- * [GezginMvi.effects].
+ * A lossless one-shot effect primitive (§10.1) — the recommended backing for [GezginMvi.effects].
  *
  * **Why NOT `MutableSharedFlow` + `tryEmit`:** `MutableSharedFlow(replay = 0, extraBufferCapacity =
  * n)` is a HOT stream and, because `replay = 0`, it keeps a value emitted **while there is no

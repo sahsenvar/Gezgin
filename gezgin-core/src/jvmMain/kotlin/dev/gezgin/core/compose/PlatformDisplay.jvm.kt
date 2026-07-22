@@ -15,7 +15,7 @@ import dev.gezgin.core.Route
 
 /**
  * Desktop (JVM): per-entry `ViewModelStore` decorator'ı — Android [rememberPlatformEntryDecorators]
- * actual'ının DAVRANIŞSAL AYNADAŞI (Faz 5 recheck / C1·MJ3). Üretilen MVI entry'leri VM'i
+ * actual'ının DAVRANIŞSAL AYNADAŞI (C1·MJ3). Üretilen MVI entry'leri VM'i
  * `viewModel()`/`koinViewModel()`/`hiltViewModel()` ile çözer; üçü de `LocalViewModelStoreOwner`
  * ister → decorator olmadan desktop'ta ya ilk render'da `IllegalStateException` (owner yok) ya da
  * VM pencere-scoped olurdu (aynı route'un iki stack instance'ı TEK VM paylaşır, pop'ta `onCleared`
