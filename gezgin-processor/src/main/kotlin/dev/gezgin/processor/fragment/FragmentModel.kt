@@ -1,10 +1,9 @@
 package dev.gezgin.processor.fragment
 
 /**
- * One `@FragmentScreen(Route::class)`-annotated legacy `androidx.fragment.app.Fragment` (spec ),
- * resolved and validated by [FragmentModelReader] into everything the `FragmentEntryCodegen` needs
- * to emit a `provideXEntry()` that hosts the Fragment via
- * `androidx.fragment.compose.AndroidFragment`.
+ * One `@FragmentScreen(Route::class)`-annotated legacy `androidx.fragment.app.Fragment`, resolved
+ * and validated by [FragmentModelReader] into everything the `FragmentEntryCodegen` needs to emit a
+ * `provideXEntry()` that hosts the Fragment via `androidx.fragment.compose.AndroidFragment`.
  *
  * This is a THIRD kind of entry model — distinct from core-mode's `EntryFunctionModel` (a `(route,
  * nav)`/`(state, onIntent)` composable FUNCTION) and the `ViewModelModel` (a `@MviViewModel` VM

@@ -26,9 +26,8 @@ private val RAW_NAVIGATOR = ClassName(CORE_PKG, "RawNavigator")
 private val NAV_RESULT = ClassName(CORE_PKG, "NavResult")
 private val FLOW = ClassName(FLOW_PKG, "Flow")
 
-// İç codegen kimlik damgası — üretilen her navigator'a KÖKEN route'uyla basılır. Cross-module PROBE
-// (NavigatorProbe) sınıfı ADIYLA bulup KİMLİKLE (routeFq) doğrular; ada-çakışan decoy'u eler. Bkz.
-// FS5/M1.
+// Generated navigators carry their source route identity. NavigatorProbe verifies that identity
+// when resolving a class across module boundaries, rejecting same-name decoys.
 private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavigatorFor")
 
 /**
@@ -82,10 +81,10 @@ internal object NavigatorCodegen {
       innermostResultFlowResultTypeFq(route, graphsByFq) != null ||
       route.resultTypeFq != null
 
-  /** `X` derivation ( hook) — see [buildNavigatorFile]'s use for the class-name rule. */
+  /** Derives `X`; see [buildNavigatorFile]'s use for the class-name rule. */
   internal fun navigatorX(simpleName: String): String = stripSuffix(simpleName)
 
-  /** `RawNavigator.xNavigator(entryId)` factory name ( hook) — mirrors [buildNavigatorFile]. */
+  /** Derives the `RawNavigator.xNavigator(entryId)` factory name used by [buildNavigatorFile]. */
   internal fun rawFactoryFunName(x: String): String = lowerFirst(x) + "Navigator"
 
   private fun buildNavigatorFile(
@@ -136,7 +135,7 @@ internal object NavigatorCodegen {
 
     val classSpec =
       TypeSpec.classBuilder(navigatorClassName)
-        // Kimlik damgası (FS5/M1): probe bu sınıfı ADIYLA bulup route KİMLİĞİYLE doğrular.
+        // Stamp the source route so classpath probes can verify more than the generated name.
         .addAnnotation(
           AnnotationSpec.builder(GEZGIN_NAVIGATOR_FOR)
             .addMember("route = %T::class", ClassName.bestGuess(route.fqName))
@@ -149,7 +148,7 @@ internal object NavigatorCodegen {
             .addParameter("entryId", LONG)
             .build()
         )
-        // Public escape hatch ( requirement) — deliberately not `private`.
+        // Public escape hatch required by generated callers; deliberately not `private`.
         .addProperty(PropertySpec.builder("raw", RAW_NAVIGATOR).initializer("raw").build())
         .addProperty(
           PropertySpec.builder("entryId", LONG)
@@ -170,7 +169,7 @@ internal object NavigatorCodegen {
         .build()
 
     return FileSpec.builder(packageName, navigatorClassName)
-      // K4 — every generated navigator applies @GezginNavigatorFor and may call the entry-id
+      // Every generated navigator applies @GezginNavigatorFor and may call the entry-id
       // RawNavigator overloads, all gated behind @GezginInternalApi.
       .optInGezginInternalApi()
       .addType(classSpec)
@@ -390,7 +389,8 @@ internal object NavigatorCodegen {
 
   private fun backWithResultFun(resultTypeFq: String): FunSpec {
     val resultType = ClassName.bestGuess(resultTypeFq)
-    // M3 — ctor'daki `entryId` bu tipli navigator'ın SAHİBİ entry'yi pinler. `raw.backWithResult(
+    // The constructor's `entryId` pins the entry that owns this typed navigator.
+    // `raw.backWithResult(
     // entryId, result)`: sonuç yalnız o entry HÂLÂ top iken teslim edilir (call-time-top DEĞİL) →
     // sheet/dialog jest'le kapandıktan sonra geç gelen async sonuç, altındaki yabancı-tipli slota
     // teslim edilmez ve o entry yanlışlıkla pop edilmez (kirli-teslim/çifte-back yarışı önlenir).

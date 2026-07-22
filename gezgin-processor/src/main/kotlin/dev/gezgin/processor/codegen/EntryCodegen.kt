@@ -16,7 +16,7 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
 
 /**
  * Emits `fun GezginEntryScope.provideXEntry()` for every [EntryFunctionModel]
- * [dev.gezgin.processor.entry.EntryModelReader] resolved (the current contract core-mode):
+ * [dev.gezgin.processor.entry.EntryModelReader] resolved in core mode:
  * ```kotlin
  * fun GezginEntryScope.provideOrderChainEntry() {
  *     register<OrderChainRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
@@ -33,21 +33,21 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
  * qualified against each entry's own [EntryFunctionModel.routePackageName] — the package the route
  * DECLARATION (and thus [NavigatorCodegen]'s factory) lives in. Reading it per-entry off the route
  * (rather than off one shared nav-topology package) is what makes the factory import resolve in a
- * cross-module feature, whose own model has no graphs and hence no target package of its own ().
+ * cross-module feature, whose own model has no graphs and hence no target package of its own.
  */
 internal object EntryCodegen {
 
   fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
     // Sort before grouping so file order (packageName) and per-file function order (routeFq,
     // unique)
-    // are reproducible — KSP symbol order is not contractually stable (MN-1); graph-derived codegen
+    // are reproducible because KSP symbol order is not contractually stable; graph-derived codegen
     // already sorts (ModelReader.routes.sortedBy fqName), this brings entry codegen to parity.
     entries
       .sortedWith(compareBy({ it.packageName }, { it.routeFq }))
       .groupBy { it.packageName }
       .map { (packageName, group) ->
         FileSpec.builder(packageName, "GezginEntries")
-          // K4 — a nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator/
+          // A nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator and
           // LocalGezginEntryId; opt in the file only when at least one entry wires nav.
           .apply { if (group.any { it.hasNavParam }) optInGezginInternalApi() }
           .apply { group.forEach { addFunction(provideEntryFun(it)) } }

@@ -20,7 +20,7 @@ public class GezginTestNavigator(
   onRootBack: () -> Unit = {},
 ) {
   /**
-   * The underlying `RawNavigator`. Gated behind `GezginInternalApi` (): the generated `fromX()`
+   * The underlying `RawNavigator`. Gated behind `GezginInternalApi`: the generated `fromX()`
    * accessors resolve through it, but tests should prefer the typed delegates below and the
    * generated `fromX()` extensions. Opt in explicitly to reach the raw surface.
    */

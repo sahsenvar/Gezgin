@@ -2,7 +2,7 @@ package dev.gezgin.processor.mvi
 
 /**
  * The route/nav/other classification of a [ViewModelModel]'s primary-constructor params, aggregated
- * into the three booleans both MVI-mode consumers key off ().
+ * into the three booleans both MVI-mode consumers key off.
  * - [vmHasNav] — a DI-relevant ctor param is a `nav` (drives the resolver's `nav:` param +
  *   `viewModel(nav, route)`).
  * - [vmHasRoute] — a DI-relevant ctor param is the route (drives `args` in the supplied-args list).
@@ -16,17 +16,17 @@ internal data class VmDiClassification(
 )
 
 /**
- * Shared DI-param classification for a `@MviViewModel`'s primary constructor (). Both
+ * Shared DI-param classification for a `@MviViewModel`'s primary constructor. Both
  * [dev.gezgin.processor.entry.EntryModelReader] (for the `MV7` nav-presence guardrail) and
  * [dev.gezgin.processor.codegen.MviEntryCodegen] (for the default `viewModel` resolver) must agree
  * on whether a VM's ctor needs `nav`/`route` and whether a default resolver is even emittable — so
  * that logic lives here once rather than being duplicated in each.
  *
- * **Classification precedence :** type decides; name is only a fallback. A param is NAV when its
+ * **Classification precedence:** type decides; name is only a fallback. A param is NAV when its
  * type IS the route's `${x}Navigator` ([VmCtorParam.typeFq] == [navigatorTypeFq]). The `nav` NAME
  * classifies NAV *only* when the type failed to resolve ([VmCtorParam.isError]) — the one
  * legitimate case being a same-module `nav: XNavigator` whose navigator class isn't generated yet
- * in this KSP round. A RESOLVED non-navigator param named `nav` (e.g. a Koin `@InjectedParam nav:
+ * in this KSP round. A RESOLVED non-navigator param named `nav` (e.g. A Koin `@InjectedParam nav:
  * AnalyticsTracker`) is classified by its type (OTHER) — NOT hijacked by the name, which previously
  * produced a default resolver that compiled but crashed in Koin's by-TYPE param lookup at first
  * render (and a spurious `MV7`). The route type always resolves (user-defined), so ROUTE is matched
@@ -82,7 +82,7 @@ internal object VmDiClassifier {
     // blocking:
     // the default ctor call (androidx, named args) simply omits it → the VM's own default applies.
     // Only
-    // a NON-defaulted OTHER (`@Assisted userId: String`) blocks the default (Problem 1). This keeps
+    // a NON-defaulted OTHER (`@Assisted userId: String`) blocks the default. This keeps
     // `class Vm(nav: XNavigator, retries: Int = 3)` on the default resolver path (`Vm(nav = nav)`).
     val blockingOtherCount = roles.count { it.second == Role.OTHER && !it.first.hasDefault }
     return VmDiClassification(
@@ -90,7 +90,7 @@ internal object VmDiClassifier {
       vmHasRoute = routeCount > 0,
       // A default is emittable only when every NON-defaulted relevant param is route/nav (no
       // blocking
-      // OTHER — Problem 1) AND neither role is duplicated: two route- (or two nav-) typed params
+      // OTHER) AND neither role is duplicated: two route- (or two nav-) typed params
       // can't
       // be positionally disambiguated, so a default would silently emit `VM(args, args)`. In that
       // case

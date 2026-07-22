@@ -22,19 +22,19 @@ internal data class MviExtraParam(val name: String, val typeFq: String, val type
 internal data class MviChromeProviderModel(val functionSimpleName: String, val packageName: String)
 
 /**
- * The MVI-mode () descriptor attached to an [EntryFunctionModel] whose content composable is shaped
+ * The MVI-mode descriptor attached to an [EntryFunctionModel] whose content composable is shaped
  * `(state, onIntent[, extras])` (as opposed to core-mode's `(route, nav)`). Present only on
  * MVI-mode entries; a core-mode entry carries `mvi = null` and is emitted by
- * [dev.gezgin.processor.codegen.EntryCodegen] exactly as before (zero behavior change). the MVI
+ * [dev.gezgin.processor.codegen.EntryCodegen] exactly as before (zero behavior change). The MVI
  * codegen branches on this being non-null.
  *
  * [vm] is the matched `@MviViewModel` (linked by shared route — see `EntryModelReader`); its
  * `S/I/E` types drove the content/effect validation (`MV5`/`MV6`) that produced this descriptor.
  *
- * **Problem 2 extras split (5.2 needs the distinction):** [roleExtraParams] are
- * Gezgin-role-provided (currently only a `dev.gezgin.core.compose.GezginSheetController`,
- * Local-injected via `LocalGezginSheetController`); [resolverExtraParams] are truly-unknown content
- * params that 5.2 turns into `@Composable () -> T` resolver params on `provideXEntry`.
+ * **Extra-parameter split:** [roleExtraParams] are Gezgin-role-provided (currently only a
+ * `dev.gezgin.core.compose.GezginSheetController`, Local-injected via
+ * `LocalGezginSheetController`); [resolverExtraParams] are truly-unknown content params that 5.2
+ * turns into `@Composable -> T` resolver params on `provideXEntry`.
  */
 internal data class MviEntryModel(
   val vm: ViewModelModel,
@@ -67,8 +67,8 @@ internal data class MviEntryModel(
 
 /**
  * One `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal`-annotated composable function, resolved
- * and validated (the current contract core-mode slice) into everything `EntryCodegen` needs to emit
- * a `provideXEntry()` — no further KSP lookups happen at codegen time.
+ * and validated in core mode into everything `EntryCodegen` needs to emit a `provideXEntry()` — no
+ * further KSP lookups happen at codegen time.
  */
 internal data class EntryFunctionModel(
   /** The composable function's own package — `provideXEntry` is emitted INTO this same package. */
@@ -101,7 +101,7 @@ internal data class EntryFunctionModel(
    */
   val x: String,
   /**
-   * MVI-mode () descriptor when this entry's content is `(state, onIntent[, extras])`; `null` for a
+   * MVI-mode descriptor when this entry's content is `(state, onIntent[, extras])`; `null` for a
    * core-mode `(route, nav)` entry. Core-mode codegen ignores it entirely — the MVI codegen keys
    * off `mvi != null` to emit the VM-driven `provideXEntry` instead.
    */

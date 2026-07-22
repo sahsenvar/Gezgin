@@ -108,13 +108,12 @@ internal data class GraphModelNode(
   /**
    * Every `@NavGraph`/`@FlowGraph`-annotated interface this graph implements DIRECTLY (declared
    * supertypes only, non-transitive). The graph-level parallel of [RouteModel.implementedGraphFqs]:
-   * a well-formed graph has AT MOST one (its parent, `OrderGraph : AppGraph` the current contract);
-   * two or more is the ambiguous-parent violation (`N11`) — the membership walk needs a single
-   * parent.
+   * a well-formed graph has AT MOST one (its parent, such as `OrderGraph : AppGraph`); two or more
+   * is the ambiguous-parent violation (`N11`) — the membership walk needs a single parent.
    */
   val directParentFqs: List<String>,
   /**
-   * The single graph/flow this graph is a member of : the annotated supertype it declares
+   * The single graph/flow this graph is a member of: the annotated supertype it declares
    * (`subtyping = nesting`, the ownership model), falling back to a lexically-enclosing annotated
    * graph. `null` = no parent by either mechanism — a top-level root graph/flow (legitimate;
    * reached by an edge) OR, when [isNested], an orphan (`N12`). Distinct from [parentFlowFq], which

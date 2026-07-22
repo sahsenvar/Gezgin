@@ -22,7 +22,7 @@ private val SERIALIZERS_MODULE = ClassName(SERIALIZATION_MODULES_PKG, "Serialize
 private val POLYMORPHIC = MemberName(SERIALIZATION_MODULES_PKG, "polymorphic")
 private val SUBCLASS = MemberName(SERIALIZATION_MODULES_PKG, "subclass")
 
-// M1 — stable, process-wide `gezginJson` (`Json(gezginSerializersModule)`) references. Deliberately
+// The stable, process-wide `gezginJson` (`Json(gezginSerializersModule)`) deliberately has
 // NO
 // generated `@Composable`: the graph module is plain-JVM (no Compose compiler plugin), so a
 // `@Composable`
@@ -100,7 +100,7 @@ internal object TopologyCodegen {
       PropertySpec.builder("gezginTopology", GEZGIN_TOPOLOGY).initializer(topologyInit).build()
 
     return FileSpec.builder(packageName, GENERATED_TOPOLOGY_FILE)
-      // K4 — the topology initializer calls the @GezginInternalApi-gated GezginTopology/FlowType/
+      // The topology initializer calls @GezginInternalApi-gated GezginTopology, FlowType, and
       // EdgeSpec constructors, so the whole generated file opts in.
       .optInGezginInternalApi()
       .addProperty(property)
@@ -115,9 +115,9 @@ internal object TopologyCodegen {
    * gate) since it references `gezginSerializersModule`. Call sites use the core
    * `rememberNavigator(start, gezginTopology, gezginJson, onRootBack)`.
    *
-   * NO `@Composable` is generated here: the graph module () is plain-JVM in the canonical layout
-   * (no Compose compiler plugin), so a `@Composable` FUNCTION compiled here would lack Compose
-   * lowering and crash Compose consumers at runtime with `NoSuchMethodError` (see the body
+   * NO `@Composable` is generated here: the graph module is plain-JVM in the canonical layout (no
+   * Compose compiler plugin), so a `@Composable` FUNCTION compiled here would lack Compose lowering
+   * and crash Compose consumers at runtime with `NoSuchMethodError` (see the body
    * comment + [generateRememberNavigator]).
    */
   fun generateRememberNavigator(packageName: String): FileSpec {
@@ -129,7 +129,7 @@ internal object TopologyCodegen {
     //
     // NO generated `@Composable rememberGezginNavigator` convenience: this file is emitted into the
     // graph
-    // module (), which in the canonical layout is a plain `kotlin.jvm` module WITHOUT the
+    // module, which in the canonical layout is a plain `kotlin.jvm` module WITHOUT the
     // Compose
     // compiler plugin. A `@Composable` FUNCTION compiled there gets a NON-lowered bytecode
     // signature (no
@@ -186,7 +186,7 @@ internal object TopologyCodegen {
       val chain = CodeBlock.builder().add("listOf(")
       route.flowChainFq.forEachIndexed { index, flowFq ->
         if (index > 0) chain.add(", ")
-        // OWNERSHIP semantics (the current contract): `FlowType.isResultFlow` marks the flow that
+        // Ownership semantics: `FlowType.isResultFlow` marks the flow that
         // OWNS a
         // result contract — DIRECT `ResultFlow<T>` declaration only, NOT the transitive
         // [GraphModelNode.isResultFlow] (a nested result-less sub-flow inherits the marker

@@ -31,7 +31,7 @@ private const val RESULT_FLOW_FQ = "dev.gezgin.core.ResultFlow"
  * Reads every `@NavGraph`/`@FlowGraph`-annotated interface reachable from [resolver], plus the
  * routes (classes/objects) that belong to them, into a semantic [GraphModel].
  *
- * MEMBERSHIP : a route/sub-graph belongs to the annotated graph/flow it DIRECTLY implements (`:
+ * MEMBERSHIP: a route/sub-graph belongs to the annotated graph/flow it DIRECTLY implements (`:
  * ParentGraph`) — "subtyping = nesting" (the ownership model), so a member declared in a SEPARATE
  * file is attributed correctly. Member enumeration uses [KSClassDeclaration.getSealedSubclasses]
  * (proven cross-file), unioned with lexical children so a member written `: Route` (declaring no

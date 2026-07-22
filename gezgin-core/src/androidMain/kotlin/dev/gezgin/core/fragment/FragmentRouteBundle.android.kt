@@ -29,14 +29,14 @@ private const val GEZGIN_FRAGMENT_ROUTE_KEY = "dev.gezgin.fragment.route"
 
 /**
  * The app's polymorphic [Json] (the SAME instance that feeds backstack PD), captured for
- * `gezginArgs`'s decode. **Why a process-wide holder ( decision):** `gezginArgs<Route>()` is called
- * inside the USER's bare `Fragment` subclass, with NO `RawNavigator`/composition/DI in scope — so
- * it cannot read `nav.json` directly the way `route.toBundle(nav)` (GENERATED code, `nav` in scope)
- * does. Because [toBundle] is evaluated (as the `arguments =` value) STRICTLY BEFORE
- * `AndroidFragment` instantiates the Fragment, the holder is populated before Fragment args are
- * read on every composition (fresh-process included). One `gezginSerializersModule` per app () →
- * one effective Json; equivalent for route polymorphism even with multiple NavDisplays.
- * `@Volatile`: a thread-visibility safeguard (in practice always the main thread).
+ * `gezginArgs`'s decode. **Why a process-wide holder:** `gezginArgs<Route>()` is called inside the
+ * USER's bare `Fragment` subclass, with NO `RawNavigator`/composition/DI in scope — so it cannot
+ * read `nav.json` directly the way `route.toBundle(nav)` (GENERATED code, `nav` in scope) does.
+ * Because [toBundle] is evaluated (as the `arguments =` value) STRICTLY BEFORE `AndroidFragment`
+ * instantiates the Fragment, the holder is populated before Fragment args are read on every
+ * composition (fresh-process included). One `gezginSerializersModule` per app → one effective
+ * `Json`, which is sufficient for route polymorphism even with multiple NavDisplays. `@Volatile`: a
+ * thread-visibility safeguard (in practice always the main thread).
  */
 @Volatile internal var gezginFragmentJson: Json? = null
 

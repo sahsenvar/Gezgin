@@ -59,7 +59,7 @@ private class BoundGezgin(val nav: Any?)
  *
  * **Why this is needed:** `gezginNav` is bound inside `AndroidFragment.onUpdate`, which runs AFTER
  * the internal `commitNow()` (fragment-compose 1.8.9 fact). So `gezginNav` is NOT yet bound in
- * `onCreateView`/ `onViewCreated` — a fragment cannot start a `nav.xResults` collector there, and
+ * `onCreateView`/`onViewCreated` — a fragment cannot start a `nav.xResults` collector there, and
  * there was no callback that says "binding is complete". Without this hook a `@GoForResult`
  * launcher fragment compiles but is practically broken (the delivered result is never observed
  * until some later interaction re-reads it).
@@ -122,7 +122,7 @@ private val boundRegistry = WeakHashMap<Fragment, BoundGezgin>()
 @Suppress("UNUSED_PARAMETER")
 public fun bindGezgin(fragment: Fragment, route: Route, nav: Any) {
   boundRegistry[fragment] = BoundGezgin(nav)
-  // Invoke after registration so onGezginBound can read gezginNav. commitNow has completed, which
+  // Invoke after registration so onGezginBound can read gezginNav. CommitNow has completed, which
   // means viewLifecycleOwner is ready and a result-launching Fragment can safely collect xResults.
   (fragment as? GezginBindingObserver)?.onGezginBound()
 }

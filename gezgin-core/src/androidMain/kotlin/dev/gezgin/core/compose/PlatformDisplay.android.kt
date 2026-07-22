@@ -54,7 +54,7 @@ internal actual fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Ro
  */
 @Composable
 internal actual fun GezginNoBackHandler() {
-  BackHandler(enabled = true) { /* @NoBack: back'i tüket — pop yok, preview başlamaz (M5′) */ }
+  BackHandler(enabled = true) { /* Consume back without popping or starting predictive preview. */ }
 }
 
 /**

@@ -1,14 +1,7 @@
 package dev.gezgin.buildlogic.kdoc
 
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
-import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
-import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
-import org.jetbrains.kotlin.com.intellij.psi.PsiComment
-import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
-import org.jetbrains.kotlin.config.CommonConfigurationKeys
-import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.psi.KtPsiFactory
+import org.jetbrains.kotlin.lexer.KotlinLexer
+import org.jetbrains.kotlin.lexer.KtTokens
 
 data class ProductionCommentFinding(
   val path: String,
@@ -24,27 +17,12 @@ enum class ProductionCommentFindingKind {
 }
 
 class KotlinProductionCommentScanner : AutoCloseable {
-  private val disposable = Disposer.newDisposable("gezgin-production-comment-scanner")
-  private val environment =
-    KotlinCoreEnvironment.createForProduction(
-      disposable,
-      CompilerConfiguration().apply {
-        put(CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
-      },
-      EnvironmentConfigFiles.JVM_CONFIG_FILES,
-    )
-  private val psiFactory = KtPsiFactory(environment.project, markGenerated = false)
-
-  override fun close() {
-    Disposer.dispose(disposable)
-  }
+  override fun close() = Unit
 
   fun scan(input: KotlinSourceInput): List<ProductionCommentFinding> {
-    val file = psiFactory.createFile(input.path.substringAfterLast('/'), input.content)
-    return PsiTreeUtil.collectElementsOfType(file, PsiComment::class.java).flatMap { comment ->
+    return input.commentBlocks().flatMap { comment ->
       val text = comment.text
-      val offset = comment.textOffset.coerceAtLeast(0).coerceAtMost(input.content.length)
-      val line = input.content.substring(0, offset).count { it == '\n' } + 1
+      val line = input.content.substring(0, comment.offset).count { it == '\n' } + 1
       buildList {
         if (text.containsInternalHistory()) {
           add(
@@ -80,6 +58,40 @@ class KotlinProductionCommentScanner : AutoCloseable {
     }
   }
 
+  private fun KotlinSourceInput.commentBlocks(): List<CommentBlock> {
+    val lexer = KotlinLexer()
+    lexer.start(content)
+    val comments = buildList {
+      while (lexer.tokenType != null) {
+        if (lexer.tokenType !in COMMENT_TOKENS) {
+          lexer.advance()
+          continue
+        }
+        add(CommentToken(lexer.tokenStart, lexer.tokenEnd, lexer.tokenType == KtTokens.EOL_COMMENT))
+        lexer.advance()
+      }
+    }
+    return comments.fold(mutableListOf()) { blocks, token ->
+      val previous = blocks.lastOrNull()
+      val gap = previous?.let { content.substring(it.end, token.start) }
+      if (
+        previous?.lineComment == true && token.lineComment && gap?.matches(LINE_COMMENT_GAP) == true
+      ) {
+        blocks[blocks.lastIndex] =
+          previous.copy(end = token.end, text = content.substring(previous.offset, token.end))
+      } else {
+        blocks +=
+          CommentBlock(
+            offset = token.start,
+            end = token.end,
+            lineComment = token.lineComment,
+            text = content.substring(token.start, token.end),
+          )
+      }
+      blocks
+    }
+  }
+
   private fun String.containsInternalHistory(): Boolean =
     WITHOUT_INLINE_CODE.replace(this, "").let { prose ->
       STALE_REFERENCE.containsMatchIn(prose) ||
@@ -92,17 +104,28 @@ class KotlinProductionCommentScanner : AutoCloseable {
   }
 
   private fun String.containsMalformedProse(): Boolean {
+    var inlineCodeIndex = 0
+    val prose = WITHOUT_INLINE_CODE.replace(this) { "KDOCSPAN${inlineCodeIndex++}" }
     if (
-      DUPLICATE_WORD.containsMatchIn(this) ||
-        EMPTY_PUNCTUATION.containsMatchIn(this) ||
-        LIST_FRAGMENT.containsMatchIn(this) ||
-        DUPLICATE_FUTURE.containsMatchIn(this)
+      DUPLICATE_WORD.containsMatchIn(prose) ||
+        EMPTY_PUNCTUATION.containsMatchIn(prose) ||
+        EMPTY_PARENTHESES.containsMatchIn(prose) ||
+        OPENING_PUNCTUATION.containsMatchIn(prose) ||
+        INNER_PARENTHESES_WHITESPACE.containsMatchIn(prose) ||
+        LIST_FRAGMENT.containsMatchIn(prose) ||
+        ORPHAN_POSSESSIVE.containsMatchIn(prose) ||
+        SEPARATED_POSSESSIVE.containsMatchIn(prose) ||
+        hasDoubledCommentPrefixWhitespace() ||
+        INTERNAL_DOUBLE_HYPHEN.containsMatchIn(prose) ||
+        MALFORMED_RULE_LABEL.containsMatchIn(prose) ||
+        DUPLICATE_FUTURE.containsMatchIn(prose) ||
+        prose.containsLowercaseSentenceFragment()
     ) {
       return true
     }
-    if (startsWith("/**") && LOWERCASE_KDOC_START.containsMatchIn(this)) return true
+    if (startsWith("/**") && LOWERCASE_KDOC_START.containsMatchIn(prose)) return true
     var depth = 0
-    WITHOUT_INLINE_CODE.replace(this, "").forEach { character ->
+    prose.forEach { character ->
       when (character) {
         '(' -> depth++
         ')' -> {
@@ -114,7 +137,26 @@ class KotlinProductionCommentScanner : AutoCloseable {
     return depth != 0
   }
 
+  private fun String.containsLowercaseSentenceFragment(): Boolean =
+    LOWERCASE_SENTENCE_FRAGMENT.findAll(this).any { match ->
+      val prefix = substring(0, match.range.first).trimEnd()
+      val previousToken = prefix.takeLastWhile { it.isLetter() || it == '.' }.lowercase()
+      previousToken !in SAFE_ABBREVIATIONS
+    }
+
+  private fun String.hasDoubledCommentPrefixWhitespace(): Boolean {
+    if (startsWith("//")) return startsWith("//  ") && getOrNull(4)?.isWhitespace() == false
+    if (!startsWith("/**")) return false
+    val firstContentLine =
+      lineSequence().drop(1).firstOrNull { line ->
+        line.trim().removePrefix("*").removeSuffix("*/").isNotBlank()
+      } ?: return false
+    return KDoc_DOUBLED_PREFIX_WHITESPACE.containsMatchIn(firstContentLine)
+  }
+
   private companion object {
+    val COMMENT_TOKENS = setOf(KtTokens.EOL_COMMENT, KtTokens.BLOCK_COMMENT, KtTokens.DOC_COMMENT)
+    val LINE_COMMENT_GAP = Regex("[ \\t]*\\r?\\n[ \\t]*")
     val STALE_REFERENCE =
       Regex(
         "(?i:§\\s*[a-z]?\\d+(?:\\.\\d+)*)|" +
@@ -131,10 +173,30 @@ class KotlinProductionCommentScanner : AutoCloseable {
       )
     val DUPLICATE_WORD = Regex("\\b([A-Za-z]{3,})\\s+\\1\\b", RegexOption.IGNORE_CASE)
     val EMPTY_PUNCTUATION = Regex("[,;:]\\s*\\)")
+    val EMPTY_PARENTHESES = Regex("(?<=\\s)\\(\\s*\\)")
+    val OPENING_PUNCTUATION = Regex("\\(\\s*[,;:]")
+    val INNER_PARENTHESES_WHITESPACE = Regex("\\([ \\t]+\\S|\\S[ \\t]+\\)")
     val LIST_FRAGMENT = Regex("(?m)^\\s*\\*\\s+(?:no|and|or|the)\\s*$", RegexOption.IGNORE_CASE)
+    val ORPHAN_POSSESSIVE = Regex("(?m)^\\s*\\*\\s+['’]s\\b", RegexOption.IGNORE_CASE)
+    val SEPARATED_POSSESSIVE = Regex("\\b[A-Za-z][A-Za-z0-9]*\\s+['’]s\\b")
+    val KDoc_DOUBLED_PREFIX_WHITESPACE = Regex("^\\s*\\*[ \\t]{2}\\S")
+    val INTERNAL_DOUBLE_HYPHEN =
+      Regex("\\b(?:spec|review|test|phase)--[A-Za-z]", RegexOption.IGNORE_CASE)
+    val MALFORMED_RULE_LABEL = Regex("\\b(?:problem|rule)\\s+\\d+\\b", RegexOption.IGNORE_CASE)
+    val LOWERCASE_SENTENCE_FRAGMENT = Regex("[.!?]\\s+([a-z])\\w*\\b")
+    val SAFE_ABBREVIATIONS = setOf("e.g", "i.e", "etc", "vs", "cf", "bkz")
     val DUPLICATE_FUTURE =
       Regex("\\b(?:later in the future|ileride gelecekte)\\b", RegexOption.IGNORE_CASE)
     val LOWERCASE_KDOC_START = Regex("(?s)^/\\*\\*\\s*\\n?\\s*\\*?\\s+[a-z][a-z-]+\\b")
     val WITHOUT_INLINE_CODE = Regex("`[^`]*`")
   }
+
+  private data class CommentToken(val start: Int, val end: Int, val lineComment: Boolean)
+
+  private data class CommentBlock(
+    val offset: Int,
+    val end: Int,
+    val lineComment: Boolean,
+    val text: String,
+  )
 }

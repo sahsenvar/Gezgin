@@ -12,11 +12,11 @@ private const val TEST_PKG = "dev.gezgin.test"
 private val TEST_NAVIGATOR = ClassName(TEST_PKG, "GezginTestNavigator")
 
 /**
- * 's typed test API: a per-source `fun GezginTestNavigator.fromX(): XNavigator` extension for every
- * route [NavigatorCodegen] actually generates a navigator for (including a bare route whose
- * navigator exposes only the implicit one-step `back()` operation). Each accessor resolves the
- * NEAREST entry of its route on the stack via `GezginTestNavigator.entryIdOf` ( core decision) and
- * hands it to the same `RawNavigator.xNavigator(entryId)` factory [NavigatorCodegen] already emits.
+ * Generates a typed test API: a per-source `fun GezginTestNavigator.fromX(): XNavigator` extension
+ * for every route [NavigatorCodegen] actually generates a navigator for (including a bare route
+ * whose navigator exposes only the implicit one-step `back()` operation). Each accessor resolves
+ * the NEAREST entry of its route on the stack via `GezginTestNavigator.entryIdOf` and hands it to
+ * the same `RawNavigator.xNavigator(entryId)` factory [NavigatorCodegen] already emits.
  *
  * Emitted into a SEPARATE file (`GezginTestAccessors.kt`) and gated behind the
  * `gezgin.emitTestAccessors=true` KSP option (default `false`, mirroring the
@@ -30,7 +30,7 @@ internal object TestApiCodegen {
     val funs = model.routes.mapNotNull { route -> fromFun(route, graphsByFq, packageName) }
     if (funs.isEmpty()) return null
     return FileSpec.builder(packageName, "GezginTestAccessors")
-      // K4 — the generated fromX() accessors read GezginTestNavigator.raw, gated by
+      // Generated fromX() accessors read GezginTestNavigator.raw, gated by
       // @GezginInternalApi.
       .optInGezginInternalApi()
       .addFunctions(funs)

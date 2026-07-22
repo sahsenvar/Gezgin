@@ -29,7 +29,7 @@ public typealias GezginPredictiveTransitionSpec =
  * The runtime transition value of a route (or of the app/graph level). All three fields are
  * optional: `null` = "this level says nothing" — the cascade falls to a higher level (graph > app >
  * NavDisplay default) ([resolveTransition]). If `predictive` is not written, the NavDisplay wiring
- * (`GezginDisplay`) fills it from `backward` ( "if predictive is not written = backward").
+ * (`GezginDisplay`) fills it from `backward` ("if predictive is not written = backward").
  *
  * @author @sahsenvar
  */
@@ -90,7 +90,7 @@ public fun navTransitions(block: GezginTransitionBuilder.() -> Unit): GezginTran
   transition(block)
 
 /**
- * Cascade resolution (: "innermost (screen) > graph > app"). [Route.transition] already CARRIES the
+ * Cascade resolution: "innermost (screen) > graph > app". [Route.transition] already CARRIES the
  * screen>graph chain (Kotlin's interface property-override chain); the only step added here: if the
  * route chain returns `null`, fall to the app-level [appTransition]. If the result is still `null`,
  * the caller ([GezginDisplay]) uses NavDisplay's own defaults.
@@ -99,8 +99,8 @@ internal fun resolveTransition(route: Route, appTransition: GezginTransition?): 
   route.transition ?: appTransition
 
 /**
- * Lowers the resolved cascade value into Nav3 per-entry metadata ( fix — "route (NavKey) → lowers
- * into the `NavDisplay.TransitionKey` family in the entry metadata"): the PUBLIC wrappers
+ * Lowers the resolved cascade value into Nav3 per-entry metadata: the route becomes an entry whose
+ * metadata uses the `NavDisplay.TransitionKey` family. The PUBLIC wrappers
  * `NavDisplay.transitionSpec/popTransitionSpec/predictivePopTransitionSpec` exist on BOTH targets
  * (desktop alpha05 AND android 1.1.4 — verified via decompile, the same `Map<String,
  * Any>`-returning signature in the same commonMain file); as long as the map key is consistent
@@ -109,7 +109,7 @@ internal fun resolveTransition(route: Route, appTransition: GezginTransition?): 
  * the NavDisplay-level parameters.
  *
  * The key of a `null` field is never added → Nav3's own fallback chain (entry metadata → NavDisplay
- * defaults) runs. Predictive: `predictive ?: backward` ( "if predictive is not written = backward")
+ * defaults) runs. Predictive: `predictive ?: backward` ("if predictive is not written = backward")
  * — if backward is also `null`, the predictive key is not added either (both fall to the NavDisplay
  * default).
  *
@@ -136,7 +136,7 @@ internal fun GezginTransition.toNavEntryMetadata(): Map<String, Any> {
   }
   val effectivePredictive: GezginPredictiveTransitionSpec? =
     predictive
-      ?: backward?.let { b -> { _: Int -> b() } } // §9: if predictive is not written = backward
+      ?: backward?.let { b -> { _: Int -> b() } } // Fall back to the ordinary back transition.
   effectivePredictive?.let { spec ->
     metadata =
       metadata +

@@ -217,7 +217,7 @@ internal fun decodeNavigatorState(
  * [decodeNavigatorState] throw — either `SerializationException` (malformed/schema-incompatible
  * json) or `IllegalArgumentException` (kotlinx.serialization is known to wrap some decode errors in
  * this type, e.g. polymorphic/enum resolution). The Compose `Saver` contract allows `restore` to
- * return `null` — on `null` Compose falls to `rememberSaveable`'s init-lambda (i.e. a fresh setup
+ * return `null` — on `null` Compose falls to `rememberSaveable`'s init-lambda (i.e. A fresh setup
  * from `start`); so both exceptions CAUGHT here are mapped to null (a silent fresh-start instead of
  * a crash-loop).
  *

@@ -52,7 +52,7 @@ import dev.gezgin.core.Route
  *
  * [onBack] — tekil sistem-back (Nav3 `NavDisplay.onBack`, ekran/predictive back → [gezginOnBack]).
  * [pinnedBack] — modal (dialog/sheet) dismiss'inin sahip-entry'ye pinli `navigator.back(entryId)`
- * kancası (); Gezgin scene-strategy'lerine geçirilir. İkisi AYRI: sistem-back canlı-top'a,
+ * kancası; Gezgin scene-strategy'lerine geçirilir. İkisi AYRI: sistem-back canlı-top'a,
  * modal-dismiss kendi entry'sine bağlanır.
  */
 @Composable

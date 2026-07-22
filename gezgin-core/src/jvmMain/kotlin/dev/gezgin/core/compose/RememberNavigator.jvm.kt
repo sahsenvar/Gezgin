@@ -10,7 +10,7 @@ import dev.gezgin.core.Route
 import kotlinx.serialization.json.Json
 
 /**
- * Desktop (JVM) actual () — davranışının AYNISI: `rememberSaveable(navigatorSaver)`. CMP desktop
+ * Desktop (JVM) actual — davranışının AYNISI: `rememberSaveable(navigatorSaver)`. CMP desktop
  * host'unda Activity/config-change YOK; composition pencere ömrü boyunca yaşar → `rememberSaveable`
  * kimliği zaten stabil tutar (VM ctor'unda yakalanan navigator referansı ölmez) ve
  * state-restoration bu Saver üzerinden çalışır. Android'in ViewModel-scope'lu holder + PD-adopt

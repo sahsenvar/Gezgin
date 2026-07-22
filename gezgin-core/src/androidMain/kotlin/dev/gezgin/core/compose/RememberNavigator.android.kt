@@ -37,7 +37,7 @@ import kotlinx.serialization.json.Json
  *    (held değer yok sayılır) → snapshot güncel. Bozuk/şema-uyumsuz snapshot
  *    [decodeSavedStateOrNull] ile `null` → sessiz fresh-start.
  *
- * **Çoklu-navigator ():** holder `viewModel<NavigatorHolder>(key = …)` ile call-site-stabil bir key
+ * **Çoklu-navigator:** holder `viewModel<NavigatorHolder>(key = …)` ile call-site-stabil bir key
  * altında edinilir. Key `rememberSaveable`'da tutulan benzersiz bir token'dır; iki bağımsız
  * `rememberNavigator` çağrısı (master/detail, adaptif iki-pane, overlay navigator) AYRI
  * rememberSaveable slot'una (composition konumundan türetilir) düşer → AYRI token → AYRI holder.
@@ -109,7 +109,7 @@ internal actual fun rememberRawNavigatorInstance(
     if (!holder.adoptChecked) {
       holder.adoptChecked = true
       if (pdSnapshot.isNotEmpty()) {
-        // MJ-B — Android adopt yolunda slot-payload decode HATA-TOLERANSI (desktop pariteyi kur):
+        // Decode the slot payload defensively before adopting Android process-death state:
         // `decodeSavedStateOrNull` yalnız YAPISAL decode yapar (payload opak string → edge silinse/
         // yeniden-adlandırılsa bile geçer). Gerçek slot-decode `adoptRestored`→`decodeSlot` içinde
         // geç

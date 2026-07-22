@@ -45,7 +45,7 @@ private val INITIALIZER = MemberName("androidx.lifecycle.viewmodel", "initialize
 private val KOIN_VIEW_MODEL = MemberName("org.koin.compose.viewmodel", "koinViewModel")
 private val PARAMETERS_OF = MemberName("org.koin.core.parameter", "parametersOf")
 
-// Hilt package pin ( open question): androidx.hilt:hilt-navigation-compose 1.4.0 deprecates
+// Hilt package pin: androidx.hilt:hilt-navigation-compose 1.4.0 deprecates
 // this
 // FQ in favor of androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel (new artifact). The OLDER
 // FQ
@@ -57,19 +57,19 @@ private val PARAMETERS_OF = MemberName("org.koin.core.parameter", "parametersOf"
 // string).
 private val HILT_VIEW_MODEL = MemberName("androidx.hilt.navigation.compose", "hiltViewModel")
 
-// M3 — the @BottomSheet role extra is now Gezgin's own `GezginSheetController` (fed from
+// The @BottomSheet role extra is Gezgin's own `GezginSheetController` (fed from
 // `LocalGezginSheetController.current`), not the experimental material3 `SheetState`, so no
 // `@ExperimentalMaterial3Api` opt-in leaks into generated code.
 private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetController"
 
 /**
  * Emits `fun GezginEntryScope.provideXEntry(...)` for every MVI-mode [EntryFunctionModel]
- * (`entry.mvi != null`, the current contract). The counterpart to core-mode's [EntryCodegen]: same
- * `GezginEntryScope` extension + `register<Route>(...)` shape (no wrapper type), grouped one
- * [FileSpec] per composable package — but into a SEPARATE `GezginMviEntries.kt` (see [generate]) so
- * a feature module mixing both entry styles gets `GezginEntries.kt` (core) + `GezginMviEntries.kt`
- * (MVI) with no same-name-same-package file collision (function-name clashes across the two are
- * already prevented by `EntryModelReader`'s shared `SC6`).
+ * (`entry.mvi != null`). The counterpart to core-mode's [EntryCodegen]: same `GezginEntryScope`
+ * extension + `register<Route>(...)` shape (no wrapper type), grouped one [FileSpec] per composable
+ * package — but into a SEPARATE `GezginMviEntries.kt` (see [generate]) so a feature module mixing
+ * both entry styles gets `GezginEntries.kt` (core) + `GezginMviEntries.kt` (MVI) with no
+ * same-name-same-package file collision (function-name clashes across the two are already prevented
+ * by `EntryModelReader`'s shared `SC6`).
  *
  * ```kotlin
  * fun GezginEntryScope.provideOrderChainEntry(
@@ -86,22 +86,22 @@ private const val SHEET_CONTROLLER_FQ = "dev.gezgin.core.compose.GezginSheetCont
  * }
  * ```
  *
- * **DI default resolver ( rule 1):** a default is emitted ONLY when every DI-relevant ctor param is
- * `route`- or `nav`-typed AND neither role is duplicated (relevant = `@Assisted`/`@InjectedParam`
- * for Hilt/Koin; ALL for androidx; NONE for plain Hilt). Any other relevant param (e.g. `@Assisted
+ * **DI default resolver:** a default is emitted ONLY when every DI-relevant ctor param is `route`-
+ * or `nav`-typed AND neither role is duplicated (relevant = `@Assisted`/`@InjectedParam` for
+ * Hilt/Koin; ALL for androidx; NONE for plain Hilt). Any other relevant param (e.g. `@Assisted
  * userId: String`), or two route- / two nav-typed relevant params (which the resolver couldn't
  * positionally disambiguate) → no default, the `viewModel` param becomes REQUIRED. Always
  * override-able either way. (The route/nav/`emitDefault` classification is shared with
  * [dev.gezgin.processor.entry.EntryModelReader] via [VmDiClassifier] so its `MV7` nav-presence
  * guardrail and this codegen never disagree.)
  *
- * **`nav` wiring ( open question, resolved: conditional):** unlike the spec's literal always-`nav`
- * example, `nav` is wired only when the VM ctor actually declares a `nav` param OR the matched
- * `@EffectHandler` takes one — mirroring core-mode's conditional `hasNavParam`. An MVI VM with no
- * edges never forces an `xNavigator()` factory call that couldn't resolve. When wired, the factory
- * is qualified against the ROUTE's package (`entry.routePackageName`), exactly like [EntryCodegen].
+ * **Conditional `nav` wiring:** `nav` is wired only when the VM ctor actually declares a `nav`
+ * param OR the matched `@EffectHandler` takes one — mirroring core-mode's conditional
+ * `hasNavParam`. An MVI VM with no edges never forces an `xNavigator()` factory call that couldn't
+ * resolve. When wired, the factory is qualified against the ROUTE's package
+ * (`entry.routePackageName`), exactly like [EntryCodegen].
  *
- * **Problem 2 ( rule 2):** each `resolverExtraParam` becomes a REQUIRED `@Composable () -> T`
+ * **Extra content parameters:** each `resolverExtraParam` becomes a REQUIRED `@Composable -> T`
  * param, threaded as `<name>()` into the content call. Role extras (`controller`) read from
  * `LocalGezginSheetController`. All content extras are passed as NAMED args so the split
  * role/resolver lists need not reconstruct the composable's original parameter order.
@@ -111,7 +111,7 @@ internal object MviEntryCodegen {
   fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
     entries
       .filter { it.mvi != null }
-      // Reproducible emit order (MN-1) — KSP symbol order isn't contractually stable; sort by
+      // Sort for reproducible emission because KSP symbol order is not contractually stable; use
       // (packageName, routeFq[unique]) to match graph-derived codegen's determinism.
       .sortedWith(compareBy({ it.packageName }, { it.routeFq }))
       .groupBy { it.packageName }
@@ -119,7 +119,7 @@ internal object MviEntryCodegen {
         FileSpec.builder(packageName, "GezginMviEntries")
           // `val state by … collectAsStateWithLifecycle()` needs the State delegate operator.
           .addImport(COMPOSE_RUNTIME_PKG, "getValue")
-          // K4 — a nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator/
+          // A nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator and
           // LocalGezginEntryId; opt in the file only when at least one entry wires nav.
           .apply { if (group.any { navWiredOf(it) }) optInGezginInternalApi() }
           .apply { group.forEach { addFunction(provideMviEntryFun(it)) } }
@@ -209,10 +209,10 @@ internal object MviEntryCodegen {
     val header = if (vmHasNav) "nav, args" else "args"
     // Values Gezgin supplies. The fixed (args, nav) order here is SAFE regardless of the user's
     // declared param order — NOT because the user must match a convention:
-    //  • Koin's parametersOf/@InjectedParam resolves injected params by TYPE, not position (route
+    // • Koin's parametersOf/@InjectedParam resolves injected params by TYPE, not position (route
     // and
     //    nav are always distinct types), so this list's order is irrelevant to the Koin lookup.
-    //  • Hilt's `factory.create(args, nav)` is a plain, compiler-type-checked call against the
+    // • Hilt's `factory.create(args, nav)` is a plain, compiler-type-checked call against the
     // user's
     //    own @AssistedFactory method — a wrong-order factory declaration fails to COMPILE, it never
     //    silently miswires. (androidx uses `ctorArgs` below, which follows the VM's declared

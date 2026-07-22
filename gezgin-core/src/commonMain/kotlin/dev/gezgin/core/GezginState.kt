@@ -41,7 +41,7 @@ internal class GezginState(
       route,
       enterFlow = enterFlow,
       singleTop = false,
-    )!! // !! güvenli: singleTop=false → push null dönemez
+    )!! // A non-single-top push always creates an entry.
   }
 
   /**
@@ -71,7 +71,7 @@ internal class GezginState(
   private fun cutIndex(clearUpTo: KClass<out Route>?, inclusive: Boolean): Int =
     if (clearUpTo == null) _stack.lastIndex
     else {
-      val i = _stack.indexOfLast { clearUpTo.isInstance(it.route) } // nearest-ancestor (§4.2/M3)
+      val i = _stack.indexOfLast { clearUpTo.isInstance(it.route) } // Nearest matching ancestor.
       require(i >= 0) { "clearUpTo target is not on the stack: ${clearUpTo.simpleName}" }
       if (inclusive) i else i + 1
     }
@@ -83,7 +83,7 @@ internal class GezginState(
       maxOf(
         if (inclusive) i else i + 1,
         1,
-      ) // §8.1 empty-stack invariant: dip entry asla poplanmaz (inclusive dipte exclusive'e düşer)
+      ) // Preserve the root entry even when an inclusive pop targets it.
     val removed = _stack.subList(keepUntil, _stack.size).toList()
     while (_stack.size > keepUntil) _stack.removeAt(_stack.lastIndex)
     return removed

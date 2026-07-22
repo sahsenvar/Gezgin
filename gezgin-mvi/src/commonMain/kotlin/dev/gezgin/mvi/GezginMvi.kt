@@ -11,8 +11,8 @@ import kotlinx.coroutines.flow.emptyFlow
  *
  * A VM marked `@MviViewModel(Route::class)` MUST implement this (BOTH ARE MANDATORY — guardrail):
  * codegen reads the VM's concrete type from `@MviViewModel`, and **S/I/E from this supertype's type
- * args** (no derivation from the content → the spec's E-source problem is solved). If
- * `@MviViewModel` is present but `GezginMvi` is not → compile error (5.1).
+ * args**, so the effect type never has to be derived from content. If `@MviViewModel` is present
+ * but `GezginMvi` is not → compile error (5.1).
  *
  * The variance (`out S, in I, out E`) = polish (S/E are produced/come out, I is consumed); it eases
  * type inference and no longer carries weight — since S/I/E are read directly from the supertype

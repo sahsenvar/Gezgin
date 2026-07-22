@@ -15,7 +15,7 @@ private val ENTRY_KIND = ClassName(COMPOSE_PKG, "EntryKind")
 private val LOCAL_ENTRY_ID = MemberName(COMPOSE_PKG, "LocalGezginEntryId")
 private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigator")
 
-// mN1 — route→Bundle encode is keyed on `route` via `remember` so a recomposition of the hosting
+// Route-to-Bundle encoding is keyed on `route` via `remember` so recomposition of the hosting
 // entry doesn't re-serialize an unchanged route every frame (only re-runs when `route` changes).
 private val REMEMBER = MemberName("androidx.compose.runtime", "remember")
 
@@ -27,7 +27,7 @@ private val REMEMBER = MemberName("androidx.compose.runtime", "remember")
 // overload (arguments, onUpdate) — NO `maxLifecycle`/`fragmentState`.
 private val ANDROID_FRAGMENT = MemberName("androidx.fragment.compose", "AndroidFragment")
 
-// gezgin-core runtime glue ( Part B) — a REAL compile dependency (gezgin-core already IS
+// gezgin-core runtime glue — a REAL compile dependency (gezgin-core already IS
 // one for
 // every Gezgin module, unlike androidx.fragment). Emitted as ordinary imported member calls.
 private val TO_BUNDLE = MemberName(FRAGMENT_RT_PKG, "toBundle")
@@ -35,14 +35,14 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
 
 /**
  * Emits `fun GezginEntryScope.provideXEntry()` for every [FragmentEntryModel]
- * [dev.gezgin.processor.fragment.FragmentModelReader] resolved (the current contract brownfield
- * Fragment interop). The THIRD entry codegen, alongside core-mode [EntryCodegen] and MVI-mode
- * [MviEntryCodegen]: same `GezginEntryScope` extension + `register<Route>(...)` shape, grouped one
- * [FileSpec] per Fragment package — but into a SEPARATE `GezginFragmentEntries.kt` (mirrors
- * `MviEntryCodegen`'s own separate-file rationale) so a module mixing entry styles gets
- * `GezginEntries.kt` / `GezginMviEntries.kt` / `GezginFragmentEntries.kt` with NO
- * same-name-same-package collision by construction (function-name clashes across the kinds are
- * prevented by `SC6` for core/MVI and by `FS4` for Fragment).
+ * [dev.gezgin.processor.fragment.FragmentModelReader] resolved for brownfield Fragment interop. The
+ * THIRD entry codegen, alongside core-mode [EntryCodegen] and MVI-mode [MviEntryCodegen]: same
+ * `GezginEntryScope` extension + `register<Route>(...)` shape, grouped one [FileSpec] per Fragment
+ * package — but into a SEPARATE `GezginFragmentEntries.kt` (mirrors `MviEntryCodegen`'s own
+ * separate-file rationale) so a module mixing entry styles gets `GezginEntries.kt` /
+ * `GezginMviEntries.kt` / `GezginFragmentEntries.kt` with NO same-name-same-package collision by
+ * construction (function-name clashes across the kinds are prevented by `SC6` for core/MVI and by
+ * `FS4` for Fragment).
  *
  * ```kotlin
  * fun GezginEntryScope.provideOrderChainEntry() {
@@ -57,8 +57,8 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * }
  * ```
  *
- * **Screen-only ().** Fragment interop has no dialog/bottom-sheet/fullscreen variant — every
- * emitted `register` is `kind = EntryKind.SCREEN`, unconditionally.
+ * **Screen-only.** Fragment interop has no dialog/bottom-sheet/fullscreen variant — every emitted
+ * `register` is `kind = EntryKind.SCREEN`, unconditionally.
  *
  * **Navigator wiring — CONDITIONAL (SC2/MV7 parity, one stage later).** A Fragment wires `nav`
  * (`val nav = raw.xNavigator(entryId)` + the 3-arg `bindGezgin(fragment, route, nav)`) **only when
@@ -91,14 +91,14 @@ internal object FragmentEntryCodegen {
     entries: List<FragmentEntryModel>,
     hasNavigator: (FragmentEntryModel) -> Boolean,
   ): List<FileSpec> =
-    // Reproducible emit order (MN-1) — sort by (packageName, routeFq[unique]) before grouping so
+    // Sort by (packageName, routeFq[unique]) before grouping for reproducible emission, so
     // file and per-file function order don't ride on non-contractual KSP symbol order.
     entries
       .sortedWith(compareBy({ it.packageName }, { it.routeFq }))
       .groupBy { it.packageName }
       .map { (packageName, group) ->
         FileSpec.builder(packageName, "GezginFragmentEntries")
-          // K4 — every fragment register body reads LocalGezginRawNavigator and calls
+          // Every fragment register body reads LocalGezginRawNavigator and calls
           // route.toBundle,
           // all gated behind @GezginInternalApi.
           .optInGezginInternalApi()

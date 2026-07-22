@@ -51,10 +51,10 @@ internal constructor(
     onRootBack: () -> Unit = {},
   ) : this(start, topology, onRootBack, Json, restored = null)
 
-  // `var` (): identity-stabil facade — config-change'te [adoptRestored] AYNI instance'ın
+  // `var`: identity-stabil facade — config-change'te [adoptRestored] AYNI instance'ın
   // `state`'ini
   // re-point eder (yeni RawNavigator KURMAZ). VM ctor'unda yakalanan navigator referansı böylece
-  // rotasyondan sonra da display'in gözlemlediği aynı akışları sürer ( "stable
+  // rotasyondan sonra da display'in gözlemlediği aynı akışları sürer ("stable
   // RawNavigator").
   private var state =
     if (restored != null) GezginState(restored.keys, restored.nextId, topology)
@@ -62,7 +62,7 @@ internal constructor(
   private val bus = ResultBus()
 
   /**
-   * Modal-kind-at-root reddi için display'in enjekte ettiği kanca (): bir route'un kayıtlı kind'ı
+   * Modal-kind-at-root reddi için display'in enjekte ettiği kanca: bir route'un kayıtlı kind'ı
    * `SCREEN` DIŞINDA (Dialog/BottomSheet/FullscreenModal) ise `true` döner. Varsayılan `{ false }`
    * — display kablolamadan (saf RawNavigator birim testleri) hiçbir op reddedilmez. `GezginDisplay`
    * registry'yi kurduktan SONRA set eder; [replaceTo] mutasyondan ÖNCE bununla kontrol eder →
@@ -183,14 +183,14 @@ internal constructor(
    * Android'de YALNIZ taze holder'ın PD-adopt yolunda çağrılır (config-change'te holder + canlı
    * navigator retained kalır → re-adopt YOK). Yeni bir `RawNavigator` KURULMAZ → bu instance'ı
    * ctor'da yakalamış her sahip (özellikle rotasyondan sağ çıkan bir ViewModel) restore'dan sonra
-   * da display'in gözlemlediği state'i sürmeye devam eder ( "stable RawNavigator"). `bus`/StateFlow
+   * da display'in gözlemlediği state'i sürmeye devam eder ("stable RawNavigator"). `bus`/StateFlow
    * instance'ları KORUNUR (aynı `keysState`/`backStack` → mevcut collector'lar kopmaz), yalnız
    * içerikleri restore edilmiş snapshot'a döner. Ctor'un `restored != null` yolunun birebir
    * eşleniği; İDEMPOTENT (aynı snapshot'la tekrar çağrı state'i aynı değere sabitler, bkz.
    * NavigatorIdentityRestoreTest) ve event yayınlamaz — bu bir kuruluş, navigasyon değil.
    */
   internal fun adoptRestored(restored: SavedState) {
-    // MJ-B (atomicity) — riskli slot decode'unu MUTASYONDAN ÖNCE yap: `decodeSlot` bir edge
+    // Decode risky slot data before mutation so restoration remains atomic: `decodeSlot` can
     // silinmiş/
     // yeniden-adlandırılmışsa (IllegalArgumentException) ya da şema değişmişse
     // (SerializationException)
@@ -304,7 +304,7 @@ internal constructor(
    * while quit() stays on the innermost.
    */
   public fun quitWith(result: Any?) {
-    // quitWith hedef seçimi: en içteki KAPSAYAN ResultFlow ();
+    // quitWith hedef seçimi: en içteki KAPSAYAN ResultFlow;
     // hiç ResultFlow yoksa fallback = en içteki flow (typed katman quitWith'i zaten yalnız
     // ResultFlow'da üretir).
     val top = state.stack.last()
@@ -332,7 +332,7 @@ internal constructor(
    * the top (e.g. an async job's result arrived late after the sheet was dismissed by a gesture) it
    * is a SILENT NO-OP → the value is not delivered to the slot of a foreign entry that is not
    * waiting for that slot (that expects a result of a different type) and that entry is not
-   * accidentally popped (a dirty-delivery/ double-back race is prevented). The typed
+   * accidentally popped (a dirty-delivery/double-back race is prevented). The typed
    * `backWithResult(result)` that codegen generates binds the ctor's `entryId` to this overload.
    *
    * **owner top ama pending-target DEĞİL:** owner top iken (`top.id == entryId`) ama onu hedefleyen
@@ -485,8 +485,7 @@ internal constructor(
 
   private fun refreshBackStack() {
     _backStack.value = state.stack.map { it.route }
-    _keysState.value =
-      state.stack.toList() // id taşır → replaceTo same-value-diff-id de emit eder (§2.1/R2)
+    _keysState.value = state.stack.toList() // Entry ids make same-route replacements observable.
   }
 
   private fun popTopAndEmit() {

@@ -16,7 +16,7 @@ import dev.gezgin.core.Route
  * DialogScene dismiss'i `SceneStrategyScope.onBack` (= tekil `NavDisplay.onBack`) üzerinden
  * çalıştırır ve bu scope'un onBack'i modül-dışından enjekte EDİLEMEZ (internal ctor) → dismiss'i
  * sahip-entry'ye pinleyemez. Bu yüzden Gezgin, [GezginBottomSheetScene] gibi, kendi DialogScene'ini
- * yazar ve dismiss'i entry-pinli `back(entryId)`'e bağlar (). Sheet key'inden ve transition
+ * yazar ve dismiss'i entry-pinli `back(entryId)`'e bağlar. Sheet key'inden ve transition
  * key'lerinden ayrık.
  */
 internal const val GEZGIN_DIALOG_KEY = "gezginDialog"
@@ -39,7 +39,7 @@ internal class GezginDialogScene(
 ) : OverlayScene<Route> {
 
   init {
-    // Overlay scene invariant () — toNavEntry'nin modal-kind-at-root guard'ı bunu zaten önceler;
+    // Overlay scene invariant — toNavEntry'nin modal-kind-at-root guard'ı bunu zaten önceler;
     // scene kendi başına net olsun diye defansif (built-in DialogScene bunu require ETMEZ ama
     // GezginBottomSheetScene ile paritede).
     require(overlaidEntries.isNotEmpty()) {
@@ -98,7 +98,7 @@ internal class GezginDialogSceneStrategy(private val onDismiss: (Long) -> Unit) 
         entry = lastEntry,
         overlaidEntries = entries.dropLast(1),
         dialogProperties = it,
-        onBack = { onDismiss(entryId) }, // C-MJ-1: dismiss sahip-entry'ye pinli
+        onBack = { onDismiss(entryId) }, // Dismiss the dialog entry that owns this callback.
       )
     }
   }

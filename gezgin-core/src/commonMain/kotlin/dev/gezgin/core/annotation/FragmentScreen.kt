@@ -40,8 +40,8 @@ import kotlin.reflect.KClass
  * **Android-only in practice.** Like every other Gezgin annotation this declaration is trivially
  * cross-platform (it names only `KClass<out Route>`), so it lives in `commonMain`. But its *use* is
  * Android-only: its target, `androidx.fragment.app.Fragment`, exists only on Android, and there is
- * deliberately **no dialog/bottom-sheet Fragment variant** ( — Fragment interop is screen-only; no
- * `@FragmentDialog`/`@FragmentBottomSheet`). No special multiplatform handling is needed at the
+ * deliberately **no dialog/bottom-sheet Fragment variant** — Fragment interop is screen-only; no
+ * `@FragmentDialog`/`@FragmentBottomSheet`. No special multiplatform handling is needed at the
  * declaration level — the annotation simply never resolves a target on non-Android sources.
  *
  * @property route the route type rendered by the annotated Fragment

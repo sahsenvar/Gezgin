@@ -60,7 +60,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
       // Codegen only runs on a clean model — a malformed model can't emit sane code.
       if (validationOk) {
         // GRAPH-derived codegen (topology/serializers/navigators/test accessors) is gated on
-        // this module OWNING graphs. A cross-module FEATURE (the current contract) has none (they
+        // this module OWNING graphs. A cross-module feature has none (they
         // live in
         // the central `:navigation` module) → this block is skipped, but its `@Screen` ENTRY
         // codegen below still runs.
@@ -102,7 +102,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
           if (emitSerializers) {
             TopologyCodegen.generateSerializers(model, packageName)
               .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
-            // M1 — stable process-wide gezginJson (Json(gezginSerializersModule)); references
+            // The stable process-wide gezginJson references gezginSerializersModule, so it shares
             // gezginSerializersModule, so it shares the emitSerializers gate. No @Composable is
             // emitted here: the graph module is plain-JVM (crash-safe val only).
             TopologyCodegen.generateRememberNavigator(packageName)
@@ -115,7 +115,8 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
             it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
           }
 
-          //  typed test API (`GezginTestNavigator.fromX()`) — opt-IN (default false): only a
+          // Generated typed test API (`GezginTestNavigator.fromX()`) — opt-IN (default false): only
+          // a
           // test source set's KSP config sets `gezgin.emitTestAccessors=true` (no `:gezgin-test`
           // dep in prod).
           val emitTestAccessors = environment.options["gezgin.emitTestAccessors"].toBoolean()
@@ -187,7 +188,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
               it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
             }
           }
-          // Fragment interop `provideXEntry` (): each @FragmentScreen →
+          // Fragment interop `provideXEntry`: each @FragmentScreen →
           // `AndroidFragment`-hosting
           // entry in a THIRD file `GezginFragmentEntries.kt`. Same emitEntries gate.
           if (fragmentModels.isNotEmpty()) {
