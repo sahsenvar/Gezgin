@@ -121,8 +121,43 @@ class ReleasePublicationVerifierTest {
             verifyRepository(repository, requireSignatures = false)
         }
 
-        assertContains(failure.message.orEmpty(), "required external POM dependencies")
+        assertContains(failure.message.orEmpty(), "external POM dependencies differ")
         assertContains(failure.message.orEmpty(), "gezgin-processor")
+    }
+
+    @Test
+    fun `rejects an unexpected external POM dependency`() {
+        val repository = publicationRepository(signatures = false)
+        val pom = pomPath(repository, "gezgin-processor")
+        val unexpected = dependencyXml(PomDependency("com.example", "unexpected", "1.0.0", "runtime"))
+        pom.writeText(pom.toFile().readText().replace("</dependencies>", "$unexpected\n</dependencies>"))
+
+        val failure = assertFailsWith<IllegalStateException> {
+            verifyRepository(repository, requireSignatures = false)
+        }
+
+        assertContains(failure.message.orEmpty(), "external POM dependencies differ")
+        assertContains(failure.message.orEmpty(), "group=com.example")
+        assertContains(failure.message.orEmpty(), "artifact=unexpected")
+    }
+
+    @Test
+    fun `rejects an unexpected external Gradle module dependency`() {
+        val repository = publicationRepository(signatures = false)
+        val module = repository.resolve(
+            "io/github/sahsenvar/gezgin-mvi/0.1.0/gezgin-mvi-0.1.0.module",
+        )
+        val unexpected =
+            """{"group":"com.example","module":"unexpected","version":{"requires":"1.0.0"}},"""
+        module.writeText(module.toFile().readText().replace("\"dependencies\": [{", "\"dependencies\": [$unexpected{"))
+
+        val failure = assertFailsWith<IllegalStateException> {
+            verifyRepository(repository, requireSignatures = false)
+        }
+
+        assertContains(failure.message.orEmpty(), "external module dependencies differ")
+        assertContains(failure.message.orEmpty(), "group=com.example")
+        assertContains(failure.message.orEmpty(), "module=unexpected")
     }
 
     @Test
@@ -230,15 +265,19 @@ class ReleasePublicationVerifierTest {
         repository.resolve("io/github/sahsenvar/$artifactId/0.1.0/$artifactId-0.1.0.pom")
 
     private fun moduleMetadata(artifact: ExpectedArtifact): String {
-        val dependencies = artifact.moduleProjectDependency?.let { dependencyArtifact ->
-            """
-            "dependencies": [{
-              "group": "io.github.sahsenvar",
-              "module": "$dependencyArtifact",
-              "version": { "requires": "0.1.0" }
-            }],
-            """.trimIndent()
-        }.orEmpty()
+        val moduleDependencies = buildList {
+            artifact.moduleProjectDependency?.let { dependencyArtifact ->
+                add(ModuleDependency("io.github.sahsenvar", dependencyArtifact, "0.1.0"))
+            }
+            addAll(expectedModuleExternalDependencies(artifact.artifactId))
+        }
+        val dependencies = if (moduleDependencies.isEmpty()) {
+            ""
+        } else {
+            moduleDependencies.joinToString(prefix = "\"dependencies\": [", postfix = "],") { dependency ->
+                """{"group":"${dependency.group}","module":"${dependency.module}","version":{"requires":"${dependency.version}"}}"""
+            }
+        }
         val variants = if (artifact.targets.isEmpty()) {
             """[{ "name": "api", $dependencies "attributes": {} }]"""
         } else {
@@ -311,6 +350,12 @@ class ReleasePublicationVerifierTest {
         val artifact: String,
         val version: String,
         val scope: String,
+    )
+
+    private data class ModuleDependency(
+        val group: String,
+        val module: String,
+        val version: String,
     )
 
     private companion object {
@@ -391,6 +436,82 @@ class ReleasePublicationVerifierTest {
                 PomDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.9", "runtime"),
                 PomDependency("com.squareup", "kotlinpoet-jvm", "2.2.0", "runtime"),
                 PomDependency("com.squareup", "kotlinpoet-ksp", "2.2.0", "runtime"),
+            )
+            else -> error("Unknown publication: $artifactId")
+        }
+
+        fun expectedModuleExternalDependencies(artifactId: String): List<ModuleDependency> = when (artifactId) {
+            "gezgin-core" -> listOf(
+                ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
+                ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+                ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
+                ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            )
+            "gezgin-core-android" -> listOf(
+                ModuleDependency("androidx.fragment", "fragment-compose", "1.8.9"),
+                ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-compose", "2.10.0"),
+                ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-navigation3", "2.10.0"),
+                ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
+                ModuleDependency("androidx.navigation3", "navigation3-ui", "1.0.0"),
+                ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+                ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
+                ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            )
+            "gezgin-core-jvm" -> listOf(
+                ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
+                ModuleDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-viewmodel-compose",
+                    "2.10.0-alpha05",
+                ),
+                ModuleDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-viewmodel-navigation3",
+                    "2.10.0-alpha05",
+                ),
+                ModuleDependency("org.jetbrains.androidx.navigation3", "navigation3-ui", "1.0.0-alpha05"),
+                ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+                ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
+                ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            )
+            "gezgin-mvi" -> listOf(
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            "gezgin-mvi-android" -> listOf(
+                ModuleDependency("androidx.lifecycle", "lifecycle-runtime-compose", "2.10.0"),
+                ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-compose", "2.10.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            "gezgin-mvi-jvm" -> listOf(
+                ModuleDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-runtime-compose",
+                    "2.10.0-alpha05",
+                ),
+                ModuleDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-viewmodel-compose",
+                    "2.10.0-alpha05",
+                ),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            "gezgin-test", "gezgin-test-android", "gezgin-test-jvm" -> listOf(
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            "gezgin-processor" -> listOf(
+                ModuleDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.9"),
+                ModuleDependency("com.squareup", "kotlinpoet", "2.2.0"),
+                ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.2.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
             )
             else -> error("Unknown publication: $artifactId")
         }

@@ -169,10 +169,9 @@ object ReleasePublicationVerifier {
         }
 
         val actualExternalDependencies = actualDependencies.filter { it.group != groupId }.toSet()
-        val missingExternalDependencies = artifact.requiredExternalDependencies - actualExternalDependencies
-        check(missingExternalDependencies.isEmpty()) {
-            "required external POM dependencies differ for ${artifact.artifactId}; " +
-                "missing=$missingExternalDependencies, actual=$actualExternalDependencies"
+        check(actualExternalDependencies == artifact.expectedExternalDependencies) {
+            "external POM dependencies differ for ${artifact.artifactId}; " +
+                "expected=${artifact.expectedExternalDependencies}, actual=$actualExternalDependencies"
         }
     }
 
@@ -191,18 +190,27 @@ object ReleasePublicationVerifier {
             .mapNotNull { it as? Map<*, *> }
             .flatMap { (it["dependencies"] as? List<*>).orEmpty().asSequence() }
             .mapNotNull { it as? Map<*, *> }
-            .filter { it["group"] == groupId }
             .map { dependency ->
                 val dependencyVersion = (dependency["version"] as? Map<*, *>)?.get("requires")
-                "${dependency["group"]}:${dependency["module"]}:$dependencyVersion"
+                ModuleDependency(
+                    group = dependency["group"].toString(),
+                    module = dependency["module"].toString(),
+                    version = dependencyVersion.toString(),
+                )
             }
             .toSet()
+        val actualInternalDependencies = actualDependencies.filter { it.group == groupId }.toSet()
         val expectedDependencies = artifact.moduleProjectDependency
-            ?.let { setOf("$groupId:$it:$version") }
+            ?.let { setOf(ModuleDependency(groupId, it, version)) }
             .orEmpty()
-        check(actualDependencies == expectedDependencies) {
+        check(actualInternalDependencies == expectedDependencies) {
             "module project dependencies differ for ${artifact.artifactId}; " +
-                "expected=$expectedDependencies, actual=$actualDependencies"
+                "expected=$expectedDependencies, actual=$actualInternalDependencies"
+        }
+        val actualExternalDependencies = actualDependencies.filter { it.group != groupId }.toSet()
+        check(actualExternalDependencies == artifact.expectedModuleExternalDependencies) {
+            "external module dependencies differ for ${artifact.artifactId}; " +
+                "expected=${artifact.expectedModuleExternalDependencies}, actual=$actualExternalDependencies"
         }
 
         val actualTargets = variants.asSequence()
@@ -251,7 +259,9 @@ object ReleasePublicationVerifier {
         val internalPomScope: String = if (targets.isNotEmpty()) "runtime" else "compile",
         val projectName: String = componentArtifactId,
         val description: String = descriptionFor(componentArtifactId),
-        val requiredExternalDependencies: Set<PomDependency> = requiredExternalDependenciesFor(artifactId),
+        val expectedExternalDependencies: Set<PomDependency> = expectedExternalDependenciesFor(artifactId),
+        val expectedModuleExternalDependencies: Set<ModuleDependency> =
+            expectedModuleExternalDependenciesFor(artifactId),
     )
 
     private data class PomDependency(
@@ -259,6 +269,12 @@ object ReleasePublicationVerifier {
         val artifact: String,
         val version: String,
         val scope: String,
+    )
+
+    private data class ModuleDependency(
+        val group: String,
+        val module: String,
+        val version: String,
     )
 
     private fun descriptionFor(projectName: String): String = when (projectName) {
@@ -269,7 +285,7 @@ object ReleasePublicationVerifier {
         else -> error("Unknown published project: $projectName")
     }
 
-    private fun requiredExternalDependenciesFor(artifactId: String): Set<PomDependency> = when (artifactId) {
+    private fun expectedExternalDependenciesFor(artifactId: String): Set<PomDependency> = when (artifactId) {
         "gezgin-core" -> setOf(
             PomDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2", "runtime"),
             PomDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0", "runtime"),
@@ -351,6 +367,83 @@ object ReleasePublicationVerifier {
         )
         else -> error("Unknown publication: $artifactId")
     }
+
+    private fun expectedModuleExternalDependenciesFor(artifactId: String): Set<ModuleDependency> =
+        when (artifactId) {
+            "gezgin-core" -> setOf(
+                ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
+                ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+                ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
+                ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            )
+            "gezgin-core-android" -> setOf(
+                ModuleDependency("androidx.fragment", "fragment-compose", "1.8.9"),
+                ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-compose", "2.10.0"),
+                ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-navigation3", "2.10.0"),
+                ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
+                ModuleDependency("androidx.navigation3", "navigation3-ui", "1.0.0"),
+                ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+                ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
+                ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            )
+            "gezgin-core-jvm" -> setOf(
+                ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
+                ModuleDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-viewmodel-compose",
+                    "2.10.0-alpha05",
+                ),
+                ModuleDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-viewmodel-navigation3",
+                    "2.10.0-alpha05",
+                ),
+                ModuleDependency("org.jetbrains.androidx.navigation3", "navigation3-ui", "1.0.0-alpha05"),
+                ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+                ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
+                ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+                ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            )
+            "gezgin-mvi" -> setOf(
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            "gezgin-mvi-android" -> setOf(
+                ModuleDependency("androidx.lifecycle", "lifecycle-runtime-compose", "2.10.0"),
+                ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-compose", "2.10.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            "gezgin-mvi-jvm" -> setOf(
+                ModuleDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-runtime-compose",
+                    "2.10.0-alpha05",
+                ),
+                ModuleDependency(
+                    "org.jetbrains.androidx.lifecycle",
+                    "lifecycle-viewmodel-compose",
+                    "2.10.0-alpha05",
+                ),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            "gezgin-test", "gezgin-test-android", "gezgin-test-jvm" -> setOf(
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            "gezgin-processor" -> setOf(
+                ModuleDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.9"),
+                ModuleDependency("com.squareup", "kotlinpoet", "2.2.0"),
+                ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.2.0"),
+                ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+            )
+            else -> error("Unknown publication: $artifactId")
+        }
 
     private val expectedArtifacts = listOf(
         ExpectedArtifact("gezgin-core", ".jar", targets = setOf("gezgin-core-android", "gezgin-core-jvm")),
