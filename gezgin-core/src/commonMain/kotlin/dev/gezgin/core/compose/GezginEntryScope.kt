@@ -57,13 +57,9 @@ internal class RegisteredEntry(
  */
 public class GezginEntryScope internal constructor() {
 
-  // Thread-safety note: NOT synchronized (`mutableMapOf`, plain) — deliberate, because it is
-  // populated
-  // ONLY ONCE, on the main/Compose thread, inside `GezginDisplay`'s `remember {
-  // GezginEntryScope().apply
-  // (entries) }` setup block; after setup it is read-only (no register calls). Multi-threaded
-  // writes after
-  // setup are neither supported nor expected.
+  // This plain `mutableMapOf` is intentionally unsynchronized. It is populated once on the main
+  // Compose thread inside `GezginDisplay`'s `remember { GezginEntryScope().apply(entries) }` setup
+  // block, then treated as read-only. Writes after setup are neither supported nor expected.
   @PublishedApi
   internal val registry: MutableMap<KClass<out Route>, RegisteredEntry> = mutableMapOf()
 

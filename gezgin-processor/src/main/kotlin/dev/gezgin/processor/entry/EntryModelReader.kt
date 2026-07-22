@@ -243,8 +243,7 @@ internal class EntryModelReader(
         )
       }
 
-    // `MV3` — every @MviViewModel must have matching content in this module (same-module
-    // triple).
+    // `MV3`: every `@MviViewModel` must have matching content in this module.
     vmModels.forEach { vm ->
       if (vm.routeFq !in matchedVmRoutes) {
         error(
@@ -348,8 +347,8 @@ internal class EntryModelReader(
     val packageName = fn.packageName.asString()
     val x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString())
 
-    // `SC8` (kind↔contract) + `SC7` (@NoBack × modal) — shared, statically decidable (see the
-    // helper).
+    // The shared helper performs the statically decidable `SC8` kind-contract and `SC7`
+    // `@NoBack`-modal checks.
     if (!checkKindContractAndNoBack(fnName, routeDecl, kind)) return null
 
     if (navParam != null) {
@@ -476,12 +475,11 @@ internal class EntryModelReader(
     }
     seenRouteFqs[routeFq] = fnName
 
-    // `SC8` (kind↔contract) + `SC7` (@NoBack × modal) — shared with core-mode, statically
-    // decidable.
+    // Apply the same statically decidable `SC8` kind-contract and `SC7` `@NoBack`-modal checks as
+    // core mode.
     if (!checkKindContractAndNoBack(fnName, routeDecl, kind)) return null
 
-    // `MV2` — the content's route must have a @MviViewModel in THIS module (same-module
-    // triple).
+    // `MV2`: the content route must have a `@MviViewModel` in this module.
     val vm = vmByRouteFq[routeFq]
     if (vm == null) {
       error(
@@ -492,9 +490,8 @@ internal class EntryModelReader(
       )
       return null
     }
-    // Mark matched as soon as a VM pairs with a content (even if `MV5` fails below) so `MV3`
-    // doesn't
-    // also fire for the same VM — `MV3` is strictly "no content at all", not "invalid content".
+    // Mark the ViewModel as matched as soon as it pairs with content, even if `MV5` fails below.
+    // `MV3` means that no content exists, rather than that existing content is invalid.
     matchedVmRoutes += routeFq
 
     // Plain Hilt receives no route data through SavedStateHandle in Navigation 3. Parameterized
@@ -551,8 +548,7 @@ internal class EntryModelReader(
     // role-provided (Local-injected via LocalGezginSheetController); everything else becomes a
     // resolver param. Deliberately NOT `SC3`-rejected here — that hard-reject is core-mode only —
     // but `MV10` (reserved name) and `MV8` (controller off a @BottomSheet) ARE rejected: both would
-    // otherwise reach codegen and emit compile-clean-but-broken/crashing code (compile-safe
-    // philosophy).
+    // otherwise reach codegen and emit code that compiles but fails at runtime.
     val roleExtras = mutableListOf<MviExtraParam>()
     val resolverExtras = mutableListOf<MviExtraParam>()
     var extrasInvalid = false
@@ -996,10 +992,9 @@ internal class EntryModelReader(
         .mapNotNull { it.declaration.qualifiedName?.asString() }
         .filter { it in ALL_KIND_CONTRACT_FQS }
         .toSet()
-    val expectedContract = CONTRACT_BY_KIND[kind] // null for SCREEN
+    val expectedContract = CONTRACT_BY_KIND[kind] // SCREEN has no presentation contract.
 
-    // `SC8` — every implemented kind-contract that isn't THIS kind's contract is a silent-drop
-    // mismatch.
+    // `SC8`: an implemented presentation contract that does not match this kind would be ignored.
     val mismatched = implementedContracts.filter { it != expectedContract }
     if (mismatched.isNotEmpty()) {
       val mismatch = mismatched.first().substringAfterLast('.')

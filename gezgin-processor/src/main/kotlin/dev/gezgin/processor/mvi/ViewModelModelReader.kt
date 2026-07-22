@@ -90,14 +90,10 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
     }
     val (state, intent, effect) = mviArgs
 
-    // KSP cannot materialize nested generic forwarding such as Wrapped<S>. Convert type names in
-    // one guarded location and turn that specific substitution failure into an actionable error.
-    // reject
-    // with the `MN3` diagnostic. Any OTHER exception (a genuinely broken/transient KSP
-    // state,
-    // unrelated to nested forwarding) is NOT swallowed — it propagates so it can't be mis-diagnosed
-    // as
-    // `MV1`. The direct-forwarding and concrete cases materialize without incident.
+    // KSP cannot materialize nested generic forwarding such as `Wrapped<S>`. Convert type names in
+    // one guarded location and report that specific substitution failure as `MN3`. Any unrelated
+    // exception, including a broken or transient KSP state, propagates instead of being
+    // misdiagnosed as `MV1`. Direct forwarding and concrete types materialize normally.
     val sie: Triple<TypeName, TypeName, TypeName> =
       try {
         Triple(state.toTypeName(), intent.toTypeName(), effect.toTypeName())
@@ -113,8 +109,7 @@ internal class ViewModelModelReader(private val resolver: Resolver, private val 
       }
     val (stateTypeName, intentTypeName, effectTypeName) = sie
 
-    // `MV4` — two @MviViewModel classes on the same route would both try to register the same MVI
-    // entry.
+    // `MV4`: two `@MviViewModel` classes on one route would register the same MVI entry.
     val previousOwner = seenRouteFqs[routeFq]
     if (previousOwner != null) {
       error(

@@ -36,9 +36,8 @@ internal actual fun rememberRawNavigatorInstance(
 ): RawNavigator =
   key(restoreKey) {
     // The token remains call-site-specific so two navigators in one owner can share a business
-    // namespace
-    // without sharing a holder. Both the Compose group and input invalidate it when restoreKey
-    // changes.
+    // namespace without sharing a holder. Both the Compose group and input invalidate it when
+    // `restoreKey` changes.
     val callSiteToken =
       rememberSaveable(
         restoreKey,

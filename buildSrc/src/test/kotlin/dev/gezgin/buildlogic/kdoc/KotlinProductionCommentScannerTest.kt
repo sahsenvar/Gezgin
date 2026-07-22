@@ -218,6 +218,64 @@ class KotlinProductionCommentScannerTest {
     assertEquals(emptyList(), findings)
   }
 
+  @Test
+  fun `rejects incomplete individual line comment tokens before grouping`() {
+    val findings =
+      scan(
+        """
+            // The owner keeps a business
+            // namespace
+            // across configuration
+            // changes.
+            private fun splitSentence(): Unit = Unit
+
+            // MviEntryCodegen's
+            // 4-param
+            // GezginMviEntries.kt
+            // Delegated
+            private fun fragmentKinds(): Unit = Unit
+
+            // writes after
+            // doesn't
+            // as
+            private fun shortFragments(): Unit = Unit
+            """
+      )
+
+    assertEquals(10, findings.count { it.kind == ProductionCommentFindingKind.MALFORMED_PROSE })
+  }
+
+  @Test
+  fun `allows complete standalone line comments directives labels urls and code`() {
+    val findings =
+      scan(
+        """
+            // Intentional.
+
+            // No-op.
+
+            // Fallback.
+
+            // region Resolution
+
+            // endregion
+
+            // language=kotlin
+
+            //noinspection KotlinConstantConditions
+
+            // https://example.com/contracts
+
+            // Failure mode:
+
+            // `MV7`
+            private fun controls(): Unit = Unit
+            """
+      )
+
+    assertEquals(emptyList(), findings)
+  }
+
   private fun scan(source: String): List<ProductionCommentFinding> =
     scanner.scan(
       KotlinSourceInput(path = "src/commonMain/kotlin/Fixture.kt", content = source.trimIndent())

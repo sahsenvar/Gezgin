@@ -181,7 +181,7 @@ internal constructor(
     refreshBackStack()
   }
 
-  // ---- public ops ----
+  // Public operations.
 
   /** @GoTo — resolves enterFlow from the topology (is the target a flow-start container entry). */
   public fun navigate(route: Route, singleTop: Boolean = true) {
@@ -431,7 +431,7 @@ internal constructor(
     navigate(route, singleTop = true)
   }
 
-  // ---- internal helpers ----
+  // Internal helpers.
 
   private fun refreshBackStack() {
     _backStack.value = state.stack.map { it.route }

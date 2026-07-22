@@ -119,14 +119,11 @@ internal object TopologyCodegen {
   fun generateRememberNavigator(packageName: String): FileSpec {
     // Emit one process-wide Json instance so save and restore use the same serializers module.
     //
-    // NO generated `@Composable rememberGezginNavigator` convenience: this file is emitted into the
-    // graph module may be plain Kotlin/JVM without the Compose compiler. A composable compiled
-    // there gets a non-lowered bytecode signature (no
-    // `Composer`/`$changed`/`$default` params) → a Compose consumer calling it crashes at runtime
-    // with
-    // `NoSuchMethodError` (compiles fine; only fails when the app actually runs). `gezginJson` is a
-    // plain
-    // `val`, so it is safe here; the @Composable helper is not.
+    // Do not generate a `@Composable rememberGezginNavigator` convenience function here: the graph
+    // module may be plain Kotlin/JVM without the Compose compiler. Such a function receives a
+    // non-lowered bytecode signature without `Composer`, `$changed`, or `$default` parameters, so a
+    // Compose consumer would fail at runtime with `NoSuchMethodError`. The plain `gezginJson` value
+    // is safe in either kind of module.
     val jsonProp =
       PropertySpec.builder("gezginJson", JSON)
         .initializer("%M { serializersModule = gezginSerializersModule }", JSON_FUN)
@@ -175,9 +172,8 @@ internal object TopologyCodegen {
       val chain = CodeBlock.builder().add("listOf(")
       route.flowChainFq.forEachIndexed { index, flowFq ->
         if (index > 0) chain.add(", ")
-        // Ownership semantics: `FlowType.isResultFlow` marks the flow that
-        // OWNS a
-        // result contract — DIRECT `ResultFlow<T>` declaration only, NOT the transitive
+        // Ownership semantics: `FlowType.isResultFlow` marks the flow that directly owns a
+        // `ResultFlow<T>` contract, not the transitive
         // [GraphModelNode.isResultFlow] (a nested result-less sub-flow inherits the marker
         // but no contract). The runtime's `RawNavigator.quitWith` resolves its target via
         // `chain.indexOfLast { it.isResultFlow }`; emitting the transitive flag here made a

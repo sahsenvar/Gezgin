@@ -20,59 +20,88 @@ class KotlinProductionCommentScanner : AutoCloseable {
   override fun close() = Unit
 
   fun scan(input: KotlinSourceInput): List<ProductionCommentFinding> {
-    return input.commentBlocks().flatMap { comment ->
-      val text = comment.text
-      val line = input.content.substring(0, comment.offset).count { it == '\n' } + 1
-      buildList {
-        if (text.containsInternalHistory()) {
-          add(
-            ProductionCommentFinding(
-              input.path,
-              line,
-              ProductionCommentFindingKind.INTERNAL_HISTORY,
-              text,
-            )
+    val tokens = input.commentTokens()
+    val individualLineFindings =
+      tokens
+        .filter { it.lineComment && it.text.isIncompleteLineFragment() }
+        .map { token ->
+          ProductionCommentFinding(
+            input.path,
+            input.lineAt(token.start),
+            ProductionCommentFindingKind.MALFORMED_PROSE,
+            token.text,
           )
         }
-        val prose = WITHOUT_INLINE_CODE.replace(text, "")
-        if (TURKISH_UNICODE.containsMatchIn(prose) || TURKISH_HISTORY.containsMatchIn(prose)) {
-          add(
-            ProductionCommentFinding(
-              input.path,
-              line,
-              ProductionCommentFindingKind.TURKISH_HISTORY,
-              text,
+    val blockFindings =
+      input.commentBlocks(tokens).flatMap { comment ->
+        val text = comment.text
+        val line = input.lineAt(comment.offset)
+        buildList {
+          if (text.containsInternalHistory()) {
+            add(
+              ProductionCommentFinding(
+                input.path,
+                line,
+                ProductionCommentFindingKind.INTERNAL_HISTORY,
+                text,
+              )
             )
-          )
-        }
-        if (text.containsMalformedProse()) {
-          add(
-            ProductionCommentFinding(
-              input.path,
-              line,
-              ProductionCommentFindingKind.MALFORMED_PROSE,
-              text,
+          }
+          val prose = WITHOUT_INLINE_CODE.replace(text, "")
+          if (TURKISH_UNICODE.containsMatchIn(prose) || TURKISH_HISTORY.containsMatchIn(prose)) {
+            add(
+              ProductionCommentFinding(
+                input.path,
+                line,
+                ProductionCommentFindingKind.TURKISH_HISTORY,
+                text,
+              )
             )
-          )
+          }
+          if (text.containsMalformedProse()) {
+            add(
+              ProductionCommentFinding(
+                input.path,
+                line,
+                ProductionCommentFindingKind.MALFORMED_PROSE,
+                text,
+              )
+            )
+          }
         }
       }
+    return (individualLineFindings + blockFindings).distinctBy { finding ->
+      finding.line to finding.kind
     }
   }
 
-  private fun KotlinSourceInput.commentBlocks(): List<CommentBlock> {
+  private fun KotlinSourceInput.lineAt(offset: Int): Int =
+    content.substring(0, offset).count { it == '\n' } + 1
+
+  private fun KotlinSourceInput.commentTokens(): List<CommentToken> {
     val lexer = KotlinLexer()
     lexer.start(content)
-    val comments = buildList {
+    return buildList {
       while (lexer.tokenType != null) {
         if (lexer.tokenType !in COMMENT_TOKENS) {
           lexer.advance()
           continue
         }
-        add(CommentToken(lexer.tokenStart, lexer.tokenEnd, lexer.tokenType == KtTokens.EOL_COMMENT))
+        add(
+          CommentToken(
+            lexer.tokenStart,
+            lexer.tokenEnd,
+            lexer.tokenType == KtTokens.EOL_COMMENT,
+            content.substring(lexer.tokenStart, lexer.tokenEnd),
+          )
+        )
         lexer.advance()
       }
     }
-    return comments.fold(mutableListOf()) { blocks, token ->
+  }
+
+  private fun KotlinSourceInput.commentBlocks(tokens: List<CommentToken>): List<CommentBlock> =
+    tokens.fold(mutableListOf()) { blocks, token ->
       val previous = blocks.lastOrNull()
       val gap = previous?.let { content.substring(it.end, token.start) }
       if (
@@ -91,6 +120,27 @@ class KotlinProductionCommentScanner : AutoCloseable {
       }
       blocks
     }
+
+  private fun String.isIncompleteLineFragment(): Boolean {
+    val body = removePrefix("//").trim()
+    if (body.isEmpty()) return false
+    val normalized = body.lowercase()
+    if (
+      '`' in body ||
+        normalized in STRUCTURAL_COMMENT_LINES ||
+        STRUCTURAL_COMMENT_PREFIXES.any(normalized::startsWith) ||
+        DIRECTIVE_PREFIXES.any(normalized::startsWith) ||
+        "://" in body ||
+        body.endsWith(":") ||
+        normalized in ALLOWED_STANDALONE_SENTENCES
+    ) {
+      return false
+    }
+    val words = LINE_FRAGMENT_WORD.findAll(body).map(MatchResult::value).toList()
+    if (words.isEmpty()) return false
+    if (FILE_NAME_FRAGMENT.matches(body) || POSSESSIVE_FRAGMENT.matches(body)) return true
+    if (SENTENCE_END.containsMatchIn(body)) return words.size == 1
+    return words.size <= 2
   }
 
   private fun String.containsInternalHistory(): Boolean =
@@ -175,17 +225,14 @@ class KotlinProductionCommentScanner : AutoCloseable {
       .let { lines ->
         lines.any(PUNCTUATION_FRAGMENT::matches) ||
           (startsWith("//") &&
-            lines.withIndex().any { (index, line) ->
+            lines.any { line ->
               val normalized = line.lowercase()
               val standalone = lines.size == 1
-              val consecutiveSentence =
-                index > 0 &&
-                  SENTENCE_END.containsMatchIn(lines[index - 1]) &&
-                  SENTENCE_END.containsMatchIn(line)
               normalized !in STRUCTURAL_COMMENT_LINES &&
+                normalized !in ALLOWED_STANDALONE_SENTENCES &&
                 !line.startsWith("KDOCSPAN") &&
                 ONE_WORD_FRAGMENT.matches(line) &&
-                (standalone || consecutiveSentence)
+                standalone
             })
       }
 
@@ -227,6 +274,12 @@ class KotlinProductionCommentScanner : AutoCloseable {
     val ONE_WORD_FRAGMENT = Regex("[A-Za-zÀ-ž][A-Za-zÀ-ž'-]*[.!?]?")
     val SENTENCE_END = Regex("[.!?]$")
     val STRUCTURAL_COMMENT_LINES = setOf("region", "endregion")
+    val STRUCTURAL_COMMENT_PREFIXES = setOf("region ", "endregion ")
+    val DIRECTIVE_PREFIXES = setOf("language=", "noinspection", "ktlint-", "spotless:", "detekt:")
+    val ALLOWED_STANDALONE_SENTENCES = setOf("intentional.", "no-op.", "fallback.")
+    val LINE_FRAGMENT_WORD = Regex("[A-Za-zÀ-ž0-9]+(?:['’-][A-Za-zÀ-ž0-9]+)*")
+    val FILE_NAME_FRAGMENT = Regex("[A-Za-z][A-Za-z0-9_.-]+\\.(?:kt|kts|java)")
+    val POSSESSIVE_FRAGMENT = Regex("[A-Za-z][A-Za-z0-9]*['’]s")
     val LOWERCASE_SENTENCE_FRAGMENT = Regex("[.!?]\\s+([a-z])\\w*\\b")
     val SAFE_ABBREVIATIONS = setOf("e.g", "i.e", "etc", "vs", "cf", "bkz")
     val DUPLICATE_FUTURE =
@@ -235,7 +288,12 @@ class KotlinProductionCommentScanner : AutoCloseable {
     val WITHOUT_INLINE_CODE = Regex("`[^`]*`")
   }
 
-  private data class CommentToken(val start: Int, val end: Int, val lineComment: Boolean)
+  private data class CommentToken(
+    val start: Int,
+    val end: Int,
+    val lineComment: Boolean,
+    val text: String,
+  )
 
   private data class CommentBlock(
     val offset: Int,

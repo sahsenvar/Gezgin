@@ -245,9 +245,8 @@ internal object MviEntryCodegen {
         )
       }
 
-      // Plain Hilt supplies nothing itself — Hilt injects everything; Gezgin passes no route/nav
-      // (a route-data-carrying route is rejected as `MV12`, since Nav3 can't feed
-      // SavedStateHandle).
+      // Plain Hilt injects every dependency, so Gezgin passes neither route nor navigator. `MV12`
+      // rejects routes carrying data because Navigation 3 cannot populate `SavedStateHandle`.
       VmDiKind.HILT_PLAIN -> CodeBlock.of("{ %M<%T>() }", HILT_VIEW_MODEL, vmClass)
     }
   }

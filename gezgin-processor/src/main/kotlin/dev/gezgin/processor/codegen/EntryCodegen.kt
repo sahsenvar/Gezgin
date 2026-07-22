@@ -38,10 +38,8 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
 internal object EntryCodegen {
 
   fun generate(entries: List<EntryFunctionModel>): List<FileSpec> =
-    // Sort before grouping so file order (packageName) and per-file function order (routeFq,
-    // unique)
-    // are reproducible because KSP symbol order is not contractually stable; graph-derived codegen
-    // already sorts (ModelReader.routes.sortedBy fqName), this brings entry codegen to parity.
+    // Sort before grouping so package and per-file route order are reproducible. KSP symbol order
+    // is not contractually stable; graph-derived codegen already sorts by fully qualified name.
     entries
       .sortedWith(compareBy({ it.packageName }, { it.routeFq }))
       .groupBy { it.packageName }

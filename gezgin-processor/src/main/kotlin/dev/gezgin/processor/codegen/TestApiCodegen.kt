@@ -30,8 +30,8 @@ internal object TestApiCodegen {
     val funs = model.routes.mapNotNull { route -> fromFun(route, graphsByFq, packageName) }
     if (funs.isEmpty()) return null
     return FileSpec.builder(packageName, "GezginTestAccessors")
-      // Generated fromX() accessors read GezginTestNavigator.raw, gated by
-      // @GezginInternalApi.
+      // Generated `fromX()` accessors read `GezginTestNavigator.raw` behind
+      // `@GezginInternalApi`.
       .optInGezginInternalApi()
       .addFunctions(funs)
       .build()

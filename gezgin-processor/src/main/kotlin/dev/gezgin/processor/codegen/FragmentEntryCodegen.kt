@@ -19,17 +19,15 @@ private val LOCAL_RAW_NAVIGATOR = MemberName(COMPOSE_PKG, "LocalGezginRawNavigat
 // entry doesn't re-serialize an unchanged route every frame (only re-runs when `route` changes).
 private val REMEMBER = MemberName("androidx.compose.runtime", "remember")
 
-// `androidx.fragment.compose.AndroidFragment` — FQ MemberName only, NO compile dependency on
-// androidx.fragment anywhere in gezgin-processor (same "emit as FQ strings" discipline as
-// MviEntryCodegen's
-// Hilt/Koin/lifecycle references;  keeps the processor fragment-free). Pinned 1.8.9 => the
-// 4-param
-// overload (arguments, onUpdate) — NO `maxLifecycle`/`fragmentState`.
+// `androidx.fragment.compose.AndroidFragment` is represented only by a fully qualified
+// `MemberName`, keeping gezgin-processor free of an androidx.fragment compile dependency. This
+// follows the same emitted-reference approach as MVI Hilt, Koin, and lifecycle symbols. Version
+// 1.8.9 supplies the four-parameter overload with arguments and `onUpdate`, but no `maxLifecycle`
+// or `fragmentState`.
 private val ANDROID_FRAGMENT = MemberName("androidx.fragment.compose", "AndroidFragment")
 
-// gezgin-core runtime glue — a REAL compile dependency (gezgin-core already IS
-// one for
-// every Gezgin module, unlike androidx.fragment). Emitted as ordinary imported member calls.
+// gezgin-core runtime glue is a real compile dependency for every Gezgin module, unlike
+// androidx.fragment. These functions are emitted as ordinary imported member calls.
 private val TO_BUNDLE = MemberName(FRAGMENT_RT_PKG, "toBundle")
 private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
 
@@ -98,9 +96,8 @@ internal object FragmentEntryCodegen {
       .groupBy { it.packageName }
       .map { (packageName, group) ->
         FileSpec.builder(packageName, "GezginFragmentEntries")
-          // Every fragment register body reads LocalGezginRawNavigator and calls
-          // route.toBundle,
-          // all gated behind @GezginInternalApi.
+          // Every Fragment registration reads `LocalGezginRawNavigator` and calls
+          // `route.toBundle`, all behind `@GezginInternalApi`.
           .optInGezginInternalApi()
           .apply { group.forEach { addFunction(provideFragmentEntryFun(it, hasNavigator(it))) } }
           .build()
@@ -119,17 +116,14 @@ internal object FragmentEntryCodegen {
           entry.noBack,
         )
         .indent()
-        // `raw` bound to a val — needed for route.toBundle(raw), and (when wired) the navigator
-        // factory.
+        // Bind `raw` once for `route.toBundle(raw)` and, when wired, the navigator factory.
         .add("val raw = %M.current\n", LOCAL_RAW_NAVIGATOR)
         .apply {
           if (navWired) {
-            // The navigator FACTORY extension lives in the route's OWN package ([routePackageName])
-            // —
-            // a different package (and, cross-module, a different MODULE) than this file's, so `%M`
-            // (imported), identical to EntryCodegen/MviEntryCodegen. Only emitted when the route
-            // earns
-            // a navigator (else `raw.xNavigator(...)` would be an unresolved reference).
+            // The navigator factory extension lives in the route's own package
+            // ([routePackageName]), which can differ from this file's package and module. Import it
+            // with `%M`, as EntryCodegen and MviEntryCodegen do, and emit it only when the route
+            // earns a navigator; otherwise `raw.xNavigator(...)` would be unresolved.
             val factoryFun =
               MemberName(entry.routePackageName, NavigatorCodegen.rawFactoryFunName(entry.x))
             add("val nav = raw.%M(%M.current)\n", factoryFun, LOCAL_ENTRY_ID)

@@ -58,11 +58,10 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
 
       // Codegen only runs on a clean model — a malformed model can't emit sane code.
       if (validationOk) {
-        // GRAPH-derived codegen (topology/serializers/navigators/test accessors) is gated on
-        // this module OWNING graphs. A cross-module feature has none (they
-        // live in
-        // the central `:navigation` module) → this block is skipped, but its `@Screen` ENTRY
-        // codegen below still runs.
+        // Graph-derived codegen (topology, serializers, navigators, and test accessors) requires
+        // this module to own graphs. A cross-module feature owns none because they live in the
+        // central `:navigation` module, so this block is skipped while its `@Screen` entry codegen
+        // below still runs.
         if (model.graphs.isNotEmpty()) {
           val packageName = TopologyCodegen.targetPackage(model)
           if (packageName.isEmpty()) {
@@ -99,23 +98,22 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
           if (emitSerializers) {
             TopologyCodegen.generateSerializers(model, packageName)
               .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
-            // The stable process-wide gezginJson references gezginSerializersModule, so it shares
-            // gezginSerializersModule, so it shares the emitSerializers gate. No @Composable is
-            // emitted here: the graph module is plain-JVM (crash-safe val only).
+            // The stable process-wide `gezginJson` references `gezginSerializersModule`, so both
+            // share the `emitSerializers` gate. No `@Composable` is emitted here because the graph
+            // module is plain JVM; only the process-safe value is generated.
             TopologyCodegen.generateRememberNavigator(packageName)
               .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
           }
 
-          // Typed per-source navigators — undeclared edges simply have no method (unresolved
-          // reference).
+          // Typed per-source navigators omit methods for undeclared edges, producing an unresolved
+          // reference at the call site.
           NavigatorCodegen.generate(model, packageName).forEach {
             it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
           }
 
-          // Generated typed test API (`GezginTestNavigator.fromX()`) — opt-IN (default false): only
-          // a
-          // test source set's KSP config sets `gezgin.emitTestAccessors=true` (no `:gezgin-test`
-          // dep in prod).
+          // Generated typed test API (`GezginTestNavigator.fromX()`) is opt-in and disabled by
+          // default. Only a test source set's KSP configuration sets
+          // `gezgin.emitTestAccessors=true`; production has no `:gezgin-test` dependency.
           val emitTestAccessors = environment.options["gezgin.emitTestAccessors"].toBoolean()
           if (emitTestAccessors) {
             TestApiCodegen.generate(model, packageName)
@@ -123,19 +121,16 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
           }
         }
 
-        // @MviViewModel classes read first so MVI-mode `@Screen(state,onIntent)` content can pair
-        // with
-        // its same-module VM by route. Reading (validate + dump) runs UNCONDITIONALLY — only
-        // WRITING
-        // entries is gated by `gezgin.emitEntries` below.
+        // Read `@MviViewModel` classes first so MVI-mode `@Screen(state,onIntent)` content can pair
+        // with its same-module ViewModel by route. Reading, validation, and dumps run
+        // unconditionally; only entry generation is gated by `gezgin.emitEntries` below.
         val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
         val (entries, entriesOk) =
           EntryModelReader(resolver, environment.logger, model, vmModels).read()
 
-        // @FragmentScreen read cross-checks each route against the already-built `entries` so a
-        // route
-        // can't be registered by BOTH a @FragmentScreen and a @Screen/MVI content (`FS3`). Post-hoc
-        // cross-check, not a shared-map change (see FragmentModelReader KDoc).
+        // The `@FragmentScreen` reader cross-checks each route against the existing entries so the
+        // same route cannot be registered by both a Fragment and `@Screen`/MVI content (`FS3`).
+        // This is a post-read cross-check rather than a shared-map mutation.
         val (fragmentModels, fragOk) =
           FragmentModelReader(resolver, environment.logger, entries).read()
 
@@ -161,15 +156,12 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
             .use { it.write(dumpFragmentText(fragmentModels).toByteArray()) }
         }
 
-        // `provideXEntry` codegen — opt-OUT (default true); the opt-out exists for kctfork infra
-        // with
-        // no compose-compiler plugin (the emitted body ICEs the backend). Runs INDEPENDENTLY of
-        // graph
-        // ownership — a feature module qualifies each navigator factory against the ROUTE's
-        // package,
-        // not this module's. Core-mode → `GezginEntries.kt`, MVI-mode → separate
-        // `GezginMviEntries.kt`
-        // (same package, distinct file; `SC6` keeps names unique). `fragOk` joins the gate so an FS
+        // `provideXEntry` codegen is enabled by default. The opt-out supports kctfork when the
+        // Compose compiler plugin is absent and the emitted body would fail the backend. Entry
+        // generation is independent of graph ownership: a feature module qualifies each navigator
+        // factory against the route package, not its own. Core mode writes `GezginEntries.kt`.
+        // MVI mode writes `GezginMviEntries.kt` in the same package but a distinct file; `SC6`
+        // keeps names unique. `fragOk` joins the gate so an FS
         // guardrail violation fails the build instead of emitting the surviving registration.
         val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
         if (emitEntries && vmOk && entriesOk && fragOk) {
@@ -185,16 +177,12 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
               it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
             }
           }
-          // Fragment interop `provideXEntry`: each @FragmentScreen →
-          // `AndroidFragment`-hosting
-          // entry in a THIRD file `GezginFragmentEntries.kt`. Same emitEntries gate.
+          // Each `@FragmentScreen` emits an `AndroidFragment`-hosting `provideXEntry` into the
+          // separate `GezginFragmentEntries.kt` file under the same `emitEntries` gate.
           if (fragmentModels.isNotEmpty()) {
-            // Whether a @FragmentScreen route earns an `xNavigator` factory is a GRAPH-derived fact
-            // —
-            // computed HERE (model in scope), not in the graph-unaware FragmentModelReader.
-            // Delegated
-            // to the SHARED [NavigatorProbe] (same-module: in-memory; cross-module: classpath
-            // probe).
+            // Whether a `@FragmentScreen` route earns an `xNavigator` factory is graph-derived, so
+            // it is computed here where the model is available. `NavigatorProbe` handles both the
+            // in-memory same-module case and the cross-module classpath case.
             val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)
             val routesByFq = model.routes.associateBy(RouteModel::fqName)
             FragmentEntryCodegen.generate(fragmentModels) { entry ->

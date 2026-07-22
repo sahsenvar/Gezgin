@@ -134,8 +134,7 @@ internal class FragmentModelReader(
   private var ok = true
 
   // Map each route to its current owner. Seed from built entries so a Fragment collision with
-  // core/MVI content is
-  // caught (`FS3` cross-kind) exactly like two Fragments colliding (`FS3` same-kind).
+  // core/MVI content is caught (`FS3` cross-kind), just like a collision between two Fragments.
   private val ownerByRouteFq: MutableMap<String, String> =
     entries.associate { it.routeFq to it.functionSimpleName }.toMutableMap()
 
