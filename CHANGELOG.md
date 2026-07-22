@@ -5,6 +5,13 @@ Bu projenin tüm kayda değer değişiklikleri bu dosyada belgelenir.
 Biçim [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/)'e,
 sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
+## [0.1.0-alpha05] - Unreleased
+
+### Fixed
+
+- Screen-only `AndroidFragment` entry'leri artık üretilen host'a `Modifier.fillMaxSize()` uygular;
+  böylece Fragment içeriği üst/alt chrome'un ölçümünden bağımsız olarak kullanılabilir ekran alanını doldurur.
+
 ## [0.1.0-alpha04] - Unreleased
 
 ### Added
@@ -79,6 +86,7 @@ navigasyon katmanı (Navigation 3 üzerinde). Yayınlanan artefaktlar: `dev.gezg
   round-trip, predictive-back, modal iptal) gerçek cihaz/emülatörde henüz doğrulanmadı;
   bkz. [docs/gezgin-on-device-checklist.md](docs/gezgin-on-device-checklist.md).
 
+[0.1.0-alpha05]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha04...v0.1.0-alpha05
 [0.1.0-alpha04]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha03...v0.1.0-alpha04
 [0.1.0-alpha03]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha02...v0.1.0-alpha03
 [0.1.0-alpha02]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha01...v0.1.0-alpha02

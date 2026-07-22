@@ -22,7 +22,7 @@ tasks.withType<KotlinCompile>().configureEach {
 // birine AÇIKÇA yazılır. Root gradle.properties'e koymak gezgin-test + sample modüllerine de sızardı
 // (yayınlanmamalı) — bu yüzden modül-başına açık `version` tercih edildi.
 group = "dev.gezgin"
-version = "0.1.0-alpha04"
+version = "0.1.0-alpha05"
 
 kotlin {
     // Faz 9.1 — açık API yüzeyi (her public bildirim explicit visibility + dönüş tipi ister). Codegen'in

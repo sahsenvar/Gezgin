@@ -17,7 +17,7 @@ tasks.withType<KotlinCompile>().configureEach {
 // Faz 7.4 — versiyonlama: proje ilk sürümü (bkz. gezgin-core/build.gradle.kts gerekçesi — modül-başına
 // açık `version`, root gradle.properties'e konmaz ki gezgin-test/sample'a sızmasın).
 group = "dev.gezgin"
-version = "0.1.0-alpha04"
+version = "0.1.0-alpha05"
 
 kotlin {
     // Faz 9.1 — yayınlanan modüller için açık API yüzeyi (her public bildirim explicit visibility +
