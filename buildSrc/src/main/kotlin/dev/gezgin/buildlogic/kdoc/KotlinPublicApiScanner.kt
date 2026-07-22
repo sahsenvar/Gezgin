@@ -292,7 +292,13 @@ class KotlinPublicApiScanner : AutoCloseable {
       )
     val PROCESS_ARTIFACT =
       Regex(
-        "\\b(?:task|phase|faz|deliverable|review|report|spike|brief|checkpoint|todo|fixme)\\b",
+        "\\b(?:todo|fixme)\\b|" +
+          "\\b(?:task|phase|faz|görev|gorev|aşama|asama)\\s*(?:[-#:]\\s*)?\\d+(?:[.-]\\d+)*\\b|" +
+          "\\btask\\s*[-#:]\\s*[a-z0-9]+\\b|" +
+          "\\b(?:final[- ]review|review report|review findings?|review checkpoint|" +
+          "spike report|implementation brief|implementation report|implementation checkpoint|" +
+          "release report|release checkpoint|migration report|migration checkpoint|" +
+          "phase migration|phase implementation)\\b",
         RegexOption.IGNORE_CASE,
       )
   }

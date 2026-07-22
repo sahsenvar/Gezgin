@@ -381,6 +381,28 @@ class KotlinPublicApiScannerTest {
     assertTrue(result.declarations.single { it.name == "ExcludedProcessArtifact" }.excluded)
   }
 
+  @Test
+  fun `allows process words when they describe API behavior in natural English`() {
+    val result =
+      scan(
+        """
+            /** Schedules a task for later execution. */
+            public fun scheduleTask(): Unit = Unit
+
+            /** Returns a report for the current route. */
+            public fun currentReport(): Unit = Unit
+
+            /** Lets callers review the route and persist checkpoint state. */
+            public fun inspectRoute(): Unit = Unit
+            """
+      )
+
+    assertEquals(
+      emptyList(),
+      result.findings.filter { it.kind == KDocFindingKind.PROCESS_ARTIFACT_KDOC },
+    )
+  }
+
   private fun scan(source: String): KotlinPublicApiScanResult =
     scanner.scan(
       KotlinSourceInput(path = "src/main/kotlin/Fixture.kt", content = source.trimIndent())
