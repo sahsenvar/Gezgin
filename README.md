@@ -100,9 +100,7 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 
 ## Installation
 
-> ⚠️ **Not on Maven Central yet.** The `maven-publish` config is currently a skeleton (no remote repository / signing). Build from source with `./gradlew publishToMavenLocal` and consume from `mavenLocal()`. The coordinates below are correct for release day.
-
-Apply the KSP + serialization plugins and add the artifacts (`group = dev.gezgin`, `version = 0.1.0-alpha04`):
+Apply the KSP + serialization plugins and use the Maven Central coordinates (`group = io.github.sahsenvar`, `version = 0.1.0`):
 
 ```kotlin
 plugins {
@@ -111,11 +109,11 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.gezgin:gezgin-core:0.1.0-alpha04")
-    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha04")
+    implementation("io.github.sahsenvar:gezgin-core:0.1.0")
+    ksp("io.github.sahsenvar:gezgin-processor:0.1.0")
 
-    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha04")        // optional MVI add-on
-    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha04")   // UI-less testing: GezginTestNavigator + typed fromX()
+    // implementation("io.github.sahsenvar:gezgin-mvi:0.1.0")        // optional MVI add-on
+    // testImplementation("io.github.sahsenvar:gezgin-test:0.1.0")   // UI-less testing: GezginTestNavigator + typed fromX()
 }
 ```
 
@@ -130,8 +128,8 @@ The two build boundaries are intentionally separate:
 
 | Boundary | Verified versions |
 |---|---|
-| Gezgin root | Gradle 8.14, Kotlin 2.3.21, KSP 2.3.9, AGP 8.11.0, Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0 on Android; JetBrains Navigation 3 1.0.0-alpha05 + lifecycle Navigation 3 2.10.0-alpha05 on desktop; min SDK 24. |
-| Independent ZAD-shaped consumer | Its own Gradle 9.4.1 wrapper, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0. It resolves pinned Maven Local artifacts and does not use a composite/source substitution. |
+| Gezgin root | Gradle 9.0.0, Kotlin 2.3.21, KSP 2.3.9, AGP 8.13.2, Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0 on Android; JetBrains Navigation 3 1.0.0-alpha05 + lifecycle Navigation 3 2.10.0-alpha05 on desktop; min SDK 24. |
+| Independent ZAD-shaped consumer | Its own Gradle 9.4.1 wrapper, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0. It resolves all four Gezgin artifacts from one exclusive repository (Maven Central in release smoke) and does not use a composite/source substitution or Maven Local fallback. |
 
 These are different build roles, not interchangeable upgrade instructions. Full contracts: [docs/gezgin-design.md](docs/gezgin-design.md) §15.
 

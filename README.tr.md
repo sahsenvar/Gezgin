@@ -100,9 +100,7 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 ## Kurulum
 
-> ⚠️ **Henüz Maven Central'da değil.** `maven-publish` yapılandırması şimdilik iskelet (uzak repository / signing YOK). Kaynaktan `./gradlew publishToMavenLocal` ile derleyip `mavenLocal()`'den tüketin. Aşağıdaki koordinatlar release günü için doğrudur.
-
-KSP + serialization plugin'lerini uygulayıp artefaktları ekle (`group = dev.gezgin`, `version = 0.1.0-alpha04`):
+KSP + serialization plugin'lerini uygulayıp Maven Central koordinatlarını kullan (`group = io.github.sahsenvar`, `version = 0.1.0`):
 
 ```kotlin
 plugins {
@@ -111,11 +109,11 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.gezgin:gezgin-core:0.1.0-alpha04")
-    ksp("dev.gezgin:gezgin-processor:0.1.0-alpha04")
+    implementation("io.github.sahsenvar:gezgin-core:0.1.0")
+    ksp("io.github.sahsenvar:gezgin-processor:0.1.0")
 
-    // implementation("dev.gezgin:gezgin-mvi:0.1.0-alpha04")        // opsiyonel MVI add-on
-    // testImplementation("dev.gezgin:gezgin-test:0.1.0-alpha04")   // UI'sız test: GezginTestNavigator + tipli fromX()
+    // implementation("io.github.sahsenvar:gezgin-mvi:0.1.0")        // opsiyonel MVI add-on
+    // testImplementation("io.github.sahsenvar:gezgin-test:0.1.0")   // UI'sız test: GezginTestNavigator + tipli fromX()
 }
 ```
 
@@ -139,8 +137,8 @@ override val dragHandleMode: BottomSheetDragHandleMode
 
 | Sınır | Doğrulanan sürümler |
 |---|---|
-| Gezgin root | Gradle 8.14, Kotlin 2.3.21, KSP 2.3.9, AGP 8.11.0, Compose Multiplatform 1.11.0; Android'de AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop'ta JetBrains Navigation 3 1.0.0-alpha05 + lifecycle Navigation 3 2.10.0-alpha05; min SDK 24. |
-| Bağımsız ZAD-shaped consumer | Kendi Gradle 9.4.1 wrapper'ı, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0. Pinli Maven Local artefaktlarını çözer; composite/source substitution kullanmaz. |
+| Gezgin root | Gradle 9.0.0, Kotlin 2.3.21, KSP 2.3.9, AGP 8.13.2, Compose Multiplatform 1.11.0; Android'de AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop'ta JetBrains Navigation 3 1.0.0-alpha05 + lifecycle Navigation 3 2.10.0-alpha05; min SDK 24. |
+| Bağımsız ZAD-shaped consumer | Kendi Gradle 9.4.1 wrapper'ı, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0. Dört Gezgin artefaktını tek exclusive repository'den (release smoke'ta Maven Central) çözer; composite/source substitution veya Maven Local fallback kullanmaz. |
 
 Bunlar birbirinin yerine uygulanacak upgrade talimatları değil, farklı build rolleridir. Tam sözleşme: [docs/gezgin-design.md](docs/gezgin-design.md) §15.
 

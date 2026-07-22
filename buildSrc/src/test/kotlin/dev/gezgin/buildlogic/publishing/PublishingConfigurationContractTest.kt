@@ -108,20 +108,22 @@ class PublishingConfigurationContractTest {
   @Test
   fun `compatibility consumer resolves the release coordinates from an isolated repository`() {
     val consumerBuild = text("compatibility/zad-consumer/build.gradle.kts")
-    assertContains(consumerBuild, "providers.gradleProperty(\"useAlpha04MavenLocal\")")
     assertContains(consumerBuild, "\"io.github.sahsenvar\"")
     assertContains(consumerBuild, "\"0.1.0\"")
-    assertContains(consumerBuild, "\"dev.gezgin\"")
-    assertContains(consumerBuild, "\"0.1.0-alpha04\"")
+    assertContains(
+      consumerBuild,
+      "testImplementation(\"${'$'}gezginGroup:gezgin-test:${'$'}gezginVersion\")",
+    )
+    assertFalse(consumerBuild.contains("useAlpha04MavenLocal"))
 
     val consumerSettings = text("compatibility/zad-consumer/settings.gradle.kts")
     assertContains(consumerSettings, "providers.gradleProperty(\"releaseVerificationRepository\")")
     assertContains(consumerSettings, "exclusiveContent")
     assertContains(consumerSettings, "includeGroup(\"io.github.sahsenvar\")")
-    assertContains(consumerSettings, "providers.gradleProperty(\"useAlpha04MavenLocal\")")
-    assertContains(consumerSettings, "releaseVerificationRepository == null")
-    assertContains(consumerSettings, "mavenLocal()")
+    assertContains(consumerSettings, "https://repo.maven.apache.org/maven2")
     assertContains(consumerSettings, "mavenCentral()")
+    assertFalse(consumerSettings.contains("mavenLocal()"))
+    assertFalse(consumerSettings.contains("includeBuild"))
   }
 
   @Test

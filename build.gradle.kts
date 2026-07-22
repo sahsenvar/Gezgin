@@ -180,6 +180,7 @@ val verifyReleaseConsumer =
       commandLine(
         "./gradlew",
         "compileDebugKotlin",
+        "compileDebugUnitTestKotlin",
         "-PreleaseVerificationRepository=${repository.absolutePath}",
         "--refresh-dependencies",
         "--rerun-tasks",

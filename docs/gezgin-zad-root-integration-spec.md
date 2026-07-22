@@ -216,7 +216,7 @@ Add a real consumer compile fixture that pins the ZAD family:
 
 The fixture must compile generated Gezgin MVI code against real Koin and Navigation 3 artifacts. Stub-only processor tests are insufficient. Gezgin's Kotlin/KSP and Android Navigation 3 dependency families are aligned until the fixture compiles without JetBrains Navigation 3 artifacts leaking into the Android runtime graph.
 
-The build boundary is fixed: the Gezgin root keeps its Gradle `8.14` wrapper, while `compatibility/zad-consumer` owns and always executes its own Gradle `9.4.1` wrapper. The consumer never uses `includeBuild`, composite substitution, `projectDir`, or another source dependency. The Gezgin root build first publishes one exact artifact version to Maven Local; the consumer then resolves only that pinned Maven Local version with its own wrapper. Every Android command performs this portable SDK preflight first:
+The build boundary is fixed: the Gezgin root uses its Gradle `9.0.0` wrapper, while `compatibility/zad-consumer` owns and always executes its own Gradle `9.4.1` wrapper. The consumer never uses `includeBuild`, composite substitution, `projectDir`, Maven Local, or another source dependency. Local release verification injects one temporary repository exclusively for `io.github.sahsenvar`; the tag workflow repeats the compile from Maven Central with a clean Gradle user home. Every Android command performs this portable SDK preflight first:
 
 ~~~bash
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"

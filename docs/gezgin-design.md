@@ -391,8 +391,8 @@ Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` eri
 
 | Sınır | Exact sürümler ve rol |
 |---|---|
-| Gezgin root | Gradle 8.14; Kotlin 2.3.21; KSP 2.3.9; AGP 8.11.0; Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop JetBrains Navigation 3 1.0.0-alpha05 + lifecycle 2.10.0-alpha05; min SDK 24. |
-| `compatibility/zad-consumer` | Kendi Gradle 9.4.1 wrapper'ı; Kotlin 2.3.21; KSP 2.3.9; AGP 9.2.1; JDK/JVM 21; compile/target SDK 37; Koin 4.2.2 + compiler plugin 1.0.1; AndroidX Navigation 3 1.0.0 + lifecycle 2.10.0. Yalnız pinli Maven Local artefaktlarını çözer; `includeBuild`, composite substitution, `projectDir` veya başka source dependency kullanmaz. |
+| Gezgin root | Gradle 9.0.0; Kotlin 2.3.21; KSP 2.3.9; AGP 8.13.2; Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop JetBrains Navigation 3 1.0.0-alpha05 + lifecycle 2.10.0-alpha05; min SDK 24. |
+| `compatibility/zad-consumer` | Kendi Gradle 9.4.1 wrapper'ı; Kotlin 2.3.21; KSP 2.3.9; AGP 9.2.1; JDK/JVM 21; compile/target SDK 37; Koin 4.2.2 + compiler plugin 1.0.1; AndroidX Navigation 3 1.0.0 + lifecycle 2.10.0. Dört `io.github.sahsenvar` artefaktını tek exclusive repository'den çözer; `includeBuild`, composite substitution, `projectDir`, Maven Local veya başka source dependency kullanmaz. |
 
 ---
 

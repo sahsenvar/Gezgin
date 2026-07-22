@@ -5,6 +5,7 @@ import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -86,7 +87,94 @@ class WorkflowConfigurationContractTest {
     assertContains(dependabot, "package-ecosystem: github-actions")
     assertContains(dependabot, "interval: weekly")
     assertFalse(Files.exists(projectRoot.resolve(".github/workflows/dependabot-auto-merge.yml")))
-    assertFalse(Files.exists(projectRoot.resolve(".github/workflows/release.yml")))
+    assertTrue(Files.isRegularFile(projectRoot.resolve(".github/workflows/release.yml")))
+  }
+
+  @Test
+  fun `release is a strict ordered stable tag workflow`() {
+    val workflow = text(".github/workflows/release.yml")
+    assertContains(workflow, "tags: [ 'v*' ]")
+    assertContains(workflow, "group: release-${'$'}{{ github.ref }}")
+    assertContains(workflow, "./gradle/release/validate-release.sh \"${'$'}{{ github.ref_name }}\"")
+    assertContains(workflow, "needs: validate")
+    assertContains(workflow, "needs: publish")
+    assertContains(workflow, "needs: central-smoke")
+    assertContains(workflow, "./gradlew publishAndReleaseToMavenCentral --no-configuration-cache")
+    assertContains(workflow, "./gradle/release/smoke-maven-central.sh")
+    assertContains(workflow, "./gradle/release/extract-release-notes.sh")
+    assertContains(workflow, "contents: write")
+  }
+
+  @Test
+  fun `release maps exactly the five repository secrets without command interpolation`() {
+    val workflow = text(".github/workflows/release.yml")
+    val requiredSecrets =
+      listOf(
+        "MAVEN_CENTRAL_USERNAME",
+        "MAVEN_CENTRAL_PASSWORD",
+        "SIGNING_IN_MEMORY_KEY",
+        "SIGNING_IN_MEMORY_KEY_PASSWORD",
+        "SIGNING_IN_MEMORY_KEY_ID",
+      )
+    requiredSecrets.forEach { secret ->
+      assertContains(workflow, "secrets.$secret")
+      assertFalse(workflow.contains("run: ${'$'}{{ secrets.$secret }}"))
+    }
+    assertEquals(
+      requiredSecrets,
+      Regex("secrets\\.([A-Z0-9_]+)").findAll(workflow).map { it.groupValues[1] }.toList(),
+    )
+    assertFalse(workflow.contains("echo ${'$'}{{ secrets."))
+  }
+
+  @Test
+  fun `release helper scripts enforce repository only Central smoke`() {
+    val validator = text("gradle/release/validate-release.sh")
+    assertContains(validator, "VERSION_NAME")
+    assertContains(validator, "CHANGELOG.md")
+    assertContains(validator, "Stable releases only")
+
+    val smoke = text("gradle/release/smoke-maven-central.sh")
+    assertContains(smoke, "gezgin-core")
+    assertContains(smoke, "gezgin-processor")
+    assertContains(smoke, "gezgin-mvi")
+    assertContains(smoke, "gezgin-test")
+    assertContains(smoke, "MAX_WAIT_SECONDS=1800")
+    assertContains(smoke, "RETRY_SECONDS=30")
+    assertContains(smoke, "compileDebugUnitTestKotlin")
+    assertContains(smoke, "gradle-9.4.1-bin.zip")
+    assertFalse(smoke.contains("mavenLocal"))
+    assertFalse(smoke.contains("includeBuild"))
+  }
+
+  @Test
+  fun `maintained release documentation uses the final coordinates and API`() {
+    val maintainedDocs =
+      listOf(
+        "README.md",
+        "README.tr.md",
+        "CHANGELOG.md",
+        "sample/README.md",
+        "docs/gezgin-by-example.md",
+        "docs/gezgin-design.md",
+        "docs/gezgin-zad-readiness-handoff.md",
+        "docs/gezgin-zad-root-integration-spec.md",
+      )
+    val contents = maintainedDocs.associateWith(::text)
+    contents.forEach { (path, content) ->
+      assertFalse(content.contains("dev.gezgin:"), path)
+      assertFalse(content.contains("0.1.0-alpha04"), path)
+      assertFalse(content.contains("ScreenEffect"), path)
+    }
+
+    listOf("README.md", "README.tr.md", "docs/gezgin-zad-readiness-handoff.md").forEach {
+      val content = contents.getValue(it)
+      listOf("gezgin-core", "gezgin-processor", "gezgin-mvi", "gezgin-test").forEach { module ->
+        assertContains(content, "io.github.sahsenvar:$module:0.1.0", message = it)
+      }
+    }
+    assertContains(contents.getValue("README.md"), "ExperimentalGezginMigrationApi")
+    assertContains(contents.getValue("README.md"), "@EffectHandler(route)")
   }
 
   @Test
