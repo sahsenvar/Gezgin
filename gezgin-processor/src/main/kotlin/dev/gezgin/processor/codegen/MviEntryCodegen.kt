@@ -204,9 +204,9 @@ internal object MviEntryCodegen {
 
     return when (vm.di) {
       VmDiKind.ANDROIDX -> {
-        // NAMED constructor call  over the route/nav params ONLY — order-independent, and any
-        // defaulted OTHER param (`MN4`, e.g. `retries: Int = 3`) is OMITTED so the VM's own default
-        // applies. `emitDefault` guarantees there are no NON-defaulted OTHER params here.
+        // Use named arguments for only route and navigator parameters; ordering is irrelevant.
+        // Defaulted other parameters (`MN4`, e.g. `retries: Int = 3`) are omitted so the ViewModel
+        // default applies. `emitDefault` guarantees every remaining other parameter has a default.
         val ctorArgs =
           vm.ctorParams
             .filter { roleOf(it) != VmDiClassifier.Role.OTHER }

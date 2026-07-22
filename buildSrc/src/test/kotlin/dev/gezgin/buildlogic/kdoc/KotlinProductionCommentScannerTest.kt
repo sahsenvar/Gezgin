@@ -276,6 +276,56 @@ class KotlinProductionCommentScannerTest {
     assertEquals(emptyList(), findings)
   }
 
+  @Test
+  fun `rejects Turkish prose in fenced code comments and internal prose double spaces`() {
+    val findings =
+      scan(
+        """
+            /**
+             * ```kotlin
+             * private val args by gezginArgs<Route>() // tipli; route Bundle'dan gelir
+             * ```
+             */
+            private fun fencedTurkish(): Unit = Unit
+
+            private val terminal = Unit // terminal ekran
+
+            // Consequence: ALL  modal guards run at runtime.
+            private fun doubleSpaceOne(): Unit = Unit
+
+            // Use a named call  over route parameters.
+            private fun doubleSpaceTwo(): Unit = Unit
+            """
+      )
+
+    assertEquals(2, findings.count { it.kind == ProductionCommentFindingKind.TURKISH_HISTORY })
+    // The two double spaces are malformed, and the two-word terminal fragment is independently
+    // malformed as well as Turkish.
+    assertEquals(3, findings.count { it.kind == ProductionCommentFindingKind.MALFORMED_PROSE })
+  }
+
+  @Test
+  fun `allows fenced code indentation alignment tables and inline code spacing`() {
+    val findings =
+      scan(
+        """
+            /**
+             * ```kotlin
+             * val short  = 1
+             * val longer = 2
+             * ```
+             *
+             * | Name  | Value  |
+             * |-------|--------|
+             * Keeps `call  over` as literal code.
+             */
+            private fun controls(): Unit = Unit
+            """
+      )
+
+    assertEquals(emptyList(), findings)
+  }
+
   private fun scan(source: String): List<ProductionCommentFinding> =
     scanner.scan(
       KotlinSourceInput(path = "src/commonMain/kotlin/Fixture.kt", content = source.trimIndent())

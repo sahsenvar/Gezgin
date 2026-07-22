@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
  * ```
  * @FragmentScreen(OrderChainRoute::class)
  * class OrderChainFragment : Fragment() {
- *     private val args by gezginArgs<OrderChainRoute>()    // tipli; route Bundle'dan → PD-safe
+ *     private val args by gezginArgs<OrderChainRoute>()    // typed route from a process-safe Bundle
  *     private val nav  by gezginNav<OrderChainNavigator>() // the counterpart of @Screen's 'nav' param
  * }
  * ```

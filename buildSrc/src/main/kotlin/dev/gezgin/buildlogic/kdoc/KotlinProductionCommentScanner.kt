@@ -36,8 +36,9 @@ class KotlinProductionCommentScanner : AutoCloseable {
       input.commentBlocks(tokens).flatMap { comment ->
         val text = comment.text
         val line = input.lineAt(comment.offset)
+        val prose = text.naturalLanguageProse()
         buildList {
-          if (text.containsInternalHistory()) {
+          if (prose.containsInternalHistory()) {
             add(
               ProductionCommentFinding(
                 input.path,
@@ -47,8 +48,11 @@ class KotlinProductionCommentScanner : AutoCloseable {
               )
             )
           }
-          val prose = WITHOUT_INLINE_CODE.replace(text, "")
-          if (TURKISH_UNICODE.containsMatchIn(prose) || TURKISH_HISTORY.containsMatchIn(prose)) {
+          if (
+            TURKISH_UNICODE.containsMatchIn(prose) ||
+              TURKISH_HISTORY.containsMatchIn(prose) ||
+              TURKISH_APOSTROPHE_SUFFIX.containsMatchIn(prose)
+          ) {
             add(
               ProductionCommentFinding(
                 input.path,
@@ -143,12 +147,35 @@ class KotlinProductionCommentScanner : AutoCloseable {
     return words.size <= 2
   }
 
+  private fun String.naturalLanguageProse(): String {
+    var insideFence = false
+    return lineSequence()
+      .mapNotNull { rawLine ->
+        val line =
+          rawLine
+            .trim()
+            .removePrefix("/**")
+            .removePrefix("/*")
+            .removePrefix("//")
+            .removePrefix("*")
+            .removeSuffix("*/")
+            .trim()
+        if (line.startsWith("```")) {
+          insideFence = !insideFence
+          null
+        } else if (insideFence) {
+          line.substringAfter("//", missingDelimiterValue = "").trim().ifEmpty { null }
+        } else {
+          line
+        }
+      }
+      .joinToString("\n") { line -> WITHOUT_INLINE_CODE.replace(line, "") }
+  }
+
   private fun String.containsInternalHistory(): Boolean =
-    WITHOUT_INLINE_CODE.replace(this, "").let { prose ->
-      STALE_REFERENCE.containsMatchIn(prose) ||
-        COMPACT_TOKEN.findAll(prose).any { token -> token.value.looksLikeCompactInternalId() } ||
-        PLAIN_INTERNAL_ID.findAll(prose).any { it.value !in SAFE_TECHNICAL_IDS }
-    }
+    STALE_REFERENCE.containsMatchIn(this) ||
+      COMPACT_TOKEN.findAll(this).any { token -> token.value.looksLikeCompactInternalId() } ||
+      PLAIN_INTERNAL_ID.findAll(this).any { it.value !in SAFE_TECHNICAL_IDS }
 
   private fun String.looksLikeCompactInternalId(): Boolean {
     val parts = split('-')
@@ -173,7 +200,8 @@ class KotlinProductionCommentScanner : AutoCloseable {
         SPACED_PUNCTUATION.containsMatchIn(prose) ||
         prose.hasOrphanFragment() ||
         DUPLICATE_FUTURE.containsMatchIn(prose) ||
-        prose.containsLowercaseSentenceFragment()
+        prose.containsLowercaseSentenceFragment() ||
+        containsInternalProseDoubleSpace()
     ) {
       return true
     }
@@ -189,6 +217,33 @@ class KotlinProductionCommentScanner : AutoCloseable {
       }
     }
     return depth != 0
+  }
+
+  private fun String.containsInternalProseDoubleSpace(): Boolean {
+    var insideFence = false
+    return lineSequence().any { rawLine ->
+      val line =
+        rawLine
+          .trim()
+          .removePrefix("/**")
+          .removePrefix("/*")
+          .removePrefix("//")
+          .removePrefix("*")
+          .removeSuffix("*/")
+          .trim()
+      if (line.startsWith("```")) {
+        insideFence = !insideFence
+        false
+      } else {
+        val proseLine =
+          if (insideFence) line.substringAfter("//", missingDelimiterValue = "").trim() else line
+        val withoutCode = WITHOUT_INLINE_CODE.replace(proseLine, "KDOCSPAN")
+        proseLine.isNotEmpty() &&
+          !withoutCode.startsWith("|") &&
+          !withoutCode.endsWith("|") &&
+          INTERNAL_PROSE_DOUBLE_SPACE.containsMatchIn(withoutCode)
+      }
+    }
   }
 
   private fun String.containsLowercaseSentenceFragment(): Boolean =
@@ -253,9 +308,11 @@ class KotlinProductionCommentScanner : AutoCloseable {
       Regex(
         "\\b(?:faz|görev|gorev|aşama|asama|rapor|bulgu|inceleme|devir|spike|karar|" +
           "kanıt|kanit|doğrulandı|dogrulandi|yalniz|yalnız|ayni|aynı|deger|değer|durumda|" +
-          "kullanilir|kullanılır|gercek|gerçek|davranis|davranış|burada|korunur)\\b",
+          "kullanilir|kullanılır|gercek|gerçek|davranis|davranış|burada|korunur|tipli|ekran)\\b",
         RegexOption.IGNORE_CASE,
       )
+    val TURKISH_APOSTROPHE_SUFFIX =
+      Regex("\\b[A-Za-zÇĞİÖŞÜçğıöşü]+['’](?:da|de|dan|den|a|e|ı|i|u|ü|ın|in|un|ün|la|le)\\b")
     val TURKISH_UNICODE = Regex("[çğıöşüÇĞİÖŞÜ]")
     val DUPLICATE_WORD = Regex("\\b([A-Za-z]{3,})\\s+\\1\\b", RegexOption.IGNORE_CASE)
     val EMPTY_PUNCTUATION = Regex("[,;:]\\s*\\)")
@@ -280,6 +337,7 @@ class KotlinProductionCommentScanner : AutoCloseable {
     val LINE_FRAGMENT_WORD = Regex("[A-Za-zÀ-ž0-9]+(?:['’-][A-Za-zÀ-ž0-9]+)*")
     val FILE_NAME_FRAGMENT = Regex("[A-Za-z][A-Za-z0-9_.-]+\\.(?:kt|kts|java)")
     val POSSESSIVE_FRAGMENT = Regex("[A-Za-z][A-Za-z0-9]*['’]s")
+    val INTERNAL_PROSE_DOUBLE_SPACE = Regex("\\S {2,}\\S")
     val LOWERCASE_SENTENCE_FRAGMENT = Regex("[.!?]\\s+([a-z])\\w*\\b")
     val SAFE_ABBREVIATIONS = setOf("e.g", "i.e", "etc", "vs", "cf", "bkz")
     val DUPLICATE_FUTURE =

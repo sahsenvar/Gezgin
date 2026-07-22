@@ -579,8 +579,8 @@ internal class GezginValidator(private val model: GraphModel, private val logger
   // identical code across build topologies, so it is intentionally not shipped. Moreover the case
   // does not crash at runtime — `@QuitAndGoTo(X)` yields `[.., Caller, X]` (caller stays below), so
   // OverlayScene's non-empty-overlaid invariant holds; it is an advisory design-smell, not a
-  // correctness violation. Consequence: ALL  modal guards are runtime — modal props are
-  // route-instance values (KSP-invisible) and modal kind is feature-module-local.
+  // correctness violation. Consequently, all modal guards are runtime checks because modal
+  // properties are route-instance values (KSP-invisible) and modal kind is feature-module-local.
   //
   // endregion
 

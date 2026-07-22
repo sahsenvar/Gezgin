@@ -1040,7 +1040,7 @@ internal class EntryModelReader(
             return false
           }
         }
-        EntryKindModel.SCREEN -> Unit // @NoBack + @Screen legal (terminal ekran)
+        EntryKindModel.SCREEN -> Unit // `@NoBack` is valid on a terminal screen.
       }
     }
     return true
