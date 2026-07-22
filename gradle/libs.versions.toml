@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.3.21"
-ksp = "2.3.9"
+ksp = "2.3.10"
 agp = "8.13.2"
 compose-multiplatform = "1.11.0"
 # CMP material3 (BottomSheet) — org.jetbrains.compose plugin 1.11.0'ın BUNDLE ettiği material3
