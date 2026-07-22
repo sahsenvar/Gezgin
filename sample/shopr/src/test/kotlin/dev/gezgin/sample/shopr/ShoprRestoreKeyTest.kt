@@ -14,7 +14,7 @@ class ShoprRestoreKeyTest {
       "Shopr host must retain its explicit stable restore namespace",
     )
 
-    val arguments = callArguments(source, "val navigator = rememberNavigator(")
+    val arguments = callArguments(source, "rememberNavigator(")
     assertTrue(
       Regex("""\brestoreKey\s*=\s*SHOPR_RESTORE_KEY\b""").containsMatchIn(arguments),
       "Shopr host must pass SHOPR_RESTORE_KEY to its rememberNavigator call",
