@@ -31,7 +31,12 @@ jobs:
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
 
       - name: Validate stable tag, project version and changelog
-        run: ./gradle/release/validate-release.sh "${{ github.ref_name }}"
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: ./gradle/release/validate-release.sh "$RELEASE_TAG"
+
+      - name: Test release scripts
+        run: ./gradle/release/test-release-scripts.sh
 
       - name: Test build and release logic
         run: ./gradlew -p buildSrc test --no-daemon --console=plain

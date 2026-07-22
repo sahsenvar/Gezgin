@@ -45,6 +45,7 @@ class WorkflowConfigurationContractTest {
     assertContains(workflow, "dokkaGenerate")
     assertContains(workflow, ":sample:app:assembleDebug")
     assertContains(workflow, "./gradle/verify-release-publications.sh")
+    assertContains(workflow, "./gradle/release/test-release-scripts.sh")
     assertFalse(workflow.contains("MAVEN_CENTRAL_USERNAME"))
   }
 
@@ -95,7 +96,8 @@ class WorkflowConfigurationContractTest {
     val workflow = text(".github/workflows/release.yml")
     assertContains(workflow, "tags: [ 'v*' ]")
     assertContains(workflow, "group: release-${'$'}{{ github.ref }}")
-    assertContains(workflow, "./gradle/release/validate-release.sh \"${'$'}{{ github.ref_name }}\"")
+    assertContains(workflow, "RELEASE_TAG: ${'$'}{{ github.ref_name }}")
+    assertContains(workflow, "./gradle/release/validate-release.sh \"${'$'}RELEASE_TAG\"")
     assertContains(workflow, "needs: validate")
     assertContains(workflow, "needs: publish")
     assertContains(workflow, "needs: central-smoke")
@@ -103,6 +105,14 @@ class WorkflowConfigurationContractTest {
     assertContains(workflow, "./gradle/release/smoke-maven-central.sh")
     assertContains(workflow, "./gradle/release/extract-release-notes.sh")
     assertContains(workflow, "contents: write")
+    Regex("(?ms)^\\s+run:\\s*(?:[>|]-?\\s*)?(.*?)(?=^\\s{6}- name:|^\\s{2}[a-zA-Z-]+:|\\z)")
+      .findAll(workflow)
+      .forEach { runBlock ->
+        assertFalse(
+          runBlock.value.contains("${'$'}{{"),
+          "Untrusted GitHub expressions must be passed through env, not interpolated into shell",
+        )
+      }
   }
 
   @Test
@@ -133,18 +143,29 @@ class WorkflowConfigurationContractTest {
     assertContains(validator, "VERSION_NAME")
     assertContains(validator, "CHANGELOG.md")
     assertContains(validator, "Stable releases only")
+    assertFalse(validator.contains("grep -E"))
+
+    val extractor = text("gradle/release/extract-release-notes.sh")
+    assertFalse(extractor.contains("awk -v version"))
 
     val smoke = text("gradle/release/smoke-maven-central.sh")
-    assertContains(smoke, "gezgin-core")
-    assertContains(smoke, "gezgin-processor")
-    assertContains(smoke, "gezgin-mvi")
-    assertContains(smoke, "gezgin-test")
-    assertContains(smoke, "MAX_WAIT_SECONDS=1800")
-    assertContains(smoke, "RETRY_SECONDS=30")
     assertContains(smoke, "compileDebugUnitTestKotlin")
     assertContains(smoke, "gradle-9.4.1-bin.zip")
     assertFalse(smoke.contains("mavenLocal"))
     assertFalse(smoke.contains("includeBuild"))
+    assertContains(smoke, "wait-for-maven-central.sh")
+
+    val waitForCentral = text("gradle/release/wait-for-maven-central.sh")
+    listOf("gezgin-core", "gezgin-processor", "gezgin-mvi", "gezgin-test").forEach {
+      assertContains(waitForCentral, it)
+    }
+    assertContains(waitForCentral, "MAX_WAIT_SECONDS")
+    assertContains(waitForCentral, ":-1800")
+    assertContains(waitForCentral, "RETRY_SECONDS")
+    assertContains(waitForCentral, ":-30")
+    assertContains(waitForCentral, "remaining")
+    assertContains(text("gradle/release/test-release-scripts.sh"), "0x1x0")
+    assertContains(text("gradle/release/test-release-scripts.sh"), "v${'$'}(touch")
   }
 
   @Test

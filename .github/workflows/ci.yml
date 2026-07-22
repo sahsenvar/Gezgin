@@ -43,6 +43,9 @@ jobs:
       - name: Test build logic
         run: ./gradlew -p buildSrc test --no-daemon --console=plain
 
+      - name: Test release scripts
+        run: ./gradle/release/test-release-scripts.sh
+
       - name: Run build, test, API, KDoc and Dokka gates
         run: >-
           ./gradlew

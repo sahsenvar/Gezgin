@@ -2,30 +2,8 @@
 set -euo pipefail
 
 VERSION=${1:?Usage: smoke-maven-central.sh VERSION}
-CENTRAL_URL=https://repo.maven.apache.org/maven2
-GROUP_PATH=io/github/sahsenvar
-MAX_WAIT_SECONDS=1800
-RETRY_SECONDS=30
-MODULES=(gezgin-core gezgin-processor gezgin-mvi gezgin-test)
-DEADLINE=$((SECONDS + MAX_WAIT_SECONDS))
-
-while true; do
-  missing=0
-  for module in "${MODULES[@]}"; do
-    pom="$CENTRAL_URL/$GROUP_PATH/$module/$VERSION/$module-$VERSION.pom"
-    if ! curl --fail --silent --show-error --location --head --max-time 10 "$pom" >/dev/null; then
-      missing=1
-    fi
-  done
-  if [[ "$missing" -eq 0 ]]; then
-    break
-  fi
-  if ((SECONDS + RETRY_SECONDS >= DEADLINE)); then
-    echo "Gezgin $VERSION was not fully visible on Maven Central within 30 minutes." >&2
-    exit 1
-  fi
-  sleep "$RETRY_SECONDS"
-done
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+"$SCRIPT_DIR/wait-for-maven-central.sh" "$VERSION"
 
 WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/gezgin-central-smoke.XXXXXX")
 trap 'rm -rf "$WORK_DIR"' EXIT
