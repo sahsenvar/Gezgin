@@ -1,7 +1,7 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 
 plugins {
   alias(libs.plugins.kotlin.multiplatform)
@@ -20,12 +20,6 @@ dokka {
   }
 }
 
-// Faz 9.3 (M7) — JVM/Android derlemelerinde `-Xjvm-default=all` (bkz. gezgin-core gerekçesi):
-// `GezginMvi$DefaultImpls` ABI'ye girmez, default'lu interface'lere üye eklemek ileride kolaylaşır.
-tasks.withType<KotlinCompile>().configureEach {
-  compilerOptions.freeCompilerArgs.add("-Xjvm-default=all")
-}
-
 kotlin {
   // Faz 9.1 — yayınlanan modüller için açık API yüzeyi (her public bildirim explicit visibility +
   // dönüş tipi ister; kasıtlı-olmayan yüzey `internal`'a çekilir). BCV .api dump'ıyla birlikte
@@ -37,8 +31,8 @@ kotlin {
   // task-5.0);
   // gezgin-mvi'nin KENDİSİ DI-agnostik (§15) — Hilt/Koin RUNTIME dep'i YOK, codegen string-FQN
   // okur.
-  jvm()
-  androidTarget()
+  jvm { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
+  androidTarget { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
   sourceSets {
     commonMain.dependencies {
       // gezgin-core: Route/annotation'lar (@Screen) + GezginEntryScope.register + navigator seam'i.

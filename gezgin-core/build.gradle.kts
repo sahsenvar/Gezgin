@@ -1,7 +1,7 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
 import com.vanniktech.maven.publish.SourcesJar
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 
 plugins {
   alias(libs.plugins.kotlin.multiplatform)
@@ -21,16 +21,6 @@ dokka {
   }
 }
 
-// Faz 9.3 (M7) — JVM/Android derlemelerinde `-Xjvm-default=all`: default'lu interface üyeleri
-// gerçek JVM
-// default method'una çevrilir → `$DefaultImpls` sınıfları ABI'ye girmez (yayın sonrası `all`'a
-// geçiş
-// binary-breaking olurdu; ilk yayında temiz başlanır). `KotlinCompile` yalnız JVM+Android compile
-// task'lerini yakalar (metadata `KotlinCompileCommon` hariç → JVM-only flag orada uyarı vermez).
-tasks.withType<KotlinCompile>().configureEach {
-  compilerOptions.freeCompilerArgs.add("-Xjvm-default=all")
-}
-
 kotlin {
   // Faz 9.1 — açık API yüzeyi (her public bildirim explicit visibility + dönüş tipi ister).
   // Codegen'in
@@ -43,8 +33,8 @@ kotlin {
   // jvm() = desktop Compose hedefi (Faz 3 GezginDisplay); compose.desktop.currentOs çalıştırma
   // zamanı
   // yalnız desktop uiTest'te gerekebilir (Faz 3.2+), burada eklenmedi.
-  jvm()
-  androidTarget()
+  jvm { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
+  androidTarget { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
   sourceSets {
     commonMain.dependencies {
       api(libs.kotlinx.coroutines.core)

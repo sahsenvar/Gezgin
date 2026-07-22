@@ -201,6 +201,17 @@ class PublishingConfigurationContractTest {
     )
   }
 
+  @Test
+  fun `uses the supported no compatibility JVM default mode`() {
+    listOf("gezgin-core", "gezgin-mvi").forEach { module ->
+      val build = text("$module/build.gradle.kts")
+      assertContains(build, "JvmDefaultMode.NO_COMPATIBILITY")
+      assertContains(build, "jvmDefault.set(")
+      assertFalse(build.contains("-Xjvm-default"), "$module must not use the deprecated flag")
+      assertFalse(build.contains("KotlinCompile"), "$module must configure the Kotlin DSL")
+    }
+  }
+
   private fun properties(relativePath: String): Properties =
     Properties().apply { projectRoot.resolve(relativePath).inputStream().use(::load) }
 
