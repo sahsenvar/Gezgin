@@ -16,11 +16,11 @@ import dev.gezgin.sample.navigation.SignUpFlow.ProfileInfoScreenRoute
 @Screen(ProfileInfoScreenRoute::class)
 @Composable
 fun ProfileInfoScreen(state: ProfileInfoUiState, onIntent: (ProfileInfoIntent) -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Kayıt ol — profil bilgileri")
-            Text("E-posta: ${state.email}")
-            Button(onClick = { onIntent(ProfileInfoIntent.Continue) }) { Text("Devam") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Kayıt ol — profil bilgileri")
+      Text("E-posta: ${state.email}")
+      Button(onClick = { onIntent(ProfileInfoIntent.Continue) }) { Text("Devam") }
     }
+  }
 }

@@ -12,11 +12,12 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(ProfileInfoScreenRoute::class)
 @Composable
 fun ProfileInfoEffectHandler(effects: Flow<ProfileInfoEffect>, nav: ProfileInfoNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is ProfileInfoEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
-            ProfileInfoEffect.OpenTerms -> nav.goToTerms()
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is ProfileInfoEffect.ShowMessage ->
+        Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      ProfileInfoEffect.OpenTerms -> nav.goToTerms()
     }
+  }
 }

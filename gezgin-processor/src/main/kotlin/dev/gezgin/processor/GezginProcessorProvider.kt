@@ -10,7 +10,7 @@ import com.google.devtools.ksp.processing.SymbolProcessorProvider
  * @author @sahsenvar
  */
 public class GezginProcessorProvider : SymbolProcessorProvider {
-    /** Creates a Gezgin processor configured with [environment]. */
-    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
-        GezginProcessor(environment)
+  /** Creates a Gezgin processor configured with [environment]. */
+  override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor =
+    GezginProcessor(environment)
 }

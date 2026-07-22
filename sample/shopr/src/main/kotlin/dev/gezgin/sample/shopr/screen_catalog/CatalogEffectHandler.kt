@@ -13,31 +13,29 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(HomeGraph.Catalog::class)
 @Composable
 fun CatalogEffectHandler(effects: Flow<CatalogEffect>, nav: CatalogNavigator) {
-    val context = LocalContext.current
-    val showMessage: (String) -> Unit = { message ->
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-    }
-    val resultIntents = effects.catalogResultIntentSink()
+  val context = LocalContext.current
+  val showMessage: (String) -> Unit = { message ->
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+  }
+  val resultIntents = effects.catalogResultIntentSink()
 
-    ObserveEffects(effects) { effect ->
-        handleCatalogEffect(effect, nav, showMessage)
+  ObserveEffects(effects) { effect -> handleCatalogEffect(effect, nav, showMessage) }
+  LaunchedEffect(effects) {
+    nav.checkoutResults.collect { result ->
+      resultIntents.send(CatalogIntent.CheckoutResult(result))
     }
-    LaunchedEffect(effects) {
-        nav.checkoutResults.collect { result ->
-            resultIntents.send(CatalogIntent.CheckoutResult(result))
-        }
-    }
+  }
 }
 
 internal fun handleCatalogEffect(
-    effect: CatalogEffect,
-    nav: CatalogNavigator,
-    onMessage: (String) -> Unit,
+  effect: CatalogEffect,
+  nav: CatalogNavigator,
+  onMessage: (String) -> Unit,
 ) {
-    when (effect) {
-        is CatalogEffect.ShowMessage -> onMessage(effect.text)
-        is CatalogEffect.NavigateToProduct -> nav.goToProduct(effect.productId)
-        CatalogEffect.LaunchCheckout -> nav.launchCheckout()
-        is CatalogEffect.CheckoutCompleted -> nav.replaceToOrderPlaced(effect.orderId.value)
-    }
+  when (effect) {
+    is CatalogEffect.ShowMessage -> onMessage(effect.text)
+    is CatalogEffect.NavigateToProduct -> nav.goToProduct(effect.productId)
+    CatalogEffect.LaunchCheckout -> nav.launchCheckout()
+    is CatalogEffect.CheckoutCompleted -> nav.replaceToOrderPlaced(effect.orderId.value)
+  }
 }

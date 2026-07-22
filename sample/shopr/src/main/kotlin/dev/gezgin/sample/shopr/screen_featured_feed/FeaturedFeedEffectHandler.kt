@@ -9,15 +9,12 @@ import kotlinx.coroutines.flow.Flow
 
 @EffectHandler(HomeGraph.FeaturedFeed::class)
 @Composable
-fun FeaturedFeedEffectHandler(
-    effects: Flow<FeaturedFeedEffect>,
-    nav: FeaturedFeedNavigator,
-) {
-    ObserveEffects(effects) { effect -> handleFeaturedFeedEffect(effect, nav) }
+fun FeaturedFeedEffectHandler(effects: Flow<FeaturedFeedEffect>, nav: FeaturedFeedNavigator) {
+  ObserveEffects(effects) { effect -> handleFeaturedFeedEffect(effect, nav) }
 }
 
 internal fun handleFeaturedFeedEffect(effect: FeaturedFeedEffect, nav: FeaturedFeedNavigator) {
-    when (effect) {
-        is FeaturedFeedEffect.NavigateToFeaturedProduct -> nav.goToProduct(effect.productId)
-    }
+  when (effect) {
+    is FeaturedFeedEffect.NavigateToFeaturedProduct -> nav.goToProduct(effect.productId)
+  }
 }

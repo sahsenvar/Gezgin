@@ -11,23 +11,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @MviViewModel(HomeGraph.WelcomeScreenRoute::class)
-class WelcomeViewModel(
-    route: HomeGraph.WelcomeScreenRoute,
-) : ViewModel(), GezginMvi<WelcomeUiState, WelcomeIntent, WelcomeEffect> {
+class WelcomeViewModel(route: HomeGraph.WelcomeScreenRoute) :
+  ViewModel(), GezginMvi<WelcomeUiState, WelcomeIntent, WelcomeEffect> {
 
-    private val _uiState = MutableStateFlow(WelcomeUiState(name = route.name))
-    override val uiState: StateFlow<WelcomeUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(WelcomeUiState(name = route.name))
+  override val uiState: StateFlow<WelcomeUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<WelcomeEffect>()
-    override val effects: Flow<WelcomeEffect> = _effects.flow
+  private val _effects = GezginEffects<WelcomeEffect>()
+  override val effects: Flow<WelcomeEffect> = _effects.flow
 
-    override fun onIntent(intent: WelcomeIntent) {
-        when (intent) {
-            // Efekt Continue'da DEĞİL OnAppear'da: @ReplaceTo Welcome entry'sini kaldırır → Continue'da
-            // gönderilen efekti hiçbir observer toplayamadan ekran yok olur (kayıp toast).
-            WelcomeIntent.OnAppear ->
-                _effects.send(WelcomeEffect.ShowMessage(_uiState.value.name?.let { "Merhaba $it" } ?: "Merhaba"))
-            WelcomeIntent.Continue -> _effects.send(WelcomeEffect.ContinueToDashboard)
-        }
+  override fun onIntent(intent: WelcomeIntent) {
+    when (intent) {
+      // Efekt Continue'da DEĞİL OnAppear'da: @ReplaceTo Welcome entry'sini kaldırır → Continue'da
+      // gönderilen efekti hiçbir observer toplayamadan ekran yok olur (kayıp toast).
+      WelcomeIntent.OnAppear ->
+        _effects.send(
+          WelcomeEffect.ShowMessage(_uiState.value.name?.let { "Merhaba $it" } ?: "Merhaba")
+        )
+      WelcomeIntent.Continue -> _effects.send(WelcomeEffect.ContinueToDashboard)
     }
+  }
 }

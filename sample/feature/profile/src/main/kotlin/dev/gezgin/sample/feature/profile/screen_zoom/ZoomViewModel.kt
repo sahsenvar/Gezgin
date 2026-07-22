@@ -14,21 +14,23 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(ZoomScreenRoute::class)
 class ZoomViewModel : ViewModel(), GezginMvi<ZoomUiState, ZoomIntent, ZoomEffect> {
 
-    private val _uiState = MutableStateFlow(ZoomUiState)
-    override val uiState: StateFlow<ZoomUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(ZoomUiState)
+  override val uiState: StateFlow<ZoomUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<ZoomEffect>()
-    override val effects: Flow<ZoomEffect> = _effects.flow
+  private val _effects = GezginEffects<ZoomEffect>()
+  override val effects: Flow<ZoomEffect> = _effects.flow
 
-    // Giriş ipucu entry yaratılırken gönderilir (quitWith'ten önce DEĞİL); lossless kanal STARTED'da toplar.
-    init {
-        _effects.send(ZoomEffect.ShowMessage("Yakınlaştırıp kareyi seçin"))
+  // Giriş ipucu entry yaratılırken gönderilir (quitWith'ten önce DEĞİL); lossless kanal STARTED'da
+  // toplar.
+  init {
+    _effects.send(ZoomEffect.ShowMessage("Yakınlaştırıp kareyi seçin"))
+  }
+
+  override fun onIntent(intent: ZoomIntent) {
+    when (intent) {
+      ZoomIntent.UseFrame ->
+        _effects.send(ZoomEffect.Complete(AvatarChoice(uri = "zoomed://frame")))
+      ZoomIntent.Back -> _effects.send(ZoomEffect.Back)
     }
-
-    override fun onIntent(intent: ZoomIntent) {
-        when (intent) {
-            ZoomIntent.UseFrame -> _effects.send(ZoomEffect.Complete(AvatarChoice(uri = "zoomed://frame")))
-            ZoomIntent.Back -> _effects.send(ZoomEffect.Back)
-        }
-    }
+  }
 }

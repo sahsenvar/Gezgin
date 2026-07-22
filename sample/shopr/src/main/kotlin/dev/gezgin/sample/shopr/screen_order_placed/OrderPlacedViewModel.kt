@@ -11,26 +11,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @MviViewModel(HomeGraph.OrderPlaced::class)
-class OrderPlacedViewModel(
-    route: HomeGraph.OrderPlaced,
-) : ViewModel(), GezginMvi<OrderPlacedUiState, OrderPlacedIntent, OrderPlacedEffect> {
+class OrderPlacedViewModel(route: HomeGraph.OrderPlaced) :
+  ViewModel(), GezginMvi<OrderPlacedUiState, OrderPlacedIntent, OrderPlacedEffect> {
 
-    private val _uiState = MutableStateFlow(OrderPlacedUiState(route.orderId))
-    override val uiState: StateFlow<OrderPlacedUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(OrderPlacedUiState(route.orderId))
+  override val uiState: StateFlow<OrderPlacedUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<OrderPlacedEffect>()
-    override val effects: Flow<OrderPlacedEffect> = _effects.flow
+  private val _effects = GezginEffects<OrderPlacedEffect>()
+  override val effects: Flow<OrderPlacedEffect> = _effects.flow
 
-    init {
-        _effects.send(OrderPlacedEffect.ShowMessage("Sipariş ${route.orderId} onaylandı"))
+  init {
+    _effects.send(OrderPlacedEffect.ShowMessage("Sipariş ${route.orderId} onaylandı"))
+  }
+
+  override fun onIntent(intent: OrderPlacedIntent) {
+    when (intent) {
+      OrderPlacedIntent.BackToFeed -> _effects.send(OrderPlacedEffect.BackToFeed)
+      OrderPlacedIntent.ShowDetails ->
+        _effects.send(OrderPlacedEffect.ShowDetails(orderId = _uiState.value.orderId))
     }
-
-    override fun onIntent(intent: OrderPlacedIntent) {
-        when (intent) {
-            OrderPlacedIntent.BackToFeed -> _effects.send(OrderPlacedEffect.BackToFeed)
-            OrderPlacedIntent.ShowDetails -> _effects.send(
-                OrderPlacedEffect.ShowDetails(orderId = _uiState.value.orderId),
-            )
-        }
-    }
+  }
 }

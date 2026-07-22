@@ -19,28 +19,21 @@ import dev.gezgin.sample.shopr.nav.HomeGraph
 @TopBar(HomeGraph.Feed::class)
 @Composable
 fun FeedTopBar(state: FeedUiState, onIntent: (FeedIntent) -> Unit) {
-    Surface {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text("Shopr")
-            Button(onClick = { onIntent(FeedIntent.OpenCatalog) }) {
-                Text(state.headline)
-            }
-        }
+  Surface {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(16.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+      Text("Shopr")
+      Button(onClick = { onIntent(FeedIntent.OpenCatalog) }) { Text(state.headline) }
     }
+  }
 }
 
 @BottomBar(HomeGraph.Feed::class)
 @Composable
 fun FeedBottomBar(state: FeedUiState, onIntent: (FeedIntent) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalArrangement = Arrangement.End,
-    ) {
-        Button(onClick = { onIntent(FeedIntent.OpenCatalog) }) {
-            Text(state.primaryActionLabel)
-        }
-    }
+  Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.End) {
+    Button(onClick = { onIntent(FeedIntent.OpenCatalog) }) { Text(state.primaryActionLabel) }
+  }
 }

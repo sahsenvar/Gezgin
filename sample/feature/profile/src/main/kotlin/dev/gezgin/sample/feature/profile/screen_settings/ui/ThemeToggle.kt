@@ -7,8 +7,8 @@ import androidx.compose.runtime.Composable
 
 @Composable
 fun ThemeToggle(checked: Boolean, onToggle: () -> Unit) {
-    Column {
-        Text("Koyu tema")
-        Switch(checked = checked, onCheckedChange = { onToggle() })
-    }
+  Column {
+    Text("Koyu tema")
+    Switch(checked = checked, onCheckedChange = { onToggle() })
+  }
 }

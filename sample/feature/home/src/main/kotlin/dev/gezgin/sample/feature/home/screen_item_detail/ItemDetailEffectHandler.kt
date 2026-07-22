@@ -12,13 +12,14 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(ItemDetailScreenRoute::class)
 @Composable
 fun ItemDetailEffectHandler(effects: Flow<ItemDetailEffect>, nav: ItemDetailNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is ItemDetailEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
-            is ItemDetailEffect.OpenRelated -> nav.goToRelated(effect.id)
-            is ItemDetailEffect.OpenImage -> nav.goToItemImageViewer(effect.id)
-            ItemDetailEffect.BackToDashboard -> nav.backToDashboard()
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is ItemDetailEffect.ShowMessage ->
+        Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      is ItemDetailEffect.OpenRelated -> nav.goToRelated(effect.id)
+      is ItemDetailEffect.OpenImage -> nav.goToItemImageViewer(effect.id)
+      ItemDetailEffect.BackToDashboard -> nav.backToDashboard()
     }
+  }
 }

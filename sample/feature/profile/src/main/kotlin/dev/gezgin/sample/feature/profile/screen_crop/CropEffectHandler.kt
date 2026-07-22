@@ -12,13 +12,13 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(CropScreenRoute::class)
 @Composable
 fun CropEffectHandler(effects: Flow<CropEffect>, nav: CropNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is CropEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
-            CropEffect.OpenZoom -> nav.goToZoom()
-            is CropEffect.Complete -> nav.quitWith(effect.choice)
-            CropEffect.Back -> nav.back()
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is CropEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      CropEffect.OpenZoom -> nav.goToZoom()
+      is CropEffect.Complete -> nav.quitWith(effect.choice)
+      CropEffect.Back -> nav.back()
     }
+  }
 }

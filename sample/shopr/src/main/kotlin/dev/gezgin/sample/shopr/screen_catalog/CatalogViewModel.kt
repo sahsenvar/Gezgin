@@ -14,22 +14,23 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(HomeGraph.Catalog::class)
 class CatalogViewModel : ViewModel(), GezginMvi<CatalogUiState, CatalogIntent, CatalogEffect> {
 
-    private val _uiState = MutableStateFlow(CatalogUiState())
-    override val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(CatalogUiState())
+  override val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<CatalogEffect>()
-    override val effects: Flow<CatalogEffect> = catalogResultIntentEffectFlow(_effects.flow, ::onIntent)
+  private val _effects = GezginEffects<CatalogEffect>()
+  override val effects: Flow<CatalogEffect> =
+    catalogResultIntentEffectFlow(_effects.flow, ::onIntent)
 
-    override fun onIntent(intent: CatalogIntent) {
-        when (intent) {
-            CatalogIntent.OpenProduct -> _effects.send(
-                CatalogEffect.NavigateToProduct(productId = _uiState.value.featuredSku),
-            )
-            CatalogIntent.StartCheckout -> _effects.send(CatalogEffect.LaunchCheckout)
-            is CatalogIntent.CheckoutResult -> when (val result = intent.result) {
-                is NavResult.Value -> _effects.send(CatalogEffect.CheckoutCompleted(result.value))
-                NavResult.Canceled -> _effects.send(CatalogEffect.ShowMessage("Ödeme iptal edildi"))
-            }
+  override fun onIntent(intent: CatalogIntent) {
+    when (intent) {
+      CatalogIntent.OpenProduct ->
+        _effects.send(CatalogEffect.NavigateToProduct(productId = _uiState.value.featuredSku))
+      CatalogIntent.StartCheckout -> _effects.send(CatalogEffect.LaunchCheckout)
+      is CatalogIntent.CheckoutResult ->
+        when (val result = intent.result) {
+          is NavResult.Value -> _effects.send(CatalogEffect.CheckoutCompleted(result.value))
+          NavResult.Canceled -> _effects.send(CatalogEffect.ShowMessage("Ödeme iptal edildi"))
         }
     }
+  }
 }

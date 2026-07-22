@@ -19,42 +19,42 @@ import dev.gezgin.core.Route
  * `viewModel()`/`koinViewModel()`/`hiltViewModel()` ile çözer; üçü de `LocalViewModelStoreOwner`
  * ister → decorator olmadan desktop'ta ya ilk render'da `IllegalStateException` (owner yok) ya da
  * VM pencere-scoped olurdu (aynı route'un iki stack instance'ı TEK VM paylaşır, pop'ta `onCleared`
- * hiç gelmez — §222'nin "entry-scoped, pop'ta onCleared" vaadinin sessiz ihlali; yalnız Android'de doğruydu).
+ * hiç gelmez — §222'nin "entry-scoped, pop'ta onCleared" vaadinin sessiz ihlali; yalnız Android'de
+ * doğruydu).
  *
- * JB `rememberViewModelStoreNavEntryDecorator` (org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-
- * navigation3, commonMain — Android actual'ı da AYNI artefaktı kullanır) her entry için
- * (`contentKey = GezginKey.id`) TAZE bir child `ViewModelStore` kurar ve entry stack'ten düşünce
- * (`removeViewModelStoreOnPop` non-android default'u `true`) o store'u `clear()`'lar → `onCleared`.
- * Böylece Android'deki "entry-scoped VM, pop'ta temizlik, cover/recompose'da korunur" yaşam döngüsü
- * desktop'ta da birebir sağlanır.
+ * JB `rememberViewModelStoreNavEntryDecorator`
+ * (org.jetbrains.androidx.lifecycle:lifecycle-viewmodel- navigation3, commonMain — Android actual'ı
+ * da AYNI artefaktı kullanır) her entry için (`contentKey = GezginKey.id`) TAZE bir child
+ * `ViewModelStore` kurar ve entry stack'ten düşünce (`removeViewModelStoreOnPop` non-android
+ * default'u `true`) o store'u `clear()`'lar → `onCleared`. Böylece Android'deki "entry-scoped VM,
+ * pop'ta temizlik, cover/recompose'da korunur" yaşam döngüsü desktop'ta da birebir sağlanır.
  *
- * **Neden host owner değil, Gezgin'in KENDİ pencere-scoped owner'ı:** decorator'ın varsayılan owner'ı
- * `checkNotNull(LocalViewModelStoreOwner.current)` yapar — CMP desktop host'unda (özellikle
- * `runComposeUiTest`) bu owner garanti DEĞİL → varsayılan patlardı. Desktop'ta config-change (recreation)
- * yok, dolayısıyla owner'ın recreation-survival'a ihtiyacı yok: `remember`'lı stabil bir owner yeter ve
- * owner'sız host'larda da çalışır. `DisposableEffect` ile display teardown'ında owner'ın store'u
- * `clear()`'lanır (aksi halde en son görünür entry'nin VM'i sızardı — child store'ları pop'ta temizlenir
- * ama görünür-kalan entry'ninki teardown'a kadar canlıdır).
+ * **Neden host owner değil, Gezgin'in KENDİ pencere-scoped owner'ı:** decorator'ın varsayılan
+ * owner'ı `checkNotNull(LocalViewModelStoreOwner.current)` yapar — CMP desktop host'unda (özellikle
+ * `runComposeUiTest`) bu owner garanti DEĞİL → varsayılan patlardı. Desktop'ta config-change
+ * (recreation) yok, dolayısıyla owner'ın recreation-survival'a ihtiyacı yok: `remember`'lı stabil
+ * bir owner yeter ve owner'sız host'larda da çalışır. `DisposableEffect` ile display teardown'ında
+ * owner'ın store'u `clear()`'lanır (aksi halde en son görünür entry'nin VM'i sızardı — child
+ * store'ları pop'ta temizlenir ama görünür-kalan entry'ninki teardown'a kadar canlıdır).
  *
- * Sıra [GezginDisplay]'de `[saveable] + platform` (saveable OUTER; bu decorator saveable'ın sağladığı
- * yaşam döngüsü kancasına dayanır) — Android ile aynı.
+ * Sıra [GezginDisplay]'de `[saveable] + platform` (saveable OUTER; bu decorator saveable'ın
+ * sağladığı yaşam döngüsü kancasına dayanır) — Android ile aynı.
  */
 @Composable
 internal actual fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Route>> {
-    val storeOwner = remember { GezginWindowViewModelStoreOwner() }
-    DisposableEffect(storeOwner) {
-        onDispose { storeOwner.viewModelStore.clear() }
-    }
-    return listOf(rememberViewModelStoreNavEntryDecorator(viewModelStoreOwner = storeOwner))
+  val storeOwner = remember { GezginWindowViewModelStoreOwner() }
+  DisposableEffect(storeOwner) { onDispose { storeOwner.viewModelStore.clear() } }
+  return listOf(rememberViewModelStoreNavEntryDecorator(viewModelStoreOwner = storeOwner))
 }
 
 /**
- * Desktop pencere-scoped [ViewModelStoreOwner] — [rememberPlatformEntryDecorators]'ın per-entry child
- * store'ları barındırdığı stabil kök (Android'in `ComponentActivity` owner'ının desktop karşılığı).
- * `remember`'lanır (composition boyunca tek instance); GezginDisplay teardown'ında store `clear()`'lanır.
+ * Desktop pencere-scoped [ViewModelStoreOwner] — [rememberPlatformEntryDecorators]'ın per-entry
+ * child store'ları barındırdığı stabil kök (Android'in `ComponentActivity` owner'ının desktop
+ * karşılığı). `remember`'lanır (composition boyunca tek instance); GezginDisplay teardown'ında
+ * store `clear()`'lanır.
  */
 private class GezginWindowViewModelStoreOwner : ViewModelStoreOwner {
-    override val viewModelStore: ViewModelStore = ViewModelStore()
+  override val viewModelStore: ViewModelStore = ViewModelStore()
 }
 
 /**
@@ -62,32 +62,33 @@ private class GezginWindowViewModelStoreOwner : ViewModelStoreOwner {
  * [gezginOnBack] guard'ıyla sağlanır (top `noBack` entry iken `onBack` pop yapmaz).
  */
 @Composable
-internal actual fun GezginNoBackHandler() { /* no-op — bkz. KDoc */ }
+internal actual fun GezginNoBackHandler() {
+  /* no-op — bkz. KDoc */
+}
 
 /**
  * Desktop (JB alpha05): `NavDisplay` scene-strategy'si **TEKİL** `sceneStrategy: SceneStrategy<T>`.
- * `GezginDialogSceneStrategy(pinnedBack) then GezginBottomSheetSceneStrategy(pinnedBack) then SinglePaneSceneStrategy()`
- * — dialog- ve sheet-metadata'lı entry'ler overlay olarak (her strateji kendi metadata key'ini okur, ayrık;
- * dismiss'i sahip-entry'ye pinli, C-MJ-1), kalanı tek-pane (SceneStrategy.then overlay-önce sözleşmesi; iki
- * overlay stratejisi karşılıklı-dışlayan, sıra önemsiz — SinglePane en sonda fallback). Nav3 built-in
- * `DialogSceneStrategy` BIRAKILDI (entry-pin edilemezdi).
+ * `GezginDialogSceneStrategy(pinnedBack) then GezginBottomSheetSceneStrategy(pinnedBack) then
+ * SinglePaneSceneStrategy()` — dialog- ve sheet-metadata'lı entry'ler overlay olarak (her strateji
+ * kendi metadata key'ini okur, ayrık; dismiss'i sahip-entry'ye pinli, C-MJ-1), kalanı tek-pane
+ * (SceneStrategy.then overlay-önce sözleşmesi; iki overlay stratejisi karşılıklı-dışlayan, sıra
+ * önemsiz — SinglePane en sonda fallback). Nav3 built-in `DialogSceneStrategy` BIRAKILDI (entry-pin
+ * edilemezdi).
  */
 @Composable
 internal actual fun GezginNavDisplay(
-    entries: List<NavEntry<Route>>,
-    modifier: Modifier,
-    onBack: () -> Unit,
-    pinnedBack: (Long) -> Unit,
+  entries: List<NavEntry<Route>>,
+  modifier: Modifier,
+  onBack: () -> Unit,
+  pinnedBack: (Long) -> Unit,
 ) {
-    // m3 — strateji zinciri stateless ama HER recomposition'da yeniden kurulmasın (Android actual'la
-    // aynı kimlik-stabilizasyonu; GezginDisplay'in decorator/onBack `remember`'ıyla tutarlı).
-    val sceneStrategy = remember(pinnedBack) {
-        GezginDialogSceneStrategy(pinnedBack) then GezginBottomSheetSceneStrategy(pinnedBack) then SinglePaneSceneStrategy()
+  // m3 — strateji zinciri stateless ama HER recomposition'da yeniden kurulmasın (Android actual'la
+  // aynı kimlik-stabilizasyonu; GezginDisplay'in decorator/onBack `remember`'ıyla tutarlı).
+  val sceneStrategy =
+    remember(pinnedBack) {
+      GezginDialogSceneStrategy(pinnedBack) then
+        GezginBottomSheetSceneStrategy(pinnedBack) then
+        SinglePaneSceneStrategy()
     }
-    NavDisplay(
-        entries = entries,
-        modifier = modifier,
-        sceneStrategy = sceneStrategy,
-        onBack = onBack,
-    )
+  NavDisplay(entries = entries, modifier = modifier, sceneStrategy = sceneStrategy, onBack = onBack)
 }

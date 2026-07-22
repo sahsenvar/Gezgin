@@ -10,7 +10,7 @@ import dev.gezgin.sample.shopr.ui.ScreenChrome
 @Screen(Payment::class)
 @Composable
 fun PaymentScreen(state: PaymentUiState, onIntent: (PaymentIntent) -> Unit) {
-    ScreenChrome(title = "Payment ${state.amount}") {
-        Button(onClick = { onIntent(PaymentIntent.Pay) }) { Text("Ödemeyi tamamla") }
-    }
+  ScreenChrome(title = "Payment ${state.amount}") {
+    Button(onClick = { onIntent(PaymentIntent.Pay) }) { Text("Ödemeyi tamamla") }
+  }
 }

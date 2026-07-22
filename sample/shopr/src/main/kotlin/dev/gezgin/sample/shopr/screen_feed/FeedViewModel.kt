@@ -13,15 +13,15 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(HomeGraph.Feed::class)
 class FeedViewModel : ViewModel(), GezginMvi<FeedUiState, FeedIntent, FeedEffect> {
 
-    private val _uiState = MutableStateFlow(FeedUiState())
-    override val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(FeedUiState())
+  override val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<FeedEffect>()
-    override val effects: Flow<FeedEffect> = _effects.flow
+  private val _effects = GezginEffects<FeedEffect>()
+  override val effects: Flow<FeedEffect> = _effects.flow
 
-    override fun onIntent(intent: FeedIntent) {
-        when (intent) {
-            FeedIntent.OpenCatalog -> _effects.send(FeedEffect.NavigateToCatalog)
-        }
+  override fun onIntent(intent: FeedIntent) {
+    when (intent) {
+      FeedIntent.OpenCatalog -> _effects.send(FeedEffect.NavigateToCatalog)
     }
+  }
 }

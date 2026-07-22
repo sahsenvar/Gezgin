@@ -13,11 +13,8 @@ import dev.gezgin.sample.shopr.nav.HomeGraph
 @BottomSheet(HomeGraph.OrderLockSheetRoute::class)
 @Composable
 fun OrderLockBottomSheet(route: HomeGraph.OrderLockSheetRoute) {
-    Column(
-        modifier = Modifier.padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text("Sipariş ${route.orderId} doğrulanıyor")
-        Text("Bu sayfa tamamlanana kadar geri, dış alan ve sürükleme ile kapatılamaz.")
-    }
+  Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Text("Sipariş ${route.orderId} doğrulanıyor")
+    Text("Bu sayfa tamamlanana kadar geri, dış alan ve sürükleme ile kapatılamaz.")
+  }
 }

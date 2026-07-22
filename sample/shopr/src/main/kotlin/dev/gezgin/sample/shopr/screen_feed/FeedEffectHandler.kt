@@ -10,11 +10,11 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(HomeGraph.Feed::class)
 @Composable
 fun FeedEffectHandler(effects: Flow<FeedEffect>, nav: FeedNavigator) {
-    ObserveEffects(effects) { effect -> handleFeedEffect(effect, nav) }
+  ObserveEffects(effects) { effect -> handleFeedEffect(effect, nav) }
 }
 
 internal fun handleFeedEffect(effect: FeedEffect, nav: FeedNavigator) {
-    when (effect) {
-        FeedEffect.NavigateToCatalog -> nav.goToCatalog()
-    }
+  when (effect) {
+    FeedEffect.NavigateToCatalog -> nav.goToCatalog()
+  }
 }

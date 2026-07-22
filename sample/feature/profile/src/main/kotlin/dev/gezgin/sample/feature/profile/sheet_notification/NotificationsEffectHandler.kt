@@ -11,16 +11,16 @@ import kotlinx.coroutines.flow.Flow
 
 @EffectHandler(NotificationsSheetRoute::class)
 @Composable
-fun NotificationsEffectHandler(effects: Flow<NotificationsEffect>, nav: NotificationsSheetNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is NotificationsEffect.ShowMessage -> Toast.makeText(
-                context,
-                effect.text,
-                Toast.LENGTH_SHORT
-            ).show()
-            is NotificationsEffect.Confirm -> nav.backWithResult(effect.level)
-        }
+fun NotificationsEffectHandler(
+  effects: Flow<NotificationsEffect>,
+  nav: NotificationsSheetNavigator,
+) {
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is NotificationsEffect.ShowMessage ->
+        Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      is NotificationsEffect.Confirm -> nav.backWithResult(effect.level)
     }
+  }
 }

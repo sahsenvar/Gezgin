@@ -16,16 +16,17 @@ import dev.gezgin.sample.navigation.ProfileGraph
 
 @Screen(ProfileGraph.SettingsScreenRoute::class)
 @Composable
-fun SettingsScreen(state: SettingsUiState, onIntent: (SettingsIntent) -> Unit, buildInfo: BuildInfo) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text("Ayarlar")
-            ThemeToggle(state.darkTheme) { onIntent(SettingsIntent.ToggleTheme) }
-            Button(onClick = { onIntent(SettingsIntent.Logout) }) { Text("Çıkış yap") }
-            Text("Sürüm ${buildInfo.version}")
-        }
+fun SettingsScreen(
+  state: SettingsUiState,
+  onIntent: (SettingsIntent) -> Unit,
+  buildInfo: BuildInfo,
+) {
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Ayarlar")
+      ThemeToggle(state.darkTheme) { onIntent(SettingsIntent.ToggleTheme) }
+      Button(onClick = { onIntent(SettingsIntent.Logout) }) { Text("Çıkış yap") }
+      Text("Sürüm ${buildInfo.version}")
     }
+  }
 }

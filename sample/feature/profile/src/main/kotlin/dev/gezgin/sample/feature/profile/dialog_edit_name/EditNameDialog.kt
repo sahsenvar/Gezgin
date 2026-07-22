@@ -27,28 +27,28 @@ import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialogRoute
 @Dialog(EditNameDialogRoute::class)
 @Composable
 fun EditNameDialog(route: EditNameDialogRoute, nav: EditNameDialogNavigator) {
-    var text by remember { mutableStateOf(route.current) }
-    // Nested-dialog sonucu composable içinde PD-safe toplanır: LaunchedEffect recompose/re-attach'te
-    // yeniden subscribe olur (kalıcı slot). "Evet" (true) gelince ad alanı temizlenir.
-    LaunchedEffect(Unit) {
-        nav.confirmResetResults.collect { if (it is NavResult.Value && it.value) text = "" }
+  var text by remember { mutableStateOf(route.current) }
+  // Nested-dialog sonucu composable içinde PD-safe toplanır: LaunchedEffect recompose/re-attach'te
+  // yeniden subscribe olur (kalıcı slot). "Evet" (true) gelince ad alanı temizlenir.
+  LaunchedEffect(Unit) {
+    nav.confirmResetResults.collect { if (it is NavResult.Value && it.value) text = "" }
+  }
+  // Dialog içeriği fillMaxSize DEĞİL — scrim üstünde wrap-content/ortalanmış görünmeli.
+  Surface(
+    shape = MaterialTheme.shapes.large,
+    tonalElevation = 6.dp,
+    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+  ) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Adı düzenle")
+      OutlinedTextField(
+        value = text,
+        onValueChange = { text = it },
+        modifier = Modifier.fillMaxWidth(),
+      )
+      Button(onClick = { nav.backWithResult(text) }) { Text("Kaydet") }
+      TextButton(onClick = { nav.back() }) { Text("Vazgeç") }
+      TextButton(onClick = { nav.launchConfirmReset() }) { Text("Adı sıfırla") }
     }
-    // Dialog içeriği fillMaxSize DEĞİL — scrim üstünde wrap-content/ortalanmış görünmeli.
-    Surface(
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 6.dp,
-        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-    ) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Adı düzenle")
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(onClick = { nav.backWithResult(text) }) { Text("Kaydet") }
-            TextButton(onClick = { nav.back() }) { Text("Vazgeç") }
-            TextButton(onClick = { nav.launchConfirmReset() }) { Text("Adı sıfırla") }
-        }
-    }
+  }
 }

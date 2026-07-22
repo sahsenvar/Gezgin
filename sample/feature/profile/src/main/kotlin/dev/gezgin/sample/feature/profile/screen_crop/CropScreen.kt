@@ -17,12 +17,12 @@ import dev.gezgin.sample.navigation.AvatarFlow.CropScreenRoute
 @Screen(CropScreenRoute::class)
 @Composable
 fun CropScreen(state: CropUiState, onIntent: (CropIntent) -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Kırp (kaynak: ${state.source})")
-            Button(onClick = { onIntent(CropIntent.Zoom) }) { Text("Yakınlaştır") }
-            Button(onClick = { onIntent(CropIntent.Use) }) { Text("Kullan") }
-            TextButton(onClick = { onIntent(CropIntent.Cancel) }) { Text("Vazgeç") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Kırp (kaynak: ${state.source})")
+      Button(onClick = { onIntent(CropIntent.Zoom) }) { Text("Yakınlaştır") }
+      Button(onClick = { onIntent(CropIntent.Use) }) { Text("Kullan") }
+      TextButton(onClick = { onIntent(CropIntent.Cancel) }) { Text("Vazgeç") }
     }
+  }
 }

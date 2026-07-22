@@ -14,26 +14,26 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(LoginScreenRoute::class)
 @Composable
 fun LoginEffectHandler(effects: Flow<LoginEffect>, nav: LoginNavigator) {
-    val context = LocalContext.current
-    val resultIntents = effects.resultIntentSink<LoginIntent>()
-    LaunchedEffect(effects) {
-        nav.forgotPasswordDialogResults.collect { result ->
-            resultIntents.sendResultIntent(LoginIntent.ForgotPasswordResult(result))
-        }
+  val context = LocalContext.current
+  val resultIntents = effects.resultIntentSink<LoginIntent>()
+  LaunchedEffect(effects) {
+    nav.forgotPasswordDialogResults.collect { result ->
+      resultIntents.sendResultIntent(LoginIntent.ForgotPasswordResult(result))
     }
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is LoginEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
-            else -> handleLoginEffect(effect, nav)
-        }
+  }
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is LoginEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      else -> handleLoginEffect(effect, nav)
     }
+  }
 }
 
 internal fun handleLoginEffect(effect: LoginEffect, nav: LoginNavigator) {
-    when (effect) {
-        is LoginEffect.ShowMessage -> Unit
-        LoginEffect.LoginSuccess -> nav.loginSuccess()
-        is LoginEffect.OpenForgotPassword -> nav.launchForgotPasswordDialog(effect.email)
-        LoginEffect.OpenSignUp -> nav.goToSignUp()
-    }
+  when (effect) {
+    is LoginEffect.ShowMessage -> Unit
+    LoginEffect.LoginSuccess -> nav.loginSuccess()
+    is LoginEffect.OpenForgotPassword -> nav.launchForgotPasswordDialog(effect.email)
+    LoginEffect.OpenSignUp -> nav.goToSignUp()
+  }
 }

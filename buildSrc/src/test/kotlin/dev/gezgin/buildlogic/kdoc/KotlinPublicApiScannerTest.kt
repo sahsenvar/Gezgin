@@ -7,17 +7,18 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class KotlinPublicApiScannerTest {
-    private val scanner = KotlinPublicApiScanner()
+  private val scanner = KotlinPublicApiScanner()
 
-    @AfterTest
-    fun closeScanner() {
-        scanner.close()
-    }
+  @AfterTest
+  fun closeScanner() {
+    scanner.close()
+  }
 
-    @Test
-    fun `parses multiline declarations and modifier ordering`() {
-        val result = scan(
-            """
+  @Test
+  fun `parses multiline declarations and modifier ordering`() {
+    val result =
+      scan(
+        """
             /**
              * A service.
              * @author @sahsenvar
@@ -36,18 +37,22 @@ class KotlinPublicApiScannerTest {
             public data class Payload(
                 public val value: String,
             )
-            """,
-        )
-
-        assertEquals(listOf("Service", "refresh", "Payload", "value"), result.declarations.map { it.name })
-        assertTrue(result.declarations.single { it.name == "refresh" }.excluded)
-        assertEquals(0, result.findings.size)
-    }
-
-    @Test
-    fun `uses the syntax tree for top level distinction regardless of indentation`() {
-        val result = scan(
             """
+      )
+
+    assertEquals(
+      listOf("Service", "refresh", "Payload", "value"),
+      result.declarations.map { it.name },
+    )
+    assertTrue(result.declarations.single { it.name == "refresh" }.excluded)
+    assertEquals(0, result.findings.size)
+  }
+
+  @Test
+  fun `uses the syntax tree for top level distinction regardless of indentation`() {
+    val result =
+      scan(
+        """
                 /**
                  * An outer type.
                  * @author @sahsenvar
@@ -56,18 +61,19 @@ class KotlinPublicApiScannerTest {
                     /** A nested type. */
                     public class Nested
                 }
-            """,
-        )
-
-        assertTrue(result.declarations.single { it.name == "Outer" }.topLevelType)
-        assertFalse(result.declarations.single { it.name == "Nested" }.topLevelType)
-        assertEquals(0, result.findings.size)
-    }
-
-    @Test
-    fun `distinguishes same line declaration annotations from constructor annotations`() {
-        val result = scan(
             """
+      )
+
+    assertTrue(result.declarations.single { it.name == "Outer" }.topLevelType)
+    assertFalse(result.declarations.single { it.name == "Nested" }.topLevelType)
+    assertEquals(0, result.findings.size)
+  }
+
+  @Test
+  fun `distinguishes same line declaration annotations from constructor annotations`() {
+    val result =
+      scan(
+        """
             import dev.gezgin.core.GezginInternalApi
 
             /**
@@ -80,21 +86,22 @@ class KotlinPublicApiScannerTest {
             public class FlowType @GezginInternalApi constructor(
                 /** The id. */ public val id: String,
             )
-            """,
-        )
-
-        assertTrue(result.declarations.single { it.name == "DirectSeam" }.excluded)
-        assertFalse(result.declarations.single { it.name == "FlowType" }.excluded)
-        assertEquals(
-            listOf(KDocFindingKind.MISSING_AUTHOR),
-            result.findings.filter { it.declaration.name == "FlowType" }.map { it.kind },
-        )
-    }
-
-    @Test
-    fun `excludes overrides in any legal modifier order`() {
-        val result = scan(
             """
+      )
+
+    assertTrue(result.declarations.single { it.name == "DirectSeam" }.excluded)
+    assertFalse(result.declarations.single { it.name == "FlowType" }.excluded)
+    assertEquals(
+      listOf(KDocFindingKind.MISSING_AUTHOR),
+      result.findings.filter { it.declaration.name == "FlowType" }.map { it.kind },
+    )
+  }
+
+  @Test
+  fun `excludes overrides in any legal modifier order`() {
+    val result =
+      scan(
+        """
             /**
              * A host.
              * @author @sahsenvar
@@ -103,28 +110,30 @@ class KotlinPublicApiScannerTest {
                 public suspend override fun first(): Unit = Unit
                 override public suspend fun second(): Unit = Unit
             }
-            """,
-        )
-
-        assertTrue(result.declarations.single { it.name == "first" }.excluded)
-        assertTrue(result.declarations.single { it.name == "second" }.excluded)
-        assertEquals(0, result.findings.size)
-    }
-
-    @Test
-    fun `excludes generated files and directly internal api declaration subtrees`() {
-        val generated = scanner.scan(
-            KotlinSourceInput(
-                path = "build/generated/Generated.kt",
-                content = "public class GeneratedType",
-                generated = true,
-            ),
-        )
-        assertEquals(1, generated.excludedCount)
-        assertEquals(0, generated.findings.size)
-
-        val internal = scan(
             """
+      )
+
+    assertTrue(result.declarations.single { it.name == "first" }.excluded)
+    assertTrue(result.declarations.single { it.name == "second" }.excluded)
+    assertEquals(0, result.findings.size)
+  }
+
+  @Test
+  fun `excludes generated files and directly internal api declaration subtrees`() {
+    val generated =
+      scanner.scan(
+        KotlinSourceInput(
+          path = "build/generated/Generated.kt",
+          content = "public class GeneratedType",
+          generated = true,
+        )
+      )
+    assertEquals(1, generated.excludedCount)
+    assertEquals(0, generated.findings.size)
+
+    val internal =
+      scan(
+        """
             import dev.gezgin.core.GezginInternalApi
 
             /** Internal generated-code seam. */
@@ -134,16 +143,17 @@ class KotlinPublicApiScannerTest {
             ) {
                 public fun call(): Unit = Unit
             }
-            """,
-        )
-        assertTrue(internal.declarations.all { it.excluded })
-        assertEquals(0, internal.findings.size)
-    }
-
-    @Test
-    fun `inventories public enum entries and reports their missing KDoc`() {
-        val result = scan(
             """
+      )
+    assertTrue(internal.declarations.all { it.excluded })
+    assertEquals(0, internal.findings.size)
+  }
+
+  @Test
+  fun `inventories public enum entries and reports their missing KDoc`() {
+    val result =
+      scan(
+        """
             /**
              * A display mode.
              * @author @sahsenvar
@@ -153,21 +163,22 @@ class KotlinPublicApiScannerTest {
                 Default,
                 None,
             }
-            """,
-        )
-
-        assertEquals(listOf("DisplayMode", "Default", "None"), result.declarations.map { it.name })
-        assertEquals("enum entry", result.declarations.single { it.name == "Default" }.kind)
-        assertEquals(
-            listOf(KDocFindingKind.MISSING_KDOC),
-            result.findings.filter { it.declaration.name == "None" }.map { it.kind },
-        )
-    }
-
-    @Test
-    fun `inventories public secondary constructors and requires their own KDoc`() {
-        val result = scan(
             """
+      )
+
+    assertEquals(listOf("DisplayMode", "Default", "None"), result.declarations.map { it.name })
+    assertEquals("enum entry", result.declarations.single { it.name == "Default" }.kind)
+    assertEquals(
+      listOf(KDocFindingKind.MISSING_KDOC),
+      result.findings.filter { it.declaration.name == "None" }.map { it.kind },
+    )
+  }
+
+  @Test
+  fun `inventories public secondary constructors and requires their own KDoc`() {
+    val result =
+      scan(
+        """
             /**
              * A service.
              * @author @sahsenvar
@@ -178,73 +189,79 @@ class KotlinPublicApiScannerTest {
 
                 public constructor(value: Int)
             }
-            """,
-        )
-
-        val constructors = result.declarations.filter { it.kind == "constructor" }
-        assertEquals(2, constructors.size)
-        assertEquals(1, constructors.count { it.hasKDoc })
-        assertEquals(
-            listOf(KDocFindingKind.MISSING_KDOC),
-            result.findings.filter { it.declaration.kind == "constructor" }.map { it.kind },
-        )
-    }
-
-    @Test
-    fun `resolves internal api annotation identity without trusting its short name`() {
-        val alias = scan(
             """
+      )
+
+    val constructors = result.declarations.filter { it.kind == "constructor" }
+    assertEquals(2, constructors.size)
+    assertEquals(1, constructors.count { it.hasKDoc })
+    assertEquals(
+      listOf(KDocFindingKind.MISSING_KDOC),
+      result.findings.filter { it.declaration.kind == "constructor" }.map { it.kind },
+    )
+  }
+
+  @Test
+  fun `resolves internal api annotation identity without trusting its short name`() {
+    val alias =
+      scan(
+        """
             package consumer
 
             import dev.gezgin.core.GezginInternalApi as InternalMarker
 
             @InternalMarker public class AliasExcluded
-            """,
-        )
-        assertTrue(alias.declarations.single { it.name == "AliasExcluded" }.excluded)
-
-        val explicit = scan(
             """
+      )
+    assertTrue(alias.declarations.single { it.name == "AliasExcluded" }.excluded)
+
+    val explicit =
+      scan(
+        """
             package consumer
 
             import dev.gezgin.core.GezginInternalApi
 
             @GezginInternalApi public class ExplicitExcluded
-            """,
-        )
-        assertTrue(explicit.declarations.single { it.name == "ExplicitExcluded" }.excluded)
-
-        val star = scan(
             """
+      )
+    assertTrue(explicit.declarations.single { it.name == "ExplicitExcluded" }.excluded)
+
+    val star =
+      scan(
+        """
             package consumer
 
             import dev.gezgin.core.*
 
             @GezginInternalApi public class StarExcluded
-            """,
-        )
-        assertTrue(star.declarations.single { it.name == "StarExcluded" }.excluded)
-
-        val samePackage = scan(
             """
+      )
+    assertTrue(star.declarations.single { it.name == "StarExcluded" }.excluded)
+
+    val samePackage =
+      scan(
+        """
             package dev.gezgin.core
 
             @GezginInternalApi public class SamePackageExcluded
-            """,
-        )
-        assertTrue(samePackage.declarations.single { it.name == "SamePackageExcluded" }.excluded)
-
-        val fullyQualified = scan(
             """
+      )
+    assertTrue(samePackage.declarations.single { it.name == "SamePackageExcluded" }.excluded)
+
+    val fullyQualified =
+      scan(
+        """
             package consumer
 
             @dev.gezgin.core.GezginInternalApi public class FullyQualifiedExcluded
-            """,
-        )
-        assertTrue(fullyQualified.declarations.single { it.name == "FullyQualifiedExcluded" }.excluded)
-
-        val unrelated = scan(
             """
+      )
+    assertTrue(fullyQualified.declarations.single { it.name == "FullyQualifiedExcluded" }.excluded)
+
+    val unrelated =
+      scan(
+        """
             package consumer
 
             private annotation class GezginInternalApi
@@ -254,13 +271,14 @@ class KotlinPublicApiScannerTest {
              * @author @sahsenvar
              */
             @GezginInternalApi public class ConsumerVisible
-            """,
-        )
-        assertFalse(unrelated.declarations.single { it.name == "ConsumerVisible" }.excluded)
-        assertEquals(0, unrelated.findings.size)
-
-        val unrelatedImport = scan(
             """
+      )
+    assertFalse(unrelated.declarations.single { it.name == "ConsumerVisible" }.excluded)
+    assertEquals(0, unrelated.findings.size)
+
+    val unrelatedImport =
+      scan(
+        """
             package consumer
 
             import unrelated.GezginInternalApi
@@ -270,39 +288,42 @@ class KotlinPublicApiScannerTest {
              * @author @sahsenvar
              */
             @GezginInternalApi public class ExplicitlyUnrelated
-            """,
-        )
-        assertFalse(unrelatedImport.declarations.single { it.name == "ExplicitlyUnrelated" }.excluded)
-        assertEquals(0, unrelatedImport.findings.size)
-    }
-
-    @Test
-    fun `reports missing KDoc and exact top level author independently`() {
-        val result = scan(
             """
+      )
+    assertFalse(unrelatedImport.declarations.single { it.name == "ExplicitlyUnrelated" }.excluded)
+    assertEquals(0, unrelatedImport.findings.size)
+  }
+
+  @Test
+  fun `reports missing KDoc and exact top level author independently`() {
+    val result =
+      scan(
+        """
             public class MissingBoth
 
             /** Has type documentation but no author tag. */
             public class MissingAuthor
 
             public fun missingFunctionKDoc(): Unit = Unit
-            """,
-        )
+            """
+      )
 
-        assertEquals(
-            setOf(KDocFindingKind.MISSING_KDOC, KDocFindingKind.MISSING_AUTHOR),
-            result.findings.filter { it.declaration.name == "MissingBoth" }.map { it.kind }.toSet(),
-        )
-        assertEquals(
-            listOf(KDocFindingKind.MISSING_AUTHOR),
-            result.findings.filter { it.declaration.name == "MissingAuthor" }.map { it.kind },
-        )
-        assertEquals(
-            listOf(KDocFindingKind.MISSING_KDOC),
-            result.findings.filter { it.declaration.name == "missingFunctionKDoc" }.map { it.kind },
-        )
-    }
+    assertEquals(
+      setOf(KDocFindingKind.MISSING_KDOC, KDocFindingKind.MISSING_AUTHOR),
+      result.findings.filter { it.declaration.name == "MissingBoth" }.map { it.kind }.toSet(),
+    )
+    assertEquals(
+      listOf(KDocFindingKind.MISSING_AUTHOR),
+      result.findings.filter { it.declaration.name == "MissingAuthor" }.map { it.kind },
+    )
+    assertEquals(
+      listOf(KDocFindingKind.MISSING_KDOC),
+      result.findings.filter { it.declaration.name == "missingFunctionKDoc" }.map { it.kind },
+    )
+  }
 
-    private fun scan(source: String): KotlinPublicApiScanResult =
-        scanner.scan(KotlinSourceInput(path = "src/main/kotlin/Fixture.kt", content = source.trimIndent()))
+  private fun scan(source: String): KotlinPublicApiScanResult =
+    scanner.scan(
+      KotlinSourceInput(path = "src/main/kotlin/Fixture.kt", content = source.trimIndent())
+    )
 }

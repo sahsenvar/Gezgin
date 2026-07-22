@@ -12,6 +12,6 @@ import dev.gezgin.sample.shopr.nav.HomeGraph.Feed
 @Screen(FeaturedFeed::class)
 @Composable
 fun ColumnScope.FeedScreen(state: FeedUiState, onIntent: (FeedIntent) -> Unit) {
-    Text(state.headline)
-    Button(onClick = { onIntent(FeedIntent.OpenCatalog) }) { Text(state.primaryActionLabel) }
+  Text(state.headline)
+  Button(onClick = { onIntent(FeedIntent.OpenCatalog) }) { Text(state.primaryActionLabel) }
 }

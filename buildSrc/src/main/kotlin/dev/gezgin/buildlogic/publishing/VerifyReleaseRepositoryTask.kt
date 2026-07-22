@@ -10,21 +10,20 @@ import org.gradle.work.DisableCachingByDefault
 
 @DisableCachingByDefault(because = "The task validates a temporary publication repository.")
 abstract class VerifyReleaseRepositoryTask : DefaultTask() {
-    @get:InputDirectory
-    abstract val repositoryDirectory: DirectoryProperty
+  @get:InputDirectory abstract val repositoryDirectory: DirectoryProperty
 
-    @get:Input
-    abstract val requireSignatures: Property<Boolean>
+  @get:Input abstract val requireSignatures: Property<Boolean>
 
-    @TaskAction
-    fun verifyRepository() {
-        val summary = ReleasePublicationVerifier.verify(
-            repository = repositoryDirectory.get().asFile.toPath(),
-            requireSignatures = requireSignatures.get(),
-        )
-        logger.lifecycle(
-            "Verified ${summary.coordinateCount} release coordinates and " +
-                "${summary.signatureCount} detached signatures.",
-        )
-    }
+  @TaskAction
+  fun verifyRepository() {
+    val summary =
+      ReleasePublicationVerifier.verify(
+        repository = repositoryDirectory.get().asFile.toPath(),
+        requireSignatures = requireSignatures.get(),
+      )
+    logger.lifecycle(
+      "Verified ${summary.coordinateCount} release coordinates and " +
+        "${summary.signatureCount} detached signatures."
+    )
+  }
 }

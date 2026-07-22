@@ -25,106 +25,125 @@ import dev.gezgin.core.Route
  * entry kurulurken patlar (erken/açık başarısızlık; sessiz boş ekran yok).
  *
  * Kind (`RegisteredEntry.kind`) → scene metadata (Faz 4, §7): `DIALOG`/`FULLSCREEN_MODAL` iken
- * `NavEntry.metadata`'ya `DialogSceneStrategy.dialog(properties)` işareti yazılır → [GezginNavDisplay]'e
- * bağlı DialogSceneStrategy o entry'yi `Dialog` overlay'inde (arka görünür) render eder. `properties`
- * route'un opsiyonel [DialogContract]/[FullscreenModalContract]'ından (route-instance runtime değeri,
- * §2.4) okunur; route implement etmemişse tip-bazlı varsayılan `DialogProperties` (FULLSCREEN_MODAL'da
- * `usePlatformDefaultWidth=false` = tam-ekran) kurulur. `BOTTOM_SHEET` (Faz 4.2) [GEZGIN_BOTTOM_SHEET_KEY]
- * işaretiyle [GezginBottomSheetSceneStrategy]'e bağlanır → `ModalBottomSheet` overlay (el-yazımı OverlayScene).
+ * `NavEntry.metadata`'ya `DialogSceneStrategy.dialog(properties)` işareti yazılır →
+ * [GezginNavDisplay]'e bağlı DialogSceneStrategy o entry'yi `Dialog` overlay'inde (arka görünür)
+ * render eder. `properties` route'un opsiyonel [DialogContract]/[FullscreenModalContract]'ından
+ * (route-instance runtime değeri, §2.4) okunur; route implement etmemişse tip-bazlı varsayılan
+ * `DialogProperties` (FULLSCREEN_MODAL'da `usePlatformDefaultWidth=false` = tam-ekran) kurulur.
+ * `BOTTOM_SHEET` (Faz 4.2) [GEZGIN_BOTTOM_SHEET_KEY] işaretiyle [GezginBottomSheetSceneStrategy]'e
+ * bağlanır → `ModalBottomSheet` overlay (el-yazımı OverlayScene).
  *
- * **Guard — modal dismissal + `@NoBack` çelişkisi (§7, kuruluş-zamanı RUNTIME):** modal back dismissal
- * kapalı olmalıdır. Bottom sheet ayrıca kullanıcı drag/swipe gesture'larını da kapatmalıdır; outside
- * dismissal bağımsızdır ve guard predicate'ine katılmaz. Route getter değerlerini KSP okuyamadığı için
- * contract-bearing route'lar entry kuruluşunda `require` ile doğrulanır.
+ * **Guard — modal dismissal + `@NoBack` çelişkisi (§7, kuruluş-zamanı RUNTIME):** modal back
+ * dismissal kapalı olmalıdır. Bottom sheet ayrıca kullanıcı drag/swipe gesture'larını da
+ * kapatmalıdır; outside dismissal bağımsızdır ve guard predicate'ine katılmaz. Route getter
+ * değerlerini KSP okuyamadığı için contract-bearing route'lar entry kuruluşunda `require` ile
+ * doğrulanır.
  *
- * Task 3.2 devri — **top-entry-drive** (§10.1/§12): [navigator] parametresi eklendi (additive,
- * Task 3.1'in tek-parametreli imzasının yerini alır); content [LocalGezginEntryId]/
- * [LocalGezginRawNavigator] ile sarılır — bir entry'nin içeriği YALNIZ kendi `key.id`'siyle kurulmuş
- * navigator'ı Local'den okuyabilir (Faz 3.4 `provideXEntry` bunlardan tipli navigator kuracak).
+ * Task 3.2 devri — **top-entry-drive** (§10.1/§12): [navigator] parametresi eklendi (additive, Task
+ * 3.1'in tek-parametreli imzasının yerini alır); content [LocalGezginEntryId]/
+ * [LocalGezginRawNavigator] ile sarılır — bir entry'nin içeriği YALNIZ kendi `key.id`'siyle
+ * kurulmuş navigator'ı Local'den okuyabilir (Faz 3.4 `provideXEntry` bunlardan tipli navigator
+ * kuracak).
  *
- * Task 3.3 — **`@NoBack` entry-scoped handler** (M5′, §4.2): kayıt `noBack==true` ve entry KÖK DEĞİLSE
- * ([isRoot]==false — "root entry'de noBack yok sayılır → back = onRootBack"), content ekran
+ * Task 3.3 — **`@NoBack` entry-scoped handler** (M5′, §4.2): kayıt `noBack==true` ve entry KÖK
+ * DEĞİLSE ([isRoot]==false — "root entry'de noBack yok sayılır → back = onRootBack"), content ekran
  * içeriğinden ÖNCE [GezginNoBackHandler] ile sarılır: Gezgin'in handler'ı OUTER/önce kaydolur →
  * dispatcher LIFO'sunda ekranın kendi (daha İÇ, sonra kaydolan) `BackHandler`'ı kazanır, yoksa
- * Gezgin'inki back'i yutar. [isRoot] çağıran (`GezginDisplay`) tarafından stack'in dibi (`keys.first`)
- * bilgisinden geçirilir — call-time gerçeği, capture edilmiş stale scope değil (§10.1 staleness notu).
+ * Gezgin'inki back'i yutar. [isRoot] çağıran (`GezginDisplay`) tarafından stack'in dibi
+ * (`keys.first`) bilgisinden geçirilir — call-time gerçeği, capture edilmiş stale scope değil
+ * (§10.1 staleness notu).
  *
  * Task 3.5 fix — **per-entry transition metadata (§9):** entry'nin KENDİ route'unun cascade'i
- * ([resolveTransition]: route-override > graph-mirası > app-default) çözülür ve `NavEntry.metadata`'ya
- * ([GezginTransition.toNavEntryMetadata] — Nav3'ün PUBLIC `NavDisplay.transitionSpec/popTransitionSpec/
- * predictivePopTransitionSpec` sarmalayıcılarıyla) yazılır. Top-route'tan NavDisplay-parametresi çözen
- * ilk yaklaşım GERİ ALINDI: pop B→A'da NavDisplay'in top'u artık A olduğundan B'nin `backward{}`/
- * `predictive{}` spec'leri hiç kullanılmıyordu (§9 "en içteki kazanır" ihlali). Per-entry metadata'da
- * Nav3'ün kendi AnimatedContent çözümü doğru entry'nin spec'ini seçer (`Scene.metadata` default'u = son
- * entry'nin metadata'sı; pop/predictive'de çıkılan scene'inki okunur — bkz. GezginDisplay KDoc).
+ * ([resolveTransition]: route-override > graph-mirası > app-default) çözülür ve
+ * `NavEntry.metadata`'ya ([GezginTransition.toNavEntryMetadata] — Nav3'ün PUBLIC
+ * `NavDisplay.transitionSpec/popTransitionSpec/ predictivePopTransitionSpec` sarmalayıcılarıyla)
+ * yazılır. Top-route'tan NavDisplay-parametresi çözen ilk yaklaşım GERİ ALINDI: pop B→A'da
+ * NavDisplay'in top'u artık A olduğundan B'nin `backward{}`/ `predictive{}` spec'leri hiç
+ * kullanılmıyordu (§9 "en içteki kazanır" ihlali). Per-entry metadata'da Nav3'ün kendi
+ * AnimatedContent çözümü doğru entry'nin spec'ini seçer (`Scene.metadata` default'u = son entry'nin
+ * metadata'sı; pop/predictive'de çıkılan scene'inki okunur — bkz. GezginDisplay KDoc).
  */
 internal fun GezginEntryScope.toNavEntry(
-    key: GezginKey,
-    navigator: RawNavigator,
-    transitions: GezginTransition?,
-    isRoot: Boolean = false,
+  key: GezginKey,
+  navigator: RawNavigator,
+  transitions: GezginTransition?,
+  isRoot: Boolean = false,
 ): NavEntry<Route> {
-    val registered = registry[key.route::class]
-        ?: error("No entry is registered for route: ${key.route::class.simpleName}")
-    // §7 modal-kind-at-root guard (kuruluş-zamanı RUNTIME) — TÜM dinamik yolları tek yerde kapatır:
-    // start route DIŞINDA `replaceTo(SomeDialogRoute)`/`quitAndGoTo` da tek-modal (kök) stack üretebilir.
-    // Bu ANA guard'dır; `GezginDisplay`'deki setup-time check yalnız start route'u kapsar → redundant
-    // güvenlik ağı olarak kalır. DIALOG/FULLSCREEN_MODAL Nav3-içi `require(overlaidEntries.isNotEmpty())`
-    // ile çökerdi (Gezgin-mesajsız), BOTTOM_SHEET ise hiç fırlamayıp boş arka-planda sessiz render'dı.
-    require(!(isRoot && registered.kind != EntryKind.SCREEN)) {
-        "GezginDisplay: modal kind (${registered.kind}) cannot be the only/root entry in the stack; " +
-            "a modal must have at least one SCREEN entry underneath it (Nav3 OverlayScene invariant, §7). " +
-            "Do not place a modal at root with replaceTo/quitAndGoTo. route: ${key.route::class.simpleName}"
+  val registered =
+    registry[key.route::class]
+      ?: error("No entry is registered for route: ${key.route::class.simpleName}")
+  // §7 modal-kind-at-root guard (kuruluş-zamanı RUNTIME) — TÜM dinamik yolları tek yerde kapatır:
+  // start route DIŞINDA `replaceTo(SomeDialogRoute)`/`quitAndGoTo` da tek-modal (kök) stack
+  // üretebilir.
+  // Bu ANA guard'dır; `GezginDisplay`'deki setup-time check yalnız start route'u kapsar → redundant
+  // güvenlik ağı olarak kalır. DIALOG/FULLSCREEN_MODAL Nav3-içi
+  // `require(overlaidEntries.isNotEmpty())`
+  // ile çökerdi (Gezgin-mesajsız), BOTTOM_SHEET ise hiç fırlamayıp boş arka-planda sessiz
+  // render'dı.
+  require(!(isRoot && registered.kind != EntryKind.SCREEN)) {
+    "GezginDisplay: modal kind (${registered.kind}) cannot be the only/root entry in the stack; " +
+      "a modal must have at least one SCREEN entry underneath it (Nav3 OverlayScene invariant, §7). " +
+      "Do not place a modal at root with replaceTo/quitAndGoTo. route: ${key.route::class.simpleName}"
+  }
+  val installNoBack = registered.noBack && !isRoot
+  // Faz 4 scene wiring (§7): DIALOG/FULLSCREEN_MODAL ise [GEZGIN_DIALOG_KEY] (Gezgin-sahipli
+  // GezginDialogSceneStrategy) işareti, BOTTOM_SHEET ise [GEZGIN_BOTTOM_SHEET_KEY]. İkisi de
+  // dismiss'i
+  // sahip-entry'ye pinler (C-MJ-1). Nav3'ün built-in DialogSceneStrategy'si BIRAKILDI: dismiss'i
+  // tekil
+  // NavDisplay.onBack'e bağlar → entry'ye pinlenemez (bkz. DialogScene.kt). Transition metadata
+  // YALNIZ
+  // SCREEN kind'a yazılır (aşağıda, display mn-1).
+  val dialogProperties = resolveDialogProperties(registered.kind, key.route)
+  val sheetProps = resolveBottomSheetProps(registered.kind, key.route)
+  // §7 guard (kuruluş-zamanı runtime): @NoBack geri'yi yutar; modal back dismissal kapalı
+  // olmalıdır.
+  // Bottom sheet'te gesture'lar da kapalı olmalıdır. Outside dismissal bağımsız bir switch'tir.
+  if (registered.noBack) {
+    if (dialogProperties != null)
+      requireBackDismissCompatible(key.route, dialogProperties.dismissOnBackPress)
+    if (sheetProps != null) {
+      requireBackDismissCompatible(key.route, sheetProps.dismissOnBackPress)
+      require(!sheetProps.sheetGesturesEnabled) {
+        "Bottom sheet setup conflict (${key.route::class.simpleName}): @NoBack requires " +
+          "sheetGesturesEnabled=false so user drag/swipe cannot hide the sheet while keeping its " +
+          "route on the stack. dismissOnClickOutside is independent and is not part of this guard (§7)."
+      }
     }
-    val installNoBack = registered.noBack && !isRoot
-    // Faz 4 scene wiring (§7): DIALOG/FULLSCREEN_MODAL ise [GEZGIN_DIALOG_KEY] (Gezgin-sahipli
-    // GezginDialogSceneStrategy) işareti, BOTTOM_SHEET ise [GEZGIN_BOTTOM_SHEET_KEY]. İkisi de dismiss'i
-    // sahip-entry'ye pinler (C-MJ-1). Nav3'ün built-in DialogSceneStrategy'si BIRAKILDI: dismiss'i tekil
-    // NavDisplay.onBack'e bağlar → entry'ye pinlenemez (bkz. DialogScene.kt). Transition metadata YALNIZ
-    // SCREEN kind'a yazılır (aşağıda, display mn-1).
-    val dialogProperties = resolveDialogProperties(registered.kind, key.route)
-    val sheetProps = resolveBottomSheetProps(registered.kind, key.route)
-    // §7 guard (kuruluş-zamanı runtime): @NoBack geri'yi yutar; modal back dismissal kapalı olmalıdır.
-    // Bottom sheet'te gesture'lar da kapalı olmalıdır. Outside dismissal bağımsız bir switch'tir.
-    if (registered.noBack) {
-        if (dialogProperties != null) requireBackDismissCompatible(key.route, dialogProperties.dismissOnBackPress)
-        if (sheetProps != null) {
-            requireBackDismissCompatible(key.route, sheetProps.dismissOnBackPress)
-            require(!sheetProps.sheetGesturesEnabled) {
-                "Bottom sheet setup conflict (${key.route::class.simpleName}): @NoBack requires " +
-                    "sheetGesturesEnabled=false so user drag/swipe cannot hide the sheet while keeping its " +
-                    "route on the stack. dismissOnClickOutside is independent and is not part of this guard (§7)."
-            }
-        }
+  }
+  // Display mn-1 — transition metadata YALNIZ SCREEN kind'a: modal
+  // (DIALOG/FULLSCREEN_MODAL/BOTTOM_SHEET)
+  // entry'sine transition anahtarları yazmak on-device'da ya etkisiz ya arka-plan SCREEN'i yanlış
+  // animasyonlar (Nav3 scene-seviyesi AnimatedContent, `Scene.metadata` = son/top entry'nin
+  // metadata'sını
+  // okur → modal entry'nin forward/pop/predictive spec'i overlay'de yanlış uygulanır). Modal
+  // kind'da ATLA.
+  val transitionMetadata =
+    if (registered.kind == EntryKind.SCREEN) {
+      resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
+    } else {
+      emptyMap()
     }
-    // Display mn-1 — transition metadata YALNIZ SCREEN kind'a: modal (DIALOG/FULLSCREEN_MODAL/BOTTOM_SHEET)
-    // entry'sine transition anahtarları yazmak on-device'da ya etkisiz ya arka-plan SCREEN'i yanlış
-    // animasyonlar (Nav3 scene-seviyesi AnimatedContent, `Scene.metadata` = son/top entry'nin metadata'sını
-    // okur → modal entry'nin forward/pop/predictive spec'i overlay'de yanlış uygulanır). Modal kind'da ATLA.
-    val transitionMetadata =
-        if (registered.kind == EntryKind.SCREEN) {
-            resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
-        } else {
-            emptyMap()
-        }
-    // Kind mutually-exclusive: dialogProperties (DIALOG/FULLSCREEN_MODAL) ve sheetProps (BOTTOM_SHEET) aynı
-    // anda dolu olamaz — her ikisi de eklense bile ayrık anahtarlar (çakışma yok). Modal kind'da
-    // transitionMetadata zaten boş (mn-1). Dialog → GEZGIN_DIALOG_KEY, sheet → GEZGIN_BOTTOM_SHEET_KEY;
-    // ikisi de kendi Gezgin scene-strategy'siyle entry-pinli dismiss render eder (C-MJ-1).
-    val metadata: Map<String, Any> = buildMap {
-        putAll(transitionMetadata)
-        if (dialogProperties != null) put(GEZGIN_DIALOG_KEY, dialogProperties)
-        if (sheetProps != null) put(GEZGIN_BOTTOM_SHEET_KEY, sheetProps)
+  // Kind mutually-exclusive: dialogProperties (DIALOG/FULLSCREEN_MODAL) ve sheetProps
+  // (BOTTOM_SHEET) aynı
+  // anda dolu olamaz — her ikisi de eklense bile ayrık anahtarlar (çakışma yok). Modal kind'da
+  // transitionMetadata zaten boş (mn-1). Dialog → GEZGIN_DIALOG_KEY, sheet →
+  // GEZGIN_BOTTOM_SHEET_KEY;
+  // ikisi de kendi Gezgin scene-strategy'siyle entry-pinli dismiss render eder (C-MJ-1).
+  val metadata: Map<String, Any> = buildMap {
+    putAll(transitionMetadata)
+    if (dialogProperties != null) put(GEZGIN_DIALOG_KEY, dialogProperties)
+    if (sheetProps != null) put(GEZGIN_BOTTOM_SHEET_KEY, sheetProps)
+  }
+  return NavEntry(key = key.route, contentKey = key.id, metadata = metadata) { route ->
+    CompositionLocalProvider(
+      LocalGezginEntryId provides key.id,
+      LocalGezginRawNavigator provides navigator,
+    ) {
+      if (installNoBack) GezginNoBackHandler() // OUTER: ekran içeriğinden önce kaydol (M5′)
+      registered.content(route)
     }
-    return NavEntry(key = key.route, contentKey = key.id, metadata = metadata) { route ->
-        CompositionLocalProvider(
-            LocalGezginEntryId provides key.id,
-            LocalGezginRawNavigator provides navigator,
-        ) {
-            if (installNoBack) GezginNoBackHandler()   // OUTER: ekran içeriğinden önce kaydol (M5′)
-            registered.content(route)
-        }
-    }
+  }
 }
 
 /**
@@ -137,57 +156,64 @@ internal fun GezginEntryScope.toNavEntry(
  *   dismiss'ler [FullscreenModalContract]'tan ya da (yoksa) default `true`.
  * - diğerleri → `null`.
  */
-private fun resolveDialogProperties(kind: EntryKind, route: Route): DialogProperties? = when (kind) {
+private fun resolveDialogProperties(kind: EntryKind, route: Route): DialogProperties? =
+  when (kind) {
     EntryKind.DIALOG -> {
-        val contract = route as? DialogContract
-        DialogProperties(
-            dismissOnBackPress = contract?.dismissOnBackPress ?: true,
-            dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
-            usePlatformDefaultWidth = contract?.usePlatformDefaultWidth ?: true,
-        )
+      val contract = route as? DialogContract
+      DialogProperties(
+        dismissOnBackPress = contract?.dismissOnBackPress ?: true,
+        dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
+        usePlatformDefaultWidth = contract?.usePlatformDefaultWidth ?: true,
+      )
     }
     EntryKind.FULLSCREEN_MODAL -> {
-        val contract = route as? FullscreenModalContract
-        DialogProperties(
-            dismissOnBackPress = contract?.dismissOnBackPress ?: true,
-            dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
-            usePlatformDefaultWidth = false,   // tam-ekran modal tanımı
-        )
+      val contract = route as? FullscreenModalContract
+      DialogProperties(
+        dismissOnBackPress = contract?.dismissOnBackPress ?: true,
+        dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
+        usePlatformDefaultWidth = false, // tam-ekran modal tanımı
+      )
     }
-    EntryKind.SCREEN, EntryKind.BOTTOM_SHEET -> null
-}
+    EntryKind.SCREEN,
+    EntryKind.BOTTOM_SHEET -> null
+  }
 
 /**
- * Kind + route-instance → BottomSheet scene [GezginBottomSheetProps] (§7), yoksa `null` (sheet-dışı entry).
- * Property'ler route'un opsiyonel [BottomSheetContract]'ından (runtime değer, §2.4) okunur; route implement
- * etmemişse tip-varsayılan (`skipPartiallyExpanded=false`, `dismissOnBackPress=true`,
- * `dismissOnClickOutside=true`, `sheetGesturesEnabled=true`, `dragHandleMode=Default`).
+ * Kind + route-instance → BottomSheet scene [GezginBottomSheetProps] (§7), yoksa `null` (sheet-dışı
+ * entry). Property'ler route'un opsiyonel [BottomSheetContract]'ından (runtime değer, §2.4) okunur;
+ * route implement etmemişse tip-varsayılan (`skipPartiallyExpanded=false`,
+ * `dismissOnBackPress=true`, `dismissOnClickOutside=true`, `sheetGesturesEnabled=true`,
+ * `dragHandleMode=Default`).
  */
-private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottomSheetProps? = when (kind) {
+private fun resolveBottomSheetProps(kind: EntryKind, route: Route): GezginBottomSheetProps? =
+  when (kind) {
     EntryKind.BOTTOM_SHEET -> {
-        val contract = route as? BottomSheetContract
-        GezginBottomSheetProps(
-            skipPartiallyExpanded = contract?.skipPartiallyExpanded ?: false,
-            dismissOnBackPress = contract?.dismissOnBackPress ?: true,
-            dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
-            sheetGesturesEnabled = contract?.sheetGesturesEnabled ?: true,
-            dragHandleMode = contract?.dragHandleMode ?: BottomSheetDragHandleMode.Default,
-        )
+      val contract = route as? BottomSheetContract
+      GezginBottomSheetProps(
+        skipPartiallyExpanded = contract?.skipPartiallyExpanded ?: false,
+        dismissOnBackPress = contract?.dismissOnBackPress ?: true,
+        dismissOnClickOutside = contract?.dismissOnClickOutside ?: true,
+        sheetGesturesEnabled = contract?.sheetGesturesEnabled ?: true,
+        dragHandleMode = contract?.dragHandleMode ?: BottomSheetDragHandleMode.Default,
+      )
     }
-    EntryKind.SCREEN, EntryKind.DIALOG, EntryKind.FULLSCREEN_MODAL -> null
-}
+    EntryKind.SCREEN,
+    EntryKind.DIALOG,
+    EntryKind.FULLSCREEN_MODAL -> null
+  }
 
 /**
  * `@NoBack` + `dismissOnBackPress=true` çelişki guard'ı (§7, kuruluş-zamanı RUNTIME) — DIALOG/
  * FULLSCREEN_MODAL ve BOTTOM_SHEET modalları için ORTAK: `@NoBack` geri'yi YUTAR ([gezginOnBack]/
- * [GezginNoBackHandler]) ama `dismissOnBackPress=true` "geri modal'ı kapatsın" der → tezat. `dismissOnBackPress`
- * runtime değer (route-instance, KSP okuyamaz) → derleme yerine entry kuruluşunda `require` ile reddedilir.
+ * [GezginNoBackHandler]) ama `dismissOnBackPress=true` "geri modal'ı kapatsın" der → tezat.
+ * `dismissOnBackPress` runtime değer (route-instance, KSP okuyamaz) → derleme yerine entry
+ * kuruluşunda `require` ile reddedilir.
  */
 private fun requireBackDismissCompatible(route: Route, dismissOnBackPress: Boolean) {
-    require(!dismissOnBackPress) {
-        "Modal setup conflict (${route::class.simpleName}): @NoBack (back is swallowed) and " +
-            "dismissOnBackPress=true (back dismisses the modal) cannot be used together. In the modal " +
-            "DialogContract/FullscreenModalContract/BottomSheetContract, set " +
-            "`override val dismissOnBackPress = false`, or remove @NoBack (§7)."
-    }
+  require(!dismissOnBackPress) {
+    "Modal setup conflict (${route::class.simpleName}): @NoBack (back is swallowed) and " +
+      "dismissOnBackPress=true (back dismisses the modal) cannot be used together. In the modal " +
+      "DialogContract/FullscreenModalContract/BottomSheetContract, set " +
+      "`override val dismissOnBackPress = false`, or remove @NoBack (§7)."
+  }
 }

@@ -21,22 +21,23 @@ private val FAKE_ITEMS = (1..5).map { "item-$it" }
 @Screen(HomeGraph.DashboardScreenRoute::class)
 @Composable
 fun DashboardScreen(state: DashboardUiState, onIntent: (DashboardIntent) -> Unit) {
-    val items = remember(state.order) {
-        when (state.order) {
-            SortOrder.RELEVANCE -> FAKE_ITEMS
-            SortOrder.PRICE_ASC -> FAKE_ITEMS.sorted()
-            SortOrder.PRICE_DESC -> FAKE_ITEMS.sortedDescending()
-        }
+  val items =
+    remember(state.order) {
+      when (state.order) {
+        SortOrder.RELEVANCE -> FAKE_ITEMS
+        SortOrder.PRICE_ASC -> FAKE_ITEMS.sorted()
+        SortOrder.PRICE_DESC -> FAKE_ITEMS.sortedDescending()
+      }
     }
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Panel — sıralama: ${state.order}")
-            items.forEach { id ->
-                TextButton(onClick = { onIntent(DashboardIntent.OpenItem(id)) }) { Text(id) }
-            }
-            Button(onClick = { onIntent(DashboardIntent.OpenProfile) }) { Text("Profil") }
-            Button(onClick = { onIntent(DashboardIntent.OpenHelp) }) { Text("Yardım (legacy Fragment)") }
-            Button(onClick = { onIntent(DashboardIntent.PickSort) }) { Text("Sırala") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Panel — sıralama: ${state.order}")
+      items.forEach { id ->
+        TextButton(onClick = { onIntent(DashboardIntent.OpenItem(id)) }) { Text(id) }
+      }
+      Button(onClick = { onIntent(DashboardIntent.OpenProfile) }) { Text("Profil") }
+      Button(onClick = { onIntent(DashboardIntent.OpenHelp) }) { Text("Yardım (legacy Fragment)") }
+      Button(onClick = { onIntent(DashboardIntent.PickSort) }) { Text("Sırala") }
     }
+  }
 }

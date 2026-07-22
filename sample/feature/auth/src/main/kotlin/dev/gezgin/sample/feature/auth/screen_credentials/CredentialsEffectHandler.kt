@@ -12,11 +12,12 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(CredentialsScreenRoute::class)
 @Composable
 fun CredentialsEffectHandler(effects: Flow<CredentialsEffect>, nav: CredentialsNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is CredentialsEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
-            is CredentialsEffect.OpenProfileInfo -> nav.goToProfileInfo(effect.email)
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is CredentialsEffect.ShowMessage ->
+        Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      is CredentialsEffect.OpenProfileInfo -> nav.goToProfileInfo(effect.email)
     }
+  }
 }

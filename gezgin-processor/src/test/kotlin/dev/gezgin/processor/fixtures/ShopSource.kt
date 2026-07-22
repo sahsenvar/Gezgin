@@ -7,9 +7,9 @@ package dev.gezgin.processor.fixtures
  * itself a `ResultFlow<OrderId>` and nests a second `@FlowGraph` (`PayAuthFlow`).
  *
  * Also pins the trickier reading rules: `@Repeatable` flattening (`Deals`), the `Self::class`
- * sentinel and explicit args on `@ReplaceTo` (`Promo`), result types via an intermediate base
- * class (`BasePicker`/`AddressPicker`), nullable+defaulted ctor params (`AddressPicker`), and flow
- * chains skipping an intervening `@NavGraph` (`CheckoutPages`/`GiftFlow`).
+ * sentinel and explicit args on `@ReplaceTo` (`Promo`), result types via an intermediate base class
+ * (`BasePicker`/`AddressPicker`), nullable+defaulted ctor params (`AddressPicker`), and flow chains
+ * skipping an intervening `@NavGraph` (`CheckoutPages`/`GiftFlow`).
  *
  * Kept as a raw string constant (rather than a `.kt` file on the test classpath) so
  * [dev.gezgin.processor.CompileHarness] can feed it to kctfork as an in-memory `SourceFile`.
@@ -20,119 +20,121 @@ package dev.gezgin.processor.fixtures
  * code has the kotlinx-serialization compiler plugin and a genuine `@Serializable`-generated
  * `.serializer()`), but kctfork's test compilation has no such plugin wired in.
  *
- * The stub's `serializer()` factory itself must succeed — `gezginTopology` is a top-level `val`,
- * so its initializer (including this call) runs eagerly in `GezginGeneratedKt.<clinit>` the moment
- * the generated file is classloaded, which every test that reads `gezginTopology` does. What must
- * never happen is a real (de)serialize call, so the returned [KSerializer] is a real object whose
- * factory construction is cheap and side-effect-free, but whose actual serialization methods throw
- * if a test ever mistakenly exercises them.
+ * The stub's `serializer()` factory itself must succeed — `gezginTopology` is a top-level `val`, so
+ * its initializer (including this call) runs eagerly in `GezginGeneratedKt.<clinit>` the moment the
+ * generated file is classloaded, which every test that reads `gezginTopology` does. What must never
+ * happen is a real (de)serialize call, so the returned [KSerializer] is a real object whose factory
+ * construction is cheap and side-effect-free, but whose actual serialization methods throw if a
+ * test ever mistakenly exercises them.
  */
-val SHOP_SOURCE = """
-    package dev.gezgin.shop
+val SHOP_SOURCE =
+  """
+      package dev.gezgin.shop
 
-    import dev.gezgin.core.ResultFlow
-    import dev.gezgin.core.ResultRoute
-    import dev.gezgin.core.Route
-    import dev.gezgin.core.annotation.BackTo
-    import dev.gezgin.core.annotation.BackToStart
-    import dev.gezgin.core.annotation.FlowGraph
-    import dev.gezgin.core.annotation.GoForResult
-    import dev.gezgin.core.annotation.GoTo
-    import dev.gezgin.core.annotation.NavGraph
-    import dev.gezgin.core.annotation.NoBack
-    import dev.gezgin.core.annotation.Quit
-    import dev.gezgin.core.annotation.ReplaceTo
-    import dev.gezgin.core.annotation.StartDestination
-    import kotlinx.serialization.KSerializer
-    import kotlinx.serialization.descriptors.SerialDescriptor
-    import kotlinx.serialization.descriptors.buildClassSerialDescriptor
-    import kotlinx.serialization.encoding.Decoder
-    import kotlinx.serialization.encoding.Encoder
+      import dev.gezgin.core.ResultFlow
+      import dev.gezgin.core.ResultRoute
+      import dev.gezgin.core.Route
+      import dev.gezgin.core.annotation.BackTo
+      import dev.gezgin.core.annotation.BackToStart
+      import dev.gezgin.core.annotation.FlowGraph
+      import dev.gezgin.core.annotation.GoForResult
+      import dev.gezgin.core.annotation.GoTo
+      import dev.gezgin.core.annotation.NavGraph
+      import dev.gezgin.core.annotation.NoBack
+      import dev.gezgin.core.annotation.Quit
+      import dev.gezgin.core.annotation.ReplaceTo
+      import dev.gezgin.core.annotation.StartDestination
+      import kotlinx.serialization.KSerializer
+      import kotlinx.serialization.descriptors.SerialDescriptor
+      import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+      import kotlinx.serialization.encoding.Decoder
+      import kotlinx.serialization.encoding.Encoder
 
-    data class OrderId(val value: String) {
-        // Test-only stub — see the file-level KDoc above. Never actually (de)serializes.
-        companion object {
-            fun serializer(): KSerializer<OrderId> = object : KSerializer<OrderId> {
-                override val descriptor: SerialDescriptor = buildClassSerialDescriptor("OrderId")
-                override fun serialize(encoder: Encoder, value: OrderId): Unit =
-                    throw UnsupportedOperationException("test stub — no kotlinx-serialization plugin in kctfork")
-                override fun deserialize(decoder: Decoder): OrderId =
-                    throw UnsupportedOperationException("test stub — no kotlinx-serialization plugin in kctfork")
-            }
-        }
-    }
+      data class OrderId(val value: String) {
+          // Test-only stub — see the file-level KDoc above. Never actually (de)serializes.
+          companion object {
+              fun serializer(): KSerializer<OrderId> = object : KSerializer<OrderId> {
+                  override val descriptor: SerialDescriptor = buildClassSerialDescriptor("OrderId")
+                  override fun serialize(encoder: Encoder, value: OrderId): Unit =
+                      throw UnsupportedOperationException("test stub — no kotlinx-serialization plugin in kctfork")
+                  override fun deserialize(decoder: Decoder): OrderId =
+                      throw UnsupportedOperationException("test stub — no kotlinx-serialization plugin in kctfork")
+              }
+          }
+      }
 
-    // Intermediate non-route layer (top-level, not nested in a graph) implementing ResultRoute —
-    // exercises transitive supertype result-type resolution.
-    abstract class BasePicker : ResultRoute<OrderId>
+      // Intermediate non-route layer (top-level, not nested in a graph) implementing ResultRoute —
+      // exercises transitive supertype result-type resolution.
+      abstract class BasePicker : ResultRoute<OrderId>
 
-    @NavGraph
-    sealed interface HomeGraph : Route {
+      @NavGraph
+      sealed interface HomeGraph : Route {
 
-        @GoTo(Product::class)
-        @GoForResult(CheckoutFlow::class)
-        data object Feed : HomeGraph
+          @GoTo(Product::class)
+          @GoForResult(CheckoutFlow::class)
+          data object Feed : HomeGraph
 
-        // Screen-mode @GoForResult (target = ResultRoute route, not a flow) with a name= override —
-        // exercises the named-@GoForResult X-substitution across Task 2.5's generated triple
-        // (launchPickAddress / pickAddressResults / goToPickAddressForResult).
-        @GoForResult(AddressPicker::class, name = "pickAddress")
-        data object Catalog : HomeGraph
+          // Screen-mode @GoForResult (target = ResultRoute route, not a flow) with a name= override —
+          // exercises the named-@GoForResult X-substitution across Task 2.5's generated triple
+          // (launchPickAddress / pickAddressResults / goToPickAddressForResult).
+          @GoForResult(AddressPicker::class, name = "pickAddress")
+          data object Catalog : HomeGraph
 
-        // Deliberately bare: no edges, no back-annotations, no result contract, no ResultFlow
-        // membership — pins that Task 2.5 generates the uniform back()-only navigator.
-        data object About : HomeGraph
+          // Deliberately bare: no edges, no back-annotations, no result contract, no ResultFlow
+          // membership — pins that Task 2.5 generates the uniform back()-only navigator.
+          data object About : HomeGraph
 
-        @NoBack
-        @BackTo(Feed::class)
-        data class Product(val id: String) : HomeGraph
+          @NoBack
+          @BackTo(Feed::class)
+          data class Product(val id: String) : HomeGraph
 
-        // Two @GoTo's to distinct targets — exercises @Repeatable flattening.
-        @GoTo(Catalog::class)
-        @GoTo(Product::class)
-        data object Deals : HomeGraph
+          // Two @GoTo's to distinct targets — exercises @Repeatable flattening.
+          @GoTo(Catalog::class)
+          @GoTo(Product::class)
+          data object Deals : HomeGraph
 
-        // Default clearUpTo (Self::class sentinel) vs fully explicit @ReplaceTo args.
-        @ReplaceTo(Catalog::class)
-        @ReplaceTo(Product::class, clearUpTo = Feed::class, inclusive = false, name = "viaFeed")
-        data object Promo : HomeGraph
+          // Default clearUpTo (Self::class sentinel) vs fully explicit @ReplaceTo args.
+          @ReplaceTo(Catalog::class)
+          @ReplaceTo(Product::class, clearUpTo = Feed::class, inclusive = false, name = "viaFeed")
+          data object Promo : HomeGraph
 
-        // ResultRoute via intermediate base class + nullable, defaulted ctor param + a GENERIC
-        // ctor param (`List<String>`) — pins that navigator codegen forwards the full parameterized
-        // type (`List<String>`), not its raw erasure (`List`), so the generated method compiles.
-        class AddressPicker(val hint: String? = null, val tags: List<String> = emptyList()) : BasePicker(), HomeGraph
-    }
+          // ResultRoute via intermediate base class + nullable, defaulted ctor param + a GENERIC
+          // ctor param (`List<String>`) — pins that navigator codegen forwards the full parameterized
+          // type (`List<String>`), not its raw erasure (`List`), so the generated method compiles.
+          class AddressPicker(val hint: String? = null, val tags: List<String> = emptyList()) : BasePicker(), HomeGraph
+      }
 
-    @FlowGraph
-    sealed interface CheckoutFlow : Route, ResultFlow<OrderId> {
+      @FlowGraph
+      sealed interface CheckoutFlow : Route, ResultFlow<OrderId> {
 
-        @StartDestination
-        @GoTo(Payment::class)
-        data object Cart : CheckoutFlow
+          @StartDestination
+          @GoTo(Payment::class)
+          data object Cart : CheckoutFlow
 
-        @Quit
-        @BackToStart
-        data object Payment : CheckoutFlow
+          @Quit
+          @BackToStart
+          data object Payment : CheckoutFlow
 
-        @FlowGraph
-        sealed interface PayAuthFlow : Route {
+          @FlowGraph
+          sealed interface PayAuthFlow : Route {
 
-            @StartDestination
-            data object Otp : PayAuthFlow
-        }
+              @StartDestination
+              data object Otp : PayAuthFlow
+          }
 
-        // Intervening @NavGraph between two @FlowGraph's — flow chains must skip it.
-        // NOTE: extends Route, NOT CheckoutFlow — extending the enclosing flow would transitively
-        // inherit its ResultFlow<OrderId> supertype and (correctly) mark this graph resultFlow=true.
-        @NavGraph
-        sealed interface CheckoutPages : Route {
+          // Intervening @NavGraph between two @FlowGraph's — flow chains must skip it.
+          // NOTE: extends Route, NOT CheckoutFlow — extending the enclosing flow would transitively
+          // inherit its ResultFlow<OrderId> supertype and (correctly) mark this graph resultFlow=true.
+          @NavGraph
+          sealed interface CheckoutPages : Route {
 
-            @FlowGraph
-            sealed interface GiftFlow : Route {
+              @FlowGraph
+              sealed interface GiftFlow : Route {
 
-                @StartDestination
-                data object GiftPick : GiftFlow
-            }
-        }
-    }
-""".trimIndent()
+                  @StartDestination
+                  data object GiftPick : GiftFlow
+              }
+          }
+      }
+  """
+    .trimIndent()

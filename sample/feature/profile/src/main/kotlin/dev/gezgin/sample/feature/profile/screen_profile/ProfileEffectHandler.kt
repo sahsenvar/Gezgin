@@ -14,37 +14,38 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(ProfileScreenRoute::class)
 @Composable
 fun ProfileEffectHandler(effects: Flow<ProfileEffect>, nav: ProfileNavigator) {
-    val context = LocalContext.current
-    val resultIntents = effects.resultIntentSink<ProfileIntent>()
-    LaunchedEffect(effects) {
-        nav.pickAvatarResults.collect { result ->
-            resultIntents.sendResultIntent(ProfileIntent.AvatarResult(result))
-        }
+  val context = LocalContext.current
+  val resultIntents = effects.resultIntentSink<ProfileIntent>()
+  LaunchedEffect(effects) {
+    nav.pickAvatarResults.collect { result ->
+      resultIntents.sendResultIntent(ProfileIntent.AvatarResult(result))
     }
-    LaunchedEffect(effects) {
-        nav.editNameDialogResults.collect { result ->
-            resultIntents.sendResultIntent(ProfileIntent.EditNameResult(result))
-        }
+  }
+  LaunchedEffect(effects) {
+    nav.editNameDialogResults.collect { result ->
+      resultIntents.sendResultIntent(ProfileIntent.EditNameResult(result))
     }
-    LaunchedEffect(effects) {
-        nav.pickNotificationsResults.collect { result ->
-            resultIntents.sendResultIntent(ProfileIntent.NotificationsResult(result))
-        }
+  }
+  LaunchedEffect(effects) {
+    nav.pickNotificationsResults.collect { result ->
+      resultIntents.sendResultIntent(ProfileIntent.NotificationsResult(result))
     }
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is ProfileEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
-            else -> handleProfileEffect(effect, nav)
-        }
+  }
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is ProfileEffect.ShowMessage ->
+        Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      else -> handleProfileEffect(effect, nav)
     }
+  }
 }
 
 internal fun handleProfileEffect(effect: ProfileEffect, nav: ProfileNavigator) {
-    when (effect) {
-        is ProfileEffect.ShowMessage -> Unit
-        is ProfileEffect.EditName -> nav.launchEditNameDialog(effect.current)
-        ProfileEffect.OpenSettings -> nav.goToSettings()
-        ProfileEffect.PickAvatar -> nav.launchPickAvatar()
-        is ProfileEffect.PickNotifications -> nav.launchPickNotifications(effect.current)
-    }
+  when (effect) {
+    is ProfileEffect.ShowMessage -> Unit
+    is ProfileEffect.EditName -> nav.launchEditNameDialog(effect.current)
+    ProfileEffect.OpenSettings -> nav.goToSettings()
+    ProfileEffect.PickAvatar -> nav.launchPickAvatar()
+    is ProfileEffect.PickNotifications -> nav.launchPickNotifications(effect.current)
+  }
 }

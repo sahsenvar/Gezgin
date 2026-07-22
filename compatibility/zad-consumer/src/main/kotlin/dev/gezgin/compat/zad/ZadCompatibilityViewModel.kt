@@ -13,47 +13,48 @@ import org.koin.core.annotation.KoinViewModel
 data class ZadCompatibilityState(val routeName: String)
 
 sealed interface ZadCompatibilityIntent {
-    data object Navigate : ZadCompatibilityIntent
+  data object Navigate : ZadCompatibilityIntent
 }
 
 sealed interface ZadCompatibilityEffect {
-    data object NavigateToFeatured : ZadCompatibilityEffect
+  data object NavigateToFeatured : ZadCompatibilityEffect
 }
 
 sealed interface FeaturedCompatibilityEffect {
-    data object NavigateToHome : FeaturedCompatibilityEffect
+  data object NavigateToHome : FeaturedCompatibilityEffect
 }
 
 @KoinViewModel
 @MviViewModel(ZadCompatibilityRoute::class)
-class ZadCompatibilityViewModel(
-    @InjectedParam route: ZadCompatibilityRoute,
-) : ViewModel(), GezginMvi<ZadCompatibilityState, ZadCompatibilityIntent, ZadCompatibilityEffect> {
-    override val uiState: StateFlow<ZadCompatibilityState> = MutableStateFlow(ZadCompatibilityState(route.toString()))
+class ZadCompatibilityViewModel(@InjectedParam route: ZadCompatibilityRoute) :
+  ViewModel(), GezginMvi<ZadCompatibilityState, ZadCompatibilityIntent, ZadCompatibilityEffect> {
+  override val uiState: StateFlow<ZadCompatibilityState> =
+    MutableStateFlow(ZadCompatibilityState(route.toString()))
 
-    private val _effects = GezginEffects<ZadCompatibilityEffect>()
-    override val effects: Flow<ZadCompatibilityEffect> = _effects.flow
+  private val _effects = GezginEffects<ZadCompatibilityEffect>()
+  override val effects: Flow<ZadCompatibilityEffect> = _effects.flow
 
-    override fun onIntent(intent: ZadCompatibilityIntent) {
-        when (intent) {
-            ZadCompatibilityIntent.Navigate -> _effects.send(ZadCompatibilityEffect.NavigateToFeatured)
-        }
+  override fun onIntent(intent: ZadCompatibilityIntent) {
+    when (intent) {
+      ZadCompatibilityIntent.Navigate -> _effects.send(ZadCompatibilityEffect.NavigateToFeatured)
     }
+  }
 }
 
 @KoinViewModel
 @MviViewModel(FeaturedCompatibilityRoute::class)
-class FeaturedCompatibilityViewModel(
-    @InjectedParam route: FeaturedCompatibilityRoute,
-) : ViewModel(), GezginMvi<ZadCompatibilityState, ZadCompatibilityIntent, FeaturedCompatibilityEffect> {
-    override val uiState: StateFlow<ZadCompatibilityState> = MutableStateFlow(ZadCompatibilityState(route.toString()))
+class FeaturedCompatibilityViewModel(@InjectedParam route: FeaturedCompatibilityRoute) :
+  ViewModel(),
+  GezginMvi<ZadCompatibilityState, ZadCompatibilityIntent, FeaturedCompatibilityEffect> {
+  override val uiState: StateFlow<ZadCompatibilityState> =
+    MutableStateFlow(ZadCompatibilityState(route.toString()))
 
-    private val _effects = GezginEffects<FeaturedCompatibilityEffect>()
-    override val effects: Flow<FeaturedCompatibilityEffect> = _effects.flow
+  private val _effects = GezginEffects<FeaturedCompatibilityEffect>()
+  override val effects: Flow<FeaturedCompatibilityEffect> = _effects.flow
 
-    override fun onIntent(intent: ZadCompatibilityIntent) {
-        when (intent) {
-            ZadCompatibilityIntent.Navigate -> _effects.send(FeaturedCompatibilityEffect.NavigateToHome)
-        }
+  override fun onIntent(intent: ZadCompatibilityIntent) {
+    when (intent) {
+      ZadCompatibilityIntent.Navigate -> _effects.send(FeaturedCompatibilityEffect.NavigateToHome)
     }
+  }
 }

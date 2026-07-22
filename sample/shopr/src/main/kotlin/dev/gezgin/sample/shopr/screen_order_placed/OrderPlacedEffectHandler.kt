@@ -12,22 +12,22 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(HomeGraph.OrderPlaced::class)
 @Composable
 fun OrderPlacedEffectHandler(effects: Flow<OrderPlacedEffect>, nav: OrderPlacedNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        handleOrderPlacedEffect(effect, nav) { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    handleOrderPlacedEffect(effect, nav) { message ->
+      Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
+  }
 }
 
 internal fun handleOrderPlacedEffect(
-    effect: OrderPlacedEffect,
-    nav: OrderPlacedNavigator,
-    onMessage: (String) -> Unit,
+  effect: OrderPlacedEffect,
+  nav: OrderPlacedNavigator,
+  onMessage: (String) -> Unit,
 ) {
-    when (effect) {
-        is OrderPlacedEffect.ShowMessage -> onMessage(effect.text)
-        OrderPlacedEffect.BackToFeed -> nav.backToFeed()
-        is OrderPlacedEffect.ShowDetails -> nav.showOrderDetails(effect.orderId)
-    }
+  when (effect) {
+    is OrderPlacedEffect.ShowMessage -> onMessage(effect.text)
+    OrderPlacedEffect.BackToFeed -> nav.backToFeed()
+    is OrderPlacedEffect.ShowDetails -> nav.showOrderDetails(effect.orderId)
+  }
 }

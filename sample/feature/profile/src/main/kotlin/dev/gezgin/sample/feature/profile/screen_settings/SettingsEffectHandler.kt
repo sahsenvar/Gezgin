@@ -13,14 +13,14 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(SettingsScreenRoute::class)
 @Composable
 fun SettingsEffectHandler(effects: Flow<SettingsEffect>, nav: SettingsNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is SettingsEffect.ShowMessage -> {
-                Log.d("SettingsMvi", "effect: ${effect.text}")
-                Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
-            }
-            SettingsEffect.Logout -> nav.logout()
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is SettingsEffect.ShowMessage -> {
+        Log.d("SettingsMvi", "effect: ${effect.text}")
+        Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      }
+      SettingsEffect.Logout -> nav.logout()
     }
+  }
 }

@@ -19,18 +19,18 @@ import dev.gezgin.sample.navigation.SignUpFlow.TermsScreenRoute
 @Screen(TermsScreenRoute::class)
 @Composable
 fun TermsScreen(state: TermsUiState, onIntent: (TermsIntent) -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Kayıt ol — kullanım koşulları")
-            OutlinedTextField(
-                value = state.name,
-                onValueChange = { onIntent(TermsIntent.NameChanged(it)) },
-                label = { Text("Adınız (Welcome ekranı için)") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(onClick = { onIntent(TermsIntent.BackToStart) }) { Text("Başa dön") }
-            TextButton(onClick = { onIntent(TermsIntent.Quit) }) { Text("Vazgeç") }
-            Button(onClick = { onIntent(TermsIntent.Complete) }) { Text("Kaydı tamamla") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Kayıt ol — kullanım koşulları")
+      OutlinedTextField(
+        value = state.name,
+        onValueChange = { onIntent(TermsIntent.NameChanged(it)) },
+        label = { Text("Adınız (Welcome ekranı için)") },
+        modifier = Modifier.fillMaxWidth(),
+      )
+      Button(onClick = { onIntent(TermsIntent.BackToStart) }) { Text("Başa dön") }
+      TextButton(onClick = { onIntent(TermsIntent.Quit) }) { Text("Vazgeç") }
+      Button(onClick = { onIntent(TermsIntent.Complete) }) { Text("Kaydı tamamla") }
     }
+  }
 }

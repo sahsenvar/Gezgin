@@ -18,24 +18,24 @@ import dev.gezgin.core.Route
  * `ComponentActivity` bunu sağlar → gerçek per-entry `ViewModelStore` (eşit-değerli iki route ayrı
  * VM store alır, R2'nin VM tarafı). CMP desktop host'unda `LocalViewModelStoreOwner` garanti DEĞİL
  * (özellikle `runComposeUiTest`/`setContent`) → çağrı `IllegalStateException` atardı. Bu yüzden
- * desktop actual'ı **boş liste** (no-op) döndürür; saveable-state-holder decorator'ı desktop'ta R2'nin
- * saved-state tarafını zaten karşılar (bkz. GezginDisplayR2Test). Kararın gerekçesi task-3.3-report.md.
+ * desktop actual'ı **boş liste** (no-op) döndürür; saveable-state-holder decorator'ı desktop'ta
+ * R2'nin saved-state tarafını zaten karşılar (bkz. GezginDisplayR2Test). Kararın gerekçesi
+ * task-3.3-report.md.
  */
-@Composable
-internal expect fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Route>>
+@Composable internal expect fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Route>>
 
 /**
- * `@NoBack` entry-scoped Gezgin-sahipli geri-handler'ı (M5′, §4.2). [toNavEntry] `noBack==true`
- * (ve kök DEĞİL) entry'lerde bunu ekran içeriğinden ÖNCE (OUTER) çağırır → dispatcher LIFO'sunda
+ * `@NoBack` entry-scoped Gezgin-sahipli geri-handler'ı (M5′, §4.2). [toNavEntry] `noBack==true` (ve
+ * kök DEĞİL) entry'lerde bunu ekran içeriğinden ÖNCE (OUTER) çağırır → dispatcher LIFO'sunda
  * ekranın kendi `BackHandler`'ı (varsa, sonra/İÇ kaydolur) kazanır; yoksa Gezgin'inki back'i yutar.
  *
- * **Platform ayrımı:** Android actual'ı gerçek `androidx.activity.compose.BackHandler(enabled = true)`
- * kurar (sistem-back'i entry düzeyinde tüketir; predictive preview o entry'de başlamaz). Desktop'ta
- * sistem-back/predictive-back kavramı YOK (task 3.2'de doğrulandı) → desktop actual'ı no-op; desktop'ta
- * geri-yutma davranışı [gezginOnBack] guard'ıyla (her iki platformda test edilebilir) sağlanır.
+ * **Platform ayrımı:** Android actual'ı gerçek `androidx.activity.compose.BackHandler(enabled =
+ * true)` kurar (sistem-back'i entry düzeyinde tüketir; predictive preview o entry'de başlamaz).
+ * Desktop'ta sistem-back/predictive-back kavramı YOK (task 3.2'de doğrulandı) → desktop actual'ı
+ * no-op; desktop'ta geri-yutma davranışı [gezginOnBack] guard'ıyla (her iki platformda test
+ * edilebilir) sağlanır.
  */
-@Composable
-internal expect fun GezginNoBackHandler()
+@Composable internal expect fun GezginNoBackHandler()
 
 /**
  * Nav3 `NavDisplay` çağrısının platform-özel sarmalayıcısı (Faz 4 scene wiring, §7) — **NAMED RISK
@@ -44,23 +44,24 @@ internal expect fun GezginNoBackHandler()
  * (`navigation3-ui` sources, `entries`-alan non-deprecated overload):
  * - **desktop (JB `1.0.0-alpha05`)**: `sceneStrategy: SceneStrategy<T> = SinglePaneSceneStrategy()`
  *   — TEKİL; `sceneDecoratorStrategies`/`sharedTransitionScope` YOK.
- * - **android (Google `1.1.4`)**: `sceneStrategies: List<SceneStrategy<T>> = listOf(SinglePaneSceneStrategy())`
- *   — ÇOĞUL liste; ayrıca `sceneDecoratorStrategies`, `sharedTransitionScope` var.
- * Parametre hem ADI hem ARİTESİ farklı (isimli argüman hedefe göre kırılır) → ortak alt-kümede
- * DEĞİL. Actual'lar Gezgin-sahipli [GezginDialogSceneStrategy] + [GezginBottomSheetSceneStrategy]'yi (C-MJ-1:
- * dismiss'i sahip-entry'ye pinler) fallback `SinglePaneSceneStrategy` ile zincirler (`then`/liste) —
- * modal-metadata'lı entry overlay, diğerleri tek-pane. Transition spec'leri buraya GEÇMEZ (per-entry
- * `NavEntry.metadata` ile iner, bkz. [GezginDisplay] KDoc).
+ * - **android (Google `1.1.4`)**: `sceneStrategies: List<SceneStrategy<T>> =
+ *   listOf(SinglePaneSceneStrategy())` — ÇOĞUL liste; ayrıca `sceneDecoratorStrategies`,
+ *   `sharedTransitionScope` var. Parametre hem ADI hem ARİTESİ farklı (isimli argüman hedefe göre
+ *   kırılır) → ortak alt-kümede DEĞİL. Actual'lar Gezgin-sahipli
+ *   [GezginDialogSceneStrategy] + [GezginBottomSheetSceneStrategy]'yi (C-MJ-1: dismiss'i
+ *   sahip-entry'ye pinler) fallback `SinglePaneSceneStrategy` ile zincirler (`then`/liste) —
+ *   modal-metadata'lı entry overlay, diğerleri tek-pane. Transition spec'leri buraya GEÇMEZ
+ *   (per-entry `NavEntry.metadata` ile iner, bkz. [GezginDisplay] KDoc).
  *
  * [onBack] — tekil sistem-back (Nav3 `NavDisplay.onBack`, ekran/predictive back → [gezginOnBack]).
- * [pinnedBack] — modal (dialog/sheet) dismiss'inin sahip-entry'ye pinli `navigator.back(entryId)` kancası
- * (C-MJ-1); Gezgin scene-strategy'lerine geçirilir. İkisi AYRI: sistem-back canlı-top'a, modal-dismiss
- * kendi entry'sine bağlanır.
+ * [pinnedBack] — modal (dialog/sheet) dismiss'inin sahip-entry'ye pinli `navigator.back(entryId)`
+ * kancası (C-MJ-1); Gezgin scene-strategy'lerine geçirilir. İkisi AYRI: sistem-back canlı-top'a,
+ * modal-dismiss kendi entry'sine bağlanır.
  */
 @Composable
 internal expect fun GezginNavDisplay(
-    entries: List<NavEntry<Route>>,
-    modifier: Modifier,
-    onBack: () -> Unit,
-    pinnedBack: (Long) -> Unit,
+  entries: List<NavEntry<Route>>,
+  modifier: Modifier,
+  onBack: () -> Unit,
+  pinnedBack: (Long) -> Unit,
 )

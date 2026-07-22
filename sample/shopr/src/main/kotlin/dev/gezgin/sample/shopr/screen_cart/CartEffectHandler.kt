@@ -12,21 +12,17 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(CheckoutFlow.Cart::class)
 @Composable
 fun CartEffectHandler(effects: Flow<CartEffect>, nav: CartNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        handleCartEffect(effect, nav) { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    handleCartEffect(effect, nav) { message ->
+      Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
+  }
 }
 
-internal fun handleCartEffect(
-    effect: CartEffect,
-    nav: CartNavigator,
-    onMessage: (String) -> Unit,
-) {
-    when (effect) {
-        is CartEffect.ShowMessage -> onMessage(effect.text)
-        CartEffect.NavigateToPayment -> nav.goToPayment()
-    }
+internal fun handleCartEffect(effect: CartEffect, nav: CartNavigator, onMessage: (String) -> Unit) {
+  when (effect) {
+    is CartEffect.ShowMessage -> onMessage(effect.text)
+    CartEffect.NavigateToPayment -> nav.goToPayment()
+  }
 }

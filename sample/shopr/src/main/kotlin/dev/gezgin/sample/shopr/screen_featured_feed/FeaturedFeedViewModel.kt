@@ -15,22 +15,19 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(HomeGraph.FeaturedFeed::class)
 class FeaturedFeedViewModel : ViewModel(), GezginMvi<FeedUiState, FeedIntent, FeaturedFeedEffect> {
 
-    private val _uiState = MutableStateFlow(
-        FeedUiState(
-            headline = "Haftanın ürünü",
-            primaryActionLabel = "Öne çıkan ürünü aç",
-        ),
+  private val _uiState =
+    MutableStateFlow(
+      FeedUiState(headline = "Haftanın ürünü", primaryActionLabel = "Öne çıkan ürünü aç")
     )
-    override val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
+  override val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<FeaturedFeedEffect>()
-    override val effects: Flow<FeaturedFeedEffect> = _effects.flow
+  private val _effects = GezginEffects<FeaturedFeedEffect>()
+  override val effects: Flow<FeaturedFeedEffect> = _effects.flow
 
-    override fun onIntent(intent: FeedIntent) {
-        when (intent) {
-            FeedIntent.OpenCatalog -> _effects.send(
-                FeaturedFeedEffect.NavigateToFeaturedProduct(productId = "featured"),
-            )
-        }
+  override fun onIntent(intent: FeedIntent) {
+    when (intent) {
+      FeedIntent.OpenCatalog ->
+        _effects.send(FeaturedFeedEffect.NavigateToFeaturedProduct(productId = "featured"))
     }
+  }
 }

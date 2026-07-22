@@ -23,76 +23,82 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Task-5.0 derleme kanıtı (full codegen 5.1/5.2). Kanıtladığı üçlü + shape:
- *  - `@MviViewModel(Route::class)` bir VM class'ında (CLASS target) + VM `GezginMvi<S,I,E>` implement eder
- *    (İKİSİ DE — guardrail'in doğrulayacağı biçim) → S/I/E generic şekli kullanılabilir.
- *  - stateless `@Screen(Route)` content `(state, onIntent)` + route-explicit effect handler `(Flow<E>)`.
- *  - `provideXEntry` = codegen'in üreteceği ANDROIDX-FALLBACK resolver shape'i, gezgin-core entry-scoping'e
- *    (`GezginEntryScope.register<Route>`) karşı derlenir: `viewModel(factory = viewModelFactory{ initializer{} })`
- *    + `collectAsStateWithLifecycle()` + `ObserveEffects(...)` + stateless content çağrısı.
- * Bu bir SMOKE derleme kanıtıdır (render/back döngüsü değil — o 5.2/5.3 sample'ında).
+ * - `@MviViewModel(Route::class)` bir VM class'ında (CLASS target) + VM `GezginMvi<S,I,E>`
+ *   implement eder (İKİSİ DE — guardrail'in doğrulayacağı biçim) → S/I/E generic şekli
+ *   kullanılabilir.
+ * - stateless `@Screen(Route)` content `(state, onIntent)` + route-explicit effect handler
+ *   `(Flow<E>)`.
+ * - `provideXEntry` = codegen'in üreteceği ANDROIDX-FALLBACK resolver shape'i, gezgin-core
+ *   entry-scoping'e (`GezginEntryScope.register<Route>`) karşı derlenir: `viewModel(factory =
+ *   viewModelFactory{ initializer{} })`
+ *     + `collectAsStateWithLifecycle()` + `ObserveEffects(...)` + stateless content çağrısı. Bu bir
+ *       SMOKE derleme kanıtıdır (render/back döngüsü değil — o 5.2/5.3 sample'ında).
  */
-
 data class CounterRoute(val start: Int = 0) : Route
 
 data class CounterState(val count: Int)
+
 sealed interface CounterIntent {
-    data object Increment : CounterIntent
-    data object Decrement : CounterIntent
+  data object Increment : CounterIntent
+
+  data object Decrement : CounterIntent
 }
+
 sealed interface CounterEffect {
-    data class Toast(val text: String) : CounterEffect
+  data class Toast(val text: String) : CounterEffect
 }
 
 @MviViewModel(CounterRoute::class)
 class CounterViewModel(route: CounterRoute) :
-    ViewModel(),
-    GezginMvi<CounterState, CounterIntent, CounterEffect> {
+  ViewModel(), GezginMvi<CounterState, CounterIntent, CounterEffect> {
 
-    private val _uiState = MutableStateFlow(CounterState(route.start))
-    override val uiState: StateFlow<CounterState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(CounterState(route.start))
+  override val uiState: StateFlow<CounterState> = _uiState.asStateFlow()
 
-    // Kayıpsız backing (MJ2): gözlemci yokken (örtülen/STOPPED entry) emit edilen efekt Channel'da tutulur,
-    // re-observe'de teslim edilir — MutableSharedFlow(replay=0)+tryEmit deseninin sessiz-düşürmesi YOK.
-    private val _effects = GezginEffects<CounterEffect>()
-    override val effects: Flow<CounterEffect> = _effects.flow
+  // Kayıpsız backing (MJ2): gözlemci yokken (örtülen/STOPPED entry) emit edilen efekt Channel'da
+  // tutulur,
+  // re-observe'de teslim edilir — MutableSharedFlow(replay=0)+tryEmit deseninin sessiz-düşürmesi
+  // YOK.
+  private val _effects = GezginEffects<CounterEffect>()
+  override val effects: Flow<CounterEffect> = _effects.flow
 
-    override fun onIntent(intent: CounterIntent) {
-        when (intent) {
-            CounterIntent.Increment -> _uiState.update { it.copy(count = it.count + 1) }
-            CounterIntent.Decrement -> _uiState.update { it.copy(count = it.count - 1) }
-        }
-        _effects.send(CounterEffect.Toast("count=${_uiState.value.count}"))
+  override fun onIntent(intent: CounterIntent) {
+    when (intent) {
+      CounterIntent.Increment -> _uiState.update { it.copy(count = it.count + 1) }
+      CounterIntent.Decrement -> _uiState.update { it.copy(count = it.count - 1) }
     }
+    _effects.send(CounterEffect.Toast("count=${_uiState.value.count}"))
+  }
 }
 
 @Screen(CounterRoute::class)
 @Composable
 fun CounterContent(state: CounterState, onIntent: (CounterIntent) -> Unit) {
-    // stateless: yalnız state okur + onIntent tetikler (UI çizimi 5.3 sample'ında).
-    if (state.count < 0) onIntent(CounterIntent.Increment)
+  // stateless: yalnız state okur + onIntent tetikler (UI çizimi 5.3 sample'ında).
+  if (state.count < 0) onIntent(CounterIntent.Increment)
 }
 
 @EffectHandler(CounterRoute::class)
 @Composable
 fun CounterEffects(effects: Flow<CounterEffect>) {
-    ObserveEffects(effects) { /* CounterEffect.Toast -> show */ }
+  ObserveEffects(effects) { /* CounterEffect.Toast -> show */ }
 }
 
 /**
  * Codegen'in (5.2) üreteceği ANDROIDX-FALLBACK provider'ın elle yazılmış eşdeğeri — DERLEME kanıtı.
- * `viewModel` default'u burada androidx `viewModel()` (Hilt/Koin YOK — gezgin-mvi DI-agnostik); Hilt/Koin
- * override'ları kullanıcı tarafından `provideCounterEntry(viewModel = { args -> hiltViewModel(...) })`
- * ile verilir (5.3 README).
+ * `viewModel` default'u burada androidx `viewModel()` (Hilt/Koin YOK — gezgin-mvi DI-agnostik);
+ * Hilt/Koin override'ları kullanıcı tarafından `provideCounterEntry(viewModel = { args ->
+ * hiltViewModel(...) })` ile verilir (5.3 README).
  */
 fun GezginEntryScope.provideCounterEntry(
-    viewModel: @Composable (args: CounterRoute) -> CounterViewModel = { args ->
-        viewModel(factory = viewModelFactory { initializer { CounterViewModel(args) } })
-    },
+  viewModel: @Composable (args: CounterRoute) -> CounterViewModel = { args ->
+    viewModel(factory = viewModelFactory { initializer { CounterViewModel(args) } })
+  }
 ) {
-    register<CounterRoute> { route ->
-        val vm = viewModel(route)
-        val state by vm.uiState.collectAsStateWithLifecycle()
-        CounterEffects(vm.effects)
-        CounterContent(state, vm::onIntent)
-    }
+  register<CounterRoute> { route ->
+    val vm = viewModel(route)
+    val state by vm.uiState.collectAsStateWithLifecycle()
+    CounterEffects(vm.effects)
+    CounterContent(state, vm::onIntent)
+  }
 }

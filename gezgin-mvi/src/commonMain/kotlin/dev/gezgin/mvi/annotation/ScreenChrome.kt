@@ -16,8 +16,8 @@ import kotlin.reflect.KClass
 @Retention(AnnotationRetention.BINARY)
 @Repeatable
 public annotation class TopBar(
-    /** The route whose content receives this top bar. */
-    public val route: KClass<out Route>,
+  /** The route whose content receives this top bar. */
+  public val route: KClass<out Route>
 )
 
 /**
@@ -31,6 +31,6 @@ public annotation class TopBar(
 @Retention(AnnotationRetention.BINARY)
 @Repeatable
 public annotation class BottomBar(
-    /** The route whose content receives this bottom bar. */
-    public val route: KClass<out Route>,
+  /** The route whose content receives this bottom bar. */
+  public val route: KClass<out Route>
 )

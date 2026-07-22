@@ -8,10 +8,10 @@ import dev.gezgin.sample.feature.home.screen_welcome.provideWelcomeEntry
 import dev.gezgin.sample.feature.home.sheet_filter.provideFilterBottomSheetEntry
 
 fun GezginEntryScope.homeGraphEntries() {
-    provideDashboardEntry()
-    provideItemDetailEntry()
-    provideFilterBottomSheetEntry()
-    provideItemImageViewerEntry()
-    provideWelcomeEntry()
-    provideHelpEntry()
+  provideDashboardEntry()
+  provideItemDetailEntry()
+  provideFilterBottomSheetEntry()
+  provideItemImageViewerEntry()
+  provideWelcomeEntry()
+  provideHelpEntry()
 }

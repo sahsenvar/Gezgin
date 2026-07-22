@@ -5,8 +5,7 @@ import dev.gezgin.core.annotation.GoTo
 import dev.gezgin.core.annotation.NavGraph
 import kotlinx.serialization.Serializable
 
-@NavGraph
-sealed interface ZadCompatibilityGraph : Route
+@NavGraph sealed interface ZadCompatibilityGraph : Route
 
 @Serializable
 @GoTo(FeaturedCompatibilityRoute::class)

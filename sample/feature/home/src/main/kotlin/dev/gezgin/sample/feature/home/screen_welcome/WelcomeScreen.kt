@@ -17,11 +17,11 @@ import dev.gezgin.sample.navigation.HomeGraph
 @Screen(HomeGraph.WelcomeScreenRoute::class)
 @Composable
 fun WelcomeScreen(state: WelcomeUiState, onIntent: (WelcomeIntent) -> Unit) {
-    LaunchedEffect(Unit) { onIntent(WelcomeIntent.OnAppear) }
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(if (state.name != null) "Hoş geldin, ${state.name}" else "Hoş geldin")
-            Button(onClick = { onIntent(WelcomeIntent.Continue) }) { Text("Panoya devam") }
-        }
+  LaunchedEffect(Unit) { onIntent(WelcomeIntent.OnAppear) }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text(if (state.name != null) "Hoş geldin, ${state.name}" else "Hoş geldin")
+      Button(onClick = { onIntent(WelcomeIntent.Continue) }) { Text("Panoya devam") }
     }
+  }
 }

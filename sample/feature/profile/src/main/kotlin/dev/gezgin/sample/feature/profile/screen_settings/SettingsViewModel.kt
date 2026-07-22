@@ -14,19 +14,19 @@ import kotlinx.coroutines.flow.update
 @MviViewModel(ProfileGraph.SettingsScreenRoute::class)
 class SettingsViewModel : ViewModel(), GezginMvi<SettingsUiState, SettingsIntent, SettingsEffect> {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    override val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(SettingsUiState())
+  override val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<SettingsEffect>()
-    override val effects: Flow<SettingsEffect> = _effects.flow
+  private val _effects = GezginEffects<SettingsEffect>()
+  override val effects: Flow<SettingsEffect> = _effects.flow
 
-    override fun onIntent(intent: SettingsIntent) {
-        when (intent) {
-            SettingsIntent.ToggleTheme -> {
-                _uiState.update { it.copy(darkTheme = !it.darkTheme) }
-                _effects.send(SettingsEffect.ShowMessage("Tema tercihi kaydedildi"))
-            }
-            SettingsIntent.Logout -> _effects.send(SettingsEffect.Logout)
-        }
+  override fun onIntent(intent: SettingsIntent) {
+    when (intent) {
+      SettingsIntent.ToggleTheme -> {
+        _uiState.update { it.copy(darkTheme = !it.darkTheme) }
+        _effects.send(SettingsEffect.ShowMessage("Tema tercihi kaydedildi"))
+      }
+      SettingsIntent.Logout -> _effects.send(SettingsEffect.Logout)
     }
+  }
 }

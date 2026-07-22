@@ -19,27 +19,24 @@ import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
 @Screen(LoginScreenRoute::class)
 @Composable
 fun LoginScreen(state: LoginUiState, onIntent: (LoginIntent) -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text("Giriş yap")
-            OutlinedTextField(
-                value = state.email,
-                onValueChange = { onIntent(LoginIntent.EmailChanged(it)) },
-                label = { Text("E-posta") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = state.password,
-                onValueChange = { onIntent(LoginIntent.PasswordChanged(it)) },
-                label = { Text("Şifre") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(onClick = { onIntent(LoginIntent.Submit) }) { Text("Giriş") }
-            TextButton(onClick = { onIntent(LoginIntent.ForgotPassword) }) { Text("Şifremi unuttum") }
-            TextButton(onClick = { onIntent(LoginIntent.SignUp) }) { Text("Kayıt ol") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Giriş yap")
+      OutlinedTextField(
+        value = state.email,
+        onValueChange = { onIntent(LoginIntent.EmailChanged(it)) },
+        label = { Text("E-posta") },
+        modifier = Modifier.fillMaxWidth(),
+      )
+      OutlinedTextField(
+        value = state.password,
+        onValueChange = { onIntent(LoginIntent.PasswordChanged(it)) },
+        label = { Text("Şifre") },
+        modifier = Modifier.fillMaxWidth(),
+      )
+      Button(onClick = { onIntent(LoginIntent.Submit) }) { Text("Giriş") }
+      TextButton(onClick = { onIntent(LoginIntent.ForgotPassword) }) { Text("Şifremi unuttum") }
+      TextButton(onClick = { onIntent(LoginIntent.SignUp) }) { Text("Kayıt ol") }
     }
+  }
 }

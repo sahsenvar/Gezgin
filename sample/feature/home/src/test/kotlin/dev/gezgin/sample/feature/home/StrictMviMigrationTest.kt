@@ -18,11 +18,11 @@ import dev.gezgin.sample.navigation.HomeGraph.ItemDetailScreenRoute
 import dev.gezgin.sample.navigation.dashboardNavigator
 import dev.gezgin.sample.navigation.filterBottomSheetNavigator
 import dev.gezgin.sample.navigation.gezginTopology
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
@@ -31,62 +31,66 @@ import org.robolectric.Shadows.shadowOf
 @RunWith(RobolectricTestRunner::class)
 class StrictMviMigrationTest {
 
-    @Test
-    fun `dashboard navigation intent becomes an effect before the typed handler navigates`() = runBlocking {
-        val viewModel = DashboardViewModel()
+  @Test
+  fun `dashboard navigation intent becomes an effect before the typed handler navigates`() =
+    runBlocking {
+      val viewModel = DashboardViewModel()
 
-        viewModel.onIntent(DashboardIntent.OpenItem("item-42"))
+      viewModel.onIntent(DashboardIntent.OpenItem("item-42"))
 
-        val effect = viewModel.effects.first()
-        assertEquals(DashboardEffect.OpenItem("item-42"), effect)
+      val effect = viewModel.effects.first()
+      assertEquals(DashboardEffect.OpenItem("item-42"), effect)
 
-        val raw = RawNavigator(start = DashboardScreenRoute, topology = gezginTopology)
-        handleDashboardEffect(effect, raw.dashboardNavigator(entryId = 1L))
-        assertEquals(ItemDetailScreenRoute("item-42"), raw.current)
+      val raw = RawNavigator(start = DashboardScreenRoute, topology = gezginTopology)
+      handleDashboardEffect(effect, raw.dashboardNavigator(entryId = 1L))
+      assertEquals(ItemDetailScreenRoute("item-42"), raw.current)
     }
 
-    @Test
-    fun `sort result re-enters the ViewModel as an intent`() = runBlocking {
-        val viewModel = DashboardViewModel()
+  @Test
+  fun `sort result re-enters the ViewModel as an intent`() = runBlocking {
+    val viewModel = DashboardViewModel()
 
-        viewModel.effects
-            .resultIntentSink<DashboardIntent>()
-            .sendResultIntent(DashboardIntent.SortResult(NavResult.Value(SortOrder.PRICE_DESC)))
+    viewModel.effects
+      .resultIntentSink<DashboardIntent>()
+      .sendResultIntent(DashboardIntent.SortResult(NavResult.Value(SortOrder.PRICE_DESC)))
 
-        assertEquals(SortOrder.PRICE_DESC, viewModel.uiState.value.order)
-        assertEquals(DashboardEffect.ShowMessage("Sıralama: PRICE_DESC"), viewModel.effects.first())
+    assertEquals(SortOrder.PRICE_DESC, viewModel.uiState.value.order)
+    assertEquals(DashboardEffect.ShowMessage("Sıralama: PRICE_DESC"), viewModel.effects.first())
+  }
+
+  @OptIn(GezginInternalApi::class)
+  @Test
+  fun `route-bound dashboard collector delivers a persisted sort result`() {
+    val viewModel = DashboardViewModel()
+    val raw = RawNavigator(start = DashboardScreenRoute, topology = gezginTopology)
+    val nav =
+      raw.dashboardNavigator(entryId = requireNotNull(raw.entryIdOf(DashboardScreenRoute::class)))
+
+    nav.launchPickSort(current = SortOrder.RELEVANCE.name)
+    raw
+      .filterBottomSheetNavigator(
+        entryId = requireNotNull(raw.entryIdOf(FilterBottomSheetRoute::class))
+      )
+      .backWithResult(SortOrder.PRICE_DESC)
+
+    val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
+    try {
+      controller.get().setContent { DashboardEffectHandler(viewModel.effects, nav) }
+
+      awaitComposeCondition("persisted sort result was not handled") {
+        viewModel.uiState.value.order == SortOrder.PRICE_DESC
+      }
+    } finally {
+      controller.pause().stop().destroy()
     }
-
-    @OptIn(GezginInternalApi::class)
-    @Test
-    fun `route-bound dashboard collector delivers a persisted sort result`() {
-        val viewModel = DashboardViewModel()
-        val raw = RawNavigator(start = DashboardScreenRoute, topology = gezginTopology)
-        val nav = raw.dashboardNavigator(entryId = requireNotNull(raw.entryIdOf(DashboardScreenRoute::class)))
-
-        nav.launchPickSort(current = SortOrder.RELEVANCE.name)
-        raw.filterBottomSheetNavigator(
-            entryId = requireNotNull(raw.entryIdOf(FilterBottomSheetRoute::class)),
-        ).backWithResult(SortOrder.PRICE_DESC)
-
-        val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
-        try {
-            controller.get().setContent { DashboardEffectHandler(viewModel.effects, nav) }
-
-            awaitComposeCondition("persisted sort result was not handled") {
-                viewModel.uiState.value.order == SortOrder.PRICE_DESC
-            }
-        } finally {
-            controller.pause().stop().destroy()
-        }
-    }
+  }
 }
 
 private fun awaitComposeCondition(message: String, condition: () -> Boolean) {
-    repeat(100) {
-        shadowOf(Looper.getMainLooper()).idle()
-        if (condition()) return
-        Thread.sleep(10)
-    }
-    assertTrue(condition(), message)
+  repeat(100) {
+    shadowOf(Looper.getMainLooper()).idle()
+    if (condition()) return
+    Thread.sleep(10)
+  }
+  assertTrue(condition(), message)
 }

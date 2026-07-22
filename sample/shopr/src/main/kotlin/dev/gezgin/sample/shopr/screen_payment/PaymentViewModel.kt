@@ -14,22 +14,20 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(CheckoutFlow.Payment::class)
 class PaymentViewModel : ViewModel(), GezginMvi<PaymentUiState, PaymentIntent, PaymentEffect> {
 
-    private val _uiState = MutableStateFlow(PaymentUiState())
-    override val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(PaymentUiState())
+  override val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<PaymentEffect>()
-    override val effects: Flow<PaymentEffect> = _effects.flow
+  private val _effects = GezginEffects<PaymentEffect>()
+  override val effects: Flow<PaymentEffect> = _effects.flow
 
-    init {
-        _effects.send(PaymentEffect.ShowMessage("Ödeme tutarı: ${_uiState.value.amount}"))
+  init {
+    _effects.send(PaymentEffect.ShowMessage("Ödeme tutarı: ${_uiState.value.amount}"))
+  }
+
+  override fun onIntent(intent: PaymentIntent) {
+    when (intent) {
+      // CheckoutFlow ResultFlow<OrderId> — sonuç ile flow'dan çıkılır.
+      PaymentIntent.Pay -> _effects.send(PaymentEffect.CompletePayment(OrderId(value = "ORD-1001")))
     }
-
-    override fun onIntent(intent: PaymentIntent) {
-        when (intent) {
-            // CheckoutFlow ResultFlow<OrderId> — sonuç ile flow'dan çıkılır.
-            PaymentIntent.Pay -> _effects.send(
-                PaymentEffect.CompletePayment(OrderId(value = "ORD-1001")),
-            )
-        }
-    }
+  }
 }

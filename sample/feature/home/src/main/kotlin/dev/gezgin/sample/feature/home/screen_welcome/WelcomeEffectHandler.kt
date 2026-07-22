@@ -12,11 +12,12 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(WelcomeScreenRoute::class)
 @Composable
 fun WelcomeEffectHandler(effects: Flow<WelcomeEffect>, nav: WelcomeNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        when (effect) {
-            is WelcomeEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
-            WelcomeEffect.ContinueToDashboard -> nav.continueToDashboard()
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    when (effect) {
+      is WelcomeEffect.ShowMessage ->
+        Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      WelcomeEffect.ContinueToDashboard -> nav.continueToDashboard()
     }
+  }
 }

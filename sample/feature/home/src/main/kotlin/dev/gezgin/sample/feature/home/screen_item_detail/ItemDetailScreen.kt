@@ -18,15 +18,17 @@ import dev.gezgin.sample.navigation.HomeGraph
 @Screen(HomeGraph.ItemDetailScreenRoute::class)
 @Composable
 fun ItemDetailScreen(state: ItemDetailUiState, onIntent: (ItemDetailIntent) -> Unit) {
-    // Sayaç composition-anında DEĞİL, entry ömründe tek sefer artmalı → LaunchedEffect ile OnAppear.
-    LaunchedEffect(Unit) { onIntent(ItemDetailIntent.OnAppear) }
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Ürün: ${state.id}")
-            Text("Bu ekran örneğinde ziyaret sayacı: ${state.visits}")
-            Button(onClick = { onIntent(ItemDetailIntent.OpenRelated) }) { Text("İlgili ürün (aynı id, yeni entry)") }
-            Button(onClick = { onIntent(ItemDetailIntent.OpenImage) }) { Text("Görseli tam ekran gör") }
-            TextButton(onClick = { onIntent(ItemDetailIntent.Back) }) { Text("Panoya dön") }
-        }
+  // Sayaç composition-anında DEĞİL, entry ömründe tek sefer artmalı → LaunchedEffect ile OnAppear.
+  LaunchedEffect(Unit) { onIntent(ItemDetailIntent.OnAppear) }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      Text("Ürün: ${state.id}")
+      Text("Bu ekran örneğinde ziyaret sayacı: ${state.visits}")
+      Button(onClick = { onIntent(ItemDetailIntent.OpenRelated) }) {
+        Text("İlgili ürün (aynı id, yeni entry)")
+      }
+      Button(onClick = { onIntent(ItemDetailIntent.OpenImage) }) { Text("Görseli tam ekran gör") }
+      TextButton(onClick = { onIntent(ItemDetailIntent.Back) }) { Text("Panoya dön") }
     }
+  }
 }

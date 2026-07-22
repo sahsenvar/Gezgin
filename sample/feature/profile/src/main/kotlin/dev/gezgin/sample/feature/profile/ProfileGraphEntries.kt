@@ -12,12 +12,12 @@ import dev.gezgin.sample.feature.profile.screen_zoom.provideZoomEntry
 import dev.gezgin.sample.feature.profile.sheet_notification.provideNotificationsSheetEntry
 
 fun GezginEntryScope.profileGraphEntries() {
-    provideProfileEntry()
-    provideSettingsEntry(buildInfo = { BuildInfo(version = "1.0.0") })
-    provideNotificationsSheetEntry()
-    provideEditNameDialogEntry()
-    provideConfirmResetDialogEntry()
-    providePickSourceEntry()
-    provideCropEntry()
-    provideZoomEntry()
+  provideProfileEntry()
+  provideSettingsEntry(buildInfo = { BuildInfo(version = "1.0.0") })
+  provideNotificationsSheetEntry()
+  provideEditNameDialogEntry()
+  provideConfirmResetDialogEntry()
+  providePickSourceEntry()
+  provideCropEntry()
+  provideZoomEntry()
 }

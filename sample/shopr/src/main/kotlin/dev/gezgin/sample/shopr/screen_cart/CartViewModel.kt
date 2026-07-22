@@ -13,19 +13,19 @@ import kotlinx.coroutines.flow.asStateFlow
 @MviViewModel(CheckoutFlow.Cart::class)
 class CartViewModel : ViewModel(), GezginMvi<CartUiState, CartIntent, CartEffect> {
 
-    private val _uiState = MutableStateFlow(CartUiState())
-    override val uiState: StateFlow<CartUiState> = _uiState.asStateFlow()
+  private val _uiState = MutableStateFlow(CartUiState())
+  override val uiState: StateFlow<CartUiState> = _uiState.asStateFlow()
 
-    private val _effects = GezginEffects<CartEffect>()
-    override val effects: Flow<CartEffect> = _effects.flow
+  private val _effects = GezginEffects<CartEffect>()
+  override val effects: Flow<CartEffect> = _effects.flow
 
-    init {
-        _effects.send(CartEffect.ShowMessage("Sepetinizde ${_uiState.value.itemCount} ürün var"))
+  init {
+    _effects.send(CartEffect.ShowMessage("Sepetinizde ${_uiState.value.itemCount} ürün var"))
+  }
+
+  override fun onIntent(intent: CartIntent) {
+    when (intent) {
+      CartIntent.Checkout -> _effects.send(CartEffect.NavigateToPayment)
     }
-
-    override fun onIntent(intent: CartIntent) {
-        when (intent) {
-            CartIntent.Checkout -> _effects.send(CartEffect.NavigateToPayment)
-        }
-    }
+  }
 }

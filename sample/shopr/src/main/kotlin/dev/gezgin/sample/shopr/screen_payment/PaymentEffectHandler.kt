@@ -12,21 +12,21 @@ import kotlinx.coroutines.flow.Flow
 @EffectHandler(CheckoutFlow.Payment::class)
 @Composable
 fun PaymentEffectHandler(effects: Flow<PaymentEffect>, nav: PaymentNavigator) {
-    val context = LocalContext.current
-    ObserveEffects(effects) { effect ->
-        handlePaymentEffect(effect, nav) { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
+  val context = LocalContext.current
+  ObserveEffects(effects) { effect ->
+    handlePaymentEffect(effect, nav) { message ->
+      Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
+  }
 }
 
 internal fun handlePaymentEffect(
-    effect: PaymentEffect,
-    nav: PaymentNavigator,
-    onMessage: (String) -> Unit,
+  effect: PaymentEffect,
+  nav: PaymentNavigator,
+  onMessage: (String) -> Unit,
 ) {
-    when (effect) {
-        is PaymentEffect.ShowMessage -> onMessage(effect.text)
-        is PaymentEffect.CompletePayment -> nav.quitWith(effect.orderId)
-    }
+  when (effect) {
+    is PaymentEffect.ShowMessage -> onMessage(effect.text)
+    is PaymentEffect.CompletePayment -> nav.quitWith(effect.orderId)
+  }
 }

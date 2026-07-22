@@ -10,9 +10,9 @@ import dev.gezgin.sample.shopr.ui.ScreenChrome
 @Screen(OrderPlaced::class)
 @Composable
 fun OrderPlacedScreen(state: OrderPlacedUiState, onIntent: (OrderPlacedIntent) -> Unit) {
-    ScreenChrome(title = "Order placed: ${state.orderId}") {
-        Text("@NoBack terminal ekran — sistem/predictive back kapanır, declared backToFeed() durur.")
-        Button(onClick = { onIntent(OrderPlacedIntent.ShowDetails) }) { Text("Detayları göster") }
-        Button(onClick = { onIntent(OrderPlacedIntent.BackToFeed) }) { Text("Feed'e dön") }
-    }
+  ScreenChrome(title = "Order placed: ${state.orderId}") {
+    Text("@NoBack terminal ekran — sistem/predictive back kapanır, declared backToFeed() durur.")
+    Button(onClick = { onIntent(OrderPlacedIntent.ShowDetails) }) { Text("Detayları göster") }
+    Button(onClick = { onIntent(OrderPlacedIntent.BackToFeed) }) { Text("Feed'e dön") }
+  }
 }

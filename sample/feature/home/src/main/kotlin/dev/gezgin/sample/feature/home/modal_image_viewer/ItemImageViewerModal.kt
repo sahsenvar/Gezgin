@@ -22,22 +22,19 @@ import dev.gezgin.sample.navigation.ItemImageViewerNavigator
 @FullscreenModal(ItemImageViewerRoute::class)
 @Composable
 fun ItemImageViewerModal(route: ItemImageViewerRoute, nav: ItemImageViewerNavigator) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Ürün görseli — tam ekran")
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("Görsel: ${route.id}")
-            }
-            Button(
-                onClick = { nav.backToItemDetail() },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Kapat") }
-        }
+  Surface(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+      Text("Ürün görseli — tam ekran")
+      Box(
+        modifier =
+          Modifier.fillMaxWidth().weight(1f).background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+      ) {
+        Text("Görsel: ${route.id}")
+      }
+      Button(onClick = { nav.backToItemDetail() }, modifier = Modifier.fillMaxWidth()) {
+        Text("Kapat")
+      }
     }
+  }
 }
