@@ -9,7 +9,7 @@ are green.
 
 ## Commit
 
-- Pending at report creation; update after the intentional Task 2 commit.
+- `fcac5cb` — `docs(api): enforce public KDoc`
 
 ## Files
 
@@ -94,4 +94,3 @@ until reviewed and accepted intentionally.
 - Android-backed Dokka generation needs a valid SDK location (`ANDROID_HOME` or `local.properties`); the
   isolated release worktree has no `local.properties`, so verification supplied `ANDROID_HOME` explicitly.
 - No publishing repository, signing, CI, tag, push, or release action was added or performed.
-
