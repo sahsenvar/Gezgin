@@ -14,7 +14,19 @@ import kotlin.reflect.KClass
  *
  * @author @sahsenvar
  */
-public enum class EntryKind { SCREEN, DIALOG, BOTTOM_SHEET, FULLSCREEN_MODAL }
+public enum class EntryKind {
+    /** A regular single-pane screen entry. */
+    SCREEN,
+
+    /** A dialog overlay entry. */
+    DIALOG,
+
+    /** A modal bottom-sheet overlay entry. */
+    BOTTOM_SHEET,
+
+    /** A full-window modal overlay entry. */
+    FULLSCREEN_MODAL,
+}
 
 /**
  * A Gezgin registry record — [kind] is metadata for Faz 4 modal scene wiring, [content] is the composable

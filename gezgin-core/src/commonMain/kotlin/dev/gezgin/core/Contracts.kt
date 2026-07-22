@@ -85,9 +85,11 @@ public interface FullscreenModalContract {
  */
 @ExperimentalGezginMigrationApi
 public enum class BottomSheetDragHandleMode {
+    /** Uses Material's built-in bottom-sheet drag handle. */
     @ExperimentalGezginMigrationApi
     Default,
 
+    /** Hides Material's built-in bottom-sheet drag handle. */
     @ExperimentalGezginMigrationApi
     None,
 }

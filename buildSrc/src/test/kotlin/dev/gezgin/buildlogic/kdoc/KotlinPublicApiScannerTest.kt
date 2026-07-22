@@ -68,6 +68,8 @@ class KotlinPublicApiScannerTest {
     fun `distinguishes same line declaration annotations from constructor annotations`() {
         val result = scan(
             """
+            import dev.gezgin.core.GezginInternalApi
+
             /**
              * A directly excluded seam.
              * @author @sahsenvar
@@ -123,6 +125,8 @@ class KotlinPublicApiScannerTest {
 
         val internal = scan(
             """
+            import dev.gezgin.core.GezginInternalApi
+
             /** Internal generated-code seam. */
             @GezginInternalApi
             public class InternalSeam(
@@ -134,6 +138,142 @@ class KotlinPublicApiScannerTest {
         )
         assertTrue(internal.declarations.all { it.excluded })
         assertEquals(0, internal.findings.size)
+    }
+
+    @Test
+    fun `inventories public enum entries and reports their missing KDoc`() {
+        val result = scan(
+            """
+            /**
+             * A display mode.
+             * @author @sahsenvar
+             */
+            public enum class DisplayMode {
+                /** Uses the default presentation. */
+                Default,
+                None,
+            }
+            """,
+        )
+
+        assertEquals(listOf("DisplayMode", "Default", "None"), result.declarations.map { it.name })
+        assertEquals("enum entry", result.declarations.single { it.name == "Default" }.kind)
+        assertEquals(
+            listOf(KDocFindingKind.MISSING_KDOC),
+            result.findings.filter { it.declaration.name == "None" }.map { it.kind },
+        )
+    }
+
+    @Test
+    fun `inventories public secondary constructors and requires their own KDoc`() {
+        val result = scan(
+            """
+            /**
+             * A service.
+             * @author @sahsenvar
+             */
+            public class Service {
+                /** Creates a service from text. */
+                public constructor(value: String)
+
+                public constructor(value: Int)
+            }
+            """,
+        )
+
+        val constructors = result.declarations.filter { it.kind == "constructor" }
+        assertEquals(2, constructors.size)
+        assertEquals(1, constructors.count { it.hasKDoc })
+        assertEquals(
+            listOf(KDocFindingKind.MISSING_KDOC),
+            result.findings.filter { it.declaration.kind == "constructor" }.map { it.kind },
+        )
+    }
+
+    @Test
+    fun `resolves internal api annotation identity without trusting its short name`() {
+        val alias = scan(
+            """
+            package consumer
+
+            import dev.gezgin.core.GezginInternalApi as InternalMarker
+
+            @InternalMarker public class AliasExcluded
+            """,
+        )
+        assertTrue(alias.declarations.single { it.name == "AliasExcluded" }.excluded)
+
+        val explicit = scan(
+            """
+            package consumer
+
+            import dev.gezgin.core.GezginInternalApi
+
+            @GezginInternalApi public class ExplicitExcluded
+            """,
+        )
+        assertTrue(explicit.declarations.single { it.name == "ExplicitExcluded" }.excluded)
+
+        val star = scan(
+            """
+            package consumer
+
+            import dev.gezgin.core.*
+
+            @GezginInternalApi public class StarExcluded
+            """,
+        )
+        assertTrue(star.declarations.single { it.name == "StarExcluded" }.excluded)
+
+        val samePackage = scan(
+            """
+            package dev.gezgin.core
+
+            @GezginInternalApi public class SamePackageExcluded
+            """,
+        )
+        assertTrue(samePackage.declarations.single { it.name == "SamePackageExcluded" }.excluded)
+
+        val fullyQualified = scan(
+            """
+            package consumer
+
+            @dev.gezgin.core.GezginInternalApi public class FullyQualifiedExcluded
+            """,
+        )
+        assertTrue(fullyQualified.declarations.single { it.name == "FullyQualifiedExcluded" }.excluded)
+
+        val unrelated = scan(
+            """
+            package consumer
+
+            private annotation class GezginInternalApi
+
+            /**
+             * A consumer-visible type.
+             * @author @sahsenvar
+             */
+            @GezginInternalApi public class ConsumerVisible
+            """,
+        )
+        assertFalse(unrelated.declarations.single { it.name == "ConsumerVisible" }.excluded)
+        assertEquals(0, unrelated.findings.size)
+
+        val unrelatedImport = scan(
+            """
+            package consumer
+
+            import unrelated.GezginInternalApi
+
+            /**
+             * Another consumer-visible type.
+             * @author @sahsenvar
+             */
+            @GezginInternalApi public class ExplicitlyUnrelated
+            """,
+        )
+        assertFalse(unrelatedImport.declarations.single { it.name == "ExplicitlyUnrelated" }.excluded)
+        assertEquals(0, unrelatedImport.findings.size)
     }
 
     @Test

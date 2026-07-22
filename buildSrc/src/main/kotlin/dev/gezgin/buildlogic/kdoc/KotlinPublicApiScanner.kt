@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPsiFactory
+import org.jetbrains.kotlin.psi.KtSecondaryConstructor
 import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 
@@ -71,6 +72,9 @@ data class KotlinPublicApiScanResult(
  * visited; local declarations and declarations hidden by a non-public container are not consumer-visible.
  */
 class KotlinPublicApiScanner : AutoCloseable {
+    private val gezginInternalApiFqName = "dev.gezgin.core.GezginInternalApi"
+    private val gezginInternalApiPackage = gezginInternalApiFqName.substringBeforeLast('.')
+    private val gezginInternalApiShortName = gezginInternalApiFqName.substringAfterLast('.')
     private val disposable = Disposer.newDisposable("gezgin-public-api-kdoc-scanner")
     private val environment = KotlinCoreEnvironment.createForProduction(
         disposable,
@@ -126,7 +130,7 @@ class KotlinPublicApiScanner : AutoCloseable {
             input.generated -> KDocExclusionReason.GENERATED
             inheritedExclusion != null -> inheritedExclusion
             declaration.hasModifier(KtTokens.OVERRIDE_KEYWORD) -> KDocExclusionReason.OVERRIDE
-            declaration.hasDirectGezginInternalApi() -> KDocExclusionReason.GEZGIN_INTERNAL_API
+            declaration.hasDirectGezginInternalApi(file) -> KDocExclusionReason.GEZGIN_INTERNAL_API
             else -> null
         }
         if (declaration.isInventoryDeclaration()) {
@@ -151,14 +155,40 @@ class KotlinPublicApiScanner : AutoCloseable {
             !hasModifier(KtTokens.INTERNAL_KEYWORD)
 
     private fun KtDeclaration.isInventoryDeclaration(): Boolean = when (this) {
-        is KtEnumEntry -> false
+        is KtEnumEntry, is KtSecondaryConstructor -> true
         is KtClassOrObject, is KtNamedFunction, is KtProperty, is KtTypeAlias -> true
         is KtParameter -> hasValOrVar()
         else -> false
     }
 
-    private fun KtDeclaration.hasDirectGezginInternalApi(): Boolean =
-        annotationEntries.any { entry -> entry.shortName?.asString() == "GezginInternalApi" }
+    private fun KtDeclaration.hasDirectGezginInternalApi(file: KtFile): Boolean =
+        annotationEntries.any { entry ->
+            val writtenName = entry.typeReference?.text ?: return@any false
+            when {
+                writtenName == gezginInternalApiFqName -> true
+                '.' in writtenName -> false
+                else -> {
+                    val matchingExplicitImports = file.importDirectives.filter { importDirective ->
+                        if (importDirective.isAllUnder) return@filter false
+                        val importedFqName = importDirective.importedFqName ?: return@filter false
+                        val visibleName = importDirective.aliasName ?: importedFqName.shortName().asString()
+                        visibleName == writtenName
+                    }
+                    when {
+                        matchingExplicitImports.isNotEmpty() -> matchingExplicitImports.any { importDirective ->
+                            importDirective.importedFqName?.asString() == gezginInternalApiFqName
+                        }
+                        writtenName == gezginInternalApiShortName && file.importDirectives.any { importDirective ->
+                            importDirective.isAllUnder &&
+                                importDirective.importedFqName?.asString() == gezginInternalApiPackage
+                        } -> true
+                        writtenName == gezginInternalApiShortName &&
+                            file.packageFqName.asString() == gezginInternalApiPackage -> true
+                        else -> false
+                    }
+                }
+            }
+        }
 
     private fun KtDeclaration.toInventoryEntry(
         file: KtFile,
@@ -199,6 +229,8 @@ class KotlinPublicApiScanner : AutoCloseable {
         this?.text?.lineSequence()?.any { line -> line.trim().removePrefix("*").trim() == "@author @sahsenvar" } == true
 
     private fun KtDeclaration.declarationKind(): String = when (this) {
+        is KtEnumEntry -> "enum entry"
+        is KtSecondaryConstructor -> "constructor"
         is KtObjectDeclaration -> "object"
         is KtClassOrObject -> when {
             hasModifier(KtTokens.ANNOTATION_KEYWORD) -> "annotation class"

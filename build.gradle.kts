@@ -37,7 +37,7 @@ tasks.register<CheckPublicApiKDocTask>("checkPublicApiKDoc") {
     projectRoot.set(layout.projectDirectory)
     expectedInventory.set(
         mapOf(
-            "gezgin-core" to "129/17",
+            "gezgin-core" to "136/17",
             "gezgin-mvi" to "16/0",
             "gezgin-processor" to "1/1",
             "gezgin-test" to "12/1",
