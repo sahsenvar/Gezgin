@@ -95,9 +95,10 @@ class WorkflowConfigurationContractTest {
   fun `CodeQL init and analyze use the same verified release`() {
     val workflow = text(".github/workflows/codeql.yml")
     val actionCommits =
-      Regex("github/codeql-action/(init|analyze)@([0-9a-f]{40})")
-        .findAll(workflow)
-        .associate { match -> match.groupValues[1] to match.groupValues[2] }
+      Regex("github/codeql-action/(init|analyze)@([0-9a-f]{40})").findAll(workflow).associate {
+        match ->
+        match.groupValues[1] to match.groupValues[2]
+      }
 
     assertEquals(setOf("init", "analyze"), actionCommits.keys)
     assertEquals(
