@@ -14,7 +14,7 @@ class ShowcaseRestoreKeyTest {
   @Test
   fun `showcase rememberNavigator host wires the stable restore namespace`() {
     val source = mainActivitySource()
-    val arguments = callArguments(source, "val navigator = rememberNavigator(")
+    val arguments = callArguments(source, "rememberNavigator(")
 
     assertTrue(
       Regex("""\brestoreKey\s*=\s*SHOWCASE_RESTORE_KEY\b""").containsMatchIn(arguments),
