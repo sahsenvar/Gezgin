@@ -13,6 +13,7 @@ grep -Fq 'gradle-9.4.1-bin.zip' "$WORK_DIR/consumer/gradle/wrapper/gradle-wrappe
 
 GRADLE_USER_HOME="$WORK_DIR/gradle-home" \
   "$WORK_DIR/consumer/gradlew" \
+  --project-dir="$WORK_DIR/consumer" \
   compileDebugKotlin compileDebugUnitTestKotlin \
   -PgezginVersion="$VERSION" \
   --refresh-dependencies \

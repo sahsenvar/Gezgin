@@ -110,4 +110,7 @@ test "$(cat "$CLOCK_FILE")" = 25
 test "$(wc -l < "$CURL_LOG" | tr -d ' ')" = 4
 test "$(cat "$SLEEP_LOG")" = 25
 
+SMOKE_SCRIPT="$ROOT_DIR/gradle/release/smoke-maven-central.sh"
+grep -Fq -- '--project-dir="$WORK_DIR/consumer"' "$SMOKE_SCRIPT"
+
 echo "release-script-tests=PASS"
