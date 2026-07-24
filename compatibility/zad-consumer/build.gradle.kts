@@ -8,7 +8,7 @@ plugins {
 }
 
 val gezginGroup = "io.github.sahsenvar"
-val gezginVersion = providers.gradleProperty("gezginVersion").getOrElse("0.1.0")
+val gezginVersion = providers.gradleProperty("gezginVersion").getOrElse("0.2.0")
 
 android {
   namespace = "dev.gezgin.compat.zad"

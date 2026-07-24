@@ -6,7 +6,7 @@ Updated: 2026-07-22
 
 Readiness base: `codex/zad-integration-readiness`
 
-Release version: `0.1.0`
+Release version: `0.2.0`
 
 Repository: Maven Central
 
@@ -15,10 +15,10 @@ substitution, `projectDir`, Maven Local, or a moving Gezgin checkout.
 
 ## Coordinates
 
-- `io.github.sahsenvar:gezgin-core:0.1.0`
-- `io.github.sahsenvar:gezgin-mvi:0.1.0`
-- `io.github.sahsenvar:gezgin-processor:0.1.0`
-- `io.github.sahsenvar:gezgin-test:0.1.0` (test source sets only)
+- `io.github.sahsenvar:gezgin-core:0.2.0`
+- `io.github.sahsenvar:gezgin-mvi:0.2.0`
+- `io.github.sahsenvar:gezgin-processor:0.2.0`
+- `io.github.sahsenvar:gezgin-test:0.2.0` (test source sets only)
 
 The root metadata selects the published Android/JVM variants. Each publication contains Gradle
 metadata, a POM, sources, Dokka javadoc, and detached signatures. The release workflow does not
@@ -40,9 +40,9 @@ dependencies, no build cache, and both `compileDebugKotlin` and `compileDebugUni
 
 ```bash
 ./gradle/verify-release-publications.sh
-./gradle/release/validate-release.sh v0.1.0
+./gradle/release/validate-release.sh v0.2.0
 # Executed by the tag workflow only after Central publication:
-./gradle/release/smoke-maven-central.sh 0.1.0
+./gradle/release/smoke-maven-central.sh 0.2.0
 ```
 
 The signed local verifier checks the exact publication topology, POM and Gradle dependency metadata,
@@ -114,4 +114,4 @@ routes.
 - Use only route-explicit `@EffectHandler(route)` and keep navigators out of ViewModels.
 - Opt in to migration APIs only at the narrow consumer boundary; do not treat them as permanent UI
   architecture.
-- Pin `0.1.0`. If a released artifact is faulty, publish `0.1.1`; never rewrite the tag or coordinate.
+- Pin `0.2.0`. If a released artifact is faulty, publish `0.2.1`; never rewrite the tag or coordinate.

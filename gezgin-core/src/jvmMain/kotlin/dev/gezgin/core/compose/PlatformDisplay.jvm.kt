@@ -39,7 +39,7 @@ internal actual fun GezginNoBackHandler() {
 }
 
 /**
- * Uses one chained desktop scene strategy: dialog and sheet overlays precede the single-pane
+ * Uses ordered desktop scene strategies: dialog and sheet overlays precede the single-pane
  * fallback, and each overlay pins dismissal to its owning entry. The built-in dialog strategy
  * cannot preserve that ownership.
  */
@@ -50,12 +50,19 @@ internal actual fun GezginNavDisplay(
   onBack: () -> Unit,
   pinnedBack: (Long) -> Unit,
 ) {
-  // Keep the stateless strategy chain stable across recompositions, as on Android.
-  val sceneStrategy =
+  // Keep the stateless strategy list stable across recompositions, as on Android.
+  val sceneStrategies =
     remember(pinnedBack) {
-      GezginDialogSceneStrategy(pinnedBack) then
-        GezginBottomSheetSceneStrategy(pinnedBack) then
-        SinglePaneSceneStrategy()
+      listOf(
+        GezginDialogSceneStrategy(pinnedBack),
+        GezginBottomSheetSceneStrategy(pinnedBack),
+        SinglePaneSceneStrategy(),
+      )
     }
-  NavDisplay(entries = entries, modifier = modifier, sceneStrategy = sceneStrategy, onBack = onBack)
+  NavDisplay(
+    entries = entries,
+    modifier = modifier,
+    sceneStrategies = sceneStrategies,
+    onBack = onBack,
+  )
 }

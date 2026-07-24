@@ -14,7 +14,7 @@ Her ikisi de public Gezgin API'sini gerçek Compose/KSP derlemesinde kullanır. 
 | Gezgin root ve sample'lar | Gradle 9.0.0, Kotlin 2.3.21, KSP 2.3.9, AGP 8.13.2, Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; min SDK 24. |
 | `compatibility/zad-consumer` | Kendi Gradle 9.4.1 wrapper'ı, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle 2.10.0. |
 
-Consumer fixture `includeBuild`, composite substitution, `projectDir`, Maven Local veya başka source dependency kullanmaz. Yerel doğrulama exact `0.1.0` artefaktlarını geçici imzalı repository'den, release smoke ise dört `io.github.sahsenvar` koordinatını doğrudan Maven Central'dan çözer.
+Consumer fixture `includeBuild`, composite substitution, `projectDir`, Maven Local veya başka source dependency kullanmaz. Yerel doğrulama exact `0.2.0` artefaktlarını geçici imzalı repository'den, release smoke ise dört `io.github.sahsenvar` koordinatını doğrudan Maven Central'dan çözer.
 
 ## Multi-module yerleşim
 

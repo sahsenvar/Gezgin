@@ -9,10 +9,10 @@ import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.xml.sax.InputSource
 
-/** Verifies the complete repository shape produced for the public 0.1.0 release. */
+/** Verifies the complete repository shape produced for the public 0.2.0 release. */
 object ReleasePublicationVerifier {
   private const val groupId = "io.github.sahsenvar"
-  private const val version = "0.1.0"
+  private const val version = "0.2.0"
   private const val projectUrl = "https://github.com/sahsenvar/Gezgin"
   private const val licenseName = "The Apache License, Version 2.0"
   private const val licenseUrl = "https://www.apache.org/licenses/LICENSE-2.0.txt"
