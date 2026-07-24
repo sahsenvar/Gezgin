@@ -40,7 +40,7 @@ class PublishingConfigurationContractTest {
   fun `centralizes release coordinates and removes module-local copies`() {
     val rootProperties = properties("gradle.properties")
     assertEquals("io.github.sahsenvar", rootProperties.getProperty("GROUP"))
-    assertEquals("0.1.0", rootProperties.getProperty("VERSION_NAME"))
+    assertEquals("0.2.0", rootProperties.getProperty("VERSION_NAME"))
 
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "providers.gradleProperty(\"GROUP\")")
@@ -109,7 +109,7 @@ class PublishingConfigurationContractTest {
   fun `compatibility consumer resolves the release coordinates from an isolated repository`() {
     val consumerBuild = text("compatibility/zad-consumer/build.gradle.kts")
     assertContains(consumerBuild, "\"io.github.sahsenvar\"")
-    assertContains(consumerBuild, "\"0.1.0\"")
+    assertContains(consumerBuild, "\"0.2.0\"")
     assertContains(
       consumerBuild,
       "testImplementation(\"${'$'}gezginGroup:gezgin-test:${'$'}gezginVersion\")",
@@ -168,7 +168,7 @@ class PublishingConfigurationContractTest {
   fun `enforces Kotlin formatting and no-regression coverage for published production modules`() {
     val catalog = text("gradle/libs.versions.toml")
     assertContains(catalog, "spotless = \"8.8.0\"")
-    assertContains(catalog, "kover = \"0.9.8\"")
+    assertContains(catalog, "kover = \"0.9.9\"")
     assertContains(
       catalog,
       "spotless = { id = \"com.diffplug.spotless\", version.ref = \"spotless\" }",

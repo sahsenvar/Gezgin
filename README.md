@@ -100,7 +100,7 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 
 ## Installation
 
-Apply the KSP + serialization plugins and use the Maven Central coordinates (`group = io.github.sahsenvar`, `version = 0.1.0`):
+Apply the KSP + serialization plugins and use the Maven Central coordinates (`group = io.github.sahsenvar`, `version = 0.2.0`):
 
 ```kotlin
 plugins {
@@ -109,11 +109,11 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:gezgin-core:0.1.0")
-    ksp("io.github.sahsenvar:gezgin-processor:0.1.0")
+    implementation("io.github.sahsenvar:gezgin-core:0.2.0")
+    ksp("io.github.sahsenvar:gezgin-processor:0.2.0")
 
-    // implementation("io.github.sahsenvar:gezgin-mvi:0.1.0")        // optional MVI add-on
-    // testImplementation("io.github.sahsenvar:gezgin-test:0.1.0")   // UI-less testing: GezginTestNavigator + typed fromX()
+    // implementation("io.github.sahsenvar:gezgin-mvi:0.2.0")        // optional MVI add-on
+    // testImplementation("io.github.sahsenvar:gezgin-test:0.2.0")   // UI-less testing: GezginTestNavigator + typed fromX()
 }
 ```
 

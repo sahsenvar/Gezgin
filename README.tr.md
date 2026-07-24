@@ -100,7 +100,7 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 ## Kurulum
 
-KSP + serialization plugin'lerini uygulayıp Maven Central koordinatlarını kullan (`group = io.github.sahsenvar`, `version = 0.1.0`):
+KSP + serialization plugin'lerini uygulayıp Maven Central koordinatlarını kullan (`group = io.github.sahsenvar`, `version = 0.2.0`):
 
 ```kotlin
 plugins {
@@ -109,11 +109,11 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:gezgin-core:0.1.0")
-    ksp("io.github.sahsenvar:gezgin-processor:0.1.0")
+    implementation("io.github.sahsenvar:gezgin-core:0.2.0")
+    ksp("io.github.sahsenvar:gezgin-processor:0.2.0")
 
-    // implementation("io.github.sahsenvar:gezgin-mvi:0.1.0")        // opsiyonel MVI add-on
-    // testImplementation("io.github.sahsenvar:gezgin-test:0.1.0")   // UI'sız test: GezginTestNavigator + tipli fromX()
+    // implementation("io.github.sahsenvar:gezgin-mvi:0.2.0")        // opsiyonel MVI add-on
+    // testImplementation("io.github.sahsenvar:gezgin-test:0.2.0")   // UI'sız test: GezginTestNavigator + tipli fromX()
 }
 ```
 

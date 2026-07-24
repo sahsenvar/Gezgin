@@ -27,7 +27,7 @@ class ReleasePublicationVerifierTest {
   @Test
   fun `rejects an unexpected coordinate`() {
     val repository = publicationRepository(signatures = false)
-    repository.resolve("io/github/sahsenvar/gezgin-extra/0.1.0").createDirectories()
+    repository.resolve("io/github/sahsenvar/gezgin-extra/0.2.0").createDirectories()
 
     val failure =
       assertFailsWith<IllegalStateException> {
@@ -42,7 +42,7 @@ class ReleasePublicationVerifierTest {
   fun `rejects a broken project dependency mapping`() {
     val repository = publicationRepository(signatures = false)
     val pom =
-      repository.resolve("io/github/sahsenvar/gezgin-mvi-jvm/0.1.0/gezgin-mvi-jvm-0.1.0.pom")
+      repository.resolve("io/github/sahsenvar/gezgin-mvi-jvm/0.2.0/gezgin-mvi-jvm-0.2.0.pom")
     pom.writeText(pom.toFile().readText().replace("gezgin-core-jvm", "gezgin-core-android"))
 
     val failure =
@@ -83,7 +83,7 @@ class ReleasePublicationVerifierTest {
     val repository = publicationRepository(signatures = false)
     val pom = pomPath(repository, "gezgin-mvi-jvm")
     val internalDependency =
-      dependencyXml(PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.1.0", "compile"))
+      dependencyXml(PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.2.0", "compile"))
     pom.writeText(
       pom.toFile().readText().replace("</dependencies>", "$internalDependency\n</dependencies>")
     )
@@ -102,9 +102,9 @@ class ReleasePublicationVerifierTest {
     val repository = publicationRepository(signatures = false)
     val pom = pomPath(repository, "gezgin-mvi-jvm")
     val expected =
-      dependencyXml(PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.1.0", "compile"))
+      dependencyXml(PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.2.0", "compile"))
     val wrongScope =
-      dependencyXml(PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.1.0", "runtime"))
+      dependencyXml(PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.2.0", "runtime"))
     pom.writeText(pom.toFile().readText().replace(expected, wrongScope))
 
     val failure =
@@ -121,7 +121,7 @@ class ReleasePublicationVerifierTest {
     val repository = publicationRepository(signatures = false)
     val pom = pomPath(repository, "gezgin-processor")
     pom.writeText(
-      pom.toFile().readText().replace("<version>2.3.9</version>", "<version>0.0.0</version>")
+      pom.toFile().readText().replace("<version>2.3.10</version>", "<version>0.0.0</version>")
     )
 
     val failure =
@@ -155,7 +155,7 @@ class ReleasePublicationVerifierTest {
   @Test
   fun `rejects an unexpected external Gradle module dependency`() {
     val repository = publicationRepository(signatures = false)
-    val module = repository.resolve("io/github/sahsenvar/gezgin-mvi/0.1.0/gezgin-mvi-0.1.0.module")
+    val module = repository.resolve("io/github/sahsenvar/gezgin-mvi/0.2.0/gezgin-mvi-0.2.0.module")
     val unexpected =
       """{"group":"com.example","module":"unexpected","version":{"requires":"1.0.0"}},"""
     module.writeText(
@@ -176,7 +176,7 @@ class ReleasePublicationVerifierTest {
   fun `rejects empty sources or Dokka jars`() {
     val repository = publicationRepository(signatures = false)
     val sources =
-      repository.resolve("io/github/sahsenvar/gezgin-core/0.1.0/gezgin-core-0.1.0-sources.jar")
+      repository.resolve("io/github/sahsenvar/gezgin-core/0.2.0/gezgin-core-0.2.0-sources.jar")
     JarOutputStream(Files.newOutputStream(sources)).close()
 
     val failure =
@@ -191,7 +191,7 @@ class ReleasePublicationVerifierTest {
   fun `requires every detached signature when signing verification is enabled`() {
     val repository = publicationRepository(signatures = true)
     repository
-      .resolve("io/github/sahsenvar/gezgin-processor/0.1.0/gezgin-processor-0.1.0.pom.asc")
+      .resolve("io/github/sahsenvar/gezgin-processor/0.2.0/gezgin-processor-0.2.0.pom.asc")
       .deleteExisting()
 
     val failure =
@@ -200,7 +200,7 @@ class ReleasePublicationVerifierTest {
       }
 
     assertContains(failure.message.orEmpty(), "missing signature")
-    assertContains(failure.message.orEmpty(), "gezgin-processor-0.1.0.pom")
+    assertContains(failure.message.orEmpty(), "gezgin-processor-0.2.0.pom")
   }
 
   private fun publicationRepository(signatures: Boolean): Path {
@@ -208,9 +208,9 @@ class ReleasePublicationVerifierTest {
     expectedArtifacts.forEach { artifact ->
       val versionDirectory =
         repository
-          .resolve("io/github/sahsenvar/${artifact.artifactId}/0.1.0")
+          .resolve("io/github/sahsenvar/${artifact.artifactId}/0.2.0")
           .also(Files::createDirectories)
-      val base = versionDirectory.resolve("${artifact.artifactId}-0.1.0")
+      val base = versionDirectory.resolve("${artifact.artifactId}-0.2.0")
       base.resolveSibling("${base.fileName}.pom").writeText(pom(artifact))
       base.resolveSibling("${base.fileName}.module").writeText(moduleMetadata(artifact))
       jar(base.resolveSibling("${base.fileName}-sources.jar"), "sample.kt")
@@ -247,7 +247,7 @@ class ReleasePublicationVerifierTest {
               PomDependency(
                 "io.github.sahsenvar",
                 dependencyArtifact,
-                "0.1.0",
+                "0.2.0",
                 artifact.internalPomScope,
               )
             )
@@ -267,7 +267,7 @@ class ReleasePublicationVerifierTest {
               <modelVersion>4.0.0</modelVersion>
               <groupId>io.github.sahsenvar</groupId>
               <artifactId>${artifact.artifactId}</artifactId>
-              <version>0.1.0</version>
+              <version>0.2.0</version>
               <name>${artifact.projectName}</name>
               <description>${artifact.description}</description>
               <url>https://github.com/sahsenvar/Gezgin</url>
@@ -292,12 +292,12 @@ class ReleasePublicationVerifierTest {
       .trimIndent()
 
   private fun pomPath(repository: Path, artifactId: String): Path =
-    repository.resolve("io/github/sahsenvar/$artifactId/0.1.0/$artifactId-0.1.0.pom")
+    repository.resolve("io/github/sahsenvar/$artifactId/0.2.0/$artifactId-0.2.0.pom")
 
   private fun moduleMetadata(artifact: ExpectedArtifact): String {
     val moduleDependencies = buildList {
       artifact.moduleProjectDependency?.let { dependencyArtifact ->
-        add(ModuleDependency("io.github.sahsenvar", dependencyArtifact, "0.1.0"))
+        add(ModuleDependency("io.github.sahsenvar", dependencyArtifact, "0.2.0"))
       }
       addAll(expectedModuleExternalDependencies(artifact.artifactId))
     }
@@ -321,10 +321,10 @@ class ReleasePublicationVerifierTest {
                   $dependencies
                   "attributes": {},
                   "available-at": {
-                    "url": "../../$target/0.1.0/$target-0.1.0.module",
+                    "url": "../../$target/0.2.0/$target-0.2.0.module",
                     "group": "io.github.sahsenvar",
                     "module": "$target",
-                    "version": "0.1.0"
+                    "version": "0.2.0"
                   }
                 }
                 """
@@ -337,7 +337,7 @@ class ReleasePublicationVerifierTest {
               "component": {
                 "group": "io.github.sahsenvar",
                 "module": "${artifact.componentArtifactId}",
-                "version": "0.1.0"
+                "version": "0.2.0"
               },
               "variants": $variants
             }
@@ -404,15 +404,15 @@ class ReleasePublicationVerifierTest {
       when (artifactId) {
         "gezgin-core" ->
           listOf(
-            PomDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2", "runtime"),
+            PomDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0", "runtime"),
             PomDependency(
               "org.jetbrains.kotlinx",
               "kotlinx-serialization-json",
               "1.9.0",
               "runtime",
             ),
-            PomDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0", "runtime"),
-            PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0", "runtime"),
+            PomDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1", "runtime"),
+            PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1", "runtime"),
             PomDependency("org.jetbrains.compose.material3", "material3", "1.9.0", "runtime"),
             PomDependency("androidx.navigation3", "navigation3-runtime", "1.0.0", "runtime"),
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"),
@@ -435,7 +435,7 @@ class ReleasePublicationVerifierTest {
             PomDependency(
               "org.jetbrains.kotlinx",
               "kotlinx-coroutines-core-jvm",
-              "1.10.2",
+              "1.11.0",
               "compile",
             ),
             PomDependency(
@@ -444,8 +444,8 @@ class ReleasePublicationVerifierTest {
               "1.9.0",
               "compile",
             ),
-            PomDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0", "compile"),
-            PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0", "compile"),
+            PomDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1", "compile"),
+            PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1", "compile"),
             PomDependency("org.jetbrains.compose.material3", "material3", "1.9.0", "compile"),
             PomDependency(
               "androidx.navigation3",
@@ -461,25 +461,25 @@ class ReleasePublicationVerifierTest {
             PomDependency(
               "org.jetbrains.androidx.navigation3",
               "navigation3-ui-desktop",
-              "1.0.0-alpha05",
+              "1.2.0-alpha02",
               "compile",
             ),
             PomDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-viewmodel-navigation3-desktop",
-              "2.10.0-alpha05",
+              "2.11.0",
               "compile",
             ),
             PomDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-viewmodel-compose-desktop",
-              "2.10.0-alpha05",
+              "2.11.0",
               "compile",
             ),
             PomDependency(
               "org.jetbrains.kotlinx",
               "kotlinx-coroutines-core-jvm",
-              "1.10.2",
+              "1.11.0",
               "compile",
             ),
             PomDependency(
@@ -488,11 +488,11 @@ class ReleasePublicationVerifierTest {
               "1.9.0",
               "compile",
             ),
-            PomDependency("org.jetbrains.compose.runtime", "runtime-desktop", "1.11.0", "compile"),
+            PomDependency("org.jetbrains.compose.runtime", "runtime-desktop", "1.11.1", "compile"),
             PomDependency(
               "org.jetbrains.compose.foundation",
               "foundation-desktop",
-              "1.11.0",
+              "1.11.1",
               "compile",
             ),
             PomDependency(
@@ -504,7 +504,7 @@ class ReleasePublicationVerifierTest {
             PomDependency(
               "androidx.navigation3",
               "navigation3-runtime-desktop",
-              "1.0.0",
+              "1.2.0-alpha04",
               "compile",
             ),
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
@@ -532,13 +532,13 @@ class ReleasePublicationVerifierTest {
             PomDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-viewmodel-compose-desktop",
-              "2.10.0-alpha05",
+              "2.11.0",
               "compile",
             ),
             PomDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-runtime-compose-desktop",
-              "2.10.0-alpha05",
+              "2.11.0",
               "compile",
             ),
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
@@ -551,7 +551,7 @@ class ReleasePublicationVerifierTest {
         "gezgin-processor" ->
           listOf(
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
-            PomDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.9", "runtime"),
+            PomDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.10", "runtime"),
             PomDependency("com.squareup", "kotlinpoet-jvm", "2.2.0", "runtime"),
             PomDependency("com.squareup", "kotlinpoet-ksp", "2.2.0", "runtime"),
           )
@@ -563,11 +563,11 @@ class ReleasePublicationVerifierTest {
         "gezgin-core" ->
           listOf(
             ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
-            ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+            ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1"),
             ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
-            ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+            ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
-            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
           )
         "gezgin-core-android" ->
@@ -577,11 +577,11 @@ class ReleasePublicationVerifierTest {
             ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-navigation3", "2.10.0"),
             ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
             ModuleDependency("androidx.navigation3", "navigation3-ui", "1.0.0"),
-            ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+            ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1"),
             ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
-            ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+            ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
-            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
           )
         "gezgin-core-jvm" ->
@@ -590,23 +590,23 @@ class ReleasePublicationVerifierTest {
             ModuleDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-viewmodel-compose",
-              "2.10.0-alpha05",
+              "2.11.0",
             ),
             ModuleDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-viewmodel-navigation3",
-              "2.10.0-alpha05",
+              "2.11.0",
             ),
             ModuleDependency(
               "org.jetbrains.androidx.navigation3",
               "navigation3-ui",
-              "1.0.0-alpha05",
+              "1.2.0-alpha02",
             ),
-            ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.0"),
+            ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1"),
             ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
-            ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.0"),
+            ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
-            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.10.2"),
+            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
           )
         "gezgin-mvi" -> listOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
@@ -621,12 +621,12 @@ class ReleasePublicationVerifierTest {
             ModuleDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-runtime-compose",
-              "2.10.0-alpha05",
+              "2.11.0",
             ),
             ModuleDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-viewmodel-compose",
-              "2.10.0-alpha05",
+              "2.11.0",
             ),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
           )
@@ -636,7 +636,7 @@ class ReleasePublicationVerifierTest {
           listOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
         "gezgin-processor" ->
           listOf(
-            ModuleDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.9"),
+            ModuleDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.10"),
             ModuleDependency("com.squareup", "kotlinpoet", "2.2.0"),
             ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.2.0"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),

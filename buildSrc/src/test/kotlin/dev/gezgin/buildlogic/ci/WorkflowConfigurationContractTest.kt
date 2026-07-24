@@ -102,9 +102,9 @@ class WorkflowConfigurationContractTest {
 
     assertEquals(setOf("init", "analyze"), actionCommits.keys)
     assertEquals(
-      "99df26d4f13ea111d4ec1a7dddef6063f76b97e9",
+      "e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
       actionCommits.getValue("init"),
-      "CodeQL must use the peeled immutable commit for v4.37.0",
+      "CodeQL must use the peeled immutable commit for v4.37.3",
     )
     assertEquals(actionCommits.getValue("init"), actionCommits.getValue("analyze"))
   }
@@ -209,7 +209,7 @@ class WorkflowConfigurationContractTest {
     listOf("README.md", "README.tr.md", "docs/gezgin-zad-readiness-handoff.md").forEach {
       val content = contents.getValue(it)
       listOf("gezgin-core", "gezgin-processor", "gezgin-mvi", "gezgin-test").forEach { module ->
-        assertContains(content, "io.github.sahsenvar:$module:0.1.0", message = it)
+        assertContains(content, "io.github.sahsenvar:$module:0.2.0", message = it)
       }
     }
     assertContains(contents.getValue("README.md"), "ExperimentalGezginMigrationApi")

@@ -5,6 +5,22 @@ Bu projenin tüm kayda değer değişiklikleri bu dosyada belgelenir.
 Biçim [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/)'e,
 sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
+## [0.2.0] - 2026-07-24
+
+### Changed
+
+- Kotlin 2.3 hattıyla uyumlu 12 Dependabot güncellemesi tek pakette uygulandı: KSP, Compose
+  Multiplatform, Coroutines, Navigation3, lifecycle-navigation3, Compose UI testleri, Kover ve
+  pinned GitHub Actions sürümleri yükseltildi.
+- Desktop `NavDisplay`, Navigation3 1.2'nin liste tabanlı `sceneStrategies` API'sine geçirildi.
+- CodeQL `init` ve `analyze` aynı immutable `v4.37.3` commit'ine sabitlendi.
+
+### Deferred
+
+- Kotlin 2.4.10, KSP'nin Kotlin 2.4 metadata desteği yayınlanana kadar ertelendi.
+- AndroidX Lifecycle 2.11.0, compileSdk 37 ve AGP 9.1 KMP geçişiyle birlikte ele alınmak üzere
+  ertelendi.
+
 ## [0.1.0] - 2026-07-22
 
 ### Added
@@ -88,6 +104,7 @@ artefaktlarını içeriyordu.
   round-trip, predictive-back, modal iptal) gerçek cihaz/emülatörde henüz doğrulanmadı;
   bkz. [docs/gezgin-on-device-checklist.md](docs/gezgin-on-device-checklist.md).
 
+[0.2.0]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sahsenvar/Gezgin/releases/tag/v0.1.0
 [0.1.0-alpha03]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha02...v0.1.0-alpha03
 [0.1.0-alpha02]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha01...v0.1.0-alpha02

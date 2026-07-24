@@ -28,6 +28,7 @@ signing_key_id="${signing_key_id: -8}"
 signing_key="$(gpg --batch --armor --export-secret-keys "$primary_fingerprint")"
 
 cd "$project_root"
+version="$(sed -n 's/^VERSION_NAME=//p' gradle.properties)"
 ORG_GRADLE_PROJECT_signingInMemoryKey="$signing_key" \
 ORG_GRADLE_PROJECT_signingInMemoryKeyId="$signing_key_id" \
 ./gradlew verifyReleasePublications \
@@ -60,7 +61,7 @@ fi
 echo "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=53"
 
 corrupted_artifact="$verification_root/corrupted-gezgin-processor.pom"
-processor_pom="$repository/io/github/sahsenvar/gezgin-processor/0.1.0/gezgin-processor-0.1.0.pom"
+processor_pom="$repository/io/github/sahsenvar/gezgin-processor/$version/gezgin-processor-$version.pom"
 processor_signature="$processor_pom.asc"
 cp "$processor_pom" "$corrupted_artifact"
 printf '\ncorruption-negative-test\n' >> "$corrupted_artifact"
