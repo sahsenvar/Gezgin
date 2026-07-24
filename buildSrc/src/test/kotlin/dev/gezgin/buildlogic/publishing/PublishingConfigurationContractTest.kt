@@ -131,6 +131,7 @@ class PublishingConfigurationContractTest {
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "VerifyReleaseRepositoryTask")
     assertContains(rootBuild, "verifyReleasePublications")
+    assertContains(rootBuild, "publicationVersion.set(releaseVersion)")
     assertContains(rootBuild, "--refresh-dependencies")
     assertContains(rootBuild, "--project-cache-dir")
 
@@ -145,12 +146,15 @@ class PublishingConfigurationContractTest {
     )
 
     val script = verificationScript.readText()
+    assertContains(script, "version=\"\${project_version%-SNAPSHOT}\"")
+    assertContains(script, "-PVERSION_NAME=\"\$version\"")
     assertContains(script, "verify_home")
     assertContains(script, "--export")
     assertContains(script, "--import")
     assertContains(script, "gpg --homedir \"\$verify_home\" --batch --verify")
     assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=53")
     assertContains(script, "CORRUPTION_NEGATIVE=PASS")
+    assertContains(rootBuild, "\"-PgezginVersion=\$releaseVersion\"")
   }
 
   @Test

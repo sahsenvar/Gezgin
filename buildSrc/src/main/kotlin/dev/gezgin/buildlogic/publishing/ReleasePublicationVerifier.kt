@@ -9,10 +9,9 @@ import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.xml.sax.InputSource
 
-/** Verifies the complete repository shape produced for the public 0.2.0 release. */
+/** Verifies the complete repository shape produced for a public release version. */
 object ReleasePublicationVerifier {
   private const val groupId = "io.github.sahsenvar"
-  private const val version = "0.2.0"
   private const val projectUrl = "https://github.com/sahsenvar/Gezgin"
   private const val licenseName = "The Apache License, Version 2.0"
   private const val licenseUrl = "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -23,7 +22,7 @@ object ReleasePublicationVerifier {
   private const val scmConnection = "scm:git:https://github.com/sahsenvar/Gezgin.git"
   private const val scmDeveloperConnection = "scm:git:ssh://git@github.com/sahsenvar/Gezgin.git"
 
-  fun verify(repository: Path, requireSignatures: Boolean): VerificationSummary {
+  fun verify(repository: Path, version: String, requireSignatures: Boolean): VerificationSummary {
     check(Files.isDirectory(repository)) { "release repository does not exist: $repository" }
     val groupDirectory = repository.resolve(groupId.replace('.', '/'))
     check(Files.isDirectory(groupDirectory)) {
@@ -68,8 +67,8 @@ object ReleasePublicationVerifier {
         it == "index.html" || it.endsWith("/index.html")
       }
       verifyArchive(primary, "non-empty primary archive") { true }
-      verifyPom(pom, artifact)
-      verifyModuleMetadata(module, artifact)
+      verifyPom(pom, artifact, version)
+      verifyModuleMetadata(module, artifact, version)
 
       if (artifact.targets.isNotEmpty()) {
         val toolingMetadata = versionDirectory.resolve("$baseName-kotlin-tooling-metadata.json")
@@ -122,7 +121,7 @@ object ReleasePublicationVerifier {
     check(hasPayload) { "$label is missing content: $path" }
   }
 
-  private fun verifyPom(path: Path, artifact: ExpectedArtifact) {
+  private fun verifyPom(path: Path, artifact: ExpectedArtifact, version: String) {
     val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
     val source =
       InputSource(StringReader(Files.readString(path).trimStart())).apply {
@@ -185,7 +184,7 @@ object ReleasePublicationVerifier {
     }
   }
 
-  private fun verifyModuleMetadata(path: Path, artifact: ExpectedArtifact) {
+  private fun verifyModuleMetadata(path: Path, artifact: ExpectedArtifact, version: String) {
     val metadata = JsonSlurper().parse(path.toFile()) as Map<*, *>
     val component = metadata["component"] as? Map<*, *> ?: error("module component missing: $path")
     check(

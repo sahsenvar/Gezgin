@@ -153,6 +153,7 @@ val verifyPublishedReleaseRepository =
     description =
       "Verifies the exact artifacts, metadata, dependency mappings, docs, and signatures."
     repositoryDirectory.set(releaseVerificationDirectory)
+    publicationVersion.set(releaseVersion)
     requireSignatures.set(
       providers.gradleProperty("verifyReleaseSignatures").map(String::toBoolean).orElse(false)
     )
@@ -182,6 +183,7 @@ val verifyReleaseConsumer =
         "compileDebugKotlin",
         "compileDebugUnitTestKotlin",
         "-PreleaseVerificationRepository=${repository.absolutePath}",
+        "-PgezginVersion=$releaseVersion",
         "--refresh-dependencies",
         "--rerun-tasks",
         "--no-build-cache",
