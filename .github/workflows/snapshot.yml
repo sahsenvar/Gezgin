@@ -1,0 +1,64 @@
+name: Snapshot
+
+on:
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: snapshot-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish-snapshot:
+    name: publish-snapshot
+    runs-on: ubuntu-latest
+    env:
+      DISPATCH_REF: ${{ github.ref_name }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+      ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+      ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
+      ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+      ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate default branch snapshot
+        shell: bash
+        run: |
+          if [[ "$DISPATCH_REF" != "$DEFAULT_BRANCH" ]]; then
+            echo "Snapshot publishing is restricted to the default branch." >&2
+            exit 1
+          fi
+          version="$(sed -n 's/^VERSION_NAME=//p' gradle.properties)"
+          if [[ -z "$version" || "$version" != *-SNAPSHOT ]]; then
+            echo "VERSION_NAME must end with -SNAPSHOT." >&2
+            exit 1
+          fi
+          printf 'SNAPSHOT_VERSION=%s\n' "$version" >> "$GITHUB_ENV"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Validate snapshot release gates
+        run: |
+          ./gradlew -p buildSrc test
+          ./gradle/release/test-release-scripts.sh
+          ./gradlew check apiCheck checkPublicApiKDoc spotlessCheck --no-daemon
+          ./gradle/verify-release-publications.sh
+
+      - name: Publish snapshot to Central Portal
+        run: ./gradlew publishToMavenCentral --no-configuration-cache
+
+      - name: Resolve snapshot from Central Portal
+        env:
+          GEZGIN_SMOKE_REPOSITORY_URL: https://central.sonatype.com/repository/maven-snapshots/
+        run: ./gradle/release/smoke-maven-central.sh "$SNAPSHOT_VERSION"

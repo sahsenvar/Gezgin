@@ -156,6 +156,29 @@ class WorkflowConfigurationContractTest {
   }
 
   @Test
+  fun `snapshot publishing is manual isolated and never releases a stable deployment`() {
+    val workflow = text(".github/workflows/snapshot.yml")
+    assertContains(workflow, "workflow_dispatch:")
+    assertContains(workflow, "permissions: read-all")
+    assertContains(workflow, "group: snapshot-${'$'}{{ github.ref }}")
+    assertContains(workflow, "VERSION_NAME")
+    assertContains(workflow, "*-SNAPSHOT")
+    assertContains(workflow, "./gradlew publishToMavenCentral --no-configuration-cache")
+    assertContains(workflow, "https://central.sonatype.com/repository/maven-snapshots/")
+    assertContains(workflow, "./gradle/release/smoke-maven-central.sh")
+    assertFalse(workflow.contains("publishAndReleaseToMavenCentral"))
+    assertFalse(workflow.contains("gh release create"))
+    listOf(
+        "MAVEN_CENTRAL_USERNAME",
+        "MAVEN_CENTRAL_PASSWORD",
+        "SIGNING_IN_MEMORY_KEY",
+        "SIGNING_IN_MEMORY_KEY_PASSWORD",
+        "SIGNING_IN_MEMORY_KEY_ID",
+      )
+      .forEach { assertContains(workflow, "secrets.$it") }
+  }
+
+  @Test
   fun `release helper scripts enforce repository only Central smoke`() {
     val validator = text("gradle/release/validate-release.sh")
     assertContains(validator, "VERSION_NAME")
@@ -182,6 +205,9 @@ class WorkflowConfigurationContractTest {
     assertContains(waitForCentral, "RETRY_SECONDS")
     assertContains(waitForCentral, ":-30")
     assertContains(waitForCentral, "remaining")
+    assertContains(waitForCentral, "GEZGIN_SMOKE_REPOSITORY_URL")
+    assertContains(waitForCentral, "maven-metadata.xml")
+    assertContains(smoke, "gezginRepositoryUrl")
     assertContains(text("gradle/release/test-release-scripts.sh"), "0x1x0")
     assertContains(text("gradle/release/test-release-scripts.sh"), "v${'$'}(touch")
   }
