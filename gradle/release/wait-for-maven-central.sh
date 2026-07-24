@@ -2,7 +2,7 @@
 set -euo pipefail
 
 VERSION=${1:?Usage: wait-for-maven-central.sh VERSION}
-CENTRAL_URL=https://repo.maven.apache.org/maven2
+CENTRAL_URL=${GEZGIN_SMOKE_REPOSITORY_URL:-https://repo.maven.apache.org/maven2}
 GROUP_PATH=io/github/sahsenvar
 MAX_WAIT_SECONDS=${GEZGIN_SMOKE_MAX_WAIT_SECONDS:-1800}
 RETRY_SECONDS=${GEZGIN_SMOKE_RETRY_SECONDS:-30}
@@ -32,10 +32,14 @@ while true; do
     if ((request_timeout > remaining)); then
       request_timeout=$remaining
     fi
-    pom="$CENTRAL_URL/$GROUP_PATH/$module/$VERSION/$module-$VERSION.pom"
+    if [[ "$VERSION" == *-SNAPSHOT ]]; then
+      resource="$CENTRAL_URL/$GROUP_PATH/$module/$VERSION/maven-metadata.xml"
+    else
+      resource="$CENTRAL_URL/$GROUP_PATH/$module/$VERSION/$module-$VERSION.pom"
+    fi
     if ! "$CURL_COMMAND" \
       --fail --silent --show-error --location --head \
-      --max-time "$request_timeout" "$pom" >/dev/null; then
+      --max-time "$request_timeout" "$resource" >/dev/null; then
       missing=1
     fi
   done

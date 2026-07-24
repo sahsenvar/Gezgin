@@ -2,6 +2,7 @@
 set -euo pipefail
 
 VERSION=${1:?Usage: smoke-maven-central.sh VERSION}
+REPOSITORY_URL=${GEZGIN_SMOKE_REPOSITORY_URL:-https://repo.maven.apache.org/maven2}
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 "$SCRIPT_DIR/wait-for-maven-central.sh" "$VERSION"
 
@@ -16,6 +17,7 @@ GRADLE_USER_HOME="$WORK_DIR/gradle-home" \
   --project-dir="$WORK_DIR/consumer" \
   compileDebugKotlin compileDebugUnitTestKotlin \
   -PgezginVersion="$VERSION" \
+  -PgezginRepositoryUrl="$REPOSITORY_URL" \
   --refresh-dependencies \
   --rerun-tasks \
   --no-build-cache \
