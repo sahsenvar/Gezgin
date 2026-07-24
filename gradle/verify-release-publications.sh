@@ -28,10 +28,12 @@ signing_key_id="${signing_key_id: -8}"
 signing_key="$(gpg --batch --armor --export-secret-keys "$primary_fingerprint")"
 
 cd "$project_root"
-version="$(sed -n 's/^VERSION_NAME=//p' gradle.properties)"
+project_version="$(sed -n 's/^VERSION_NAME=//p' gradle.properties)"
+version="${project_version%-SNAPSHOT}"
 ORG_GRADLE_PROJECT_signingInMemoryKey="$signing_key" \
 ORG_GRADLE_PROJECT_signingInMemoryKeyId="$signing_key_id" \
 ./gradlew verifyReleasePublications \
+    -PVERSION_NAME="$version" \
     -PreleaseVerificationRepository="$repository" \
     -PverifyReleaseSignatures=true \
     --rerun-tasks \

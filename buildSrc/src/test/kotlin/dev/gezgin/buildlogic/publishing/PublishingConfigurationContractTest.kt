@@ -40,7 +40,7 @@ class PublishingConfigurationContractTest {
   fun `centralizes release coordinates and removes module-local copies`() {
     val rootProperties = properties("gradle.properties")
     assertEquals("io.github.sahsenvar", rootProperties.getProperty("GROUP"))
-    assertEquals("0.2.0", rootProperties.getProperty("VERSION_NAME"))
+    assertEquals("0.2.1-SNAPSHOT", rootProperties.getProperty("VERSION_NAME"))
 
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "providers.gradleProperty(\"GROUP\")")
@@ -131,6 +131,7 @@ class PublishingConfigurationContractTest {
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "VerifyReleaseRepositoryTask")
     assertContains(rootBuild, "verifyReleasePublications")
+    assertContains(rootBuild, "publicationVersion.set(releaseVersion)")
     assertContains(rootBuild, "--refresh-dependencies")
     assertContains(rootBuild, "--project-cache-dir")
 
@@ -145,12 +146,15 @@ class PublishingConfigurationContractTest {
     )
 
     val script = verificationScript.readText()
+    assertContains(script, "version=\"\${project_version%-SNAPSHOT}\"")
+    assertContains(script, "-PVERSION_NAME=\"\$version\"")
     assertContains(script, "verify_home")
     assertContains(script, "--export")
     assertContains(script, "--import")
     assertContains(script, "gpg --homedir \"\$verify_home\" --batch --verify")
     assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=53")
     assertContains(script, "CORRUPTION_NEGATIVE=PASS")
+    assertContains(rootBuild, "\"-PgezginVersion=\$releaseVersion\"")
   }
 
   @Test

@@ -12,6 +12,8 @@ import org.gradle.work.DisableCachingByDefault
 abstract class VerifyReleaseRepositoryTask : DefaultTask() {
   @get:InputDirectory abstract val repositoryDirectory: DirectoryProperty
 
+  @get:Input abstract val publicationVersion: Property<String>
+
   @get:Input abstract val requireSignatures: Property<Boolean>
 
   @TaskAction
@@ -19,6 +21,7 @@ abstract class VerifyReleaseRepositoryTask : DefaultTask() {
     val summary =
       ReleasePublicationVerifier.verify(
         repository = repositoryDirectory.get().asFile.toPath(),
+        version = publicationVersion.get(),
         requireSignatures = requireSignatures.get(),
       )
     logger.lifecycle(
