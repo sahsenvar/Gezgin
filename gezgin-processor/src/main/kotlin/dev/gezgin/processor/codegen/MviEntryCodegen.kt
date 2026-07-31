@@ -9,6 +9,7 @@ import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
 import dev.gezgin.processor.entry.EntryFunctionModel
+import dev.gezgin.processor.entry.EntryKindModel
 import dev.gezgin.processor.entry.MviEntryModel
 import dev.gezgin.processor.entry.MviExtraParam
 import dev.gezgin.processor.mvi.ViewModelModel
@@ -307,28 +308,36 @@ internal object MviEntryCodegen {
       )
     }
 
-    // Migration-only ZAD compatibility wrapper. The nested Column preserves a ColumnScope receiver
-    // for existing screen bodies while keeping top/content/bottom ordering route-local.
-    body.add("%M {\n", COLUMN).indent()
-    mvi.topBar?.let { topBar ->
-      body.add("%M(%L)\n", MemberName(topBar.packageName, topBar.functionSimpleName), chromeArgs())
-    }
-    // `weight` is a ColumnScope member extension. Emitting a top-level import resolves Compose's
-    // internal RowColumnParentData property on Android; keep the call literal so the outer Column
-    // receiver supplies the public ColumnScope.weight extension.
-    body.add("%M(%T.%M().weight(1f)) {\n", COLUMN, MODIFIER, FILL_MAX_WIDTH).indent()
-    body.add("%M(%L)\n", contentFun, contentArgs(mvi))
-    body.unindent().add("}\n")
-    mvi.bottomBar?.let { bottomBar ->
-      body.add("if (!imeVisible) {\n").indent()
-      body.add(
-        "%M(%L)\n",
-        MemberName(bottomBar.packageName, bottomBar.functionSimpleName),
-        chromeArgs(),
-      )
+    if (entry.kind == EntryKindModel.BOTTOM_SHEET) {
+      body.add("%M(%L)\n", contentFun, contentArgs(mvi))
+    } else {
+      // Migration-only ZAD compatibility wrapper. The nested Column preserves a ColumnScope
+      // receiver for existing screen bodies while keeping top/content/bottom ordering route-local.
+      body.add("%M {\n", COLUMN).indent()
+      mvi.topBar?.let { topBar ->
+        body.add(
+          "%M(%L)\n",
+          MemberName(topBar.packageName, topBar.functionSimpleName),
+          chromeArgs(),
+        )
+      }
+      // `weight` is a ColumnScope member extension. Emitting a top-level import resolves Compose's
+      // internal RowColumnParentData property on Android; keep the call literal so the outer Column
+      // receiver supplies the public ColumnScope.weight extension.
+      body.add("%M(%T.%M().weight(1f)) {\n", COLUMN, MODIFIER, FILL_MAX_WIDTH).indent()
+      body.add("%M(%L)\n", contentFun, contentArgs(mvi))
+      body.unindent().add("}\n")
+      mvi.bottomBar?.let { bottomBar ->
+        body.add("if (!imeVisible) {\n").indent()
+        body.add(
+          "%M(%L)\n",
+          MemberName(bottomBar.packageName, bottomBar.functionSimpleName),
+          chromeArgs(),
+        )
+        body.unindent().add("}\n")
+      }
       body.unindent().add("}\n")
     }
-    body.unindent().add("}\n")
     return body.unindent().add("}\n").build()
   }
 
