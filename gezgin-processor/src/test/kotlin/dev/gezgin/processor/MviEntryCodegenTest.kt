@@ -303,8 +303,9 @@ class MviEntryCodegenTest {
   }
 
   @Test
-  fun `Problem 2 — bottom sheet role extra (sheetState) and resolver extra (imageLoader)`() {
+  fun `Problem 2 — bottom sheet is wrap-content and resolves role and resolver extras`() {
     val text = generateMvi(SourceFile.kotlin("Sheet.kt", SHEET_MVI_SOURCE))
+    val body = text.substringAfter("fun GezginEntryScope.provideSheetEntry")
 
     // The resolver extra is a REQUIRED `@Composable () -> T` param (no default); kind is
     // BOTTOM_SHEET.
@@ -326,6 +327,10 @@ class MviEntryCodegenTest {
       text,
       "SheetContent(state = state, onIntent = vm::onIntent, controller = LocalGezginSheetController.current, " +
         "imageLoader = imageLoader())",
+    )
+    assertFalse(
+      "weight(1f)" in body,
+      "bottom-sheet content must not be forced to fill height: $body",
     )
   }
 
