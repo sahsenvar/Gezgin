@@ -259,5 +259,6 @@ apiValidation {
   // kancaları)
   // kilitli ABI yüzeyinden düşürülür → alpha01 sonrası deprecation döngüsü olmadan evrilebilirler.
   nonPublicMarkers += "dev.gezgin.core.GezginInternalApi"
-  ignoredProjects += listOf("shopr", "navigation", "app", "domain", "auth", "home", "profile")
+  ignoredProjects +=
+    listOf("hello", "shopr", "navigation", "app", "domain", "auth", "home", "profile")
 }
