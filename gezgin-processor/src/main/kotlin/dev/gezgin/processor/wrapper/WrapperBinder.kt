@@ -41,13 +41,15 @@ internal class WrapperBinder(private val logger: KSPLogger) {
       val candidates = applicable.mapNotNull { tryBind(it, routeFq, routeProviders) }
       when (candidates.size) {
         1 -> bindings[routeFq] = candidates.single()
+        // Not an error: a mixed application legitimately keeps core-mode entries whose content
+        // no wrapper can fill. It IS worth saying out loud, because a screen silently losing its
+        // chrome is invisible at runtime.
         0 ->
-          error(
-            "SW6",
-            "route $routeFq matches none of the @ScreenWrapper functions that declare a content " +
-              "slot for its kind " +
-              "(${applicable.joinToString { "${it.packageName}.${it.functionSimpleName}" }}); " +
-              "check the screen's receiver and parameter types against the wrapper's content slot",
+          logger.warn(
+            "[SW6] route $routeFq is NOT wrapped: its content does not match the content slot of " +
+              "${applicable.joinToString { "${it.packageName}.${it.functionSimpleName}" }}. The " +
+              "entry is generated without a wrapper. If that is intended, ignore this; otherwise " +
+              "check the content function's receiver and parameter types against the slot."
           )
         else ->
           error(

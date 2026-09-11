@@ -9,8 +9,8 @@ import dev.gezgin.core.NavResult
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.sample.domain.model.AvatarChoice
 import dev.gezgin.sample.feature.profile.screen_profile.ProfileEffect
-import dev.gezgin.sample.feature.profile.screen_profile.ProfileEffectHandler
 import dev.gezgin.sample.feature.profile.screen_profile.ProfileIntent
+import dev.gezgin.sample.feature.profile.screen_profile.ProfileResultCollector
 import dev.gezgin.sample.feature.profile.screen_profile.ProfileViewModel
 import dev.gezgin.sample.feature.profile.screen_profile.handleProfileEffect
 import dev.gezgin.sample.navigation.ProfileGraph.EditNameDialogRoute
@@ -33,7 +33,7 @@ import org.robolectric.Shadows.shadowOf
 class StrictMviMigrationTest {
 
   @Test
-  fun `profile navigation intent becomes an effect before the typed handler navigates`() =
+  fun `profile navigation intent becomes an effect before the typed provider navigates`() =
     runBlocking {
       val viewModel = ProfileViewModel()
 
@@ -43,7 +43,7 @@ class StrictMviMigrationTest {
       assertEquals(ProfileEffect.OpenSettings, effect)
 
       val raw = RawNavigator(start = ProfileScreenRoute, topology = gezginTopology)
-      handleProfileEffect(effect, raw.profileNavigator(entryId = 1L))
+      handleProfileEffect(effect, {}, raw.profileNavigator(entryId = 1L))
       assertEquals(SettingsScreenRoute, raw.current)
     }
 
@@ -52,9 +52,7 @@ class StrictMviMigrationTest {
     val viewModel = ProfileViewModel()
     val choice = AvatarChoice("file://avatar.png")
 
-    viewModel.effects
-      .resultIntentSink<ProfileIntent>()
-      .sendResultIntent(ProfileIntent.AvatarResult(NavResult.Value(choice)))
+    viewModel.onIntent(ProfileIntent.AvatarResult(NavResult.Value(choice)))
 
     assertEquals(choice.uri, viewModel.uiState.value.avatarUri)
     assertEquals(ProfileEffect.ShowMessage("Avatar güncellendi"), viewModel.effects.first())
@@ -65,17 +63,15 @@ class StrictMviMigrationTest {
   fun `route-bound profile collector leaves its disposed generation unable to steal later results`() {
     val viewModel = ProfileViewModel()
     var disposedGenerationIntents = 0
-    val disposedGenerationEffects =
-      resultIntentEffectFlow<ProfileEffect, ProfileIntent>(viewModel.effects) { intent ->
-        disposedGenerationIntents += 1
-        viewModel.onIntent(intent)
-      }
+    val disposedGeneration: (ProfileIntent) -> Unit = { intent ->
+      disposedGenerationIntents += 1
+      viewModel.onIntent(intent)
+    }
     var activeGenerationIntents = 0
-    val activeGenerationEffects =
-      resultIntentEffectFlow<ProfileEffect, ProfileIntent>(viewModel.effects) { intent ->
-        activeGenerationIntents += 1
-        viewModel.onIntent(intent)
-      }
+    val activeGeneration: (ProfileIntent) -> Unit = { intent ->
+      activeGenerationIntents += 1
+      viewModel.onIntent(intent)
+    }
     val raw = RawNavigator(start = ProfileScreenRoute, topology = gezginTopology)
     val nav =
       raw.profileNavigator(entryId = requireNotNull(raw.entryIdOf(ProfileScreenRoute::class)))
@@ -86,9 +82,9 @@ class StrictMviMigrationTest {
     try {
       controller.get().setContent {
         if (attached.value) {
-          ProfileEffectHandler(
-            if (useActiveGeneration.value) activeGenerationEffects else disposedGenerationEffects,
-            nav,
+          ProfileResultCollector(
+            onIntent = if (useActiveGeneration.value) activeGeneration else disposedGeneration,
+            nav = nav,
           )
         }
       }

@@ -1,11 +1,11 @@
 package dev.gezgin.sample.feature.auth.screen_login
 
-import androidx.lifecycle.ViewModel
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.gezgin.core.NavResult
-import dev.gezgin.mvi.GezginEffects
-import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.annotation.MviViewModel
-import dev.gezgin.sample.feature.auth.resultIntentEffectFlow
+import dev.gezgin.sample.designsystem.BaseViewModel
+import dev.gezgin.sample.designsystem.EffectSink
+import dev.gezgin.sample.designsystem.ViewModelOf
 import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,14 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-@MviViewModel(LoginScreenRoute::class)
-class LoginViewModel : ViewModel(), GezginMvi<LoginUiState, LoginIntent, LoginEffect> {
+class LoginViewModel : BaseViewModel<LoginUiState, LoginIntent, LoginEffect>() {
 
   private val _uiState = MutableStateFlow(LoginUiState())
   override val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-  private val _effects = GezginEffects<LoginEffect>()
-  override val effects: Flow<LoginEffect> = resultIntentEffectFlow(_effects.flow, ::onIntent)
+  private val _effects = EffectSink<LoginEffect>()
+  override val effects: Flow<LoginEffect> = _effects.flow
 
   override fun onIntent(intent: LoginIntent) {
     when (intent) {
@@ -43,3 +42,7 @@ class LoginViewModel : ViewModel(), GezginMvi<LoginUiState, LoginIntent, LoginEf
     }
   }
 }
+
+@ViewModelOf(LoginScreenRoute::class)
+@Composable
+fun loginViewModel(): LoginViewModel = viewModel { LoginViewModel() }

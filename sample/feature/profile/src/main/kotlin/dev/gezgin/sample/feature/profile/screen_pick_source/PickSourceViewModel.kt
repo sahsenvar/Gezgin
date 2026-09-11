@@ -1,23 +1,22 @@
 package dev.gezgin.sample.feature.profile.screen_pick_source
 
-import androidx.lifecycle.ViewModel
-import dev.gezgin.mvi.GezginEffects
-import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.annotation.MviViewModel
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.gezgin.sample.designsystem.BaseViewModel
+import dev.gezgin.sample.designsystem.EffectSink
+import dev.gezgin.sample.designsystem.ViewModelOf
 import dev.gezgin.sample.navigation.AvatarFlow.PickSourceScreenRoute
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@MviViewModel(PickSourceScreenRoute::class)
-class PickSourceViewModel :
-  ViewModel(), GezginMvi<PickSourceUiState, PickSourceIntent, PickSourceEffect> {
+class PickSourceViewModel : BaseViewModel<PickSourceUiState, PickSourceIntent, PickSourceEffect>() {
 
   private val _uiState = MutableStateFlow(PickSourceUiState)
   override val uiState: StateFlow<PickSourceUiState> = _uiState.asStateFlow()
 
-  private val _effects = GezginEffects<PickSourceEffect>()
+  private val _effects = EffectSink<PickSourceEffect>()
   override val effects: Flow<PickSourceEffect> = _effects.flow
 
   // Giriş ipucu entry yaratılırken gönderilir (goToCrop'tan önce DEĞİL); lossless kanal STARTED'da
@@ -33,3 +32,7 @@ class PickSourceViewModel :
     }
   }
 }
+
+@ViewModelOf(PickSourceScreenRoute::class)
+@Composable
+fun pickSourceViewModel(): PickSourceViewModel = viewModel { PickSourceViewModel() }

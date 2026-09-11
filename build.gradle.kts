@@ -222,7 +222,7 @@ tasks.register<CheckPublicApiKDocTask>("checkPublicApiKDoc") {
   projectRoot.set(layout.projectDirectory)
   expectedInventory.set(
     mapOf(
-      "gezgin-core" to "136/17",
+      "gezgin-core" to "140/17",
       "gezgin-mvi" to "16/0",
       "gezgin-processor" to "1/1",
       "gezgin-test" to "12/1",
@@ -260,5 +260,15 @@ apiValidation {
   // kilitli ABI yüzeyinden düşürülür → alpha01 sonrası deprecation döngüsü olmadan evrilebilirler.
   nonPublicMarkers += "dev.gezgin.core.GezginInternalApi"
   ignoredProjects +=
-    listOf("hello", "shopr", "navigation", "app", "domain", "auth", "home", "profile")
+    listOf(
+      "hello",
+      "shopr",
+      "navigation",
+      "designsystem",
+      "app",
+      "domain",
+      "auth",
+      "home",
+      "profile",
+    )
 }

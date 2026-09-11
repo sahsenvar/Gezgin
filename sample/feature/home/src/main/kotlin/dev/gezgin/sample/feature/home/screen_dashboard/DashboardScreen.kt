@@ -2,6 +2,7 @@ package dev.gezgin.sample.feature.home.screen_dashboard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -20,7 +21,7 @@ private val FAKE_ITEMS = (1..5).map { "item-$it" }
 
 @Screen(HomeGraph.DashboardScreenRoute::class)
 @Composable
-fun DashboardScreen(state: DashboardUiState, onIntent: (DashboardIntent) -> Unit) {
+fun ColumnScope.DashboardScreen(state: DashboardUiState, onIntent: (DashboardIntent) -> Unit) {
   val items =
     remember(state.order) {
       when (state.order) {

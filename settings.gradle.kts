@@ -29,6 +29,8 @@ include(":sample:shopr")
 
 include(":sample:domain")
 
+include(":sample:designsystem")
+
 include(":sample:navigation")
 
 include(":sample:feature:auth")

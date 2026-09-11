@@ -28,7 +28,7 @@ dependencies {
   // MVI add-on — auth ekranları MVI-mode'u kullanır;
   // GezginMvi/GezginEffects/ObserveEffects
   // ve üretilen GezginMviEntries.kt'nin androidx ViewModel tabanı buradan (`api` yüzeyi) çözülür.
-  implementation(project(":gezgin-mvi"))
+  implementation(project(":sample:designsystem"))
   ksp(project(":gezgin-processor"))
 
   implementation(platform(libs.androidx.compose.bom))
@@ -39,3 +39,7 @@ dependencies {
   testImplementation(libs.androidx.activity.compose)
   testImplementation("org.robolectric:robolectric:4.14")
 }
+
+// The wrapper and its slot markers are compiled into :sample:designsystem, and KSP cannot
+// enumerate classpath declarations by annotation -- so this module names their package.
+ksp { arg("gezgin.wrapperPackages", "dev.gezgin.sample.designsystem") }
