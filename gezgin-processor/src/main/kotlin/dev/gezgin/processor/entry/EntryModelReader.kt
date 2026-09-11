@@ -154,6 +154,8 @@ internal class EntryModelReader(
   private val logger: KSPLogger,
   private val model: GraphModel,
   private val vmModels: List<ViewModelModel> = emptyList(),
+  /** Routes a `@ScreenWrapper` was bound to; their content parameters are the wrapper's job. */
+  private val wrappedRoutes: Set<String> = emptySet(),
 ) {
 
   private val graphsByFq: Map<String, GraphModelNode> = model.graphs.associateBy { it.fqName }
@@ -266,11 +268,17 @@ internal class EntryModelReader(
     chromeFuns: List<ChromeFun>,
   ): EntryFunctionModel? {
     val paramNames = fn.parameters.mapNotNull { it.name?.asString() }.toSet()
+    // A wrapped route's content parameters are matched by the wrapper binder, not here, so the
+    // shape checks below do not apply to it.
+    val routeFq = annotation.classArg("route")?.fqOf()
+    if (routeFq != null && routeFq in wrappedRoutes) {
+      return buildCoreEntry(fn, annotation, kind, wrapped = true)
+    }
     val isMvi = "state" in paramNames && "onIntent" in paramNames
     return if (isMvi) {
       buildMviEntry(fn, annotation, kind, effectFuns, chromeFuns)
     } else {
-      buildCoreEntry(fn, annotation, kind)
+      buildCoreEntry(fn, annotation, kind, wrapped = false)
     }
   }
 
@@ -280,6 +288,7 @@ internal class EntryModelReader(
     fn: KSFunctionDeclaration,
     annotation: KSAnnotation,
     kind: EntryKindModel,
+    wrapped: Boolean,
   ): EntryFunctionModel? {
     val fnName = fn.simpleName.asString()
     val params = fn.parameters
@@ -288,7 +297,7 @@ internal class EntryModelReader(
     val navParam = params.firstOrNull { it.name?.asString() == "nav" }
     val unknownParams = params.filter { it.name?.asString() !in setOf("route", "nav") }
 
-    if (unknownParams.isNotEmpty()) {
+    if (unknownParams.isNotEmpty() && !wrapped) {
       error(
         "SC3",
         "$fnName has unsupported parameter(s): " +

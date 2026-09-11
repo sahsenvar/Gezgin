@@ -13,6 +13,7 @@ import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.NavigatorProbe
 import dev.gezgin.processor.codegen.TestApiCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
+import dev.gezgin.processor.codegen.WrapperEntryCodegen
 import dev.gezgin.processor.entry.EntryModelReader
 import dev.gezgin.processor.fragment.FragmentModelReader
 import dev.gezgin.processor.fragment.dumpFragmentText
@@ -125,19 +126,6 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
           }
         }
 
-        // Read `@MviViewModel` classes first so MVI-mode `@Screen(state,onIntent)` content can pair
-        // with its same-module ViewModel by route. Reading, validation, and dumps run
-        // unconditionally; only entry generation is gated by `gezgin.emitEntries` below.
-        val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
-        val (entries, entriesOk) =
-          EntryModelReader(resolver, environment.logger, model, vmModels).read()
-
-        // The `@FragmentScreen` reader cross-checks each route against the existing entries so the
-        // same route cannot be registered by both a Fragment and `@Screen`/MVI content (`FS3`).
-        // This is a post-read cross-check rather than a shared-map mutation.
-        val (fragmentModels, fragOk) =
-          FragmentModelReader(resolver, environment.logger, entries).read()
-
         // Screen-wrapper pipeline. Discovery is independent of graph ownership: a feature module
         // finds its own `@ScreenWrapper`/`@ScreenSlot` declarations by annotation, and ones
         // compiled into a dependency through `gezgin.wrapperPackages`.
@@ -149,6 +137,20 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
 
         val (wrapperBindings, bindOk) =
           WrapperBinder(environment.logger).bind(wrapperResult.wrappers, slotProviders)
+
+        // Read `@MviViewModel` classes first so MVI-mode `@Screen(state,onIntent)` content can pair
+        // with its same-module ViewModel by route. Reading, validation, and dumps run
+        // unconditionally; only entry generation is gated by `gezgin.emitEntries` below.
+        val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
+        val (entries, entriesOk) =
+          EntryModelReader(resolver, environment.logger, model, vmModels, wrapperBindings.keys)
+            .read()
+
+        // The `@FragmentScreen` reader cross-checks each route against the existing entries so the
+        // same route cannot be registered by both a Fragment and `@Screen`/MVI content (`FS3`).
+        // This is a post-read cross-check rather than a shared-map mutation.
+        val (fragmentModels, fragOk) =
+          FragmentModelReader(resolver, environment.logger, entries).read()
 
         if (environment.options["gezgin.dumpWrapper"].toBoolean()) {
           environment.codeGenerator
@@ -194,13 +196,20 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
         // guardrail violation fails the build instead of emitting the surviving registration.
         val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
         if (emitEntries && vmOk && entriesOk && fragOk && wrapperOk && providersOk && bindOk) {
-          val coreEntries = entries.filter { it.mvi == null }
+          val boundEntries = entries.map { it.copy(wrapper = wrapperBindings[it.routeFq]) }
+          val wrappedEntries = boundEntries.filter { it.wrapper != null }
+          if (wrappedEntries.isNotEmpty()) {
+            WrapperEntryCodegen.generate(wrappedEntries).forEach {
+              it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+            }
+          }
+          val coreEntries = boundEntries.filter { it.mvi == null && it.wrapper == null }
           if (coreEntries.isNotEmpty()) {
             EntryCodegen.generate(coreEntries).forEach {
               it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
             }
           }
-          val mviEntries = entries.filter { it.mvi != null }
+          val mviEntries = boundEntries.filter { it.mvi != null && it.wrapper == null }
           if (mviEntries.isNotEmpty()) {
             MviEntryCodegen.generate(mviEntries).forEach {
               it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)

@@ -106,4 +106,10 @@ internal data class EntryFunctionModel(
    * off `mvi != null` to emit the VM-driven `provideXEntry` instead.
    */
   val mvi: MviEntryModel? = null,
+  /**
+   * The `@ScreenWrapper` bound to this entry's route, or `null` when no wrapper is in scope. A
+   * bound entry is emitted by [dev.gezgin.processor.codegen.WrapperEntryCodegen] and is excluded
+   * from both the core-mode and MVI-mode codegen, so a route is never registered twice.
+   */
+  val wrapper: dev.gezgin.processor.wrapper.WrapperBindingModel? = null,
 )
