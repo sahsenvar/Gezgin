@@ -12,6 +12,7 @@ import kotlin.reflect.KClass
  * @property route the route type rendered by the annotated composable
  * @author @sahsenvar
  */
+@ScreenSlot
 @Target(AnnotationTarget.FUNCTION)
 @Repeatable
 public annotation class Screen(val route: KClass<out Route>)

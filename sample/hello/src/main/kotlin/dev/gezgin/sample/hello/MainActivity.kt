@@ -12,27 +12,21 @@ import dev.gezgin.sample.hello.nav.gezginJson
 import dev.gezgin.sample.hello.nav.gezginTopology
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent { HelloApp(onRootBack = { finish() }) }
-    }
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContent { HelloApp(onRootBack = { finish() }) }
+  }
 }
 
 @Composable
 private fun HelloApp(onRootBack: () -> Unit) {
-    val navigator =
-        rememberNavigator(
-            start = HelloGraph.ContactListScreenRoute,
-            topology = gezginTopology,
-            json = gezginJson,
-            restoreKey = "hello",
-            onRootBack = onRootBack,
-        )
-    MaterialTheme {
-        GezginDisplay(
-            navigator = navigator
-        ) {
-            helloGraphEntries()
-        }
-    }
+  val navigator =
+    rememberNavigator(
+      start = HelloGraph.ContactListScreenRoute,
+      topology = gezginTopology,
+      json = gezginJson,
+      restoreKey = "hello",
+      onRootBack = onRootBack,
+    )
+  MaterialTheme { GezginDisplay(navigator = navigator) { helloGraphEntries() } }
 }

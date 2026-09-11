@@ -15,7 +15,8 @@ fun ContactDetailEffectHandler(effects: Flow<ContactDetailEffect>, nav: ContactD
   val context = LocalContext.current
   ObserveEffects(effects) { effect ->
     when (effect) {
-      is ContactDetailEffect.ShowMessage -> Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
+      is ContactDetailEffect.ShowMessage ->
+        Toast.makeText(context, effect.text, Toast.LENGTH_SHORT).show()
       is ContactDetailEffect.BackToList -> nav.backToContactList()
     }
   }
