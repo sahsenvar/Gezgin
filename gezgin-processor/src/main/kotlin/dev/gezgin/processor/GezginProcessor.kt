@@ -22,6 +22,8 @@ import dev.gezgin.processor.model.RouteModel
 import dev.gezgin.processor.model.dumpText
 import dev.gezgin.processor.mvi.ViewModelModelReader
 import dev.gezgin.processor.mvi.dumpMviText
+import dev.gezgin.processor.wrapper.WrapperModelReader
+import dev.gezgin.processor.wrapper.dumpWrapperText
 
 /**
  * Reads the semantic [dev.gezgin.processor.model.GraphModel], validates it via [GezginValidator]
@@ -134,6 +136,23 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
         val (fragmentModels, fragOk) =
           FragmentModelReader(resolver, environment.logger, entries).read()
 
+        // Screen-wrapper pipeline. Discovery is independent of graph ownership: a feature module
+        // finds its own `@ScreenWrapper`/`@ScreenSlot` declarations by annotation, and ones
+        // compiled into a dependency through `gezgin.wrapperPackages`.
+        val (wrapperResult, wrapperOk) =
+          WrapperModelReader(resolver, environment.logger, environment.options).read()
+
+        if (environment.options["gezgin.dumpWrapper"].toBoolean()) {
+          environment.codeGenerator
+            .createNewFile(
+              dependencies = Dependencies.ALL_FILES,
+              packageName = "",
+              fileName = "GezginWrapperDump",
+              extensionName = "txt",
+            )
+            .use { it.write(dumpWrapperText(wrapperResult, emptyList(), emptyMap()).toByteArray()) }
+        }
+
         if (environment.options["gezgin.dumpMvi"].toBoolean()) {
           environment.codeGenerator
             .createNewFile(
@@ -164,7 +183,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
         // keeps names unique. `fragOk` joins the gate so an FS
         // guardrail violation fails the build instead of emitting the surviving registration.
         val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
-        if (emitEntries && vmOk && entriesOk && fragOk) {
+        if (emitEntries && vmOk && entriesOk && fragOk && wrapperOk) {
           val coreEntries = entries.filter { it.mvi == null }
           if (coreEntries.isNotEmpty()) {
             EntryCodegen.generate(coreEntries).forEach {
