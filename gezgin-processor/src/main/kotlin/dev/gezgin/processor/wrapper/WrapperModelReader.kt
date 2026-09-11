@@ -69,7 +69,9 @@ internal class WrapperModelReader(
 
     // The kind annotations are slot markers too, and always arrive from the gezgin-core classpath.
     CONTENT_MARKER_FQS.forEach { fq ->
-      resolver.getClassDeclarationByName(resolver.getKSNameFromString(fq))?.let { markerDecls += it }
+      resolver.getClassDeclarationByName(resolver.getKSNameFromString(fq))?.let {
+        markerDecls += it
+      }
     }
 
     val markers =
@@ -100,7 +102,10 @@ internal class WrapperModelReader(
     val declarations = resolver.getDeclarationsFromPackage(pkg).toList()
     return declarations.filterIsInstance<KSFunctionDeclaration>().filter {
       it.hasAnnotation(SCREEN_WRAPPER_FQ)
-    } to declarations.filterIsInstance<KSClassDeclaration>().filter { it.hasAnnotation(SCREEN_SLOT_FQ) }
+    } to
+      declarations.filterIsInstance<KSClassDeclaration>().filter {
+        it.hasAnnotation(SCREEN_SLOT_FQ)
+      }
   }
 
   private fun readMarker(declaration: KSClassDeclaration): SlotMarkerModel? {

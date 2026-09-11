@@ -23,6 +23,7 @@ import dev.gezgin.processor.model.dumpText
 import dev.gezgin.processor.mvi.ViewModelModelReader
 import dev.gezgin.processor.mvi.dumpMviText
 import dev.gezgin.processor.wrapper.SlotProviderReader
+import dev.gezgin.processor.wrapper.WrapperBinder
 import dev.gezgin.processor.wrapper.WrapperModelReader
 import dev.gezgin.processor.wrapper.dumpWrapperText
 
@@ -146,6 +147,9 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
         val (slotProviders, providersOk) =
           SlotProviderReader(resolver, environment.logger, wrapperResult.markers).read()
 
+        val (wrapperBindings, bindOk) =
+          WrapperBinder(environment.logger).bind(wrapperResult.wrappers, slotProviders)
+
         if (environment.options["gezgin.dumpWrapper"].toBoolean()) {
           environment.codeGenerator
             .createNewFile(
@@ -154,7 +158,9 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
               fileName = "GezginWrapperDump",
               extensionName = "txt",
             )
-            .use { it.write(dumpWrapperText(wrapperResult, slotProviders, emptyMap()).toByteArray()) }
+            .use {
+              it.write(dumpWrapperText(wrapperResult, slotProviders, wrapperBindings).toByteArray())
+            }
         }
 
         if (environment.options["gezgin.dumpMvi"].toBoolean()) {
@@ -187,7 +193,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
         // keeps names unique. `fragOk` joins the gate so an FS
         // guardrail violation fails the build instead of emitting the surviving registration.
         val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
-        if (emitEntries && vmOk && entriesOk && fragOk && wrapperOk && providersOk) {
+        if (emitEntries && vmOk && entriesOk && fragOk && wrapperOk && providersOk && bindOk) {
           val coreEntries = entries.filter { it.mvi == null }
           if (coreEntries.isNotEmpty()) {
             EntryCodegen.generate(coreEntries).forEach {

@@ -3,6 +3,7 @@ package dev.gezgin.processor
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.UNIT
 import dev.gezgin.processor.wrapper.SlotType
@@ -89,5 +90,16 @@ class SlotUnifierTest {
       SlotType.Lambda(listOf(SlotType.Variable("S")), SlotType.Concrete("kotlin.Unit", UNIT))
 
     assertTrue(SlotUnifier.unify(slot, annotated, mutableMapOf()))
+  }
+
+  @Test
+  fun `a function type rendered as kotlin Function1 also matches a lambda slot`() {
+    val bindings = mutableMapOf<String, TypeName>()
+    val slot =
+      SlotType.Lambda(listOf(SlotType.Variable("I")), SlotType.Concrete("kotlin.Unit", UNIT))
+    val asParameterized = ClassName("kotlin", "Function1").parameterizedBy(detailIntent, UNIT)
+
+    assertTrue(SlotUnifier.unify(slot, asParameterized, bindings))
+    assertEquals(mapOf<String, TypeName>("I" to detailIntent), bindings)
   }
 }

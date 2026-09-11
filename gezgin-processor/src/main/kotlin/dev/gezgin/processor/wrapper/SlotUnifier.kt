@@ -1,6 +1,7 @@
 package dev.gezgin.processor.wrapper
 
 import com.squareup.kotlinpoet.LambdaTypeName
+import com.squareup.kotlinpoet.ParameterizedTypeName
 import com.squareup.kotlinpoet.TypeName
 
 /**
@@ -26,21 +27,41 @@ internal object SlotUnifier {
       }
 
       is SlotType.Lambda -> {
-        val lambda = concrete as? LambdaTypeName
+        val function = concrete.asFunctionType()
         when {
-          lambda == null -> false
-          lambda.parameters.size != slot.parameters.size -> false
+          function == null -> false
+          function.parameters.size != slot.parameters.size -> false
           else ->
-            slot.parameters.zip(lambda.parameters).all { (slotParam, concreteParam) ->
-              unify(slotParam, concreteParam.type, bindings)
-            } && unify(slot.returnType, lambda.returnType, bindings)
+            slot.parameters.zip(function.parameters).all { (slotParam, concreteParam) ->
+              unify(slotParam, concreteParam, bindings)
+            } && unify(slot.returnType, function.returnType, bindings)
         }
       }
     }
 
+  private data class FunctionShape(val parameters: List<TypeName>, val returnType: TypeName)
+
   /**
-   * `@Composable` and nullability annotations ride on the KotlinPoet type but say nothing about
-   * whether a provider fits a slot, so they are dropped before comparing.
+   * A provider's function-typed parameter reaches us either as a [LambdaTypeName] or, depending on
+   * how KotlinPoet rendered the KSP type, as `kotlin.FunctionN<P…, R>`. Both describe the same
+   * thing, so both are accepted.
+   */
+  private fun TypeName.asFunctionType(): FunctionShape? =
+    when (val bare = bare()) {
+      is LambdaTypeName ->
+        if (bare.receiver != null) null
+        else FunctionShape(bare.parameters.map { it.type }, bare.returnType)
+
+      is ParameterizedTypeName ->
+        if (!bare.rawType.simpleName.startsWith("Function")) null
+        else FunctionShape(bare.typeArguments.dropLast(1), bare.typeArguments.last())
+
+      else -> null
+    }
+
+  /**
+   * `@Composable` and other annotations ride on the KotlinPoet type but say nothing about whether a
+   * provider fits a slot, so they are dropped before comparing.
    */
   private fun TypeName.bare(): TypeName = copy(annotations = emptyList())
 }
