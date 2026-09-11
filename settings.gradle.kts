@@ -17,8 +17,6 @@ rootProject.name = "gezgin"
 
 include(":gezgin-core")
 
-include(":gezgin-mvi")
-
 include(":gezgin-test")
 
 include(":gezgin-processor")

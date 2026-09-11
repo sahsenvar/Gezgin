@@ -11,16 +11,11 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
 import com.squareup.kotlinpoet.TypeName
-import com.squareup.kotlinpoet.ksp.toTypeName
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.NavigatorProbe
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
-import dev.gezgin.processor.mvi.EFFECT_HANDLER_FQ
-import dev.gezgin.processor.mvi.ViewModelModel
-import dev.gezgin.processor.mvi.VmDiClassifier
-import dev.gezgin.processor.mvi.VmDiKind
 
 private const val SCREEN_FQ = "dev.gezgin.core.annotation.Screen"
 private const val DIALOG_FQ = "dev.gezgin.core.annotation.Dialog"
@@ -153,28 +148,20 @@ internal class EntryModelReader(
   private val resolver: Resolver,
   private val logger: KSPLogger,
   private val model: GraphModel,
-  private val vmModels: List<ViewModelModel> = emptyList(),
   /** Routes a `@ScreenWrapper` was bound to; their content parameters are the wrapper's job. */
   private val wrappedRoutes: Set<String> = emptySet(),
 ) {
 
   private val graphsByFq: Map<String, GraphModelNode> = model.graphs.associateBy { it.fqName }
   private val routesByFq: Map<String, RouteModel> = model.routes.associateBy { it.fqName }
-  private val vmByRouteFq: Map<String, ViewModelModel> = vmModels.associateBy { it.routeFq }
 
   private var ok = true
   private val seenRouteFqs =
     mutableMapOf<String, String>() // routeFq -> first function's simple name
   private val seenProvideNames =
     mutableMapOf<Pair<String, String>, String>() // (package, x) -> first function's simple name
-  // Routes whose `@MviViewModel` has matching content; used by the `MV3` validation.
-  private val matchedVmRoutes = mutableSetOf<String>()
-  private val declaredMviScreenRoutes = mutableSetOf<String>()
 
   fun read(): Pair<List<EntryFunctionModel>, Boolean> {
-    val effectFuns = readEffectFuns()
-    val chromeFuns = readChromeFuns()
-
     val entries =
       KIND_BY_ANNOTATION_FQ.flatMap { (annotationFq, kind) ->
         val functions =
@@ -221,65 +208,22 @@ internal class EntryModelReader(
           .flatMap { fn ->
             fn.annotations
               .filter { it.fqName() == annotationFq }
-              .mapNotNull { annotation -> buildEntry(fn, annotation, kind, effectFuns, chromeFuns) }
+              .mapNotNull { annotation -> buildEntry(fn, annotation, kind) }
           }
       }
-
-    effectFuns
-      .filter { it.routeFq !in declaredMviScreenRoutes }
-      .forEach { effect ->
-        error(
-          "MV15",
-          "@EffectHandler ${effect.simpleName} targets route ${effect.routeFq}, but that route has no " +
-            "@Screen(state, onIntent) declaration in this module",
-        )
-      }
-
-    chromeFuns
-      .filter { it.routeFq !in declaredMviScreenRoutes }
-      .forEach { chrome ->
-        error(
-          "MV21",
-          "@${chrome.kind.annotationName} ${chrome.simpleName} targets route ${chrome.routeFq}, but that " +
-            "route has no @Screen(state, onIntent) declaration in this module",
-        )
-      }
-
-    // `MV3`: every `@MviViewModel` must have matching content in this module.
-    vmModels.forEach { vm ->
-      if (vm.routeFq !in matchedVmRoutes) {
-        error(
-          "MV3",
-          "@MviViewModel ${vm.vmSimpleName}(${vm.routeFq.substringAfterLast('.')}) exists, but this module " +
-            "has no matching @Screen(state, onIntent) content (§10.1 same-module triple)",
-        )
-      }
-    }
 
     return entries to ok
   }
 
-  /** Dispatches on parameter shape: MVI-mode iff BOTH `state` and `onIntent` params are present. */
+  /** A wrapped route's content parameters belong to the wrapper binder, not to this reader. */
   private fun buildEntry(
     fn: KSFunctionDeclaration,
     annotation: KSAnnotation,
     kind: EntryKindModel,
-    effectFuns: List<EffectFun>,
-    chromeFuns: List<ChromeFun>,
   ): EntryFunctionModel? {
-    val paramNames = fn.parameters.mapNotNull { it.name?.asString() }.toSet()
-    // A wrapped route's content parameters are matched by the wrapper binder, not here, so the
-    // shape checks below do not apply to it.
     val routeFq = annotation.classArg("route")?.fqOf()
-    if (routeFq != null && routeFq in wrappedRoutes) {
-      return buildCoreEntry(fn, annotation, kind, wrapped = true)
-    }
-    val isMvi = "state" in paramNames && "onIntent" in paramNames
-    return if (isMvi) {
-      buildMviEntry(fn, annotation, kind, effectFuns, chromeFuns)
-    } else {
-      buildCoreEntry(fn, annotation, kind, wrapped = false)
-    }
+    val wrapped = routeFq != null && routeFq in wrappedRoutes
+    return buildCoreEntry(fn, annotation, kind, wrapped = wrapped)
   }
 
   // region Core-mode (UNCHANGED)
@@ -383,13 +327,12 @@ internal class EntryModelReader(
       // The `nav:` parameter type must be the route's own `${x}Navigator`; otherwise the
       // generated `XScreen(route, nav)` call site would type-mismatch inside GezginEntries.kt
       // (a confusing generated-code error instead of a clean [`SC2`]). Same technique as
-      // VmDiClassifier:
-      // a same-module navigator type isn't generated yet in this KSP round (its FQ resolves to an
-      // error type), so we accept an unresolved type by NAME `nav` and only reject a RESOLVED,
-      // wrong-typed param.
+      // A same-module navigator type isn't generated yet in this KSP round (its FQ resolves to
+      // an error type), so an unresolved type is accepted by the NAME `nav` and only a RESOLVED,
+      // wrong-typed param is rejected.
       val navParamType = navParam.type.resolve()
       val navParamFq = navParamType.declaration.qualifiedName?.asString()
-      val expectedNavigatorFq = VmDiClassifier.navigatorTypeFq(routeDecl.packageName.asString(), x)
+      val expectedNavigatorFq = "${routeDecl.packageName.asString()}.${x}Navigator"
       if (!navParamType.isError && navParamFq != expectedNavigatorFq) {
         error(
           "SC2",
@@ -433,533 +376,6 @@ internal class EntryModelReader(
       // routes while KSP still resolves their annotations.
       noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
       x = x,
-    )
-  }
-
-  // endregion
-
-  // region MVI-mode
-
-  private fun buildMviEntry(
-    fn: KSFunctionDeclaration,
-    annotation: KSAnnotation,
-    kind: EntryKindModel,
-    effectFuns: List<EffectFun>,
-    chromeFuns: List<ChromeFun>,
-  ): EntryFunctionModel? {
-    val fnName = fn.simpleName.asString()
-    val params = fn.parameters
-    val stateParam = params.first { it.name?.asString() == "state" }
-    val onIntentParam = params.first { it.name?.asString() == "onIntent" }
-
-    // MVI content has no route parameter, so the mandatory annotation is its only route source.
-    val resolvedRouteType = resolveMandatoryRoute(annotation, fnName) ?: return null
-
-    val routeDecl = resolvedRouteType.declaration as? KSClassDeclaration
-    val implementsRoute =
-      routeDecl != null &&
-        (routeDecl.qualifiedName?.asString() == ROUTE_FQ ||
-          routeDecl.getAllSuperTypes().any { it.declaration.qualifiedName?.asString() == ROUTE_FQ })
-    if (!implementsRoute) {
-      error(
-        "SC5",
-        "$fnName: route type (${resolvedRouteType.declaration.qualifiedName?.asString()}) " +
-          "does not implement dev.gezgin.core.Route",
-      )
-      return null
-    }
-
-    val routeFq = requireNotNull(routeDecl.qualifiedName?.asString())
-    val routeModel = routesByFq[routeFq]
-    declaredMviScreenRoutes += routeFq
-
-    // `SC4` — shared with core-mode: a route may have only ONE content registration.
-    val previousOwner = seenRouteFqs[routeFq]
-    if (previousOwner != null) {
-      error(
-        "SC4",
-        "route ${routeFq.substringAfterLast('.')} is registered by multiple functions: $previousOwner, $fnName",
-      )
-      return null
-    }
-    seenRouteFqs[routeFq] = fnName
-
-    // Apply the same statically decidable `SC8` kind-contract and `SC7` `@NoBack`-modal checks as
-    // core mode.
-    if (!checkKindContractAndNoBack(fnName, routeDecl, kind)) return null
-
-    // `MV2`: the content route must have a `@MviViewModel` in this module.
-    val vm = vmByRouteFq[routeFq]
-    if (vm == null) {
-      error(
-        "MV2",
-        "$fnName: MVI-mode content has no matching @MviViewModel for route ${routeFq.substringAfterLast('.')} " +
-          "in this module; content is linked to the VM by ROUTE, not by state/onIntent types. " +
-          "Add @MviViewModel(${routeFq.substringAfterLast('.')}::class) for the same route (§10.1)",
-      )
-      return null
-    }
-    // Mark the ViewModel as matched as soon as it pairs with content, even if `MV5` fails below.
-    // `MV3` means that no content exists, rather than that existing content is invalid.
-    matchedVmRoutes += routeFq
-
-    // Plain Hilt receives no route data through SavedStateHandle in Navigation 3. Parameterized
-    // routes therefore require an assisted factory or an explicit resolver.
-    if (
-      vm.di == VmDiKind.HILT_PLAIN &&
-        routeDecl.primaryConstructor?.parameters.orEmpty().isNotEmpty()
-    ) {
-      error(
-        "MV12",
-        "$fnName: route ${routeFq.substringAfterLast('.')} has parameters (carries route data), but " +
-          "@MviViewModel ${vm.vmSimpleName} is plain @HiltViewModel (no assistedFactory). In Nav3, a plain-Hilt " +
-          "VM cannot access route arguments: nothing writes the route into SavedStateHandle, so " +
-          "`SavedStateHandle.get(...)` always returns null. For a screen with route data, use " +
-          "@HiltViewModel(assistedFactory = …) (HILT_ASSISTED), or make the route parameterless (§10.1)",
-      )
-      return null
-    }
-
-    // Compare generics-preserving TypeNames so Wrapper<Int> cannot match Wrapper<String> merely by
-    // flattened FQ name.
-    val stateTypeName = stateParam.type.resolve().toTypeName()
-    if (stateTypeName != vm.stateTypeName) {
-      error(
-        "MV5",
-        "$fnName for route $routeFq: state parameter type ($stateTypeName) does not match VM " +
-          "${vm.vmSimpleName}'s state type (${vm.stateTypeName})",
-      )
-      return null
-    }
-    val onIntentType = onIntentParam.type.resolve()
-    val onIntentDeclFq = onIntentType.declaration.qualifiedName?.asString()
-    val returnsUnit = onIntentType.arguments.getOrNull(1)?.type?.resolve()?.fqOf() == UNIT_FQ
-    if (onIntentDeclFq != FUNCTION1_FQ || !returnsUnit) {
-      error(
-        "MV5",
-        "$fnName for route $routeFq: onIntent parameter is not a " +
-          "(${vm.intentTypeFq.substringAfterLast('.')}) -> Unit function " +
-          "(type: ${onIntentType.fqOf()})",
-      )
-      return null
-    }
-    val intentArgTypeName = onIntentType.arguments.getOrNull(0)?.type?.resolve()?.toTypeName()
-    if (intentArgTypeName != vm.intentTypeName) {
-      error(
-        "MV5",
-        "$fnName for route $routeFq: onIntent intent type ($intentArgTypeName) does not match VM " +
-          "${vm.vmSimpleName}'s intent type (${vm.intentTypeName})",
-      )
-      return null
-    }
-
-    // Record content parameters beyond {state, onIntent}. A GezginSheetController (by TYPE) is
-    // role-provided (Local-injected via LocalGezginSheetController); everything else becomes a
-    // resolver param. Deliberately NOT `SC3`-rejected here — that hard-reject is core-mode only —
-    // but `MV10` (reserved name) and `MV8` (controller off a @BottomSheet) ARE rejected: both would
-    // otherwise reach codegen and emit code that compiles but fails at runtime.
-    val roleExtras = mutableListOf<MviExtraParam>()
-    val resolverExtras = mutableListOf<MviExtraParam>()
-    var extrasInvalid = false
-    params
-      .filter { it.name?.asString() != "state" && it.name?.asString() != "onIntent" }
-      .forEach { p ->
-        val pName = p.name?.asString().orEmpty()
-        // Reject extras that collide with generated register-body identifiers.
-        if (pName in RESERVED_EXTRA_NAMES) {
-          error(
-            "MV10",
-            "$fnName: '$pName' cannot be a content-extra parameter name; it is reserved in the " +
-              "generated register body (viewModel/nav/route/vm). Use a different name " +
-              "(in MVI, nav access belongs in the VM constructor, not content)",
-          )
-          extrasInvalid = true
-          return@forEach
-        }
-        val t = p.type.resolve()
-        val extra = MviExtraParam(pName, t.fqOf(), t.toTypeName())
-        if (t.declaration.qualifiedName?.asString() == SHEET_CONTROLLER_FQ) {
-          // LocalGezginSheetController is valid only inside bottom-sheet content; elsewhere its
-          // default fails at first render.
-          if (kind == EntryKindModel.BOTTOM_SHEET) {
-            roleExtras += extra
-          } else {
-            error(
-              "MV8",
-              "$fnName: GezginSheetController parameter is only valid in @BottomSheet content (role-extra, " +
-                "provided from LocalGezginSheetController); this content is $kind, not @BottomSheet",
-            )
-            extrasInvalid = true
-          }
-        } else if (p.hasDefault) {
-          // A resolver extra with a Kotlin default need not be supplied by Gezgin:
-          // the generated content call passes named args, so an omitted defaulted param falls
-          // back to the composable's own default. Don't force a mandatory `@Composable -> T`
-          // resolver for it ("minimal ceremony") — drop it from both lists.
-          Unit
-        } else {
-          resolverExtras += extra
-        }
-      }
-    if (extrasInvalid) return null
-
-    val effect = effectFuns.firstOrNull { it.routeFq == routeFq }
-    if (effect != null && effect.effectTypeName != vm.effectTypeName) {
-      error(
-        "MV16",
-        "@EffectHandler ${effect.simpleName} for route $routeFq takes Flow<${effect.effectTypeName}>, " +
-          "but ${vm.vmSimpleName} declares effect ${vm.effectTypeName}",
-      )
-      return null
-    }
-    if (effect?.hasIntentParam == true) {
-      if (effect.intentTypeName != vm.intentTypeName) {
-        error(
-          "MV23",
-          "@EffectHandler ${effect.simpleName} for route $routeFq has onIntent type " +
-            "${effect.intentTypeName}, but ${vm.vmSimpleName} declares intent ${vm.intentTypeName}",
-        )
-        return null
-      }
-    }
-
-    val topChrome = chromeFuns.firstOrNull { it.routeFq == routeFq && it.kind == ChromeKind.TOP }
-    val topBar = validateChromeProvider(topChrome, routeFq, vm)
-    if (topChrome != null && topBar == null) return null
-    val bottomChrome =
-      chromeFuns.firstOrNull { it.routeFq == routeFq && it.kind == ChromeKind.BOTTOM }
-    val bottomBar = validateChromeProvider(bottomChrome, routeFq, vm)
-    if (bottomChrome != null && bottomBar == null) return null
-
-    val packageName = fn.packageName.asString()
-    val x = NavigatorCodegen.navigatorX(routeDecl.simpleName.asString())
-
-    // Nav wiring requires a generated navigator whether requested by the VM or effect handler.
-    val navigatorTypeFq = VmDiClassifier.navigatorTypeFq(routeDecl.packageName.asString(), x)
-    val vmWantsNav = VmDiClassifier.classify(vm, routeFq, navigatorTypeFq).vmHasNav
-    val effectWantsNav = effect != null && effect.hasNavParam
-    if (vmWantsNav || effectWantsNav) {
-      // Reuse the identity-verified probe so a missing cross-module navigator produces `MV7`.
-      val hasNavigator =
-        NavigatorProbe.routeEarnsNavigator(
-          resolver,
-          routeModel,
-          graphsByFq,
-          routeDecl.packageName.asString(),
-          x,
-          routeFq,
-        )
-      if (!hasNavigator) {
-        error(
-          "MV7",
-          "$fnName: nav is being wired (VM constructor or @EffectHandler requests nav), but target route " +
-            "(${routeFq.substringAfterLast('.')}) has no navigator " +
-            "(@NoBack and no declared navigation/result operation)",
-        )
-        return null
-      }
-    }
-
-    // An effect handler's navigator must belong to this route. Same-round navigator types remain
-    // error types, so compare their declared simple name while retaining exact FQ checks otherwise.
-    val effectNavigatorMatches =
-      effect?.navParamTypeFq?.let { actual ->
-        if (effect.navParamIsError) {
-          actual.substringAfterLast('.') == navigatorTypeFq.substringAfterLast('.')
-        } else {
-          actual == navigatorTypeFq
-        }
-      } ?: false
-    if (effectWantsNav && !effectNavigatorMatches) {
-      error(
-        "MV11",
-        "@EffectHandler ${effect.simpleName} for route $routeFq has nav parameter type " +
-          "(${effect.navParamTypeFq}), which is not this route's " +
-          "navigator ($navigatorTypeFq); the generated ${effect.simpleName}(effects = …, nav = nav) " +
-          "call would fail with a type mismatch in GezginMviEntries.kt. Use `nav: ${x}Navigator`",
-      )
-      return null
-    }
-
-    // As in core mode, reject duplicate provideXEntry names within one package.
-    val provideKey = packageName to x
-    val previousProvideOwner = seenProvideNames[provideKey]
-    if (previousProvideOwner != null) {
-      error(
-        "SC6",
-        "$packageName generates provide${x}Entry() from multiple functions: " +
-          "$previousProvideOwner, $fnName; route names resolve to the same derived 'X' (${x})",
-      )
-      return null
-    }
-    seenProvideNames[provideKey] = fnName
-
-    return EntryFunctionModel(
-      packageName = packageName,
-      functionSimpleName = fnName,
-      kind = kind,
-      routeFq = routeFq,
-      hasRouteParam = false,
-      hasNavParam = false,
-      routeInModel = routeModel != null,
-      routePackageName = routeDecl.packageName.asString(),
-      noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
-      x = x,
-      mvi =
-        MviEntryModel(
-          vm = vm,
-          effectFunSimpleName = effect?.simpleName,
-          effectFunPackageName = effect?.packageName,
-          effectFlowParamName = effect?.flowParamName,
-          effectHasNavParam = effect?.hasNavParam ?: false,
-          effectHasIntentParam = effect?.hasIntentParam ?: false,
-          topBar = topBar,
-          bottomBar = bottomBar,
-          roleExtraParams = roleExtras,
-          resolverExtraParams = resolverExtras,
-        ),
-    )
-  }
-
-  /** One route-explicit effect binder, resolved before MVI-entry wiring. */
-  private data class EffectFun(
-    val simpleName: String,
-    val packageName: String,
-    /** Generics-preserving effect type used to join the binder with its ViewModel. */
-    val effectTypeName: TypeName?,
-    /** Name of the `Flow<E>` parameter, or null when the binder has none. */
-    val flowParamName: String?,
-    val hasNavParam: Boolean,
-    val hasIntentParam: Boolean,
-    val intentTypeName: TypeName?,
-    /** Resolved nav FQ, or the declared simple name for a same-round error type. */
-    val navParamTypeFq: String?,
-    /** `true` when [navParamTypeFq] is a same-module declared name rather than a resolved FQ. */
-    val navParamIsError: Boolean,
-    val routeFq: String,
-  )
-
-  private enum class ChromeKind(
-    val annotationFq: String,
-    val annotationName: String,
-    val duplicateCode: String,
-  ) {
-    TOP(TOP_BAR_FQ, "TopBar", "MV19"),
-    BOTTOM(BOTTOM_BAR_FQ, "BottomBar", "MV20"),
-  }
-
-  private data class ChromeFun(
-    val simpleName: String,
-    val packageName: String,
-    val routeFq: String,
-    val kind: ChromeKind,
-    val stateTypeName: TypeName,
-    val intentTypeName: TypeName,
-  )
-
-  /** Reads temporary chrome strictly by explicit route; no State/Intent inference is permitted. */
-  private fun readChromeFuns(): List<ChromeFun> {
-    val chrome =
-      ChromeKind.entries.flatMap { kind ->
-        resolver
-          .getSymbolsWithAnnotation(kind.annotationFq)
-          .filterIsInstance<KSFunctionDeclaration>()
-          .distinctBy { it.declarationIdentity() }
-          .flatMap { fn ->
-            fn.annotations
-              .filter { it.fqName() == kind.annotationFq }
-              .mapNotNull { annotation -> readChromeFun(fn, annotation, kind) }
-          }
-          .toList()
-      }
-
-    chrome
-      .groupBy { it.kind to it.routeFq }
-      .forEach { (_, providers) ->
-        if (providers.size > 1) {
-          val first = providers.first()
-          error(
-            first.kind.duplicateCode,
-            "route ${first.routeFq} has multiple @${first.kind.annotationName} providers: " +
-              providers.joinToString { it.simpleName },
-          )
-        }
-      }
-    return chrome
-  }
-
-  private fun readChromeFun(
-    fn: KSFunctionDeclaration,
-    annotation: KSAnnotation,
-    kind: ChromeKind,
-  ): ChromeFun? {
-    val simpleName = fn.simpleName.asString()
-    val routeFq = annotation.classArg("route")?.declaration?.qualifiedName?.asString()
-    if (routeFq == null) {
-      error("MV21", "@${kind.annotationName} $simpleName has an unresolved route declaration")
-      return null
-    }
-
-    val stateParam = fn.parameters.firstOrNull { it.name?.asString() == "state" }
-    val onIntentParam = fn.parameters.firstOrNull { it.name?.asString() == "onIntent" }
-    val unsupported = fn.parameters.filter { it != stateParam && it != onIntentParam }
-    if (stateParam == null || onIntentParam == null || unsupported.isNotEmpty()) {
-      error(
-        "MV22",
-        "@${kind.annotationName} $simpleName for route $routeFq must declare exactly " +
-          "(state, onIntent); unsupported parameters: " +
-          unsupported.joinToString { it.name?.asString().orEmpty() }.ifEmpty { "none" },
-      )
-      return null
-    }
-
-    val onIntentType = onIntentParam.type.resolve()
-    val returnsUnit = onIntentType.arguments.getOrNull(1)?.type?.resolve()?.fqOf() == UNIT_FQ
-    val intentType = onIntentType.arguments.getOrNull(0)?.type?.resolve()
-    if (
-      onIntentType.declaration.qualifiedName?.asString() != FUNCTION1_FQ ||
-        !returnsUnit ||
-        intentType == null
-    ) {
-      error(
-        "MV22",
-        "@${kind.annotationName} $simpleName for route $routeFq has invalid onIntent type " +
-          "(${onIntentType.fqOf()}); expected (Intent) -> Unit",
-      )
-      return null
-    }
-
-    return ChromeFun(
-      simpleName = simpleName,
-      packageName = fn.packageName.asString(),
-      routeFq = routeFq,
-      kind = kind,
-      stateTypeName = stateParam.type.resolve().toTypeName(),
-      intentTypeName = intentType.toTypeName(),
-    )
-  }
-
-  private fun validateChromeProvider(
-    chrome: ChromeFun?,
-    routeFq: String,
-    vm: ViewModelModel,
-  ): MviChromeProviderModel? {
-    if (chrome == null) return null
-    if (chrome.stateTypeName != vm.stateTypeName) {
-      error(
-        "MV22",
-        "@${chrome.kind.annotationName} ${chrome.simpleName} for route $routeFq has state type " +
-          "${chrome.stateTypeName}, but ${vm.vmSimpleName} declares ${vm.stateTypeName}",
-      )
-      return null
-    }
-    if (chrome.intentTypeName != vm.intentTypeName) {
-      error(
-        "MV22",
-        "@${chrome.kind.annotationName} ${chrome.simpleName} for route $routeFq has onIntent type " +
-          "${chrome.intentTypeName}, but ${vm.vmSimpleName} declares ${vm.intentTypeName}",
-      )
-      return null
-    }
-    return MviChromeProviderModel(chrome.simpleName, chrome.packageName)
-  }
-
-  /** Reads route-explicit handlers and rejects duplicate bindings for one route. */
-  private fun readEffectFuns(): List<EffectFun> {
-    val explicit =
-      resolver
-        .getSymbolsWithAnnotation(EFFECT_HANDLER_FQ)
-        .filterIsInstance<KSFunctionDeclaration>()
-        .distinctBy { it.declarationIdentity() }
-        .flatMap { fn ->
-          fn.annotations
-            .filter { it.fqName() == EFFECT_HANDLER_FQ }
-            .mapNotNull { annotation ->
-              val routeFq = annotation.classArg("route")?.declaration?.qualifiedName?.asString()
-              if (routeFq == null) {
-                error(
-                  "MV15",
-                  "@EffectHandler ${fn.simpleName.asString()} has an unresolved route declaration",
-                )
-                null
-              } else {
-                readEffectFun(fn, routeFq)
-              }
-            }
-        }
-        .toList()
-
-    explicit
-      .groupBy { it.routeFq }
-      .forEach { (routeFq, handlers) ->
-        if (handlers.size > 1) {
-          error(
-            "MV14",
-            "route $routeFq has multiple @EffectHandler functions: ${handlers.joinToString { it.simpleName }}",
-          )
-        }
-      }
-
-    return explicit
-  }
-
-  private fun readEffectFun(fn: KSFunctionDeclaration, routeFq: String): EffectFun {
-    val simpleName = fn.simpleName.asString()
-    val flowParam =
-      fn.parameters.firstOrNull { p ->
-        p.type.resolve().declaration.qualifiedName?.asString() == FLOW_FQ
-      }
-    val effectArgType = flowParam?.type?.resolve()?.arguments?.firstOrNull()?.type?.resolve()
-    val navParam = fn.parameters.firstOrNull { it.name?.asString() == "nav" }
-    val navParamType = navParam?.type?.resolve()
-    val intentParam = fn.parameters.firstOrNull { it.name?.asString() == "onIntent" }
-    val intentParamType = intentParam?.type?.resolve()
-    val intentReturnsUnit =
-      intentParamType?.arguments?.getOrNull(1)?.type?.resolve()?.fqOf() == UNIT_FQ
-    val intentArgType = intentParamType?.arguments?.getOrNull(0)?.type?.resolve()
-    val validIntentParam =
-      intentParam == null ||
-        (intentParamType?.declaration?.qualifiedName?.asString() == FUNCTION1_FQ &&
-          intentReturnsUnit &&
-          intentArgType != null)
-    if (!validIntentParam) {
-      error(
-        "MV23",
-        "@EffectHandler $simpleName for route $routeFq has invalid onIntent " +
-          "parameter; expected (Intent) -> Unit",
-      )
-    }
-    val extraParams =
-      fn.parameters.filter { it != flowParam && it != navParam && it != intentParam }
-    if (extraParams.isNotEmpty()) {
-      error(
-        "MV11",
-        "@EffectHandler $simpleName for route $routeFq has unsupported " +
-          "extra parameter(s): ${extraParams.joinToString { it.name?.asString().orEmpty() }}",
-      )
-    }
-    if (effectArgType == null) {
-      error(
-        "MV6",
-        "@EffectHandler $simpleName for route $routeFq does not take a Flow<E> parameter",
-      )
-    }
-    return EffectFun(
-      simpleName = simpleName,
-      packageName = fn.packageName.asString(),
-      effectTypeName = effectArgType?.toTypeName(),
-      flowParamName = flowParam?.name?.asString(),
-      hasNavParam = navParam != null,
-      hasIntentParam = intentParam != null,
-      intentTypeName = intentArgType?.toTypeName(),
-      navParamTypeFq =
-        if (navParamType?.isError == true) {
-          navParamType.toString().removeSurrounding("<ERROR TYPE: ", ">")
-        } else {
-          navParamType?.fqOf()
-        },
-      navParamIsError = navParamType?.isError ?: false,
-      routeFq = routeFq,
     )
   }
 

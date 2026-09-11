@@ -8,7 +8,6 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.squareup.kotlinpoet.ksp.writeTo
 import dev.gezgin.processor.codegen.EntryCodegen
 import dev.gezgin.processor.codegen.FragmentEntryCodegen
-import dev.gezgin.processor.codegen.MviEntryCodegen
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.NavigatorProbe
 import dev.gezgin.processor.codegen.TestApiCodegen
@@ -21,8 +20,6 @@ import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.RouteModel
 import dev.gezgin.processor.model.dumpText
-import dev.gezgin.processor.mvi.ViewModelModelReader
-import dev.gezgin.processor.mvi.dumpMviText
 import dev.gezgin.processor.wrapper.SlotProviderReader
 import dev.gezgin.processor.wrapper.WrapperBinder
 import dev.gezgin.processor.wrapper.WrapperModelReader
@@ -138,13 +135,8 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
         val (wrapperBindings, bindOk) =
           WrapperBinder(environment.logger).bind(wrapperResult.wrappers, slotProviders)
 
-        // Read `@MviViewModel` classes first so MVI-mode `@Screen(state,onIntent)` content can pair
-        // with its same-module ViewModel by route. Reading, validation, and dumps run
-        // unconditionally; only entry generation is gated by `gezgin.emitEntries` below.
-        val (vmModels, vmOk) = ViewModelModelReader(resolver, environment.logger).read()
         val (entries, entriesOk) =
-          EntryModelReader(resolver, environment.logger, model, vmModels, wrapperBindings.keys)
-            .read()
+          EntryModelReader(resolver, environment.logger, model, wrapperBindings.keys).read()
 
         // The `@FragmentScreen` reader cross-checks each route against the existing entries so the
         // same route cannot be registered by both a Fragment and `@Screen`/MVI content (`FS3`).
@@ -165,17 +157,6 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
             }
         }
 
-        if (environment.options["gezgin.dumpMvi"].toBoolean()) {
-          environment.codeGenerator
-            .createNewFile(
-              dependencies = Dependencies.ALL_FILES,
-              packageName = "",
-              fileName = "GezginMviDump",
-              extensionName = "txt",
-            )
-            .use { it.write(dumpMviText(vmModels, entries).toByteArray()) }
-        }
-
         if (environment.options["gezgin.dumpFragment"].toBoolean()) {
           environment.codeGenerator
             .createNewFile(
@@ -190,12 +171,12 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
         // `provideXEntry` codegen is enabled by default. The opt-out supports kctfork when the
         // Compose compiler plugin is absent and the emitted body would fail the backend. Entry
         // generation is independent of graph ownership: a feature module qualifies each navigator
-        // factory against the route package, not its own. Core mode writes `GezginEntries.kt`.
-        // MVI mode writes `GezginMviEntries.kt` in the same package but a distinct file; `SC6`
-        // keeps names unique. `fragOk` joins the gate so an FS
+        // factory against the route package, not its own. A wrapped route writes
+        // `GezginWrapperEntries.kt` and an unwrapped one `GezginEntries.kt` — the two sets are
+        // disjoint, so a route is never registered twice. `fragOk` joins the gate so an FS
         // guardrail violation fails the build instead of emitting the surviving registration.
         val emitEntries = environment.options["gezgin.emitEntries"]?.toBooleanStrictOrNull() ?: true
-        if (emitEntries && vmOk && entriesOk && fragOk && wrapperOk && providersOk && bindOk) {
+        if (emitEntries && entriesOk && fragOk && wrapperOk && providersOk && bindOk) {
           val boundEntries = entries.map { it.copy(wrapper = wrapperBindings[it.routeFq]) }
           val wrappedEntries = boundEntries.filter { it.wrapper != null }
           if (wrappedEntries.isNotEmpty()) {
@@ -203,15 +184,9 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
               it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
             }
           }
-          val coreEntries = boundEntries.filter { it.mvi == null && it.wrapper == null }
+          val coreEntries = boundEntries.filter { it.wrapper == null }
           if (coreEntries.isNotEmpty()) {
             EntryCodegen.generate(coreEntries).forEach {
-              it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
-            }
-          }
-          val mviEntries = boundEntries.filter { it.mvi != null && it.wrapper == null }
-          if (mviEntries.isNotEmpty()) {
-            MviEntryCodegen.generate(mviEntries).forEach {
               it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
             }
           }
