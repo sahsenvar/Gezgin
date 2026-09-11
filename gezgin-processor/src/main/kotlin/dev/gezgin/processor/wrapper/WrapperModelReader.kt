@@ -16,7 +16,6 @@ internal const val SCREEN_WRAPPER_FQ = "dev.gezgin.core.annotation.ScreenWrapper
 internal const val SCREEN_SLOT_FQ = "dev.gezgin.core.annotation.ScreenSlot"
 internal const val FILLED_BY_FQ = "dev.gezgin.core.annotation.FilledBy"
 internal const val WRAPPER_ROUTE_FQ = "dev.gezgin.core.Route"
-private const val EXTENSION_FUNCTION_TYPE_FQ = "kotlin.ExtensionFunctionType"
 
 internal data class WrapperReadResult(
   val wrappers: List<WrapperModel>,
@@ -147,8 +146,7 @@ internal class WrapperModelReader(
           parameterName = parameter.name!!.asString(),
           markerFq = markerFq,
           hasDefault = parameter.hasDefault,
-          receiver = type.functionReceiver()?.toSlotType(typeParameterNames),
-          parameters = type.functionParameters().map { it.toSlotType(typeParameterNames) },
+          parameters = type.functionArguments().map { it.toSlotType(typeParameterNames) },
         )
       }
 
@@ -191,17 +189,9 @@ private fun KSType.isRouteKClass(): Boolean {
   } == true
 }
 
-private fun KSType.isExtensionFunctionType(): Boolean =
-  annotations.any { it.isNamed(EXTENSION_FUNCTION_TYPE_FQ) }
-
-private fun KSType.functionReceiver(): KSType? =
-  if (isExtensionFunctionType()) arguments.firstOrNull()?.type?.resolve() else null
-
-/** Function-type arguments are `[receiver?] + parameters + returnType`. */
-private fun KSType.functionParameters(): List<KSType> {
-  val withoutReturn = arguments.dropLast(1).mapNotNull { it.type?.resolve() }
-  return if (isExtensionFunctionType()) withoutReturn.drop(1) else withoutReturn
-}
+/** Every function-type argument except the return type — a receiver is simply the first one. */
+private fun KSType.functionArguments(): List<KSType> =
+  arguments.dropLast(1).mapNotNull { it.type?.resolve() }
 
 private fun KSType.functionReturn(): KSType? = arguments.lastOrNull()?.type?.resolve()
 
@@ -212,7 +202,7 @@ internal fun KSType.toSlotType(typeParameterNames: List<String>): SlotType {
   }
   if (isFunctionType) {
     return SlotType.Lambda(
-      parameters = functionParameters().map { it.toSlotType(typeParameterNames) },
+      parameters = functionArguments().map { it.toSlotType(typeParameterNames) },
       returnType =
         functionReturn()?.toSlotType(typeParameterNames)
           ?: SlotType.Concrete("kotlin.Unit", com.squareup.kotlinpoet.UNIT),

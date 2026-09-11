@@ -95,9 +95,8 @@ internal class WrapperBinder(private val logger: KSPLogger) {
                 "${provider.packageName}.${provider.functionSimpleName} does not match slot " +
                   "'${slot.parameterName}' of " +
                   "${wrapper.packageName}.${wrapper.functionSimpleName}: the slot expects " +
-                  "receiver=${slot.receiver} params=${slot.parameters}, the provider has " +
-                  "receiver=${provider.receiverTypeName} " +
-                  "params=${provider.slotParams.map { it.typeName }}",
+                  "${slot.parameters} (a receiver counts as the first entry), the provider has " +
+                  "${provider.allParameterTypes()}",
               )
               return null
             }
@@ -134,24 +133,26 @@ internal class WrapperBinder(private val logger: KSPLogger) {
     )
   }
 
+  /**
+   * The provider's receiver counts as its first parameter, mirroring how a slot's function type
+   * carries its receiver as the first type argument. A slot that declares a receiver therefore
+   * requires an extension provider, and vice versa: the slot's signature IS the content function's
+   * signature.
+   */
   private fun unifySlot(
     slot: WrapperSlotModel,
     provider: SlotProviderModel,
     bindings: MutableMap<String, TypeName>,
   ): Boolean {
-    val receiverOk =
-      when {
-        slot.receiver == null && provider.receiverTypeName == null -> true
-        slot.receiver != null && provider.receiverTypeName != null ->
-          SlotUnifier.unify(slot.receiver, provider.receiverTypeName, bindings)
-        else -> false
-      }
-    if (!receiverOk) return false
-    if (slot.parameters.size != provider.slotParams.size) return false
-    return slot.parameters.zip(provider.slotParams).all { (slotType, providerParam) ->
-      SlotUnifier.unify(slotType, providerParam.typeName, bindings)
+    val providerTypes = provider.allParameterTypes()
+    if (slot.parameters.size != providerTypes.size) return false
+    return slot.parameters.zip(providerTypes).all { (slotType, providerType) ->
+      SlotUnifier.unify(slotType, providerType, bindings)
     }
   }
+
+  private fun SlotProviderModel.allParameterTypes(): List<TypeName> =
+    listOfNotNull(receiverTypeName) + slotParams.map { it.typeName }
 
   private fun error(code: String, message: String) {
     logger.error("[$code] $message")

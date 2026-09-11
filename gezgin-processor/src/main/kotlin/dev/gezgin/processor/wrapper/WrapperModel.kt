@@ -26,12 +26,19 @@ internal sealed interface SlotType {
 /** An application annotation carrying `@ScreenSlot`. */
 internal data class SlotMarkerModel(val annotationFq: String, val routeParamName: String)
 
-/** One `@FilledBy` parameter of a `@ScreenWrapper` function. */
+/**
+ * One `@FilledBy` parameter of a `@ScreenWrapper` function.
+ *
+ * [parameters] holds EVERY type argument of the slot's function type except the return type, so a
+ * receiver — `ColumnScope.(S, (I) -> Unit) -> Unit` — is simply its first entry. KSP does not
+ * reliably mark a `@Composable` extension function type with `@ExtensionFunctionType`, so the
+ * receiver is not split out; the provider side counts its own receiver the same way, which makes
+ * the comparison symmetric without depending on that annotation.
+ */
 internal data class WrapperSlotModel(
   val parameterName: String,
   val markerFq: String,
   val hasDefault: Boolean,
-  val receiver: SlotType?,
   val parameters: List<SlotType>,
 )
 

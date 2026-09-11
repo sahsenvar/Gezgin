@@ -15,7 +15,7 @@ internal fun dumpWrapperText(
     wrapper.slots.forEach { slot ->
       appendLine(
         "  slot ${slot.parameterName} marker=${slot.markerFq} default=${slot.hasDefault} " +
-          "receiver=${slot.receiver} params=${slot.parameters}"
+          "params=${slot.parameters}"
       )
     }
   }
