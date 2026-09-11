@@ -1,5 +1,3 @@
-@file:OptIn(dev.gezgin.core.ExperimentalGezginMigrationApi::class)
-
 package dev.gezgin.sample.shopr.screen_feed
 
 import androidx.compose.foundation.layout.Arrangement
@@ -12,9 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.gezgin.mvi.annotation.BottomBar
-import dev.gezgin.mvi.annotation.TopBar
 import dev.gezgin.sample.shopr.nav.HomeGraph
+import dev.gezgin.sample.shopr.ui.BottomBar
+import dev.gezgin.sample.shopr.ui.TopBar
 
 @TopBar(HomeGraph.Feed::class)
 @Composable

@@ -5,12 +5,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.gezgin.sample.hello.CONTACTS
 import dev.gezgin.sample.hello.nav.HelloGraph
 import dev.gezgin.sample.hello.ui.BaseViewModel
+import dev.gezgin.sample.hello.ui.EffectSink
 import dev.gezgin.sample.hello.ui.ViewModelOf
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -22,13 +21,13 @@ class ContactDetailViewModel(contactId: String) :
   private val _uiState = MutableStateFlow(ContactDetailUiState(contact.name, contact.title))
   override val uiState: StateFlow<ContactDetailUiState> = _uiState.asStateFlow()
 
-  private val _effects = MutableSharedFlow<ContactDetailEffect>(extraBufferCapacity = 8)
-  override val effects: Flow<ContactDetailEffect> = _effects.asSharedFlow()
+  private val _effects = EffectSink<ContactDetailEffect>()
+  override val effects: Flow<ContactDetailEffect> = _effects.flow
 
   override fun onIntent(intent: ContactDetailIntent) {
     when (intent) {
       ContactDetailIntent.ToggleStar -> _uiState.update { it.copy(starred = !it.starred) }
-      ContactDetailIntent.Back -> _effects.tryEmit(ContactDetailEffect.BackToList)
+      ContactDetailIntent.Back -> _effects.send(ContactDetailEffect.BackToList)
     }
   }
 }

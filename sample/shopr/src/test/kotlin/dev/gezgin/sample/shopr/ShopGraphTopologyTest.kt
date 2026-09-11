@@ -70,9 +70,9 @@ class ShopGraphTopologyTest {
   @Test
   fun `shared Feed screen iki route-local entry ve navigator uretir`() {
     val generatedMethods =
-      Class.forName("dev.gezgin.sample.shopr.screen_feed.GezginMviEntriesKt").declaredMethods.map {
-        it.name
-      }
+      Class.forName("dev.gezgin.sample.shopr.screen_feed.GezginWrapperEntriesKt")
+        .declaredMethods
+        .map { it.name }
 
     assertTrue("provideFeedEntry" in generatedMethods)
     assertTrue("provideFeaturedFeedEntry" in generatedMethods)
@@ -103,11 +103,12 @@ class ShopGraphTopologyTest {
   @Test
   fun `route-local effect handlerlar farkli typed navigator hedeflerine gider`() {
     val feedRaw = RawNavigator(start = HomeGraph.Feed, topology = gezginTopology)
-    handleFeedEffect(FeedEffect.NavigateToCatalog, feedRaw.feedNavigator(entryId = 1L))
+    handleFeedEffect(FeedEffect.NavigateToCatalog, {}, feedRaw.feedNavigator(entryId = 1L))
 
     val featuredRaw = RawNavigator(start = HomeGraph.FeaturedFeed, topology = gezginTopology)
     handleFeaturedFeedEffect(
       FeaturedFeedEffect.NavigateToFeaturedProduct("featured"),
+      {},
       featuredRaw.featuredFeedNavigator(entryId = 1L),
     )
 
@@ -190,17 +191,17 @@ class ShopGraphTopologyTest {
     val catalogNav = raw.catalogNavigator(entryId = 1L)
     val messages = mutableListOf<String>()
 
-    handleCatalogEffect(CatalogEffect.LaunchCheckout, catalogNav, messages::add)
-    handleCartEffect(CartEffect.NavigateToPayment, raw.cartNavigator(entryId = 2L), messages::add)
+    handleCatalogEffect(CatalogEffect.LaunchCheckout, messages::add, catalogNav)
+    handleCartEffect(CartEffect.NavigateToPayment, messages::add, raw.cartNavigator(entryId = 2L))
     val result = async { catalogNav.checkoutResults.first() }
     handlePaymentEffect(
       PaymentEffect.CompletePayment(OrderId(value = "ORD-1001")),
-      raw.paymentNavigator(entryId = 3L),
       messages::add,
+      raw.paymentNavigator(entryId = 3L),
     )
     val viewModel = CatalogViewModel()
     viewModel.onIntent(CatalogIntent.CheckoutResult(result.await()))
-    handleCatalogEffect(viewModel.effects.first(), catalogNav, messages::add)
+    handleCatalogEffect(viewModel.effects.first(), messages::add, catalogNav)
 
     assertTrue(messages.isEmpty())
     assertEquals(listOf<Route>(HomeGraph.OrderPlaced(orderId = "ORD-1001")), raw.backStack.value)
@@ -213,11 +214,7 @@ class ShopGraphTopologyTest {
     raw.catalogNavigator(entryId = 2L).replaceToOrderPlaced(orderId = "order-42")
     val orderPlacedNav = raw.orderPlacedNavigator(entryId = 3L)
 
-    handleOrderPlacedEffect(
-      OrderPlacedEffect.ShowDetails(orderId = "order-42"),
-      orderPlacedNav,
-      onMessage = {},
-    )
+    handleOrderPlacedEffect(OrderPlacedEffect.ShowDetails(orderId = "order-42"), {}, orderPlacedNav)
     assertEquals(
       listOf<Route>(
         HomeGraph.Feed,
@@ -228,7 +225,7 @@ class ShopGraphTopologyTest {
     )
 
     raw.back()
-    handleOrderPlacedEffect(OrderPlacedEffect.BackToFeed, orderPlacedNav, onMessage = {})
+    handleOrderPlacedEffect(OrderPlacedEffect.BackToFeed, {}, orderPlacedNav)
 
     assertEquals(listOf<Route>(HomeGraph.Feed), raw.backStack.value)
   }

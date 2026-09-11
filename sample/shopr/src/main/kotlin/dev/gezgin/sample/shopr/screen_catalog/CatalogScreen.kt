@@ -1,5 +1,6 @@
 package dev.gezgin.sample.shopr.screen_catalog
 
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,7 +10,7 @@ import dev.gezgin.sample.shopr.ui.ScreenChrome
 
 @Screen(Catalog::class)
 @Composable
-fun CatalogScreen(state: CatalogUiState, onIntent: (CatalogIntent) -> Unit) {
+fun ColumnScope.CatalogScreen(state: CatalogUiState, onIntent: (CatalogIntent) -> Unit) {
   ScreenChrome(title = "Catalog") {
     Button(onClick = { onIntent(CatalogIntent.OpenProduct) }) {
       Text("Ürüne git (${state.featuredSku})")

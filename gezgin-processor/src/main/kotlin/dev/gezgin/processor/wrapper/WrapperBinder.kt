@@ -31,15 +31,23 @@ internal class WrapperBinder(private val logger: KSPLogger) {
 
     routesWithContent.sorted().forEach { routeFq ->
       val routeProviders = providersByRoute[routeFq].orEmpty().associateBy { it.markerFq }
-      val candidates = wrappers.mapNotNull { tryBind(it, routeFq, routeProviders) }
+      // A route whose kind no wrapper declares a content slot for is simply unwrapped — a @Dialog
+      // in an app whose only wrapper takes @Screen content is not a mistake.
+      val applicable =
+        wrappers.filter { wrapper ->
+          wrapper.contentSlot?.markerFq?.let { it in routeProviders.keys } == true
+        }
+      if (applicable.isEmpty()) return@forEach
+      val candidates = applicable.mapNotNull { tryBind(it, routeFq, routeProviders) }
       when (candidates.size) {
         1 -> bindings[routeFq] = candidates.single()
         0 ->
           error(
             "SW6",
-            "route $routeFq matches none of the @ScreenWrapper functions in scope " +
-              "(${wrappers.joinToString { "${it.packageName}.${it.functionSimpleName}" }}); check " +
-              "the screen's receiver and parameter types against each wrapper's content slot",
+            "route $routeFq matches none of the @ScreenWrapper functions that declare a content " +
+              "slot for its kind " +
+              "(${applicable.joinToString { "${it.packageName}.${it.functionSimpleName}" }}); " +
+              "check the screen's receiver and parameter types against the wrapper's content slot",
           )
         else ->
           error(

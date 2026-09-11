@@ -1,5 +1,6 @@
 package dev.gezgin.sample.shopr.screen_cart
 
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,7 +10,7 @@ import dev.gezgin.sample.shopr.ui.ScreenChrome
 
 @Screen(Cart::class)
 @Composable
-fun CartScreen(state: CartUiState, onIntent: (CartIntent) -> Unit) {
+fun ColumnScope.CartScreen(state: CartUiState, onIntent: (CartIntent) -> Unit) {
   ScreenChrome(title = "Cart (${state.itemCount})") {
     Button(onClick = { onIntent(CartIntent.Checkout) }) { Text("Ödemeye geç") }
   }

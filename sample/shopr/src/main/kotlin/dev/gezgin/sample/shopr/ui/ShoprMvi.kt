@@ -1,4 +1,4 @@
-package dev.gezgin.sample.hello.ui
+package dev.gezgin.sample.shopr.ui
 
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.channels.Channel
@@ -6,18 +6,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 
-interface UiState
-
-interface UiIntent
-
-interface UiEvent
-
 /**
- * The application's own MVI base. Gezgin knows none of these types: the wrapper below is what binds
- * them to a screen, and swapping this base for Orbit, Molecule or a plain StateFlow changes nothing
- * in the library.
+ * Shopr's own MVI base. Unlike `sample/hello` it puts no marker interfaces on S/I/E — a wrapper's
+ * type parameters need no bounds at all, and leaving them off keeps existing state, intent and
+ * effect types untouched.
  */
-abstract class BaseViewModel<S : UiState, I : UiIntent, E : UiEvent> : ViewModel() {
+abstract class BaseViewModel<S, I, E> : ViewModel() {
   abstract val uiState: StateFlow<S>
   abstract val effects: Flow<E>
 
