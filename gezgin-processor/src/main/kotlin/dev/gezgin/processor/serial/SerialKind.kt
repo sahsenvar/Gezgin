@@ -16,6 +16,6 @@ internal sealed interface SerialKind {
 
   data class ListOf(val element: SerialKind) : SerialKind
 
-  /** No serializer can be referenced; reported as `SZ1`. */
+  /** No serializer can be referenced; validation reports the unsupported reason. */
   data class Unsupported(val reason: String) : SerialKind
 }
