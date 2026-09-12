@@ -1,61 +1,79 @@
 package dev.gezgin.processor
 
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.LIST
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.STRING
+import com.squareup.kotlinpoet.TypeName
 import dev.gezgin.processor.codegen.SerializerRef
 import dev.gezgin.processor.serial.SerialKind
 import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertContains
 
 class SerializerRefTest {
 
+  /**
+   * Renders the reference the way it actually reaches a generated file. Asserting on
+   * `CodeBlock.toString()` instead would miss the thing most likely to be wrong: an extension
+   * referenced without the import that makes it resolve.
+   */
+  private fun render(kind: SerialKind, typeName: TypeName, nullable: Boolean) =
+    FileSpec.builder("app", "Probe")
+      .addProperty(
+        PropertySpec.builder(
+            "ref",
+            ClassName("kotlinx.serialization", "KSerializer").parameterizedBy(STAR),
+          )
+          .initializer(SerializerRef.of(kind, typeName, nullable))
+          .build()
+      )
+      .build()
+      .toString()
+
   @Test
   fun `a builtin resolves through the builtins extension`() {
-    val ref = SerializerRef.of(SerialKind.Builtin("kotlin.String"), STRING, isNullable = false)
+    val file = render(SerialKind.Builtin("kotlin.String"), STRING, nullable = false)
 
-    assertEquals("kotlin.String.serializer()", ref.toString())
+    assertContains(file, "import kotlinx.serialization.builtins.serializer")
+    assertContains(file, "String.serializer()")
   }
 
   @Test
   fun `a nullable type wraps the reference`() {
-    val ref = SerializerRef.of(SerialKind.Builtin("kotlin.Int"), INT, isNullable = true)
+    val file = render(SerialKind.Builtin("kotlin.Int"), INT, nullable = true)
 
-    assertEquals("kotlin.Int.serializer().nullable", ref.toString())
+    assertContains(file, "import kotlinx.serialization.builtins.nullable")
+    assertContains(file, "Int.serializer().nullable")
   }
 
   @Test
   fun `a serializable class resolves through its companion`() {
-    val filter = ClassName("app", "Filter")
+    val file = render(SerialKind.SerializableClass, ClassName("app", "Filter"), nullable = false)
 
-    val ref = SerializerRef.of(SerialKind.SerializableClass, filter, isNullable = false)
-
-    assertEquals("app.Filter.serializer()", ref.toString())
+    assertContains(file, "Filter.serializer()")
   }
 
   @Test
   fun `a bare enum resolves to its generated serializer`() {
-    val sort = ClassName("app", "Sort")
+    val file = render(SerialKind.BareEnum, ClassName("app", "Sort"), nullable = false)
 
-    val ref = SerializerRef.of(SerialKind.BareEnum, sort, isNullable = false)
-
-    assertEquals("app.SortGezginSerializer", ref.toString())
+    assertContains(file, "SortGezginSerializer")
   }
 
   @Test
   fun `a list wraps its element reference`() {
-    val ref =
-      SerializerRef.of(
+    val file =
+      render(
         SerialKind.ListOf(SerialKind.Builtin("kotlin.String")),
         LIST.parameterizedBy(STRING),
-        isNullable = false,
+        nullable = false,
       )
 
-    assertEquals(
-      "kotlinx.serialization.builtins.ListSerializer(kotlin.String.serializer())",
-      ref.toString(),
-    )
+    assertContains(file, "import kotlinx.serialization.builtins.ListSerializer")
+    assertContains(file, "ListSerializer(String.serializer())")
   }
 }

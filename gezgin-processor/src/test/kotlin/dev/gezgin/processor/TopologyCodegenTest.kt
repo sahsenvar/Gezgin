@@ -11,6 +11,7 @@ import dev.gezgin.processor.CompileHarness.generatedSourceFor
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.reflect.KClass
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -225,10 +226,10 @@ class TopologyCodegenTest {
 
   @Test
   fun `topology compiles when a GoForResult result type is a kotlinx builtin (Boolean)`() {
-    // ForgotPasswordDialog : ResultRoute<Boolean> — a BUILTIN result type has no companion
-    // `Boolean.serializer()`, so the topology must reach it through the reified
-    // `kotlinx.serialization.serializer<Boolean>()` helper. Regression for the sample showcase's
-    // ResultRoute<Boolean>/<String> screen-mode results (spec §6).
+    // ForgotPasswordDialog : ResultRoute<Boolean> — Boolean's builtins serializer is an extension,
+    // so topology should emit the explicit `Boolean.serializer()` reference.
+    // Regression for the sample showcase's ResultRoute<Boolean>/<String> screen-mode results (spec
+    // §6).
     val source =
       """
           package dev.gezgin.builtinresult
@@ -257,7 +258,71 @@ class TopologyCodegenTest {
 
     val topologyText = result.generatedSourceFor("GezginGenerated.kt")?.readText()
     assertNotNull(topologyText, "GezginGenerated.kt must be emitted")
-    assertTrue("serializer<Boolean>()" in topologyText, topologyText)
+    assertContains(topologyText, "Boolean.serializer()")
+  }
+
+  @Test
+  fun `the module registers a generated serializer for a route without @Serializable`() {
+    val result =
+      compileGezgin(
+        SourceFile.kotlin(
+          "Mixed.kt",
+          """
+          package app
+
+          import dev.gezgin.core.Route
+          import dev.gezgin.core.annotation.GoTo
+          import dev.gezgin.core.annotation.NavGraph
+          import kotlinx.serialization.Serializable
+
+          @NavGraph
+          sealed interface AppGraph : Route {
+            @GoTo(Plain::class) @Serializable data object Annotated : AppGraph
+
+            data class Plain(val id: String) : AppGraph
+          }
+          """
+            .trimIndent(),
+        ),
+        kspArgs = mapOf("gezgin.emitEntries" to "false"),
+      )
+
+    val text = result.generatedSourceFor("GezginSerializers.kt")!!.readText()
+    assertContains(text, "subclass(AppGraph.Plain::class, PlainGezginSerializer)")
+    assertContains(text, "subclass(AppGraph.Annotated::class)")
+  }
+
+  @Test
+  fun `a result edge references an explicit serializer rather than the reified lookup`() {
+    val result =
+      compileGezgin(
+        SourceFile.kotlin(
+          "Results.kt",
+          """
+          package app
+
+          import dev.gezgin.core.ResultRoute
+          import dev.gezgin.core.Route
+          import dev.gezgin.core.annotation.GoForResult
+          import dev.gezgin.core.annotation.NavGraph
+
+          enum class Sort { A, B }
+
+          @NavGraph
+          sealed interface AppGraph : Route {
+            @GoForResult(Picker::class, name = "pickSort") data object Home : AppGraph
+
+            data class Picker(val current: String) : AppGraph, ResultRoute<Sort>
+          }
+          """
+            .trimIndent(),
+        ),
+        kspArgs = mapOf("gezgin.emitEntries" to "false"),
+      )
+
+    val text = result.generatedSourceFor("GezginGenerated.kt")!!.readText()
+    assertContains(text, "SortGezginSerializer")
+    assertFalse(text.contains("serializer<"), text)
   }
 
   @Test
@@ -282,7 +347,7 @@ class TopologyCodegenTest {
     // KotlinPoet only auto-imports top-level types, so a nested route like `Feed` (nested in
     // `HomeGraph`) is emitted qualified by its enclosing simple name(s) — `HomeGraph.Feed`, not
     // a bare `Feed` — which is also the only form that would actually resolve/compile here.
-    assertTrue("subclass(HomeGraph.Feed::class)" in text, text)
+    assertTrue("subclass(HomeGraph.Feed::class, FeedGezginSerializer)" in text, text)
     assertFalse("BasePicker" in text, text)
   }
 

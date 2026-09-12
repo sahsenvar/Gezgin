@@ -28,24 +28,15 @@ private val JSON = ClassName(JSON_PKG, "Json")
 private val JSON_FUN = MemberName(JSON_PKG, "Json")
 
 /**
- * The reified `kotlinx.serialization.serializer<T>()` lookup — used instead of `T.serializer()` so
- * a BUILTIN result type (`ResultRoute<Boolean>`/`<String>`/`<Int>` …) resolves too: those have no
- * companion `serializer()`, only the `kotlinx.serialization.builtins` extensions, whereas the
- * reified top-level helper covers builtin AND `@Serializable` types uniformly with one import.
- */
-private val SERIALIZER = MemberName("kotlinx.serialization", "serializer")
-
-/**
  * Emits generated artifacts derived from a validated [GraphModel] via KotlinPoet.
  * - [generateTopology] → `GezginGenerated.kt`: the loadable, executable `GezginTopology` — safe to
  *   generate unconditionally, since every result type is serializable (either `@Serializable` or a
- *   kotlinx builtin), resolved uniformly through the reified [SERIALIZER] lookup.
+ *   kotlinx builtin), resolved through explicit [SerializerRef] references.
  * - [generateSerializers] → `GezginSerializers.kt`: the `SerializersModule` registering every
  *   concrete `dev.gezgin.core.Route` subtype for polymorphic serialization. Split into its own file
- *   (gated by the `gezgin.emitSerializers` KSP option, default `true`) purely so test compilations
- *   that can't wire the kotlinx-serialization compiler plugin can opt out of it without losing
- *   [generateTopology] coverage — `subclass(X::class)` needs no `.serializer()` call itself, but a
- *   *consumer* of the resulting module would.
+ *   (gated by the `gezgin.emitSerializers` KSP option, default `true`) independently so test
+ *   compilations that can't wire the kotlinx-serialization compiler plugin can opt out of module
+ *   emission without losing [generateTopology] coverage.
  *
  * Both files are emitted into [targetPackage] — the shortest common package prefix across every
  * graph/route in the model, computed via [ClassName.bestGuess]'s "lowercase = package segment,
@@ -139,7 +130,17 @@ internal object TopologyCodegen {
   fun generateSerializers(model: GraphModel, packageName: String): FileSpec {
     val polymorphicBody = CodeBlock.builder()
     model.routes.forEach { route ->
-      polymorphicBody.addStatement("%M(%T::class)", SUBCLASS, ClassName.bestGuess(route.fqName))
+      val routeClass = ClassName.bestGuess(route.fqName)
+      if (route.isSerializable) {
+        polymorphicBody.addStatement("%M(%T::class)", SUBCLASS, routeClass)
+      } else {
+        polymorphicBody.addStatement(
+          "%M(%T::class, %T)",
+          SUBCLASS,
+          routeClass,
+          RouteSerializerCodegen.serializerName(route, packageName),
+        )
+      }
     }
 
     val moduleInit =
@@ -210,20 +211,31 @@ internal object TopologyCodegen {
         .filter { it.kind == EdgeKind.GO_FOR_RESULT }
         .forEach { edge ->
           val id = edgeId(route.fqName, edge.targetFq, edge.name)
-          val resultTypeFq =
-            graphsByFq[edge.targetFq]?.resultTypeFq
-              ?: routesByFq[edge.targetFq]?.resultTypeFq
+          val result =
+            graphsByFq[edge.targetFq]?.let { it.resultTypeFq to it.resultTypeKind }
+              ?: routesByFq[edge.targetFq]?.let { it.resultTypeFq to it.resultTypeKind }
               ?: error(
                 "@GoForResult target ${edge.targetFq} (from ${route.fqName}) has no result " +
                   "type — should have been rejected by GezginValidator's E2 before codegen runs"
               )
+          val resultTypeFq =
+            result.first
+              ?: error(
+                "@GoForResult target ${edge.targetFq} (from ${route.fqName}) has no result " +
+                  "type — should have been rejected by GezginValidator's E2 before codegen runs"
+              )
+          val resultTypeKind =
+            result.second
+              ?: error(
+                "@GoForResult target ${edge.targetFq} (from ${route.fqName}) has no result kind " +
+                  "— should have been classified by ModelReader before codegen runs"
+              )
           builder.add(
-            "%S to %T(%S, %M<%T>()),\n",
+            "%S to %T(%S, %L),\n",
             id,
             EDGE_SPEC,
             id,
-            SERIALIZER,
-            ClassName.bestGuess(resultTypeFq),
+            SerializerRef.of(resultTypeKind, ClassName.bestGuess(resultTypeFq), isNullable = false),
           )
         }
     }

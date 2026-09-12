@@ -50,8 +50,8 @@ class RouteSerializerCodegenTest {
     val text = generated.readText()
     assertContains(text, "internal object DetailGezginSerializer : KSerializer<AppGraph.Detail>")
     assertContains(text, """buildClassSerialDescriptor("app.AppGraph.Detail")""")
-    assertContains(text, "kotlin.String.serializer()")
-    assertContains(text, "kotlin.String.serializer().nullable")
+    assertContains(text, "String.serializer()")
+    assertContains(text, "String.serializer().nullable")
     assertContains(text, "SortGezginSerializer")
     assertContains(text, "Filter.serializer()")
   }

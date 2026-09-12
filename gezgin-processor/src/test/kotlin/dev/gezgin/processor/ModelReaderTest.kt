@@ -304,7 +304,7 @@ class ModelReaderTest {
 
     val serializers = result.generatedSourceFor("GezginSerializers.kt")!!.readText()
     assertFalse("SharedBase" in serializers, serializers)
-    assertTrue("subclass(HomeGraph.Feed::class)" in serializers, serializers)
+    assertTrue("subclass(HomeGraph.Feed::class, FeedGezginSerializer)" in serializers, serializers)
   }
 
   // endregion

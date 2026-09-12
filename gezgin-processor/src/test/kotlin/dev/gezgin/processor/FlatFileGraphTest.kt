@@ -186,8 +186,12 @@ class FlatFileGraphTest {
     // route).
     val serializers = result.generatedSourceFor("GezginSerializers.kt")!!.readText()
     assertTrue("polymorphic(Route::class)" in serializers, serializers)
-    assertTrue("subclass(HomeRoute::class)" in serializers, serializers)
-    assertTrue("subclass(SignUpFlow.CredentialsRoute::class)" in serializers, serializers)
+    assertTrue("subclass(HomeRoute::class, HomeRouteGezginSerializer)" in serializers, serializers)
+    assertTrue(
+      "subclass(SignUpFlow.CredentialsRoute::class, CredentialsRouteGezginSerializer)" in
+        serializers,
+      serializers,
+    )
 
     // quitFlow surface: every member of the ResultFlow gets a `quitWith(result: SignUpResult)` —
     // proving the flow's T (read from the `ResultFlow<SignUpResult>` supertype in another file)
@@ -371,7 +375,7 @@ class FlatFileGraphTest {
 
     val serializers = result.generatedSourceFor("GezginSerializers.kt")!!.readText()
     assertFalse("SharedMid" in serializers || "SharedBase" in serializers, serializers)
-    assertTrue("subclass(Feed::class)" in serializers, serializers)
+    assertTrue("subclass(Feed::class, FeedGezginSerializer)" in serializers, serializers)
   }
 
   @Test

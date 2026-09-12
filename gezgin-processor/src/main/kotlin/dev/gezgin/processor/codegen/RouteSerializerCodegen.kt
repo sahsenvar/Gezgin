@@ -31,9 +31,6 @@ private val SERIALIZATION_EXCEPTION = ClassName(SERIALIZATION_PKG, "Serializatio
 private val BUILD_CLASS_SERIAL_DESCRIPTOR =
   MemberName(DESCRIPTORS_PKG, "buildClassSerialDescriptor")
 private val PRIMITIVE_SERIAL_DESCRIPTOR = MemberName(DESCRIPTORS_PKG, "PrimitiveSerialDescriptor")
-private val LIST_SERIALIZER = MemberName(BUILTINS_PKG, "ListSerializer")
-private val BUILTIN_SERIALIZER = MemberName(BUILTINS_PKG, "serializer")
-private val NULLABLE = MemberName(BUILTINS_PKG, "nullable")
 private val ENCODE_STRUCTURE = MemberName(ENCODING_PKG, "encodeStructure")
 private val DECODE_STRUCTURE = MemberName(ENCODING_PKG, "decodeStructure")
 
@@ -192,25 +189,7 @@ internal object RouteSerializerCodegen {
   }
 
   private fun serializerRef(param: ParamModel): CodeBlock =
-    serializerRef(param.kind, param.typeName, param.isNullable)
-
-  private fun serializerRef(kind: SerialKind, typeName: TypeName, isNullable: Boolean): CodeBlock {
-    val bare =
-      when (kind) {
-        is SerialKind.Builtin -> CodeBlock.of("%L.%M()", kind.fq, BUILTIN_SERIALIZER)
-        is SerialKind.ListOf -> {
-          val elementType =
-            (typeName.copy(nullable = false) as ParameterizedTypeName).typeArguments.single()
-          CodeBlock.of(
-            "%M(%L)",
-            LIST_SERIALIZER,
-            serializerRef(kind.element, elementType, elementType.isNullable),
-          )
-        }
-        else -> SerializerRef.of(kind, typeName, isNullable = false)
-      }
-    return if (isNullable) CodeBlock.of("%L.%M", bare, NULLABLE) else bare
-  }
+    SerializerRef.of(param.kind, param.typeName, param.isNullable)
 
   private fun enumSerializer(enumType: ClassName): TypeSpec {
     val serializerType = SerializerRef.enumSerializerName(enumType)
