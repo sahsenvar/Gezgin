@@ -16,10 +16,8 @@ import dev.gezgin.core.annotation.ReplaceTo
 import dev.gezgin.core.compose.GezginTransition
 import dev.gezgin.core.compose.transition
 import dev.gezgin.sample.domain.model.NotificationLevel
-import kotlinx.serialization.Serializable
 
 @NavGraph
-@Serializable
 sealed interface ProfileGraph : Route {
 
   override val transition: GezginTransition?
@@ -29,7 +27,6 @@ sealed interface ProfileGraph : Route {
   @GoTo(SettingsScreenRoute::class)
   @GoForResult(AvatarFlow::class, name = "pickAvatar")
   @GoForResult(NotificationsSheetRoute::class, name = "pickNotifications")
-  @Serializable
   data object ProfileScreenRoute : ProfileGraph
 
   @ReplaceTo(
@@ -38,14 +35,12 @@ sealed interface ProfileGraph : Route {
     inclusive = true,
     name = "logout",
   )
-  @Serializable
   data object SettingsScreenRoute : ProfileGraph {
     override val transition: GezginTransition
       get() = transition { forward { slideInHorizontally() togetherWith slideOutHorizontally() } }
   }
 
   @GoForResult(ConfirmResetDialogRoute::class, name = "confirmReset")
-  @Serializable
   data class EditNameDialogRoute(val current: String) :
     ProfileGraph, ResultRoute<String>, DialogContract {
     override val dismissOnClickOutside: Boolean
@@ -55,12 +50,10 @@ sealed interface ProfileGraph : Route {
   // Dialog-over-dialog: EditName'in ÜSTÜne açılır (N8 stacked LIFO + nested result). Tüm
   // DialogContract
   // varsayılanları (dismissOnBackPress=true) → sistem-back yalnız bu üst dialog'u kapatır (LIFO).
-  @Serializable
   data object ConfirmResetDialogRoute : ProfileGraph, ResultRoute<Boolean>, DialogContract
 
   // Sheet'in içerik ve slot sağlayıcıları :feature:profile'da olmalı (per-module
   // KSP, §10.1).
-  @Serializable
   data class NotificationsSheetRoute(val current: NotificationLevel) :
     ProfileGraph, ResultRoute<NotificationLevel>, BottomSheetContract {
     override val skipPartiallyExpanded: Boolean
