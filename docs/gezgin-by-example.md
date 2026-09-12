@@ -9,7 +9,7 @@
 - **String route yok.** Navigasyon grafiği = `sealed interface` ağacı; gidilecek yer = tip.
 - **Tanımlamadığın yere gidiş _derlenmez_.** Her ekran için tipli bir navigator üretilir; sadece deklare ettiğin kenarların metodu olur.
 - **Boilerplate codegen'de.** Graph wiring, result kanalı, entry kaydı — hepsi KSP üretir (deep-link tablosu → 🔮 V2).
-- **State-as-data çekirdek.** Back stack = gözlemlenebilir + serializable veri → test (UI'sız), log, process-death restore, MVI _bedavaya_ gelir.
+- **State-as-data çekirdek.** Back stack = gözlemlenebilir veri; Gezgin'in ürettiği serializer'lar process-death restore'u sağlar, test (UI'sız), log ve MVI _bedavaya_ gelir.
 - **DI-agnostik.** Koin/Hilt/manuel — kütüphane seni bir DI'a mahkûm etmez.
 
 ---
@@ -20,22 +20,18 @@ Grafiği ve davranışı **sealed route ağacı** tutar; pikselleri composable. 
 
 ```kotlin
 @NavGraph
-@Serializable
 sealed interface HomeGraph : ShopGraph {
 
-    @Serializable
     data object FeedRoute : HomeGraph                       // app-start olarak host'a verilir (NavGraph'ta @StartDestination yok)
 
     @GoTo(ProductRoute::class)
-    @Serializable
     data object CatalogRoute : HomeGraph
 
-    @Serializable
     data class ProductRoute(val id: String) : HomeGraph     // route = veri
 }
 ```
 
-**Neden önemli:** Grafik tek bakışta okunuyor, namespaced (`HomeGraph.ProductRoute`), ve `@Serializable` olduğu için **kendiliğinden** process-death'e dayanıklı + iOS/Web'de polimorfik serialize "bedava".
+**Neden önemli:** Grafik tek bakışta okunuyor, namespaced (`HomeGraph.ProductRoute`), ve Gezgin route serializer'larını üretip kaydettiği için **kendiliğinden** process-death'e dayanıklı + iOS/Web'de polimorfik serialize "bedava".
 
 > **Guardrail 1 (derleme-zamanı):** app-start route'u (host'a verilen) ve `@FlowGraph` `@StartDestination`'ı codegen'in **argümansız** kurabileceği bir şey olmalı (`data object` ya da tüm parametreleri default/nullable). Aksi halde **build patlar** — "start ekranını kuramıyorum" hatasını runtime'da değil derlemede alırsın.
 
@@ -44,17 +40,16 @@ sealed interface HomeGraph : ShopGraph {
 ```kotlin
 // SignUpFlow.kt — AuthGraph.kt'den AYRI dosya, AYNI paket (dev.gezgin.sample.navigation)
 @FlowGraph
-@Serializable
 sealed interface SignUpFlow : AuthGraph {                       // supertype = üyelik; nesting'e gerek yok
 
     @StartDestination @GoTo(ProfileInfoScreenRoute::class)
-    @Serializable data object CredentialsScreenRoute : SignUpFlow
+    data object CredentialsScreenRoute : SignUpFlow
 
     @GoTo(TermsScreenRoute::class)
-    @Serializable data class ProfileInfoScreenRoute(val email: String) : SignUpFlow
+    data class ProfileInfoScreenRoute(val email: String) : SignUpFlow
 
     @BackToStart @Quit @QuitAndGoTo(HomeGraph.WelcomeScreenRoute::class)
-    @Serializable data object TermsScreenRoute : SignUpFlow
+    data object TermsScreenRoute : SignUpFlow
 }
 ```
 
@@ -106,7 +101,6 @@ Checkout'un en güzel yeri — **başarıyla biten ödeme**: result ekranını p
 
 ```kotlin
 @ReplaceTo(OrderPlacedRoute::class)            // ödeme akışını temizle (clearUpTo default'u = Self::class)
-@Serializable
 data class PaymentRoute(val cartId: String) : CartGraph
 
 // PaymentScreen / VM:
@@ -129,7 +123,6 @@ Terminal ekran (result gibi) `@NoBack` → **sadece** doğal `back()` + sistem/p
 
 ```kotlin
 @NoBack @BackTo(FeedRoute::class)               // terminal: doğal back yok ama backToFeed() var
-@Serializable
 data class OrderPlacedRoute(val orderId: String) : CartGraph   // @Quit olamaz: CartGraph bir @NavGraph
 ```
 
@@ -140,12 +133,10 @@ data class OrderPlacedRoute(val orderId: String) : CartGraph   // @Quit olamaz: 
 Bir ekrandan değer döndürmek (adres seç, fotoğraf çek, onay al). Hedef route ürettiği tipi **kendisi** deklare eder (`ResultRoute<T>`), çağıran `@GoForResult` der.
 
 ```kotlin
-@Serializable
 data class SelectAddressRoute(val userId: String) :
     CartGraph, ResultRoute<Address>            // "ben Address döndürürüm"
 
 @GoForResult(SelectAddressRoute::class)
-@Serializable
 data class CheckoutRoute(val cartId: String) : CartGraph
 ```
 
@@ -172,8 +163,8 @@ fun SelectAddressScreen(route: SelectAddressRoute, nav: SelectAddressNavigator) 
 Klasik yöntemle kıyas (Zad'da gerçekte gördüğümüz acı):
 
 ```kotlin
-// Klasik: callback'i @Serializable route'un İÇİNE gömmek →
-// fonksiyon serialize edilemez → process death'te kaybolur, restore patlar:
+// Klasik: callback'i route'un İÇİNE gömmek →
+// callback serialize edilemez → process death'te kaybolur, restore patlar:
 data class SelectAddressRoute(val onPicked: (Address) -> Unit) : NavKey   // 😬
 ```
 
@@ -196,7 +187,6 @@ Modal ayrı bir mekanizma değil — normal back stack entry'si, sadece **render
 Sonuç döndüren bir onay dialog'u (başlık/mesaj backend'den geliyor → constructor param):
 
 ```kotlin
-@Serializable
 data class ConfirmOrderDialog(val summary: String) :
     CartGraph, DialogContract, ResultRoute<Boolean> {
     override val dismissOnClickOutside = false                  // SABİT davranış = override
@@ -236,11 +226,11 @@ fun SortSheetScreen(nav: SortSheetNavigator, controller: GezginSheetController) 
 **V1'de tek-stack; bottom-nav uygulama-yönetimli** (Gezgin `goTo`/`replaceTo` verir, app kendi bar'ını çizer). Aşağıdaki `@TabGraph` + per-sekme back stack **V2 vizyonu** — her sekme kendi geçmişini korur:
 
 ```kotlin
-@TabGraph @Serializable sealed interface ShopGraph                                    // (V2) switcher = bottom-nav
+@TabGraph sealed interface ShopGraph                                    // (V2) switcher = bottom-nav
 
-@DefaultTab @NavGraph @Serializable sealed interface HomeGraph    : ShopGraph { /* ... */ }         // default tab
-@NavGraph              @Serializable sealed interface CartGraph    : ShopGraph { /* ... */ }
-@NavGraph              @Serializable sealed interface ProfileGraph : ShopGraph { /* ... */ }
+@DefaultTab @NavGraph sealed interface HomeGraph    : ShopGraph { /* ... */ }         // default tab
+@NavGraph              sealed interface CartGraph    : ShopGraph { /* ... */ }
+@NavGraph              sealed interface ProfileGraph : ShopGraph { /* ... */ }
 
 @Composable
 fun ShopShell(nav: ShopNavigator) {
@@ -256,7 +246,7 @@ fun ShopShell(nav: ShopNavigator) {
 }
 ```
 
-**Neden önemli:** Profile sekmesinde 3 ekran derine indin, Home'a geçip geri döndün — **Profile stack'in duruyor**. Temsil: `Map<Tab, List<Route>>` (Nav3'ün resmi deseni), aktif sekme(ler) düz listeye flatten edilir. Save/restore otomatik (serializable state).
+**Neden önemli:** Profile sekmesinde 3 ekran derine indin, Home'a geçip geri döndün — **Profile stack'in duruyor**. Temsil: `Map<Tab, List<Route>>` (Nav3'ün resmi deseni), aktif sekme(ler) düz listeye flatten edilir. Gezgin'in ürettiği serializer'larla save/restore otomatik.
 
 ---
 
@@ -266,7 +256,6 @@ fun ShopShell(nav: ShopNavigator) {
 
 ```kotlin
 @DeepLink("shopr://product/{id}")
-@Serializable
 data class ProductRoute(val id: String) : HomeGraph
 ```
 
@@ -359,13 +348,12 @@ GezginDisplay(
 Transition üç seviyede; en içteki kazanır (screen > graph > app), runtime değer:
 
 ```kotlin
-@Serializable
 data class ProductRoute(val id: String) : HomeGraph {
     override val transition get() = transition { /* forward; back; predictive */ }
 }
 ```
 
-**Neden önemli:** Process death restore = state'i serialize/deserialize. Log = state'i dinle. MVI = state'i gözle. Hepsi tek bir "navigasyon = veri" kararından düşüyor.
+**Neden önemli:** Process death restore = Gezgin'in ürettiği serializer'larla state'i serialize/deserialize. Log = state'i dinle. MVI = state'i gözle. Hepsi tek bir "navigasyon = veri" kararından düşüyor.
 
 ---
 

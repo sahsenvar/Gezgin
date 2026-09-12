@@ -163,7 +163,6 @@ GezginDisplay(navigator = navigator) {
 `BottomSheetContract.sheetGesturesEnabled` varsayılan olarak `true`'dur. Bir sheet kullanıcı tarafından hiçbir yolla dismiss edilmemeliyse üç anahtar birlikte kapatılır:
 
 ```kotlin
-@Serializable
 data object LockedSheetRoute : AppGraph, BottomSheetContract {
     override val dismissOnBackPress: Boolean get() = false
     override val dismissOnClickOutside: Boolean get() = false
