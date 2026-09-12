@@ -80,6 +80,12 @@ internal data class RouteModel(
    * *second*, non-membership graph interface, which is itself the violation.
    */
   val implementedGraphFqs: List<String>,
+  /**
+   * Whether the route declares `@Serializable` itself. Such a route keeps its compiler-generated
+   * serializer and the old `subclass(X::class)` registration; only a route WITHOUT the annotation
+   * gets one emitted for it.
+   */
+  val isSerializable: Boolean = false,
 )
 
 /**

@@ -214,6 +214,11 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
 
     return RouteModel(
       fqName = routeDecl.requireQualifiedName(),
+      isSerializable =
+        routeDecl.annotations.any {
+          it.annotationType.resolve().declaration.qualifiedName?.asString() ==
+            "kotlinx.serialization.Serializable"
+        },
       simpleName = routeDecl.simpleName.asString(),
       graphFq = graphFq,
       flowChainFq = flowChainFq,
