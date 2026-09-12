@@ -5,6 +5,14 @@
 > Gezgin baseline: `codex/zad-integration-readiness` at `3748bdb`
 > Future ZAD baseline: `architectural/miracle-data-and-domain-refactor`; the future worktree starts from local tip `8e02471e1`, which contains three local AGP 9 / Android 17 commits over origin `69142a1bd`
 
+> **0.3.0'da supersede edildi.** Aşağıda anlatılan `@TopBar` / `@BottomBar` migration
+> sözleşmesi `gezgin-mvi` ile birlikte kaldırıldı. Kalıcı halefi — uygulamanın tanımladığı
+> `@ScreenWrapper` slot'ları — `docs/superpowers/specs/2026-09-11-gezgin-screen-wrapper-design.md` dosyasındadır.
+> Denetlenen 25 `ColumnScope` ekranı tek bir `ColumnScope` wrapper'ına, 14 top-bar / 7 bottom-bar
+> sağlayıcı dosyası da uygulamanın kendi `@TopBar` / `@BottomBar` marker'larına karşılık gelir.
+> Bu dokümandaki diğer her şey — graph, result flow'lar, restore ve sıralama — geçerliliğini
+> korur.
+
 ## 1. Purpose and ownership boundary
 
 This contract separates two bodies of work that must not be mixed:

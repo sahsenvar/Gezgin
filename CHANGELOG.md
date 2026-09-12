@@ -5,6 +5,51 @@ Bu projenin tüm kayda değer değişiklikleri bu dosyada belgelenir.
 Biçim [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/)'e,
 sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
+## [0.3.0] - 2026-09-12
+
+Kırıcı sürüm. Gezgin artık bir MVI tarzı dayatmıyor: ekranın container'ı, ViewModel'i, state
+akışı ve yan-etki politikası uygulamaya geri verildi.
+
+### Removed
+
+- **`gezgin-mvi` artifact'i tamamen kaldırıldı.** Yayınlanan 4 modül 3'e indi
+  (`gezgin-core`, `gezgin-processor`, `gezgin-test`).
+- `GezginMvi<S, I, E>`, `GezginEffects`, `ObserveEffects`, `@MviViewModel`, `@EffectHandler`,
+  `@TopBar`, `@BottomBar`, `@ExperimentalGezginMigrationApi`.
+- DI algılama alt sistemi (`VmDiClassifier`) ve yalnız onu denetleyen `MV*` validasyonları.
+  Gezgin artık Hilt/Koin/androidx ayrımı yapmıyor; VM'i uygulama kendi sağlayıcısında yaratıyor.
+- Üretilen entry'lerdeki koşulsuz `Column { Column(Modifier.fillMaxWidth().weight(1f)) { … } }`
+  sarmalayıcısı.
+- `provideXEntry`'nin uygulama tarafından doldurulan resolver parametreleri.
+
+### Added
+
+- `@ScreenWrapper` — content slot'u olan bir composable'ı ekran kökü yapar.
+- `@ScreenSlot` — uygulamanın kendi annotation'ını slot marker'ı yapan meta-annotation. İşaretlenen
+  annotation tam olarak bir `KClass<out Route>` parametresi bildirmelidir; diğerleri yok sayılır.
+- `@FilledBy(marker)` — bir wrapper parametresini o marker'ın sağlayıcılarına bağlar.
+- `gezgin.wrapperPackages` KSP seçeneği — bir bağımlılığa derlenmiş wrapper ve marker'ların
+  paketlerini bildirir. KSP classpath'teki bildirimleri annotation'la sayamadığı için çok-modüllü
+  kurulumda gereklidir; tek modüllü uygulamada gerekmez.
+- `SW1`–`SW11` hata kataloğu.
+
+### Migration
+
+Ekran başına:
+
+1. `GezginMvi` üst tipini kaldır; ViewModel ve state/intent/effect tiplerin olduğu gibi kalır.
+2. Uygulamanın kendi temel tiplerini ve **bir** `@ScreenWrapper`'ı yaz — ekran başına değil, bir kez.
+3. `@MviViewModel(R::class)` yerine DI'yı doğrudan çağıran bir `@ViewModelOf(R::class)` sağlayıcısı.
+4. `@EffectHandler(R::class)` yerine `@Effects(R::class)` sağlayıcısı; gövde aynen kalır, typed
+   navigator parametresi dahil.
+5. `@TopBar`/`@BottomBar` yerine uygulamanın kendi marker'ları ya da doğrudan wrapper'ın `Scaffold`'u.
+
+Effect sink'ini `MutableSharedFlow` ile değiştirme: `replay = 0`, abone yokken yayılan effect'i
+düşürür ve örtülen bir Navigation 3 entry'si composition'dan tamamen çıkar. `Channel(UNLIMITED)`
+tabanlı bir sink kullan (`sample/*/ui/*Mvi.kt` içindeki `EffectSink` örnektir).
+
+Tasarım: `docs/superpowers/specs/2026-09-11-gezgin-screen-wrapper-design.md`.
+
 ## [0.2.0] - 2026-07-24
 
 ### Changed

@@ -35,46 +35,69 @@ Consumer fixture `includeBuild`, composite substitution, `projectDir`, Maven Loc
 
 Graph ve route deklarasyonları `:sample:navigation` içinde aynı Kotlin paketindedir. Feature modülleri kendi `@Screen`, modal ve MVI binding'lerini taşır; generated `provideXEntry` fonksiyonlarını feature-owned `*GraphEntries.kt` bundle'larında kaydeder. App yalnız host, root navigation state ve bu bundle'ların montajına sahiptir.
 
-## Strict MVI sözleşmesi
+## Ekran wrapper'ı sözleşmesi
 
 Maintained screen'lerde navigasyon yönü tam olarak şöyledir:
 
-`Intent -> onIntent -> Effect -> @EffectHandler(route) -> typed navigator`
+`Intent -> onIntent -> Effect -> route'a bağlı effect sağlayıcısı -> typed navigator`
 
 - Stateless screen state render eder ve intent emit eder.
-- ViewModel `GezginMvi<State, Intent, Effect>` implement eder; navigator tutmaz.
+- ViewModel uygulamanın **kendi** temel tipini implement eder; navigator tutmaz. Gezgin bu tipi
+  tanımaz.
 - `onIntent` state'i günceller veya Effect emit eder.
-- Route-bound handler Effect'i gözler ve generated typed navigator metodunu çağırır.
+- Route'a bağlı effect sağlayıcısı Effect'i alır ve generated typed navigator metodunu çağırır.
+
+Uygulamanın sözlüğü ve tek ekran kökü `:sample:designsystem` içindedir; feature modülleri onu
+`gezgin.wrapperPackages` ile bildirir.
 
 ```kotlin
-@MviViewModel(SettingsRoute::class)
-class SettingsViewModel : ViewModel(), GezginMvi<SettingsState, SettingsIntent, SettingsEffect> {
-    private val effectSink = GezginEffects<SettingsEffect>()
-    override val effects: Flow<SettingsEffect> = effectSink.flow
+// :sample:designsystem — bir kez
+@ScreenSlot @Repeatable annotation class ViewModelOf(val route: KClass<out Route>)
+@ScreenSlot @Repeatable annotation class Effects(val route: KClass<out Route>)
 
-    override fun onIntent(intent: SettingsIntent) {
-        when (intent) {
-            SettingsIntent.Logout -> effectSink.send(SettingsEffect.Logout)
-            is SettingsIntent.ToggleTheme -> updateTheme(intent.enabled)
-        }
-    }
-}
-
-@EffectHandler(SettingsRoute::class)
+@ScreenWrapper
 @Composable
-fun SettingsEffectHandler(
-    effects: Flow<SettingsEffect>,
-    nav: SettingsNavigator,
-) {
-    ObserveEffects(effects) { effect ->
-        if (effect == SettingsEffect.Logout) nav.logout()
+fun <S, I, E> ShowcaseScreenRoot(
+    @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
+    @FilledBy(Effects::class)     onEffect: (E, (String) -> Unit) -> Unit,
+    @FilledBy(Screen::class)      content: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
+) { /* container, state toplama ve effect politikası burada */ }
+
+// :feature:profile — ekran başına
+@ViewModelOf(SettingsScreenRoute::class)
+@Composable
+fun settingsViewModel(): SettingsViewModel = viewModel { SettingsViewModel() }
+
+@Effects(SettingsScreenRoute::class)
+fun handleSettingsEffect(effect: SettingsEffect, show: (String) -> Unit, nav: SettingsNavigator) {
+    when (effect) {
+        is SettingsEffect.ShowMessage -> show(effect.text)
+        SettingsEffect.Logout -> nav.logout()
     }
 }
 ```
 
-Result bekleyen maintained strict MVI route'larında collector VM'ye taşınmaz. Route-bound `@EffectHandler(route)`, generated `nav.*Results` akışını `LaunchedEffect` içinde toplar ve her `NavResult`'ı typed bir `*Intent` olarak `resultIntentSink` üzerinden VM'in `onIntent`'ine aktarır. Akışı açmak da aynı yönde kalır: VM Effect emit eder, handler `nav.launchX()` çağırır. Güncel örnekler `sample/feature/auth/src/main/kotlin/dev/gezgin/sample/feature/auth/screen_login/LoginEffectHandler.kt`, `sample/feature/home/src/main/kotlin/dev/gezgin/sample/feature/home/screen_dashboard/DashboardEffectHandler.kt` ve `sample/feature/profile/src/main/kotlin/dev/gezgin/sample/feature/profile/screen_profile/ProfileEffectHandler.kt` dosyalarındadır.
+`show` bir Gezgin rolü değil, uygulamanın slot imzasından geçirdiği bir yetenektir: effect
+sağlayıcısı düz bir fonksiyondur ve `LocalContext`'e erişemez. Typed navigator ise Gezgin'in verdiği
+bir roldür ve üretilen slot lambda'sının closure'ında taşınır.
 
-Process-death sonrası re-attach, VM'in navigator tutmasına değil, restore edilen caller route entry'sinin route-bound handler'ı yeniden composition'a sokmasına bağlıdır. Generated navigator aynı caller entry kimliğine bağlıdır; mevcut navigator snapshot'ı in-flight veya teslim edilmiş ama tüketilmemiş `ResultBus` slotunu korur ve yeniden kurulan collector sonucu tüketir. Navigator handler'da kalır, VM yalnız Intent görür. Suspend `goToXForResult()` process ömrü içi convenience yüzeyidir; strict MVI için navigator'ı VM'e koyma gerekçesi değildir.
+Result bekleyen route'larda collector VM'ye taşınmaz: composable bir result-collector sağlayıcısı
+`nav.*Results` akışını `LaunchedEffect` içinde toplar ve her `NavResult`'ı typed bir `*Intent`
+olarak wrapper'dan aldığı `onIntent`'e verir. Güncel örnekler
+`sample/feature/auth/.../screen_login/LoginEffectHandler.kt`,
+`sample/feature/home/.../screen_dashboard/DashboardEffectHandler.kt` ve
+`sample/feature/profile/.../screen_profile/ProfileEffectHandler.kt` dosyalarındadır.
+
+Process-death sonrası re-attach, VM'in navigator tutmasına değil, restore edilen caller route
+entry'sinin result-collector'ı yeniden composition'a sokmasına bağlıdır. Generated navigator aynı
+caller entry kimliğine bağlıdır; mevcut navigator snapshot'ı in-flight veya teslim edilmiş ama
+tüketilmemiş `ResultBus` slotunu korur ve yeniden kurulan collector sonucu tüketir. Navigator
+sağlayıcıda kalır, VM yalnız Intent görür.
+
+Effect'leri `MutableSharedFlow` ile taşıma: `replay = 0`, abone yokken yayılan effect'i düşürür ve
+örtülen bir Navigation 3 entry'si composition'dan tamamen çıkar. Sample'lar `Channel(UNLIMITED)`
+tabanlı `EffectSink` kullanır.
+
 
 ## Maintained capability matrix
 
@@ -102,27 +125,18 @@ fun ColumnScope.SharedFeed(
 ) { /* ... */ }
 ```
 
-Her route ayrı `@MviViewModel(route)` ve `@EffectHandler(route)` alır. State ve Intent content ile uyumlu olmalıdır; Home ve Featured route'larının Effect ve typed Navigator tipleri farklı olabilir. Duplicate, eksik veya type-mismatch binding processor tarafından fail-loud reddedilir.
+Her route ayrı `@ViewModelOf(route)` ve `@Effects(route)` sağlayıcısı alır. State ve Intent content ile uyumlu olmalıdır; Home ve Featured route'larının Effect ve typed Navigator tipleri farklı olabilir. Duplicate, eksik veya type-mismatch binding processor tarafından fail-loud reddedilir.
 
-Effect binding yalnız route-explicit `@EffectHandler(Route::class)` ile yapılır; maintained sample kodu her handler'ın route ownership'ini açıkça bildirir.
+Effect binding yalnız route-explicit bir slot marker'ı ile yapılır; maintained sample kodu her sağlayıcının route ownership'ini açıkça bildirir.
 
-## Migration-only top/bottom chrome
+## Uygulamaya ait top/bottom chrome
 
-`@TopBar(route)` ve `@BottomBar(route)` repeatable `gezgin-mvi` API'leridir. Bunlar yalnız ZAD'ın mevcut `ColumnScope` ekran şeklini migration sırasında korur:
+`@TopBar`/`@BottomBar` artık Gezgin'in kavramı değil: `sample/shopr` kendi marker'larını tanımlar
+ve `ShoprScreenRoot` bunları kendi slot'larından doldurur. IME görünürken bottom bar'ı gizleme
+davranışı da wrapper'ın içindedir — yani uygulamanın değiştirebileceği bir yerde.
 
-```kotlin
-Column {
-    TopBar(state, onIntent)
-    Column(Modifier.fillMaxWidth().weight(1f)) {
-        Screen(state, onIntent)
-    }
-    if (!imeVisible) {
-        BottomBar(state, onIntent)
-    }
-}
-```
-
-Provider eksik olabilir; aynı route için duplicate provider ve State/Intent mismatch compile error'dür. Bu annotation'lar kalıcı app chrome çözümü değildir ve migration app-owned container'a geçtiğinde kaldırılır.
+Bkz. `sample/shopr/src/main/kotlin/dev/gezgin/sample/shopr/ui/ShoprScreenRoot.kt` ve
+`sample/shopr/src/main/kotlin/dev/gezgin/sample/shopr/screen_feed/FeedChrome.kt`.
 
 ## Host ve restore namespace
 

@@ -1,3 +1,7 @@
+> **0.3.0'da supersede edildi.** `@MviViewModel` / `@EffectHandler` / `@TopBar` / `@BottomBar`
+> kaldırıldı; binding artık uygulamanın tanımladığı slot marker'larıyla yapılır. Bkz. `docs/superpowers/specs/2026-09-11-gezgin-screen-wrapper-design.md`.
+> Aşağıdaki metin 0.2.x dönemine ait kayıttır.
+
 # Gezgin MVI binder location — maintained contract
 
 > Durum: uygulanmış current contract. Tarihsel adaylar artık kullanım rehberi değildir; güncel ZAD-readiness mimarisi bu belgedeki strict akıştır.

@@ -1,3 +1,7 @@
+> **0.3.0 notu.** Bu dokümanın MVI ile ilgili bölümleri (`GezginMvi`, `@MviViewModel`,
+> `@EffectHandler`, `@TopBar`, `@BottomBar`, DI algılama) 0.3.0'da kaldırılan API'yi anlatır.
+> Yerine gelen ekran-wrapper tasarımı: `docs/superpowers/specs/2026-09-11-gezgin-screen-wrapper-design.md`.
+
 # Gezgin — Navigasyon Kütüphanesi Tasarım Spec'i
 
 > Durum: **maintained current contract**. Bu belge uygulanan public yüzeyi ve Phase A ZAD-readiness sınırlarını anlatır.

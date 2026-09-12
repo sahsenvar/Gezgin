@@ -1,6 +1,7 @@
 # Gezgin screen wrapper and MVI de-opinionation
 
-> Status: approved design, ready for implementation planning
+> Status: implemented on `design/screen-wrapper-de-opinionation`; §6.1, §9 and §10 amended
+> below to match what the implementation proved
 > Date: 2026-09-11
 > Baseline: `main` at `27c9b5c` (merge of `7382a63`)
 > Target release: `0.3.0` (breaking)
@@ -176,11 +177,19 @@ For a route `R`:
 
 A provider matches a slot of type `@Composable Recv.(T1, …, Tn) -> Unit` when:
 
-- The provider's extension receiver equals `Recv` (or both are absent).
 - The provider's parameters are partitioned into **slot parameters** and **role parameters**.
   Role parameters are those whose type is one of the Gezgin-supplied roles (§6.2); every other
   parameter is a slot parameter.
-- The slot parameters, in declaration order, unify positionally with `T1 … Tn`.
+- The provider's extension receiver, when it has one, counts as its first slot parameter, and the
+  slot's own receiver is likewise its first type argument. The two lists then unify positionally.
+
+  *Amended during implementation.* The original wording split the receiver out and compared it
+  separately. KSP does not reliably mark a `@Composable` extension function type with
+  `@ExtensionFunctionType`, so `ColumnScope.(S, (I) -> Unit) -> Unit` is read with a null receiver
+  and `ColumnScope` as an ordinary first parameter — nothing matched. Counting the receiver as the
+  first parameter on both sides makes the comparison symmetric and independent of that annotation.
+  The consequence is strict and worth stating: a slot that declares a receiver requires an
+  extension provider, and one that does not requires a non-extension provider.
 
 Unification is shallow: a concrete type must equal the slot's type; a slot type that is one of the
 wrapper's type parameters binds to the provider's concrete type; a slot type of the form
@@ -281,11 +290,12 @@ existing `SC`/`MV` convention with a new `SW` prefix.
 | `SW3` | `@ScreenSlot` annotation does not declare exactly one `KClass<out Route>` parameter |
 | `SW4` | two providers claim the same slot for the same route |
 | `SW5` | a slot without a Kotlin default has no provider for a route that has a `@Screen` |
-| `SW6` | at least one wrapper is in scope but none is a candidate for a route, or more than one is |
+| `SW6` | more than one wrapper is a candidate for a route. *Amended:* zero candidates is a WARNING, not an error — a mixed application legitimately keeps core-mode entries no wrapper can fill, and failing the build would force a do-nothing wrapper to exist. A wrapper is only considered for a route whose content provider carries that wrapper's content marker, so a `@Dialog` in an app with only a `@Screen` wrapper is silent. |
 | `SW7` | a candidate wrapper has a type parameter bound by no filled slot |
 | `SW8` | a provider's parameters do not unify with its slot's signature |
 | `SW9` | a package named by `gezgin.wrapperPackages` yields no wrapper and no slot marker |
 | `SW10` | a provider names a route that has a `@Screen` in this module, but no wrapper slot consumes that provider's marker |
+| `SW11` | a provider parameter does not resolve and is not this route's navigator. *Added during implementation:* in a single-module app the navigator is emitted by the same KSP round, so its type is an error type while providers are read and resolving it throws. The navigator is matched by its written name before anything is resolved; anything else that fails to resolve gets this error instead of a processor crash. |
 
 Zero `@ScreenWrapper` in scope is not an error. Content is then called bare, exactly as core-mode
 entries are emitted today, and the double `Column` disappears for everyone.
@@ -301,6 +311,15 @@ with the rest of the hard-coded chrome.
 `@FragmentScreen` entries are unchanged and are not wrapped. A Fragment brings its own view
 hierarchy; introducing a Compose wrapper around it is a separate question and is explicitly
 deferred.
+
+## 10a. Implementation note on ordering
+
+The work was planned as "add the new path, then remove the old one". That is not achievable: the
+MVI reader rejects a `@Screen(state, onIntent)` function with `MV2` when no `@MviViewModel` exists
+for its route, and that failure gates all codegen. The wrapper pipeline therefore runs BEFORE the
+entry reader and feeds it the set of bound routes, so a wrapped route takes its own branch where
+content parameters are the binder's business. The samples were migrated before `gezgin-mvi` was
+deleted, which kept every commit green.
 
 ## 11. Migration
 
