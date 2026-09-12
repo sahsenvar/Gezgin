@@ -8,7 +8,7 @@ plugins {
 }
 
 val gezginGroup = "io.github.sahsenvar"
-val gezginVersion = providers.gradleProperty("gezginVersion").getOrElse("0.2.0")
+val gezginVersion = providers.gradleProperty("gezginVersion").getOrElse("0.3.0")
 
 android {
   namespace = "dev.gezgin.compat.zad"
@@ -59,13 +59,16 @@ configurations.configureEach {
 
 dependencies {
   implementation("$gezginGroup:gezgin-core:$gezginVersion")
-  implementation("$gezginGroup:gezgin-mvi:$gezginVersion")
   ksp("$gezginGroup:gezgin-processor:$gezginVersion")
   testImplementation("$gezginGroup:gezgin-test:$gezginVersion")
 
   implementation("androidx.navigation3:navigation3-runtime:1.0.0")
   implementation("androidx.navigation3:navigation3-ui:1.0.0")
   implementation("androidx.lifecycle:lifecycle-viewmodel-navigation3:2.10.0")
+  // gezgin-mvi used to bring these in; the consumer's own wrapper resolves the ViewModel and
+  // collects state, so it declares them itself.
+  implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+  implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
 
   implementation("io.insert-koin:koin-android:4.2.2")
   implementation("io.insert-koin:koin-compose-viewmodel:4.2.2")

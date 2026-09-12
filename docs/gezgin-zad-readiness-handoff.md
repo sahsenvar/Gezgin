@@ -1,3 +1,7 @@
+> **0.3.0 notu.** `gezgin-mvi` kaldırıldı; MVI bağlamaları uygulamanın tanımladığı
+> `@ScreenWrapper` slot'larıyla yapılır. Bkz.
+> `docs/superpowers/specs/2026-09-11-gezgin-screen-wrapper-design.md`.
+
 # Gezgin Phase A → ZAD Phase B Handoff
 
 Status: **GREEN**
@@ -15,10 +19,9 @@ substitution, `projectDir`, Maven Local, or a moving Gezgin checkout.
 
 ## Coordinates
 
-- `io.github.sahsenvar:gezgin-core:0.2.0`
-- `io.github.sahsenvar:gezgin-mvi:0.2.0`
-- `io.github.sahsenvar:gezgin-processor:0.2.0`
-- `io.github.sahsenvar:gezgin-test:0.2.0` (test source sets only)
+- `io.github.sahsenvar:gezgin-core:0.3.0`
+- `io.github.sahsenvar:gezgin-processor:0.3.0`
+- `io.github.sahsenvar:gezgin-test:0.3.0` (test source sets only)
 
 The root metadata selects the published Android/JVM variants. Each publication contains Gradle
 metadata, a POM, sources, Dokka javadoc, and detached signatures. The release workflow does not

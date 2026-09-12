@@ -40,13 +40,12 @@ class PublishingConfigurationContractTest {
   fun `centralizes release coordinates and removes module-local copies`() {
     val rootProperties = properties("gradle.properties")
     assertEquals("io.github.sahsenvar", rootProperties.getProperty("GROUP"))
-    assertEquals("0.2.1-SNAPSHOT", rootProperties.getProperty("VERSION_NAME"))
+    assertEquals("0.3.0-SNAPSHOT", rootProperties.getProperty("VERSION_NAME"))
 
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "providers.gradleProperty(\"GROUP\")")
     assertContains(rootBuild, "providers.gradleProperty(\"VERSION_NAME\")")
     assertContains(rootBuild, "\":gezgin-core\"")
-    assertContains(rootBuild, "\":gezgin-mvi\"")
     assertContains(rootBuild, "\":gezgin-test\"")
     assertContains(rootBuild, "\":gezgin-processor\"")
     assertContains(rootBuild, "configure(publishedProjects)")
@@ -66,7 +65,7 @@ class PublishingConfigurationContractTest {
   }
 
   @Test
-  fun `configures four Central-ready signed publications without manual skeletons`() {
+  fun `configures three Central-ready signed publications without manual skeletons`() {
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "publishToMavenCentral()")
     assertContains(rootBuild, "signAllPublications()")
@@ -207,7 +206,7 @@ class PublishingConfigurationContractTest {
 
   @Test
   fun `uses the supported no compatibility JVM default mode`() {
-    listOf("gezgin-core", "gezgin-mvi").forEach { module ->
+    listOf("gezgin-core").forEach { module ->
       val build = text("$module/build.gradle.kts")
       assertContains(build, "JvmDefaultMode.NO_COMPATIBILITY")
       assertContains(build, "jvmDefault.set(")
@@ -226,7 +225,7 @@ class PublishingConfigurationContractTest {
   }
 
   private companion object {
-    val kmpModules = listOf("gezgin-core", "gezgin-mvi", "gezgin-test")
+    val kmpModules = listOf("gezgin-core", "gezgin-test")
     val publishedModules = kmpModules + "gezgin-processor"
   }
 }

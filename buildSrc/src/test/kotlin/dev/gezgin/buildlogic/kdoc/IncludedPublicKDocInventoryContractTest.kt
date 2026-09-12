@@ -105,7 +105,7 @@ class IncludedPublicKDocInventoryContractTest {
   }
 
   private companion object {
-    val publishedModules = listOf("gezgin-core", "gezgin-mvi", "gezgin-processor", "gezgin-test")
+    val publishedModules = listOf("gezgin-core", "gezgin-processor", "gezgin-test")
     val token = Regex("[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+|[A-Za-z][A-Za-z0-9]*")
     val word = Regex("[A-Za-z]+")
     val withoutInlineCode = Regex("`[^`]*`")

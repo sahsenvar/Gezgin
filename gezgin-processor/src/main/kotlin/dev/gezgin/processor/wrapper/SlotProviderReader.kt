@@ -140,7 +140,7 @@ private fun KSTypeReference.writtenName(): String? {
   (element as? KSClassifierReference)?.referencedName()?.let {
     return it.substringAfterLast('.')
   }
-  // KSP2 exposes no classifier element for a type it cannot resolve, and a same-round navigator is
+  // KSP exposes no classifier element for a type it cannot resolve, and a same-round navigator is
   // exactly that case. The reference still renders as `<ERROR TYPE: DetailNavigator>`, which is the
   // only place the written name survives.
   val rendered = (element?.toString() ?: toString()).trim()
