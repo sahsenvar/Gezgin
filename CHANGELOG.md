@@ -22,6 +22,10 @@ akışı ve yan-etki politikası uygulamaya geri verildi.
   sarmalayıcısı.
 - `provideXEntry`'nin uygulama tarafından doldurulan resolver parametreleri.
 
+- Route'larda (`@NavGraph` içindeki graph üyelerinde) `@Serializable` zorunluluğu kaldırıldı.
+  Yalnızca route parametresi veya result türü olarak kullanılan enum'lar da annotation gerektirmez;
+  kendi `@Serializable` türünü tanımlamayan graph modülü serialization Gradle plugin'ine ihtiyaç duymaz.
+
 ### Added
 
 - `@ScreenWrapper` — content slot'u olan bir composable'ı ekran kökü yapar.
@@ -32,6 +36,7 @@ akışı ve yan-etki politikası uygulamaya geri verildi.
   paketlerini bildirir. KSP classpath'teki bildirimleri annotation'la sayamadığı için çok-modüllü
   kurulumda gereklidir; tek modüllü uygulamada gerekmez.
 - `SW1`–`SW11` hata kataloğu.
+- `SZ1`, serializer'ı bulunamayan route parametreleri ve result türleri için açık processor hatası.
 
 ### Migration
 

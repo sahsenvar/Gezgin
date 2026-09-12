@@ -22,8 +22,10 @@ data class ItemDetailScreenRoute(val id: String) : HomeGraph
 every graph. This design removes it by generating each route's `KSerializer` instead of requiring
 the user to ask the compiler plugin for one.
 
-Nothing about persistence changes. The wire format, process-death restore, typed results, Fragment
-argument decoding and Compose Multiplatform support are all untouched.
+Nothing about persistence semantics changes. Process-death restore, typed results, Fragment argument
+decoding and Compose Multiplatform support are all untouched. The wire format remains unchanged for
+routes without defaulted parameters; generated serializers include previously omitted defaulted fields
+(see §4.1).
 
 ## 2. Scope
 
@@ -115,9 +117,15 @@ drains the structure and returns the object instance.
 
 The descriptor's serial name must be the route's **fully-qualified name**, because that is what
 kotlinx uses as the default serial name today and the polymorphic discriminator is written from it.
-Getting this wrong does not corrupt anything — a snapshot that fails to decode falls back to a
-fresh start — but it silently loses every user's navigation state on upgrade, so §11 locks it with
-a test that decodes an `@Serializable`-produced snapshot using the generated serializer.
+
+Generated serializers always write every element and require every element on read. `Json` uses
+kotlinx's default `encodeDefaults = false`, but KSP exposes whether a constructor parameter has a
+default, not the default expression itself; generated code cannot reproduce that omission. Therefore,
+a snapshot written by 0.2.x for a route with a defaulted parameter fails to decode and
+`decodeNavigatorStateOrNull` falls back to a fresh start. This is the documented incompatible-snapshot
+behavior. Routes without defaulted parameters decode unchanged, and new snapshots include previously
+omitted defaulted fields. §11 locks the serial-name claim with a test that decodes an
+`@Serializable`-produced snapshot using the generated serializer.
 
 ### 4.2 One serializer per enum
 
@@ -198,7 +206,8 @@ the *obligation*, not the option.
 
 ## 7. What does not change
 
-- The encoded form of `SavedState`, `GezginKey`, and each route.
+- The encoded form of `SavedState`, `GezginKey`, and routes without defaulted parameters. For routes
+  with defaulted parameters, generated serializers include the previously omitted fields; see §4.1.
 - Process-death restore, including pending result slots and their payloads.
 - `Gezgin.initFragmentInterop(gezginJson)` and `gezginArgs` decoding.
 - Compose Multiplatform support: no reflection is introduced anywhere.
@@ -226,7 +235,7 @@ Measured on 2026-09-12 with two throwaway probes, both since deleted.
   generated serializers, round-tripped through the real `encodeNavigatorState` /
   `decodeNavigatorState` path: back stack and `current` preserved exactly. Parameters covered
   `String`, `String?`, an enum with no annotation, and an `@Serializable` data class.
-- The encoded form was identical in shape to today's:
+- For the routes in this probe, which have no defaulted parameters, the encoded form was identical in shape to today's:
   `{"keys":[{"route":{"type":"…ListRoute"},"id":0},{"route":{"type":"…DetailRoute","id":"x","name":"n","order":"RELEVANCE","filter":{"query":"q","page":1}},"id":1}],"nextId":2,"pendingSlots":[]}`
 - A separate Gradle module with **no** `kotlin.plugin.serialization` and no `@Serializable`
   anywhere, containing routes plus hand-written serializers, compiled successfully. This is the

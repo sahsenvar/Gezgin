@@ -108,7 +108,11 @@ class PublishingConfigurationContractTest {
   fun `compatibility consumer resolves the release coordinates from an isolated repository`() {
     val consumerBuild = text("compatibility/zad-consumer/build.gradle.kts")
     assertContains(consumerBuild, "\"io.github.sahsenvar\"")
-    assertContains(consumerBuild, "\"0.2.0\"")
+    // Derived, not hard-coded: this assertion silently went stale across the 0.3.0 bump, and a
+    // literal here would only go stale again at the next one.
+    val releaseVersion =
+      properties("gradle.properties").getProperty("VERSION_NAME").substringBefore("-")
+    assertContains(consumerBuild, "\"$releaseVersion\"")
     assertContains(
       consumerBuild,
       "testImplementation(\"${'$'}gezginGroup:gezgin-test:${'$'}gezginVersion\")",

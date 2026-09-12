@@ -15,20 +15,19 @@ Gezgin **Navigation 3** üzerinde çalışır. Navigasyon grafiğin bir `sealed 
 ```kotlin
 // 1 · grafik = sealed ağaç — deklare ettiğin kenar = elde ettiğin metot
 @NavGraph
-@Serializable
 sealed interface ShopGraph {
     @GoTo(ProductRoute::class)                              // Catalog → Product
-    @Serializable data object CatalogRoute : ShopGraph
+    data object CatalogRoute : ShopGraph
 
     @GoTo(PaymentResult::class)                             // Product → PaymentResult ("hemen al")
-    @Serializable data class ProductRoute(val id: String) : ShopGraph
+    data class ProductRoute(val id: String) : ShopGraph
 
     // Başarıda checkout ekranını REPLACE et ve alışveriş hunisini Catalog dahil temizle,
     // ki sistem/predictive Back kullanıcıyı yeni bitirdiği akışa geri düşüremesin:
     @ReplaceTo(PaymentResult::class, clearUpTo = CatalogRoute::class, inclusive = true)
-    @Serializable data object CheckoutRoute : ShopGraph
+    data object CheckoutRoute : ShopGraph
 
-    @Serializable data object PaymentResult : ShopGraph     // terminal — ulaşılır, huniye geri gidilmez
+    data object PaymentResult : ShopGraph     // terminal — ulaşılır, huniye geri gidilmez
 }
 
 // 2 · ekranın tipli navigator'ı YALNIZ Catalog'un deklare kenarlarının metotlarına sahip
@@ -41,6 +40,10 @@ fun CatalogScreen(nav: CatalogNavigator) {
 ```
 
 `nav.goToProduct(id)` var, çünkü `CatalogRoute` `@GoTo(ProductRoute::class)` deklare etti. `nav.goToCheckout()` bir **derleme hatası** — `CheckoutRoute` gayet geçerli bir route, sadece *Catalog'dan* ulaşılamıyor. *"Buradan nereye gidebilirim?"* sorusunun cevabı IDE otomatik-tamamlamasında — bir lint kuralıyla değil, **API'nin şekliyle** zorunlu kılınıyor.
+
+`@NavGraph` içindeki route'larda artık `@Serializable` gerekmez; Gezgin bu route'lar için serializer
+üretip kaydeder. Parametre veya result olarak kullanılan generic olmayan sınıflarda `@Serializable`
+bırakılmalıdır. Yalnızca bu konumlarda kullanılan enum'lar annotation olmadan adlarıyla serileştirilir.
 
 ---
 
@@ -59,7 +62,9 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 ## Neden Gezgin? (Artıları)
 
-- **String route yok.** Grafik bir `sealed interface` ağacı; hedef = tip. Namespaced, `@Serializable` → process-death'e dayanıklı ve çok-platform serializable bedava.
+- **String route yok.** Grafik bir `sealed interface` ağacı; hedef = tip. Her route için üretilen
+  serializer route'u process-death'e dayanıklı ve çok-platform serializable yapar; parametre ve
+  result sınıflarında `@Serializable` bırakılır.
 - **Tanımlamadığın yere gidiş derlenmez.** Her route yalnız deklare ettiğin kenarların metotlarına sahip tipli bir navigator alır.
 - **Tüm sözlük deklaratif.** İleri (`@GoTo` / `@ReplaceTo`), geri (`back()` / `@BackTo` / `@BackToStart` / `@NoBack`), ve tipli sonuç döndüren çok-ekranlı **alt-flow'lar** (`@FlowGraph` / `ResultFlow` + `@GoForResult`) — davranış annotation'da, compile-time'da çözülür, runtime lambda yok.
 - **Sonuçlar type-safe *ve* process-death-safe.** `@GoForResult` sana `launchX()` + gerçek process ölümünü sağ atlatan re-attach `xResults: Flow<NavResult<T>>` verir.
@@ -100,7 +105,10 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 ## Kurulum
 
-KSP + serialization plugin'lerini uygulayıp Maven Central koordinatlarını kullan (`group = io.github.sahsenvar`, `version = 0.3.0`):
+KSP plugin'ini uygula. `kotlin("plugin.serialization")` plugin'ini yalnızca `@Serializable` türleri
+tanımlayan modüllerde uygula; yalnızca serializable parametre veya result türlerine referans veren
+graph modülüne gerek yok. Aşağıdaki snippet common case için iki plugin'i de içerir; koordinatlar
+`group = io.github.sahsenvar`, `version = 0.3.0`:
 
 ```kotlin
 plugins {
@@ -157,16 +165,12 @@ Bunlar birbirinin yerine uygulanacak upgrade talimatları değil, farklı build 
 
 ```kotlin
 @NavGraph
-@Serializable
 sealed interface HomeGraph {
-    @Serializable
     data object FeedRoute : HomeGraph               // app-start route'u (host'a verilir)
 
     @GoTo(ProductRoute::class)
-    @Serializable
     data object CatalogRoute : HomeGraph
 
-    @Serializable
     data class ProductRoute(val id: String) : HomeGraph   // route = veri
 }
 ```
@@ -190,12 +194,10 @@ Klasik yol — `navController.navigate("product/$id")` — bir typo'da *runtime*
 
 ```kotlin
 @ReplaceTo(OrderPlacedRoute::class)                 // checkout flow'unu temizle ki geri form'a dönemesin
-@Serializable
 data class PaymentRoute(val cartId: String) : CartGraph
 // → nav.replaceToOrderPlaced(orderId)
 
 @NoBack                                             // terminal ekran: sistem/predictive back burada no-op
-@Serializable
 data class OrderPlacedRoute(val orderId: String) : CartGraph
 ```
 
@@ -212,15 +214,14 @@ data class OrderPlacedRoute(val orderId: String) : CartGraph
 
 ```kotlin
 @FlowGraph
-@Serializable
 sealed interface CheckoutFlow : ShopGraph, ResultFlow<OrderId> {   // tüm flow bir OrderId döndürür
-    @StartDestination @Serializable data object CartRoute : CheckoutFlow
+    @StartDestination data object CartRoute : CheckoutFlow
     // … PaymentRoute … ; nav.quitWith(OrderId(...)) flow'u bitirir ve sonucu teslim eder
 }
 
 // Çağıran result edge'ini deklare eder; route-bound handler başlatır ve sonucu toplar:
 @GoForResult(CheckoutFlow::class)
-@Serializable data object CatalogRoute : HomeGraph
+data object CatalogRoute : HomeGraph
 // → nav.launchCheckout()  +  nav.checkoutResults: Flow<NavResult<OrderId>>
 ```
 
@@ -241,7 +242,6 @@ Dialog / sheet / fullscreen modal = farklı render'lı, ekranla aynı entry — 
 Sheet'ler üç bağımsız dismiss anahtarı sunar. Kullanıcı tarafından kapatılamaması gereken bir route üçünü de kapatır; `sheetGesturesEnabled` kaynak uyumluluğu için varsayılan olarak `true`'dur:
 
 ```kotlin
-@Serializable
 data object LockedSheetRoute : ShopGraph, BottomSheetContract {
     override val dismissOnBackPress: Boolean get() = false
     override val dismissOnClickOutside: Boolean get() = false

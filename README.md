@@ -15,20 +15,19 @@ Gezgin runs on **Navigation 3**. Your navigation graph is a `sealed interface` t
 ```kotlin
 // 1 · the graph is a sealed tree — the edge you declare is the method you get
 @NavGraph
-@Serializable
 sealed interface ShopGraph {
     @GoTo(ProductRoute::class)                              // Catalog → Product
-    @Serializable data object CatalogRoute : ShopGraph
+    data object CatalogRoute : ShopGraph
 
     @GoTo(PaymentResult::class)                             // Product → PaymentResult ("buy now")
-    @Serializable data class ProductRoute(val id: String) : ShopGraph
+    data class ProductRoute(val id: String) : ShopGraph
 
     // On success, REPLACE the checkout screen and wipe the shopping funnel up to & including Catalog,
     // so system/predictive Back can't drop the user back into the flow they just finished:
     @ReplaceTo(PaymentResult::class, clearUpTo = CatalogRoute::class, inclusive = true)
-    @Serializable data object CheckoutRoute : ShopGraph
+    data object CheckoutRoute : ShopGraph
 
-    @Serializable data object PaymentResult : ShopGraph     // terminal — reached, never navigated *away* into the funnel
+    data object PaymentResult : ShopGraph     // terminal — reached, never navigated *away* into the funnel
 }
 
 // 2 · the screen's typed navigator has methods ONLY for Catalog's declared edges
@@ -41,6 +40,10 @@ fun CatalogScreen(nav: CatalogNavigator) {
 ```
 
 `nav.goToProduct(id)` exists because `CatalogRoute` declared `@GoTo(ProductRoute::class)`. `nav.goToCheckout()` is a **compile error** — `CheckoutRoute` is a perfectly valid route, it's just not reachable *from Catalog*. The answer to *"where can I go from here?"* lives in IDE autocomplete — enforced by the **shape of the API**, not a lint rule you can forget.
+
+Routes inside a `@NavGraph` no longer need `@Serializable`; Gezgin generates and registers their
+serializers. Keep `@Serializable` on non-generic parameter or result classes. Enums used only as
+route parameters or result types are serialized by name without the annotation.
 
 ---
 
@@ -59,7 +62,9 @@ We wanted the graph to be **data you read at a glance**, the reachable destinati
 
 ## Why Gezgin
 
-- **No string routes.** The graph is a `sealed interface` tree; a destination is a type. Namespaced, `@Serializable` → process-death-safe and multiplatform-serializable for free.
+- **No string routes.** The graph is a `sealed interface` tree; a destination is a type. Generated
+  route serializers make each route process-death-safe and multiplatform-serializable; keep
+  `@Serializable` for parameter and result classes.
 - **Navigating to an undeclared destination doesn't compile.** Each route gets a typed navigator with methods *only* for the edges you declared.
 - **The whole vocabulary is declarative.** Forward (`@GoTo` / `@ReplaceTo`), backward (`back()` / `@BackTo` / `@BackToStart` / `@NoBack`), and multi-screen **sub-flows** with a typed result (`@FlowGraph` / `ResultFlow` + `@GoForResult`) — behavior lives in annotations, resolved at compile time, no runtime lambdas.
 - **Results are type-safe *and* process-death-safe.** `@GoForResult` generates `launchX()` + a re-attach `xResults: Flow<NavResult<T>>` that survives a real process kill.
@@ -100,7 +105,10 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 
 ## Installation
 
-Apply the KSP + serialization plugins and use the Maven Central coordinates (`group = io.github.sahsenvar`, `version = 0.3.0`):
+Apply the KSP plugin. Apply `kotlin("plugin.serialization")` only in modules that declare
+`@Serializable` types; a graph module that only references serializable parameter or result types
+does not need it. The snippet below includes both plugins for the common case; coordinates are
+`group = io.github.sahsenvar`, `version = 0.3.0`:
 
 ```kotlin
 plugins {
@@ -148,16 +156,12 @@ Set via `ksp { arg("<name>", "<value>") }`:
 
 ```kotlin
 @NavGraph
-@Serializable
 sealed interface HomeGraph {
-    @Serializable
     data object FeedRoute : HomeGraph               // the app-start route (given to the host)
 
     @GoTo(ProductRoute::class)
-    @Serializable
     data object CatalogRoute : HomeGraph
 
-    @Serializable
     data class ProductRoute(val id: String) : HomeGraph   // a route is data
 }
 ```
@@ -181,12 +185,10 @@ The classic alternative — `navController.navigate("product/$id")` — fails at
 
 ```kotlin
 @ReplaceTo(OrderPlacedRoute::class)                 // clear the checkout flow so Back can't return to the form
-@Serializable
 data class PaymentRoute(val cartId: String) : CartGraph
 // → nav.replaceToOrderPlaced(orderId)
 
 @NoBack                                             // terminal screen: system/predictive Back is a no-op here
-@Serializable
 data class OrderPlacedRoute(val orderId: String) : CartGraph
 ```
 
@@ -203,15 +205,14 @@ data class OrderPlacedRoute(val orderId: String) : CartGraph
 
 ```kotlin
 @FlowGraph
-@Serializable
 sealed interface CheckoutFlow : ShopGraph, ResultFlow<OrderId> {   // the whole flow returns an OrderId
-    @StartDestination @Serializable data object CartRoute : CheckoutFlow
+    @StartDestination data object CartRoute : CheckoutFlow
     // … PaymentRoute … ; nav.quitWith(OrderId(...)) finishes the flow and delivers the result
 }
 
 // The caller declares the result edge; its route-bound handler launches and collects it:
 @GoForResult(CheckoutFlow::class)
-@Serializable data object CatalogRoute : HomeGraph
+data object CatalogRoute : HomeGraph
 // → nav.launchCheckout()  +  nav.checkoutResults: Flow<NavResult<OrderId>>
 ```
 
@@ -232,7 +233,6 @@ A dialog / sheet / fullscreen modal is the same entry as a screen with a differe
 Sheets expose three independent dismissal switches. A route that must not be dismissed by the user disables all three; `sheetGesturesEnabled` defaults to `true` for source compatibility:
 
 ```kotlin
-@Serializable
 data object LockedSheetRoute : ShopGraph, BottomSheetContract {
     override val dismissOnBackPress: Boolean get() = false
     override val dismissOnClickOutside: Boolean get() = false
