@@ -1,5 +1,6 @@
 package dev.gezgin.processor.serial
 
+import com.google.devtools.ksp.getDeclaredFunctions
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
@@ -55,9 +56,20 @@ internal object SerialTypeClassifier {
       declaration.annotations.any {
         it.annotationType.resolve().declaration.qualifiedName?.asString() == SERIALIZABLE_FQ
       }
-    if (annotated) return SerialKind.SerializableClass
+    if (annotated || declaration.hasCompanionSerializer()) return SerialKind.SerializableClass
     if (declaration.classKind == ClassKind.ENUM_CLASS) return SerialKind.BareEnum
 
     return SerialKind.Unsupported("not @Serializable and not an enum")
   }
+
+  /**
+   * A hand-written serializer surfaced as `Companion.serializer()` is just as reachable as the one
+   * `@Serializable` generates, and [SerializerRef] emits the same call for both. Accepting it is
+   * what lets a type carry a custom serializer without also carrying the annotation.
+   */
+  private fun KSClassDeclaration.hasCompanionSerializer(): Boolean =
+    declarations.filterIsInstance<KSClassDeclaration>().any { nested ->
+      nested.isCompanionObject &&
+        nested.getDeclaredFunctions().any { it.simpleName.asString() == "serializer" }
+    }
 }

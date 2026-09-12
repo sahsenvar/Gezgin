@@ -10,6 +10,7 @@ import dev.gezgin.processor.codegen.EntryCodegen
 import dev.gezgin.processor.codegen.FragmentEntryCodegen
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.NavigatorProbe
+import dev.gezgin.processor.codegen.RouteSerializerCodegen
 import dev.gezgin.processor.codegen.TestApiCodegen
 import dev.gezgin.processor.codegen.TopologyCodegen
 import dev.gezgin.processor.codegen.WrapperEntryCodegen
@@ -98,6 +99,11 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
           val emitSerializers =
             environment.options["gezgin.emitSerializers"]?.toBooleanStrictOrNull() ?: true
           if (emitSerializers) {
+            RouteSerializerCodegen.generate(model, packageName)
+              ?.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+            RouteSerializerCodegen.generateEnumSerializers(model, packageName).forEach {
+              it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
+            }
             TopologyCodegen.generateSerializers(model, packageName)
               .writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
             // The stable process-wide `gezginJson` references `gezginSerializersModule`, so both
