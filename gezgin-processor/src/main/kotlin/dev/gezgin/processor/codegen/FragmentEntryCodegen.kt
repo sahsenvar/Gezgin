@@ -21,7 +21,7 @@ private val REMEMBER = MemberName("androidx.compose.runtime", "remember")
 
 // `androidx.fragment.compose.AndroidFragment` is represented only by a fully qualified
 // `MemberName`, keeping gezgin-processor free of an androidx.fragment compile dependency. This
-// follows the same emitted-reference approach as MVI Hilt, Koin, and lifecycle symbols. Version
+// follows the same emitted-reference approach as the Hilt, Koin, and lifecycle symbols. Version
 // 1.8.9 supplies the four-parameter overload with arguments and `onUpdate`, but no `maxLifecycle`
 // or `fragmentState`.
 private val ANDROID_FRAGMENT = MemberName("androidx.fragment.compose", "AndroidFragment")
@@ -34,13 +34,11 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
 /**
  * Emits `fun GezginEntryScope.provideXEntry()` for every [FragmentEntryModel]
  * [dev.gezgin.processor.fragment.FragmentModelReader] resolved for brownfield Fragment interop. The
- * third entry code generator, alongside core-mode [EntryCodegen] and MVI-mode [MviEntryCodegen]. It
- * uses the same `GezginEntryScope` extension + `register<Route>(...)` shape, grouped one [FileSpec]
- * per Fragment package — but into a SEPARATE `GezginFragmentEntries.kt` (mirrors
- * `MviEntryCodegen`'s own separate-file rationale) so a module mixing entry styles gets
- * `GezginEntries.kt` / `GezginMviEntries.kt` / `GezginFragmentEntries.kt` with NO
- * same-name-same-package collision by construction (function-name clashes across the kinds are
- * prevented by `SC6` for core/MVI and by `FS4` for Fragment).
+ * second entry code generator, alongside [EntryCodegen]. It uses the same `GezginEntryScope`
+ * extension + `register<Route>(...)` shape, grouped one [FileSpec] per Fragment package — but into
+ * a SEPARATE `GezginFragmentEntries.kt`, so a module mixing entry styles gets `GezginEntries.kt`
+ * and `GezginFragmentEntries.kt` with NO same-name-same-package collision by construction
+ * (function-name clashes are prevented by `SC6` for composable entries and by `FS4` for Fragment).
  *
  * ```kotlin
  * fun GezginEntryScope.provideOrderChainEntry() {
@@ -58,24 +56,24 @@ private val BIND_GEZGIN = MemberName(FRAGMENT_RT_PKG, "bindGezgin")
  * **Screen-only.** Fragment interop has no dialog/bottom-sheet/fullscreen variant — every emitted
  * `register` is `kind = EntryKind.SCREEN`, unconditionally.
  *
- * **Navigator wiring — CONDITIONAL (`SC2`/`MV7` parity, one stage later).** A Fragment wires `nav`
- * (`val nav = raw.xNavigator(entryId)` + the 3-arg `bindGezgin(fragment, route, nav)`) **only when
- * the route actually earns a navigator** — the `navWired` flag [generate]'s `hasNavigator`
- * predicate supplies per entry (computed at the [dev.gezgin.processor.GezginProcessor] dispatch
- * site: a SAME-module route decides from the in-memory `GraphModel` via
- * [NavigatorCodegen.hasNavigator], exactly like core-mode's `SC2` and MVI-mode's `MV7`; a
- * CROSS-module route — absent from this module's model — is decided by a classpath PROBE for the
- * already-compiled `XNavigator` class, replacing the old `?: true` blind optimism that nav-wired
- * every cross-module Fragment and mis-compiled a display-only cross-module leaf). A
- * `@FragmentScreen` route with NO edges/back-edges/result-contract earns no
- * `NavigatorCodegen`-generated `xNavigator` factory — a realistic, legitimate case (a display-only
- * brownfield leaf like Settings/About that only reads `gezginArgs` and never navigates). For that
- * leaf the emitted body SUPPRESSES the `val nav = ...` line (which would be an unresolved
- * reference) and binds via the no-nav `bindGezgin(fragment, route)` overload; `gezginNav` then
- * throws the actionable `FS5` runtime error (gezgin-core `FragmentBinding.android.kt`) rather than
- * the codegen calling a factory that doesn't exist. The leaf is NOT rejected at KSP time (that
- * would forbid a legitimate display-only Fragment). The factory call, when wired, is qualified
- * against [FragmentEntryModel.routePackageName] — cross-module-safe, exactly like [EntryCodegen].
+ * **Navigator wiring — CONDITIONAL (`SC2` parity, one stage later).** A Fragment wires `nav` (`val
+ * nav = raw.xNavigator(entryId)` + the 3-arg `bindGezgin(fragment, route, nav)`) **only when the
+ * route actually earns a navigator** — the `navWired` flag [generate]'s `hasNavigator` predicate
+ * supplies per entry (computed at the [dev.gezgin.processor.GezginProcessor] dispatch site: a
+ * SAME-module route decides from the in-memory `GraphModel` via [NavigatorCodegen.hasNavigator],
+ * exactly like a composable entry's `SC2`; a CROSS-module route — absent from this module's model —
+ * is decided by a classpath PROBE for the already-compiled `XNavigator` class, replacing the old
+ * `?: true` blind optimism that nav-wired every cross-module Fragment and mis-compiled a
+ * display-only cross-module leaf). A `@FragmentScreen` route with NO
+ * edges/back-edges/result-contract earns no `NavigatorCodegen`-generated `xNavigator` factory — a
+ * realistic, legitimate case (a display-only brownfield leaf like Settings/About that only reads
+ * `gezginArgs` and never navigates). For that leaf the emitted body SUPPRESSES the `val nav = ...`
+ * line (which would be an unresolved reference) and binds via the no-nav `bindGezgin(fragment,
+ * route)` overload; `gezginNav` then throws the actionable `FS5` runtime error (gezgin-core
+ * `FragmentBinding.android.kt`) rather than the codegen calling a factory that doesn't exist. The
+ * leaf is NOT rejected at KSP time (that would forbid a legitimate display-only Fragment). The
+ * factory call, when wired, is qualified against [FragmentEntryModel.routePackageName] —
+ * cross-module-safe, exactly like [EntryCodegen].
  */
 internal object FragmentEntryCodegen {
 
@@ -122,7 +120,7 @@ internal object FragmentEntryCodegen {
           if (navWired) {
             // The navigator factory extension lives in the route's own package
             // ([routePackageName]), which can differ from this file's package and module. Import it
-            // with `%M`, as EntryCodegen and MviEntryCodegen do, and emit it only when the route
+            // with `%M`, as EntryCodegen does, and emit it only when the route
             // earns a navigator; otherwise `raw.xNavigator(...)` would be unresolved.
             val factoryFun =
               MemberName(entry.routePackageName, NavigatorCodegen.rawFactoryFunName(entry.x))

@@ -155,7 +155,7 @@ class PublishingConfigurationContractTest {
     assertContains(script, "--export")
     assertContains(script, "--import")
     assertContains(script, "gpg --homedir \"\$verify_home\" --batch --verify")
-    assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=53")
+    assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=37")
     assertContains(script, "CORRUPTION_NEGATIVE=PASS")
     assertContains(rootBuild, "\"-PgezginVersion=\$releaseVersion\"")
   }

@@ -145,7 +145,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
           EntryModelReader(resolver, environment.logger, model, wrapperBindings.keys).read()
 
         // The `@FragmentScreen` reader cross-checks each route against the existing entries so the
-        // same route cannot be registered by both a Fragment and `@Screen`/MVI content (`FS3`).
+        // same route cannot be registered by both a Fragment and `@Screen` content (`FS3`).
         // This is a post-read cross-check rather than a shared-map mutation.
         val (fragmentModels, fragOk) =
           FragmentModelReader(resolver, environment.logger, entries).read()

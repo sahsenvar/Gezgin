@@ -64,8 +64,9 @@ internal object SerialTypeClassifier {
 
   /**
    * A hand-written serializer surfaced as `Companion.serializer()` is just as reachable as the one
-   * `@Serializable` generates, and [SerializerRef] emits the same call for both. Accepting it is
-   * what lets a type carry a custom serializer without also carrying the annotation.
+   * `@Serializable` generates, and [dev.gezgin.processor.codegen.SerializerRef] emits the same call
+   * for both. Accepting it is what lets a type carry a custom serializer without also carrying the
+   * annotation.
    */
   private fun KSClassDeclaration.hasCompanionSerializer(): Boolean =
     declarations.filterIsInstance<KSClassDeclaration>().any { nested ->

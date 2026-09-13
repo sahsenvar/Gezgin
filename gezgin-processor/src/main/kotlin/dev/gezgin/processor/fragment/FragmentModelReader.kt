@@ -30,14 +30,13 @@ private val MODAL_CONTRACT_FQS =
 
 /**
  * Reads each class annotated with `@FragmentScreen(Route::class)` into a validated
- * [FragmentEntryModel] list. Like [dev.gezgin.processor.mvi.ViewModelModelReader], it reads a
- * class-target annotation with a required route argument and reports bracketed validation errors.
- * [read] reports every violation in one pass and returns both the resolved models and success
- * state.
+ * [FragmentEntryModel] list. It reads a class-target annotation with a required route argument and
+ * reports bracketed validation errors. [read] reports every violation in one pass and returns both
+ * the resolved models and success state.
  *
  * All `androidx.fragment.*` symbols are read as **string FQNs** — `gezgin-processor` gains NO
  * compile dependency on `androidx.fragment` (only the test source set stubs a local `Fragment` for
- * fixtures), exactly like the `dev.gezgin.mvi.*` reads.
+ * fixtures), exactly like the Hilt and Koin reads.
  *
  * Guardrails (`FS`-family — Fragment Screen):
  * - **`FS1` — FragmentFactory-instantiability.** Android recreates Fragments after PD/config-
@@ -57,34 +56,34 @@ private val MODAL_CONTRACT_FQS =
  * - **`FS7` — screen-only, no modal contract.** A route implementing a modal presentation contract
  *   (`DialogContract`/`BottomSheetContract`/`FullscreenModalContract`) is rejected: fragment
  *   interop always registers `kind = SCREEN`, so would be SILENTLY ignored (the user asked for a
- *   modal, got a full-screen fragment). Hard-error like `SC8`/`MV8` (silent-drop). → no model.
+ *   modal, got a full-screen fragment). Hard-error like `SC8` (silent-drop). → no model.
  * - **`FS3` — duplicate route registration (cross-kind aware).** A route may back only ONE
  *   registration. [FragmentModelReader] cross-checks each `@FragmentScreen`'s route against BOTH
  *   (a) the already-built [entries] (core-mode
- *   `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal` + MVI-mode content, which already share
+ *   `@Screen`/`@Dialog`/`@BottomSheet`/`@FullscreenModal` content, which already shares
  *   `EntryModelReader`'s single `seenRouteFqs`) AND (b) previously-seen `@FragmentScreen`s. Mirrors
- *   `SC4`/`MV4` semantics: a route claimed by two registrations would compile two `register<Route>`
- *   calls and crash at runtime. → no model emitted for the colliding Fragment.
+ *   `SC4` semantics: a route claimed by two registrations would compile two `register<Route>` calls
+ *   and crash at runtime. → no model emitted for the colliding Fragment.
  * - **`FS4` — provide-name clash (cross-kind aware, mirrors `SC6`).** Two entries in the SAME
  *   package that derive the SAME `x` produce two identical-signature `provideXEntry()` declarations
  *   — and Kotlin package-level function names collide across FILES too, so this catches a Fragment
  *   entry clashing with another Fragment entry (same-kind, e.g. `Detail`/`DetailRoute` routes →
- *   both `provideDetailEntry`) AND a Fragment entry clashing with an existing core-mode / MVI-mode
+ *   both `provideDetailEntry`) AND a Fragment entry clashing with an existing composable
  *   `provideXEntry` name (cross-kind, since `GezginFragmentEntries.kt` sits beside
- *   `GezginEntries.kt` / `GezginMviEntries.kt` in one package). Same `(packageName, x)` uniqueness
- *   key `EntryModelReader`'s `SC6` uses, cross-checked against the same materialized [entries] plus
- *   previously-seen Fragments. → no model emitted for the colliding Fragment.
+ *   `GezginEntries.kt` in one package). Same `(packageName, x)` uniqueness key `EntryModelReader`'s
+ *   `SC6` uses, cross-checked against the same materialized [entries] plus previously-seen
+ *   Fragments. → no model emitted for the colliding Fragment.
  * - **`FS5` — nav-wiring guard (dispatch-site + RUNTIME, NOT a KSP rejection here).** Core-mode's
- *   `SC2` and MVI-mode's `MV7` REJECT a nav-wanting entry whose `@NoBack` route earns no navigator.
- *   A `@FragmentScreen` can't be rejected the same way: an edge-less leaf (a display-only
- *   brownfield screen that only reads `gezginArgs` and never navigates) is legitimate. `FS5` is
- *   split and lives OUTSIDE this graph-unaware reader: the whether-the-route-earns-a-navigator
- *   predicate (`NavigatorCodegen.hasNavigator` for a same-module route — exactly like `SC2`/`MV7`;
- *   a classpath probe for the compiled `XNavigator` class for a cross-module route, replacing the
- *   earlier `?: true` optimism) is computed at [dev.gezgin.processor.GezginProcessor]'s codegen
- *   dispatch site, [dev.gezgin.processor.codegen.FragmentEntryCodegen] SUPPRESSES nav wiring (no
- *   `val nav = raw.xNavigator(...)`, binds via the no-nav `bindGezgin(fragment, route)` overload)
- *   when it's false, and `gezginNav` throws the actionable `FS5` error at runtime (gezgin-core
+ *   `SC2` REJECTS a nav-wanting entry whose `@NoBack` route earns no navigator. A `@FragmentScreen`
+ *   can't be rejected the same way: an edge-less leaf (a display-only brownfield screen that only
+ *   reads `gezginArgs` and never navigates) is legitimate. `FS5` is split and lives OUTSIDE this
+ *   graph-unaware reader: the whether-the-route-earns-a-navigator predicate
+ *   (`NavigatorCodegen.hasNavigator` for a same-module route — exactly like `SC2`; a classpath
+ *   probe for the compiled `XNavigator` class for a cross-module route, replacing the earlier `?:
+ *   true` optimism) is computed at [dev.gezgin.processor.GezginProcessor]'s codegen dispatch site,
+ *   [dev.gezgin.processor.codegen.FragmentEntryCodegen] SUPPRESSES nav wiring (no `val nav =
+ *   raw.xNavigator(...)`, binds via the no-nav `bindGezgin(fragment, route)` overload) when it's
+ *   false, and `gezginNav` throws the actionable `FS5` error at runtime (gezgin-core
  *   `FragmentBinding.android.kt`). This reader is untouched (no `GraphModel` in its ctor).
  * - **`FS6` — annotated class must BE a `Fragment`.** The annotated CLASS must extend
  *   `androidx.fragment.app.Fragment` ([getAllSuperTypes] string-FQN walk against [FRAGMENT_FQ], the
@@ -99,7 +98,7 @@ private val MODAL_CONTRACT_FQS =
  * `EntryModelReader`'s private `seenRouteFqs` (which would require changing its constructor and
  * would classify the cross-kind collision under `SC4`), this reader runs AFTER the entry reader and
  * cross-checks the already-built [entries] list — the materialized output of that shared map. This
- * keeps `EntryModelReader` UNTOUCHED (zero change to core-mode / MVI-mode behavior) and lets `FS3`
+ * keeps `EntryModelReader` UNTOUCHED (zero change to composable-entry behavior) and lets `FS3`
  * uniformly own every Fragment duplicate (same-kind AND cross-kind) under one code.
  *
  * **Deliberately NOT validated: `gezginArgs<R>()`/`gezginNav<N>()` type-argument matching.** Unlike
@@ -124,22 +123,19 @@ private val MODAL_CONTRACT_FQS =
 internal class FragmentModelReader(
   private val resolver: Resolver,
   private val logger: KSPLogger,
-  /**
-   * The core-mode + MVI-mode entries already resolved by `EntryModelReader` — the `FS3` cross-check
-   * set.
-   */
+  /** The composable entries already resolved by `EntryModelReader` — the `FS3` cross-check set. */
   private val entries: List<EntryFunctionModel> = emptyList(),
 ) {
 
   private var ok = true
 
   // Map each route to its current owner. Seed from built entries so a Fragment collision with
-  // core/MVI content is caught (`FS3` cross-kind), just like a collision between two Fragments.
+  // composable content is caught (`FS3` cross-kind), just like a collision between two Fragments.
   private val ownerByRouteFq: MutableMap<String, String> =
     entries.associate { it.routeFq to it.functionSimpleName }.toMutableMap()
 
   // Map each generated provide function to its owner. EntryFunctionModel exposes the same package
-  // and derived-name key used for core/MVI output.
+  // and derived-name key used for composable-entry output.
   private val ownerByProvideName: MutableMap<Pair<String, String>, String> =
     entries.associate { (it.packageName to it.x) to it.functionSimpleName }.toMutableMap()
 
@@ -278,7 +274,7 @@ internal class FragmentModelReader(
         "FS3",
         "route ${routeFq.substringAfterLast('.')} is registered by multiple destinations: " +
           "$previousOwner, $fragmentSimpleName; only one @Screen/@Dialog/@BottomSheet/" +
-          "@FullscreenModal/@FragmentScreen may bind to a route (same rule as SC4/MV4)",
+          "@FullscreenModal/@FragmentScreen may bind to a route (same rule as SC4)",
       )
       return null
     }
@@ -295,7 +291,7 @@ internal class FragmentModelReader(
         "FS4",
         "$packageName generates provide${x}Entry() from multiple destinations: " +
           "$previousProvideOwner, $fragmentSimpleName; route names resolve to the same derived 'X' (${x}) " +
-          "(same rule as SC6; an @FragmentScreen entry can also collide with a core/MVI provideXEntry " +
+          "(same rule as SC6; an @FragmentScreen entry can also collide with a composable provideXEntry " +
           "because GezginFragmentEntries.kt and GezginEntries.kt sit side by side in the same package)",
       )
       return null

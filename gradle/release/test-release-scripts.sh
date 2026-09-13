@@ -107,7 +107,7 @@ if run_deadline_case 0; then
   exit 1
 fi
 test "$(cat "$CLOCK_FILE")" = 25
-test "$(wc -l < "$CURL_LOG" | tr -d ' ')" = 4
+test "$(wc -l < "$CURL_LOG" | tr -d ' ')" = 3
 test "$(cat "$SLEEP_LOG")" = 25
 
 SMOKE_SCRIPT="$ROOT_DIR/gradle/release/smoke-maven-central.sh"

@@ -10,7 +10,7 @@ CURL_MAX_SECONDS=${GEZGIN_SMOKE_CURL_MAX_SECONDS:-10}
 NOW_COMMAND=${GEZGIN_SMOKE_NOW_COMMAND:-date}
 CURL_COMMAND=${GEZGIN_SMOKE_CURL_COMMAND:-curl}
 SLEEP_COMMAND=${GEZGIN_SMOKE_SLEEP_COMMAND:-sleep}
-MODULES=(gezgin-core gezgin-processor gezgin-mvi gezgin-test)
+MODULES=(gezgin-core gezgin-processor gezgin-test)
 
 now_seconds() {
   "$NOW_COMMAND" +%s
