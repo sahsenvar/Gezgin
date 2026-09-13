@@ -45,10 +45,10 @@ jobs:
         run: >-
           ./gradlew
           :gezgin-core:compileKotlinJvm :gezgin-core:compileDebugKotlinAndroid
-          :gezgin-mvi:compileKotlinJvm :gezgin-mvi:compileDebugKotlinAndroid
           :gezgin-test:compileKotlinJvm :gezgin-test:compileDebugKotlinAndroid
           :gezgin-processor:compileKotlin
           :sample:navigation:compileKotlin :sample:app:compileDebugKotlin
+          :sample:hello:compileDebugKotlin
           --no-daemon --console=plain
 
       - name: Analyze

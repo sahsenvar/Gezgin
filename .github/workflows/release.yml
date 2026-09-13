@@ -47,10 +47,10 @@ jobs:
           check apiCheck checkPublicApiKDoc spotlessCheck koverVerify
           :gezgin-core:test :gezgin-core:jvmTest :gezgin-core:dokkaGenerate
           :gezgin-processor:test :gezgin-processor:dokkaGenerate
-          :gezgin-mvi:jvmTest :gezgin-mvi:dokkaGenerate
           :gezgin-test:jvmTest :gezgin-test:dokkaGenerate
           :sample:navigation:test :sample:shopr:test :sample:app:test
           :sample:app:assembleDebug :sample:shopr:assembleDebug
+          :sample:hello:assembleDebug
           --no-daemon --console=plain
 
       - name: Verify signed local publications and isolated consumer
