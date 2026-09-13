@@ -100,7 +100,7 @@ class ModelReaderTest {
           "chain=- start=false noBack=false resultType=- params=-",
         "route dev.gezgin.shop.HomeGraph.AddressPicker graph=dev.gezgin.shop.HomeGraph " +
           "chain=- start=false noBack=false resultType=dev.gezgin.shop.OrderId " +
-          "params=hint:kotlin.String?=,tags:kotlin.collections.List=",
+          "params=hint: Builtin(kotlin.String)?=,tags: ListOf(Builtin(kotlin.String))=",
         "route dev.gezgin.shop.HomeGraph.Catalog graph=dev.gezgin.shop.HomeGraph " +
           "chain=- start=false noBack=false resultType=- params=-",
         "route dev.gezgin.shop.HomeGraph.Deals graph=dev.gezgin.shop.HomeGraph " +
@@ -108,7 +108,7 @@ class ModelReaderTest {
         "route dev.gezgin.shop.HomeGraph.Feed graph=dev.gezgin.shop.HomeGraph " +
           "chain=- start=false noBack=false resultType=- params=-",
         "route dev.gezgin.shop.HomeGraph.Product graph=dev.gezgin.shop.HomeGraph " +
-          "chain=- start=false noBack=true resultType=- params=id:kotlin.String",
+          "chain=- start=false noBack=true resultType=- params=id: Builtin(kotlin.String)",
         "route dev.gezgin.shop.HomeGraph.Promo graph=dev.gezgin.shop.HomeGraph " +
           "chain=- start=false noBack=false resultType=- params=-",
       ),
@@ -234,10 +234,11 @@ class ModelReaderTest {
       shopDump,
       "route dev.gezgin.shop.HomeGraph.AddressPicker graph=dev.gezgin.shop.HomeGraph " +
         "chain=- start=false noBack=false resultType=dev.gezgin.shop.OrderId " +
-        "params=hint:kotlin.String?=,tags:kotlin.collections.List=",
+        "params=hint: Builtin(kotlin.String)?=,tags: ListOf(Builtin(kotlin.String))=",
       "AddressPicker implements ResultRoute<OrderId> only via BasePicker; its resultType " +
         "must still resolve to OrderId and its nullable, defaulted ctor param must dump " +
-        "as hint:kotlin.String?= (and the generic tags param as kotlin.collections.List=)",
+        "as hint: Builtin(kotlin.String)?= (and the generic tags param as " +
+        "ListOf(Builtin(kotlin.String))=)",
     )
   }
 
@@ -303,7 +304,7 @@ class ModelReaderTest {
 
     val serializers = result.generatedSourceFor("GezginSerializers.kt")!!.readText()
     assertFalse("SharedBase" in serializers, serializers)
-    assertTrue("subclass(HomeGraph.Feed::class)" in serializers, serializers)
+    assertTrue("subclass(HomeGraph.Feed::class, FeedGezginSerializer)" in serializers, serializers)
   }
 
   // endregion

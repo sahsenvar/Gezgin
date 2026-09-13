@@ -19,27 +19,24 @@ import kotlinx.serialization.Serializable
 @NavGraph
 sealed interface HomeGraph : Route {
 
-  @GoTo(Catalog::class) @GoTo(FeaturedFeed::class) @Serializable data object Feed : HomeGraph
+  @GoTo(Catalog::class) @GoTo(FeaturedFeed::class) data object Feed : HomeGraph
 
-  @GoTo(Product::class) @Serializable data object FeaturedFeed : HomeGraph
+  @GoTo(Product::class) data object FeaturedFeed : HomeGraph
 
   @GoTo(Product::class)
   @GoForResult(CheckoutFlow::class)
   @ReplaceTo(OrderPlaced::class)
-  @Serializable
   data object Catalog : HomeGraph
 
-  @Serializable data class Product(val id: String) : HomeGraph
+  data class Product(val id: String) : HomeGraph
 
   @NoBack
   @BackTo(Feed::class)
   @GoTo(OrderDetailsDialogRoute::class, name = "showOrderDetails")
   @GoTo(OrderLockSheetRoute::class, name = "showOrderLock")
-  @Serializable
   data class OrderPlaced(val orderId: String) : HomeGraph
 
   @NoBack
-  @Serializable
   data class OrderLockSheetRoute(val orderId: String) : HomeGraph, BottomSheetContract {
     override val dismissOnBackPress: Boolean
       get() = false
@@ -59,14 +56,13 @@ sealed interface HomeGraph : Route {
   // @BackTo(OrderPlaced) =
   // "Kapat" edge'i (navigator'ı hak ettirir; ItemImageViewer emsali).
   @BackTo(OrderPlaced::class)
-  @Serializable
   data class OrderDetailsDialogRoute(val orderId: String) : HomeGraph, DialogContract
 }
 
 @FlowGraph
 sealed interface CheckoutFlow : Route, ResultFlow<OrderId> {
 
-  @StartDestination @GoTo(Payment::class) @Serializable data object Cart : CheckoutFlow
+  @StartDestination @GoTo(Payment::class) data object Cart : CheckoutFlow
 
-  @Serializable data object Payment : CheckoutFlow
+  data object Payment : CheckoutFlow
 }

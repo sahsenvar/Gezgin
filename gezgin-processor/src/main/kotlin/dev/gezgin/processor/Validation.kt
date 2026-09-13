@@ -7,6 +7,7 @@ import dev.gezgin.processor.model.EdgeKind
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
+import dev.gezgin.processor.serial.SerialKind
 
 /**
  * Compile-time strictness gate: walks the [GraphModel] produced by
@@ -42,6 +43,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
       checkE4(route)
       checkE5(route)
       checkE6(route)
+      checkSZ1(route)
       checkN9(route)
       checkN10Members(route)
       checkNB1(route)
@@ -55,6 +57,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
       checkN11(graph)
       checkN12(graph)
       checkN13(graph)
+      checkSZ1(graph)
     }
     checkN10ClassNames()
     return ok
@@ -244,6 +247,42 @@ internal class GezginValidator(private val model: GraphModel, private val logger
           "to its owning graph ${simple(route.graphFq)}; a route may implement only its own graph",
       )
     }
+  }
+
+  // endregion
+
+  // region Persisted type serializer reachability
+
+  private fun checkSZ1(route: RouteModel) {
+    if (route.isSerializable) return
+
+    route.ctorParams.forEach { param ->
+      val kind = param.kind as? SerialKind.Unsupported ?: return@forEach
+      error(
+        "SZ1",
+        "${route.fqName}: parameter '${param.name}' of type ${param.typeFq} cannot be persisted " +
+          "(${kind.reason}). A route parameter must be a Kotlin primitive, an enum, a List of " +
+          "those, or a non-generic class annotated @Serializable.",
+      )
+    }
+
+    val kind = route.resultTypeKind as? SerialKind.Unsupported ?: return
+    error(
+      "SZ1",
+      "${route.fqName}: result type ${route.resultTypeFq} cannot be persisted " +
+        "(${kind.reason}). A result type must be a Kotlin primitive, an enum, a List of " +
+        "those, or a non-generic class annotated @Serializable.",
+    )
+  }
+
+  private fun checkSZ1(graph: GraphModelNode) {
+    val kind = graph.resultTypeKind as? SerialKind.Unsupported ?: return
+    error(
+      "SZ1",
+      "${graph.fqName}: result type ${graph.resultTypeFq} cannot be persisted " +
+        "(${kind.reason}). A result type must be a Kotlin primitive, an enum, a List of " +
+        "those, or a non-generic class annotated @Serializable.",
+    )
   }
 
   // endregion

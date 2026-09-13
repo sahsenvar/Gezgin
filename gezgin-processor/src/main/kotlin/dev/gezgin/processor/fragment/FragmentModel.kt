@@ -6,15 +6,13 @@ package dev.gezgin.processor.fragment
  * to emit a `provideXEntry()` that hosts the Fragment via
  * `androidx.fragment.compose.AndroidFragment`.
  *
- * This is a THIRD kind of entry model — distinct from core-mode's `EntryFunctionModel` (a `(route,
- * nav)`/`(state, onIntent)` composable FUNCTION) and the `ViewModelModel` (a `@MviViewModel` VM
- * class). A `@FragmentScreen` binds a Fragment CLASS to a route with no composable content at all;
- * the route and navigator reach it through the `gezginArgs` and `gezginNav` delegates, not a
- * constructor.
+ * This is the second kind of entry model — distinct from `EntryFunctionModel`, which describes a
+ * `(route, nav)` composable FUNCTION. A `@FragmentScreen` binds a Fragment CLASS to a route with no
+ * composable content at all; the route and navigator reach it through the `gezginArgs` and
+ * `gezginNav` delegates, not a constructor.
  *
  * All `androidx.fragment.*` symbols are read as **string FQNs** — `gezgin-processor` has (and per
- * will keep) NO compile dependency on `androidx.fragment`, exactly like the `dev.gezgin.mvi.*`
- * reads.
+ * will keep) NO compile dependency on `androidx.fragment`, exactly like the Hilt and Koin reads.
  */
 internal data class FragmentEntryModel(
   /** The annotated Fragment class's fully-qualified name (e.g. `com.app.OrderChainFragment`). */
@@ -48,7 +46,7 @@ internal data class FragmentEntryModel(
   /**
    * `X` derivation (via [dev.gezgin.processor.codegen.NavigatorCodegen.navigatorX] on the route's
    * simple name) for both the entry function name (`provideXEntry`) and the navigator factory
-   * (`RawNavigator.xNavigator()`) — identical derivation to core-mode / MVI-mode entries.
+   * (`RawNavigator.xNavigator()`) — identical derivation to composable entries.
    */
   val x: String,
 )

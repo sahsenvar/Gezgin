@@ -16,7 +16,7 @@ tasks.test {
   useJUnitPlatform()
   val repositoryRoot = layout.projectDirectory.dir("..")
   inputs.files(
-    listOf("gezgin-core", "gezgin-mvi", "gezgin-processor", "gezgin-test").map { module ->
+    listOf("gezgin-core", "gezgin-processor", "gezgin-test").map { module ->
       fileTree(repositoryRoot.dir("$module/src")) {
         include("**/*Main/**/*.kt")
         include("**/main/**/*.kt")

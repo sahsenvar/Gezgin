@@ -15,20 +15,19 @@ Gezgin runs on **Navigation 3**. Your navigation graph is a `sealed interface` t
 ```kotlin
 // 1 · the graph is a sealed tree — the edge you declare is the method you get
 @NavGraph
-@Serializable
 sealed interface ShopGraph {
     @GoTo(ProductRoute::class)                              // Catalog → Product
-    @Serializable data object CatalogRoute : ShopGraph
+    data object CatalogRoute : ShopGraph
 
     @GoTo(PaymentResult::class)                             // Product → PaymentResult ("buy now")
-    @Serializable data class ProductRoute(val id: String) : ShopGraph
+    data class ProductRoute(val id: String) : ShopGraph
 
     // On success, REPLACE the checkout screen and wipe the shopping funnel up to & including Catalog,
     // so system/predictive Back can't drop the user back into the flow they just finished:
     @ReplaceTo(PaymentResult::class, clearUpTo = CatalogRoute::class, inclusive = true)
-    @Serializable data object CheckoutRoute : ShopGraph
+    data object CheckoutRoute : ShopGraph
 
-    @Serializable data object PaymentResult : ShopGraph     // terminal — reached, never navigated *away* into the funnel
+    data object PaymentResult : ShopGraph     // terminal — reached, never navigated *away* into the funnel
 }
 
 // 2 · the screen's typed navigator has methods ONLY for Catalog's declared edges
@@ -41,6 +40,10 @@ fun CatalogScreen(nav: CatalogNavigator) {
 ```
 
 `nav.goToProduct(id)` exists because `CatalogRoute` declared `@GoTo(ProductRoute::class)`. `nav.goToCheckout()` is a **compile error** — `CheckoutRoute` is a perfectly valid route, it's just not reachable *from Catalog*. The answer to *"where can I go from here?"* lives in IDE autocomplete — enforced by the **shape of the API**, not a lint rule you can forget.
+
+Routes inside a `@NavGraph` no longer need `@Serializable`; Gezgin generates and registers their
+serializers. Keep `@Serializable` on non-generic parameter or result classes. Enums used only as
+route parameters or result types are serialized by name without the annotation.
 
 ---
 
@@ -59,13 +62,15 @@ We wanted the graph to be **data you read at a glance**, the reachable destinati
 
 ## Why Gezgin
 
-- **No string routes.** The graph is a `sealed interface` tree; a destination is a type. Namespaced, `@Serializable` → process-death-safe and multiplatform-serializable for free.
+- **No string routes.** The graph is a `sealed interface` tree; a destination is a type. Generated
+  route serializers make each route process-death-safe and multiplatform-serializable; keep
+  `@Serializable` for parameter and result classes.
 - **Navigating to an undeclared destination doesn't compile.** Each route gets a typed navigator with methods *only* for the edges you declared.
 - **The whole vocabulary is declarative.** Forward (`@GoTo` / `@ReplaceTo`), backward (`back()` / `@BackTo` / `@BackToStart` / `@NoBack`), and multi-screen **sub-flows** with a typed result (`@FlowGraph` / `ResultFlow` + `@GoForResult`) — behavior lives in annotations, resolved at compile time, no runtime lambdas.
 - **Results are type-safe *and* process-death-safe.** `@GoForResult` generates `launchX()` + a re-attach `xResults: Flow<NavResult<T>>` that survives a real process kill.
 - **Modals are first-class back-stack entries.** `@Dialog` / `@BottomSheet` / `@FullscreenModal` are the same entries with a different render — no separate dialog state to hand-manage.
 - **State-as-data.** `backStack: StateFlow`, `events: Flow` — observe it, log it, restore it, and **test navigation without a UI** (`GezginTestNavigator`).
-- **DI-agnostic.** Hilt / Koin / manual — Gezgin never forces a DI framework. Optional `gezgin-mvi` add-on for MVI screens; `@FragmentScreen` for brownfield Fragment interop.
+- **DI-agnostic.** Hilt / Koin / manual — Gezgin never forces a DI framework, and never resolves a ViewModel: a `@ScreenWrapper` does. `@FragmentScreen` for brownfield Fragment interop.
 - **Boilerplate is generated.** Graph wiring, the result channel, entry registration — all KSP.
 
 ---
@@ -100,7 +105,10 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 
 ## Installation
 
-Apply the KSP + serialization plugins and use the Maven Central coordinates (`group = io.github.sahsenvar`, `version = 0.2.0`):
+Apply the KSP plugin. Apply `kotlin("plugin.serialization")` only in modules that declare
+`@Serializable` types; a graph module that only references serializable parameter or result types
+does not need it. The snippet below includes both plugins for the common case; coordinates are
+`group = io.github.sahsenvar`, `version = 0.3.0`:
 
 ```kotlin
 plugins {
@@ -109,11 +117,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:gezgin-core:0.2.0")
-    ksp("io.github.sahsenvar:gezgin-processor:0.2.0")
-
-    // implementation("io.github.sahsenvar:gezgin-mvi:0.2.0")        // optional MVI add-on
-    // testImplementation("io.github.sahsenvar:gezgin-test:0.2.0")   // UI-less testing: GezginTestNavigator + typed fromX()
+    implementation("io.github.sahsenvar:gezgin-core:0.3.0")
+    ksp("io.github.sahsenvar:gezgin-processor:0.3.0")
+    // testImplementation("io.github.sahsenvar:gezgin-test:0.3.0")   // UI-less testing: GezginTestNavigator + typed fromX()
 }
 ```
 
@@ -121,7 +127,6 @@ dependencies {
 |---|---|
 | `gezgin-core` | Required. Annotations, runtime, `GezginDisplay` (the Compose layer), modal scene strategies. DI-agnostic. |
 | `gezgin-processor` | Required. The KSP2 processor that generates the typed navigators + entry providers. |
-| `gezgin-mvi` | Optional. `@MviViewModel` / route-bound `@EffectHandler` + `GezginMvi<S, I, E>` + DI-detection (Hilt/Koin, androidx fallback). |
 | `gezgin-test` | Optional (test). UI-less `GezginTestNavigator` with typed `fromX()` accessors. |
 
 The two build boundaries are intentionally separate:
@@ -141,6 +146,7 @@ Set via `ksp { arg("<name>", "<value>") }`:
 |---|---|---|
 | `gezgin.emitSerializers` | `true` | Set `false` to opt out if you register the polymorphic `Route` `SerializersModule` yourself. |
 | `gezgin.emitTestAccessors` | `false` | Set `true` to generate the typed `GezginTestNavigator.fromX()` test accessors. Enable it in the module's **main** KSP round (where the graphs live); the accessors are generated into `main`, so the `test` source set can call `nav.fromX()` directly — works across modules. Add `:gezgin-test` as `compileOnly` on the main classpath (so the accessors compile; it never leaks into the app runtime) and re-add it as `testImplementation` for tests. |
+| `gezgin.wrapperPackages` | empty | Comma-separated packages to scan for `@ScreenWrapper` functions and `@ScreenSlot` annotations compiled into a dependency rather than declared in this module. KSP cannot enumerate classpath declarations by annotation, so a multi-module setup needs this; a single-module app does not. |
 
 ---
 
@@ -150,16 +156,12 @@ Set via `ksp { arg("<name>", "<value>") }`:
 
 ```kotlin
 @NavGraph
-@Serializable
 sealed interface HomeGraph {
-    @Serializable
     data object FeedRoute : HomeGraph               // the app-start route (given to the host)
 
     @GoTo(ProductRoute::class)
-    @Serializable
     data object CatalogRoute : HomeGraph
 
-    @Serializable
     data class ProductRoute(val id: String) : HomeGraph   // a route is data
 }
 ```
@@ -183,12 +185,10 @@ The classic alternative — `navController.navigate("product/$id")` — fails at
 
 ```kotlin
 @ReplaceTo(OrderPlacedRoute::class)                 // clear the checkout flow so Back can't return to the form
-@Serializable
 data class PaymentRoute(val cartId: String) : CartGraph
 // → nav.replaceToOrderPlaced(orderId)
 
 @NoBack                                             // terminal screen: system/predictive Back is a no-op here
-@Serializable
 data class OrderPlacedRoute(val orderId: String) : CartGraph
 ```
 
@@ -205,19 +205,18 @@ data class OrderPlacedRoute(val orderId: String) : CartGraph
 
 ```kotlin
 @FlowGraph
-@Serializable
 sealed interface CheckoutFlow : ShopGraph, ResultFlow<OrderId> {   // the whole flow returns an OrderId
-    @StartDestination @Serializable data object CartRoute : CheckoutFlow
+    @StartDestination data object CartRoute : CheckoutFlow
     // … PaymentRoute … ; nav.quitWith(OrderId(...)) finishes the flow and delivers the result
 }
 
 // The caller declares the result edge; its route-bound handler launches and collects it:
 @GoForResult(CheckoutFlow::class)
-@Serializable data object CatalogRoute : HomeGraph
+data object CatalogRoute : HomeGraph
 // → nav.launchCheckout()  +  nav.checkoutResults: Flow<NavResult<OrderId>>
 ```
 
-In the maintained strict-MVI pattern, the route-bound `@EffectHandler` owns the generated navigator: it calls `launchX()`, collects `xResults` in `LaunchedEffect`, and forwards each `NavResult` into the VM as a typed Intent. After restore, re-composition of that caller route/handler re-attaches the collector, while the navigator's saved result-bus slot preserves the in-flight or delivered-but-unconsumed result. Keep the navigator out of the VM; suspend `goToXForResult()` is process-lifetime convenience, not the PD-safe strict-MVI ownership model.
+In the maintained pattern, the route-bound slot providers own the generated navigator: an effect provider calls `launchX()`, and a composable result-collector provider collects `xResults` in `LaunchedEffect` and forwards each `NavResult` into the ViewModel as a typed Intent. After restore, re-composition of that caller route's collector re-attaches it, while the navigator's saved result-bus slot preserves the in-flight or delivered-but-unconsumed result. Keep the navigator out of the VM; suspend `goToXForResult()` is process-lifetime convenience, not the PD-safe ownership model.
 
 ### 5 · Modals are back-stack entries, not special state
 
@@ -234,7 +233,6 @@ A dialog / sheet / fullscreen modal is the same entry as a screen with a differe
 Sheets expose three independent dismissal switches. A route that must not be dismissed by the user disables all three; `sheetGesturesEnabled` defaults to `true` for source compatibility:
 
 ```kotlin
-@Serializable
 data object LockedSheetRoute : ShopGraph, BottomSheetContract {
     override val dismissOnBackPress: Boolean get() = false
     override val dismissOnClickOutside: Boolean get() = false
@@ -284,45 +282,94 @@ assertEquals(listOf(CatalogRoute, ProductRoute("sku-42")), nav.backStack)
 
 Because the back stack is `@Serializable` data, process-death restore is automatic; a corrupted / incompatible snapshot falls back to a fresh start instead of crash-looping.
 
-### Strict MVI add-on
+### Screen wrappers
 
-Maintained MVI examples use one direction only:
+Gezgin does not own the inside of a screen. A `@ScreenWrapper` is an application composable with
+**slots**; the processor fills each slot from the declarations carrying that slot's marker, and
+calls the wrapper in place of the screen content. What the wrapper does with a `Scaffold`, a
+ViewModel, state collection or a side-effect policy is the application's business — Gezgin never
+names those types.
 
-`intent -> onIntent -> effect -> @EffectHandler(route) -> typed navigator`
-
-The ViewModel owns state and emits effects; it does not hold a navigator. The route-bound handler observes the effect and owns the typed navigation call:
+The application defines its own vocabulary. `@ScreenSlot` marks an ordinary annotation as a slot
+marker; it must declare exactly one `KClass<out Route>` parameter, and any further parameters are
+ignored.
 
 ```kotlin
-@Screen(HomeRoute::class)
-@Screen(FeaturedRoute::class)
-@Composable
-fun ColumnScope.SharedContent(
-    state: SharedState,
-    onIntent: (SharedIntent) -> Unit,
-) { /* render state; emit intents */ }
+@ScreenSlot @Repeatable annotation class ViewModelOf(val route: KClass<out Route>)
+@ScreenSlot @Repeatable annotation class Effects(val route: KClass<out Route>)
+@ScreenSlot @Repeatable annotation class TopBar(val route: KClass<out Route>)
 
-@MviViewModel(HomeRoute::class)
-class HomeViewModel : ViewModel(), GezginMvi<SharedState, SharedIntent, HomeEffect> {
-    private val effectSink = GezginEffects<HomeEffect>()
-    override val effects: Flow<HomeEffect> = effectSink.flow
-    // uiState omitted
-    override fun onIntent(intent: SharedIntent) {
-        if (intent == SharedIntent.OpenNext) effectSink.send(HomeEffect.OpenFeatured)
-    }
-}
-
-@EffectHandler(HomeRoute::class)
+@ScreenWrapper
 @Composable
-fun HomeEffectHandler(effects: Flow<HomeEffect>, nav: HomeNavigator) {
-    ObserveEffects(effects) { effect ->
-        if (effect == HomeEffect.OpenFeatured) nav.goToFeatured()
+fun <S, I, E> AppScreenRoot(
+    @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
+    @FilledBy(Effects::class)     onEffect: (E) -> Unit,
+    @FilledBy(TopBar::class)      topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
+    @FilledBy(Screen::class)      content: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
+) {
+    val vm = viewModel()
+    val state by vm.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(vm) { vm.effects.collect(onEffect) }
+    Scaffold(topBar = { topBar(state, vm::onIntent) }) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) { content(state, vm::onIntent) }
     }
 }
 ```
 
-`@Screen` is repeatable. Every bound route has its own `@MviViewModel(route)` and route-bound handler. A shared content function must use State and Intent types compatible with every route; Effect and typed Navigator types may differ per route.
+Each screen then contributes providers, one annotation apiece:
 
-`@TopBar(route)` and `@BottomBar(route)` are repeatable, migration-only `gezgin-mvi` APIs guarded by `@ExperimentalGezginMigrationApi`. Generated content is an outer `Column`, then top bar, a `Column(Modifier.fillMaxWidth().weight(1f))` preserving the content's `ColumnScope`, and the bottom bar only while the IME is hidden. They exist only to preserve the current ZAD screen shape and must be removed when the migration adopts its permanent app-owned container. Consumers must declare `@OptIn(ExperimentalGezginMigrationApi::class)` explicitly.
+```kotlin
+@ViewModelOf(DetailRoute::class)
+@Composable
+fun detailViewModel(route: DetailRoute): DetailViewModel = koinViewModel { parametersOf(route) }
+
+@Effects(DetailRoute::class)
+fun handleDetailEffect(effect: DetailEffect, nav: DetailNavigator) { /* typed navigation */ }
+
+@TopBar(DetailRoute::class)
+@Composable
+fun DetailTopBar(state: DetailUiState, onIntent: (DetailIntent) -> Unit) { /* chrome */ }
+
+@Screen(DetailRoute::class)
+@Composable
+fun ColumnScope.DetailScreen(state: DetailUiState, onIntent: (DetailIntent) -> Unit) { /* body */ }
+```
+
+and the generated entry wires them together:
+
+```kotlin
+register<DetailRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
+    val nav = LocalGezginRawNavigator.current.detailNavigator(LocalGezginEntryId.current)
+    AppScreenRoot<DetailUiState, DetailIntent, DetailEffect>(
+        viewModel = { detailViewModel(route = route) },
+        onEffect = { effect -> handleDetailEffect(effect = effect, nav = nav) },
+        topBar = { state, onIntent -> DetailTopBar(state = state, onIntent = onIntent) },
+        content = { state, onIntent -> DetailScreen(state = state, onIntent = onIntent) },
+    )
+}
+```
+
+**How a slot is filled.** A slot's function type IS the provider's signature, receiver included: a
+slot declared `ColumnScope.(S, (I) -> Unit) -> Unit` requires an extension provider on
+`ColumnScope`. Type parameters bind from whatever fills the slots — `S` and `I` from the content
+provider, `E` from the effect provider — which is why the wrapper needs no `reified` and `@Screen`
+carries no ViewModel argument. A provider may also declare **roles** Gezgin supplies and does not
+count against matching: the route's own type, that route's typed navigator, and
+`GezginSheetController`. The typed navigator reaching a wrapper generic over `S`/`I`/`E` is exactly
+that: the generated slot lambda closes over it.
+
+A slot whose parameter has a Kotlin default and no provider is left out of the call. A wrapper
+whose content slot names `@BottomSheet` is a candidate only for bottom-sheet routes, so kind is
+part of the match with no special-casing. A route that matches no wrapper is generated unwrapped,
+with a warning; two matching wrappers is an error.
+
+Declare wrappers and markers in a module the features depend on, and name its package once per
+feature module — KSP cannot enumerate classpath declarations by annotation:
+
+```kotlin
+ksp { arg("gezgin.wrapperPackages", "com.example.designsystem") }
+```
+
 
 ### Fragment interop
 

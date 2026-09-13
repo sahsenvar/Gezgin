@@ -237,6 +237,10 @@ public abstract interface annotation class dev/gezgin/core/annotation/Dialog : j
 	public abstract fun route ()Ljava/lang/Class;
 }
 
+public abstract interface annotation class dev/gezgin/core/annotation/FilledBy : java/lang/annotation/Annotation {
+	public abstract fun marker ()Ljava/lang/Class;
+}
+
 public abstract interface annotation class dev/gezgin/core/annotation/FlowGraph : java/lang/annotation/Annotation {
 }
 
@@ -297,6 +301,12 @@ public abstract interface annotation class dev/gezgin/core/annotation/Screen : j
 
 public abstract interface annotation class dev/gezgin/core/annotation/Screen$Container : java/lang/annotation/Annotation {
 	public abstract fun value ()[Ldev/gezgin/core/annotation/Screen;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/ScreenSlot : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/ScreenWrapper : java/lang/annotation/Annotation {
 }
 
 public abstract interface annotation class dev/gezgin/core/annotation/StartDestination : java/lang/annotation/Annotation {

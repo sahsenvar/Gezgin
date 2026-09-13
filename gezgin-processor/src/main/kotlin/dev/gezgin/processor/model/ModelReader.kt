@@ -11,6 +11,7 @@ import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
 import com.google.devtools.ksp.symbol.Modifier
 import com.squareup.kotlinpoet.ksp.toTypeName
+import dev.gezgin.processor.serial.SerialTypeClassifier
 
 private const val NAV_GRAPH_FQ = "dev.gezgin.core.annotation.NavGraph"
 private const val FLOW_GRAPH_FQ = "dev.gezgin.core.annotation.FlowGraph"
@@ -171,7 +172,8 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
   ): GraphModelNode {
     val fqName = graphDecl.requireQualifiedName()
     val isFlow = graphDecl.hasAnnotation(FLOW_GRAPH_FQ)
-    val resultTypeFq = resultTypeArgOf(graphDecl, RESULT_FLOW_FQ)
+    val resultType = resultTypeOf(graphDecl, RESULT_FLOW_FQ)
+    val resultTypeFq = resultType?.fqNameOrTypeString()
     val members = memberDecls.filter { membershipParent(it)?.qualifiedName?.asString() == fqName }
     val startFq =
       members.firstOrNull { it.hasAnnotation(START_DESTINATION_FQ) }?.requireQualifiedName()
@@ -186,6 +188,7 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
       isResultFlow = resultTypeFq != null,
       declaresResultFlowDirectly = graphDecl.directlyImplements(RESULT_FLOW_FQ),
       resultTypeFq = resultTypeFq,
+      resultTypeKind = resultType?.let { SerialTypeClassifier.classify(it) },
       startFq = startFq,
       memberFq = members.map { it.requireQualifiedName() }.sorted(),
       parentFlowFq = parentFlowFq,
@@ -206,16 +209,24 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
     val graphFq = chain.last().requireQualifiedName()
     val flowChainFq =
       chain.filter { it.hasAnnotation(FLOW_GRAPH_FQ) }.map { it.requireQualifiedName() }
+    val resultType = resultTypeOf(routeDecl, RESULT_ROUTE_FQ)
+    val resultTypeFq = resultType?.fqNameOrTypeString()
 
     return RouteModel(
       fqName = routeDecl.requireQualifiedName(),
+      isSerializable =
+        routeDecl.annotations.any {
+          it.annotationType.resolve().declaration.qualifiedName?.asString() ==
+            "kotlinx.serialization.Serializable"
+        },
       simpleName = routeDecl.simpleName.asString(),
       graphFq = graphFq,
       flowChainFq = flowChainFq,
       ctorParams = ctorParamsOf(routeDecl),
       isStart = routeDecl.hasAnnotation(START_DESTINATION_FQ),
       noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
-      resultTypeFq = resultTypeArgOf(routeDecl, RESULT_ROUTE_FQ),
+      resultTypeFq = resultTypeFq,
+      resultTypeKind = resultType?.let { SerialTypeClassifier.classify(it) },
       edges = edgesOf(routeDecl),
       backEdges = backEdgesOf(routeDecl),
       implementedGraphFqs = implementedGraphFqsOf(routeDecl),
@@ -241,6 +252,7 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
         typeName = resolved.toTypeName(),
         isNullable = resolved.isMarkedNullable,
         hasDefault = param.hasDefault,
+        kind = SerialTypeClassifier.classify(resolved),
       )
     }
 
@@ -321,22 +333,21 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
 
   /**
    * Whether `decl`'s OWN (declared) supertype list names [fq] — non-transitive (cf.
-   * [resultTypeArgOf]).
+   * [resultTypeOf]).
    */
   private fun KSClassDeclaration.directlyImplements(fq: String): Boolean =
     superTypes.any { it.resolve().declaration.qualifiedName?.asString() == fq }
 
-  /**
-   * `T` from `markerFq<T>` if `decl` transitively implements `markerFq<T>` (substituted), else
-   * null.
-   */
-  private fun resultTypeArgOf(decl: KSClassDeclaration, markerFq: String): String? {
+  /** The resolved `T` from `markerFq<T>`, if `decl` transitively implements the marker. */
+  private fun resultTypeOf(decl: KSClassDeclaration, markerFq: String): KSType? {
     val markerType =
       decl.getAllSuperTypes().firstOrNull { it.declaration.qualifiedName?.asString() == markerFq }
         ?: return null
-    val argType = markerType.arguments.firstOrNull()?.type?.resolve() ?: return null
-    return argType.declaration.qualifiedName?.asString() ?: argType.toString()
+    return markerType.arguments.firstOrNull()?.type?.resolve()
   }
+
+  private fun KSType.fqNameOrTypeString(): String =
+    declaration.qualifiedName?.asString() ?: toString()
 
   private fun KSClassDeclaration.requireQualifiedName(): String =
     qualifiedName?.asString() ?: error("Declaration without a qualified name: $this")

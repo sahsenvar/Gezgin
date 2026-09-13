@@ -1,5 +1,7 @@
 package dev.gezgin.processor.model
 
+import dev.gezgin.processor.serial.SerialKind
+
 /**
  * Deterministic, line-based textual dump of a [GraphModel], written by the processor under the
  * `gezgin.dumpModel=true` KSP option for test assertions. The format below is the exact grammar.
@@ -51,8 +53,17 @@ internal fun GraphModel.dumpText(): String {
 private fun ParamModel.dump(): String {
   val nullableMark = if (isNullable) "?" else ""
   val defaultMark = if (hasDefault) "=" else ""
-  return "$name:$typeFq$nullableMark$defaultMark"
+  return "$name: ${kind.dump()}$nullableMark$defaultMark"
 }
+
+private fun SerialKind.dump(): String =
+  when (this) {
+    is SerialKind.Builtin -> "Builtin($fq)"
+    SerialKind.SerializableClass -> "SerializableClass"
+    SerialKind.BareEnum -> "BareEnum"
+    is SerialKind.ListOf -> "ListOf(${element.dump()})"
+    is SerialKind.Unsupported -> "Unsupported"
+  }
 
 private fun String?.orDash(): String = this ?: "-"
 

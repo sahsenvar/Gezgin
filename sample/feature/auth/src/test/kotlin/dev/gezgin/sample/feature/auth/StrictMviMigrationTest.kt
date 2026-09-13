@@ -3,12 +3,13 @@ package dev.gezgin.sample.feature.auth
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.NavResult
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.sample.feature.auth.screen_login.LoginEffect
-import dev.gezgin.sample.feature.auth.screen_login.LoginEffectHandler
 import dev.gezgin.sample.feature.auth.screen_login.LoginIntent
+import dev.gezgin.sample.feature.auth.screen_login.LoginResultCollector
 import dev.gezgin.sample.feature.auth.screen_login.LoginViewModel
 import dev.gezgin.sample.feature.auth.screen_login.handleLoginEffect
 import dev.gezgin.sample.navigation.AuthGraph.ForgotPasswordDialogRoute
@@ -26,13 +27,17 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.shadows.ShadowToast
 
+/**
+ * The one-directional contract survives the move off `gezgin-mvi`: an intent becomes an effect, the
+ * route-bound effect provider owns the typed navigation, and a persisted result re-enters the
+ * ViewModel through the result-collector slot.
+ */
 @RunWith(RobolectricTestRunner::class)
 class StrictMviMigrationTest {
 
   @Test
-  fun `login navigation intent becomes an effect before the typed handler navigates`() =
+  fun `login navigation intent becomes an effect before the typed provider navigates`() =
     runBlocking {
       val viewModel = LoginViewModel()
 
@@ -42,7 +47,7 @@ class StrictMviMigrationTest {
       assertEquals(LoginEffect.LoginSuccess, effect)
 
       val raw = RawNavigator(start = LoginScreenRoute, topology = gezginTopology)
-      handleLoginEffect(effect, raw.loginNavigator(entryId = 1L))
+      handleLoginEffect(effect, {}, raw.loginNavigator(entryId = 1L))
       assertEquals(DashboardScreenRoute, raw.current)
     }
 
@@ -50,9 +55,7 @@ class StrictMviMigrationTest {
   fun `forgot password result re-enters the ViewModel as an intent`() = runBlocking {
     val viewModel = LoginViewModel()
 
-    viewModel.effects
-      .resultIntentSink<LoginIntent>()
-      .sendResultIntent(LoginIntent.ForgotPasswordResult(NavResult.Value(true)))
+    viewModel.onIntent(LoginIntent.ForgotPasswordResult(NavResult.Value(true)))
 
     assertEquals(LoginEffect.ShowMessage("Sıfırlama linki gönderildi"), viewModel.effects.first())
   }
@@ -60,10 +63,10 @@ class StrictMviMigrationTest {
   @OptIn(GezginInternalApi::class)
   @Test
   fun `route-bound login collector delivers a persisted result through the ViewModel`() {
-    ShadowToast.reset()
     val viewModel = LoginViewModel()
     val raw = RawNavigator(start = LoginScreenRoute, topology = gezginTopology)
     val nav = raw.loginNavigator(entryId = requireNotNull(raw.entryIdOf(LoginScreenRoute::class)))
+    val messages = mutableListOf<String>()
 
     nav.launchForgotPasswordDialog(email = null)
     raw
@@ -74,12 +77,20 @@ class StrictMviMigrationTest {
 
     val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
     try {
-      controller.get().setContent { LoginEffectHandler(viewModel.effects, nav) }
+      // Exactly the wiring ShowcaseScreenRoot performs for this route.
+      controller.get().setContent {
+        LaunchedEffect(viewModel) {
+          viewModel.effects.collect { effect -> handleLoginEffect(effect, messages::add, nav) }
+        }
+        LoginResultCollector(onIntent = viewModel::onIntent, nav = nav)
+      }
 
       awaitComposeCondition("persisted forgot-password result was not handled") {
-        ShadowToast.getTextOfLatestToast() == "Sıfırlama linki gönderildi"
+        messages.lastOrNull() == "Sıfırlama linki gönderildi"
       }
     } finally {
+      controller.get().runOnUiThread { controller.get().setContent {} }
+      shadowOf(Looper.getMainLooper()).idle()
       controller.pause().stop().destroy()
     }
   }

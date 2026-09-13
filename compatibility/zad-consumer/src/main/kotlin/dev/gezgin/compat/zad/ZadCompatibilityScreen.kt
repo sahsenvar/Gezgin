@@ -1,5 +1,3 @@
-@file:OptIn(dev.gezgin.core.ExperimentalGezginMigrationApi::class)
-
 package dev.gezgin.compat.zad
 
 import androidx.compose.foundation.clickable
@@ -8,11 +6,8 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import dev.gezgin.core.annotation.Screen
-import dev.gezgin.mvi.ObserveEffects
-import dev.gezgin.mvi.annotation.BottomBar
-import dev.gezgin.mvi.annotation.EffectHandler
-import dev.gezgin.mvi.annotation.TopBar
-import kotlinx.coroutines.flow.Flow
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Screen(ZadCompatibilityRoute::class)
 @Screen(FeaturedCompatibilityRoute::class)
@@ -27,31 +22,33 @@ fun ColumnScope.ZadCompatibilityScreen(
   )
 }
 
-@EffectHandler(ZadCompatibilityRoute::class)
+@ViewModelOf(ZadCompatibilityRoute::class)
 @Composable
-fun ZadCompatibilityEffectHandler(
-  effects: Flow<ZadCompatibilityEffect>,
-  nav: ZadCompatibilityNavigator,
-) {
-  ObserveEffects(effects) { effect ->
-    when (effect) {
-      ZadCompatibilityEffect.NavigateToFeatured -> nav.goToFeaturedCompatibility()
-    }
+fun zadCompatibilityViewModel(route: ZadCompatibilityRoute): ZadCompatibilityViewModel =
+  koinViewModel {
+    parametersOf(route)
+  }
+
+@ViewModelOf(FeaturedCompatibilityRoute::class)
+@Composable
+fun featuredCompatibilityViewModel(
+  route: FeaturedCompatibilityRoute
+): FeaturedCompatibilityViewModel = koinViewModel { parametersOf(route) }
+
+@Effects(ZadCompatibilityRoute::class)
+fun handleZadCompatibilityEffect(effect: ZadCompatibilityEffect, nav: ZadCompatibilityNavigator) {
+  when (effect) {
+    ZadCompatibilityEffect.NavigateToFeatured -> nav.goToFeaturedCompatibility()
   }
 }
 
-@EffectHandler(FeaturedCompatibilityRoute::class)
-@Composable
-fun FeaturedCompatibilityEffectHandler(
+@Effects(FeaturedCompatibilityRoute::class)
+fun handleFeaturedCompatibilityEffect(
+  effect: FeaturedCompatibilityEffect,
   nav: FeaturedCompatibilityNavigator,
-  effects: Flow<FeaturedCompatibilityEffect>,
-  onIntent: (ZadCompatibilityIntent) -> Unit,
 ) {
-  onIntent.hashCode()
-  ObserveEffects(effects) { effect ->
-    when (effect) {
-      FeaturedCompatibilityEffect.NavigateToHome -> nav.goToZadCompatibility()
-    }
+  when (effect) {
+    FeaturedCompatibilityEffect.NavigateToHome -> nav.goToZadCompatibility()
   }
 }
 

@@ -289,7 +289,6 @@ object ReleasePublicationVerifier {
     when (projectName) {
       "gezgin-core" ->
         "DI-agnostic Kotlin Multiplatform navigation runtime and Compose display layer."
-      "gezgin-mvi" -> "Optional MVI bindings and generated route effect handlers for Gezgin."
       "gezgin-test" -> "UI-free typed navigation test utilities for Gezgin applications."
       "gezgin-processor" ->
         "KSP2 processor that generates typed Gezgin navigators and entry providers."
@@ -390,40 +389,6 @@ object ReleasePublicationVerifier {
           ),
           PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
         )
-      "gezgin-mvi" ->
-        setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"))
-      "gezgin-mvi-android" ->
-        setOf(
-          PomDependency(
-            "androidx.lifecycle",
-            "lifecycle-viewmodel-compose-android",
-            "2.10.0",
-            "compile",
-          ),
-          PomDependency(
-            "androidx.lifecycle",
-            "lifecycle-runtime-compose-android",
-            "2.10.0",
-            "compile",
-          ),
-          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
-        )
-      "gezgin-mvi-jvm" ->
-        setOf(
-          PomDependency(
-            "org.jetbrains.androidx.lifecycle",
-            "lifecycle-viewmodel-compose-desktop",
-            "2.11.0",
-            "compile",
-          ),
-          PomDependency(
-            "org.jetbrains.androidx.lifecycle",
-            "lifecycle-runtime-compose-desktop",
-            "2.11.0",
-            "compile",
-          ),
-          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
-        )
       "gezgin-test" ->
         setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"))
       "gezgin-test-android",
@@ -486,27 +451,6 @@ object ReleasePublicationVerifier {
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
         )
-      "gezgin-mvi" -> setOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
-      "gezgin-mvi-android" ->
-        setOf(
-          ModuleDependency("androidx.lifecycle", "lifecycle-runtime-compose", "2.10.0"),
-          ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-compose", "2.10.0"),
-          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
-        )
-      "gezgin-mvi-jvm" ->
-        setOf(
-          ModuleDependency(
-            "org.jetbrains.androidx.lifecycle",
-            "lifecycle-runtime-compose",
-            "2.11.0",
-          ),
-          ModuleDependency(
-            "org.jetbrains.androidx.lifecycle",
-            "lifecycle-viewmodel-compose",
-            "2.11.0",
-          ),
-          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
-        )
       "gezgin-test",
       "gezgin-test-android",
       "gezgin-test-jvm" ->
@@ -530,26 +474,6 @@ object ReleasePublicationVerifier {
       ),
       ExpectedArtifact("gezgin-core-android", ".aar", componentArtifactId = "gezgin-core"),
       ExpectedArtifact("gezgin-core-jvm", ".jar", componentArtifactId = "gezgin-core"),
-      ExpectedArtifact(
-        "gezgin-mvi",
-        ".jar",
-        "gezgin-core",
-        setOf("gezgin-mvi-android", "gezgin-mvi-jvm"),
-      ),
-      ExpectedArtifact(
-        "gezgin-mvi-android",
-        ".aar",
-        "gezgin-core-android",
-        componentArtifactId = "gezgin-mvi",
-        moduleProjectDependency = "gezgin-core",
-      ),
-      ExpectedArtifact(
-        "gezgin-mvi-jvm",
-        ".jar",
-        "gezgin-core-jvm",
-        componentArtifactId = "gezgin-mvi",
-        moduleProjectDependency = "gezgin-core",
-      ),
       ExpectedArtifact(
         "gezgin-test",
         ".jar",

@@ -3,13 +3,14 @@ package dev.gezgin.sample.feature.home
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.NavResult
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.sample.domain.model.SortOrder
 import dev.gezgin.sample.feature.home.screen_dashboard.DashboardEffect
-import dev.gezgin.sample.feature.home.screen_dashboard.DashboardEffectHandler
 import dev.gezgin.sample.feature.home.screen_dashboard.DashboardIntent
+import dev.gezgin.sample.feature.home.screen_dashboard.DashboardResultCollector
 import dev.gezgin.sample.feature.home.screen_dashboard.DashboardViewModel
 import dev.gezgin.sample.feature.home.screen_dashboard.handleDashboardEffect
 import dev.gezgin.sample.navigation.HomeGraph.DashboardScreenRoute
@@ -32,7 +33,7 @@ import org.robolectric.Shadows.shadowOf
 class StrictMviMigrationTest {
 
   @Test
-  fun `dashboard navigation intent becomes an effect before the typed handler navigates`() =
+  fun `dashboard navigation intent becomes an effect before the typed provider navigates`() =
     runBlocking {
       val viewModel = DashboardViewModel()
 
@@ -42,7 +43,7 @@ class StrictMviMigrationTest {
       assertEquals(DashboardEffect.OpenItem("item-42"), effect)
 
       val raw = RawNavigator(start = DashboardScreenRoute, topology = gezginTopology)
-      handleDashboardEffect(effect, raw.dashboardNavigator(entryId = 1L))
+      handleDashboardEffect(effect, {}, raw.dashboardNavigator(entryId = 1L))
       assertEquals(ItemDetailScreenRoute("item-42"), raw.current)
     }
 
@@ -50,9 +51,7 @@ class StrictMviMigrationTest {
   fun `sort result re-enters the ViewModel as an intent`() = runBlocking {
     val viewModel = DashboardViewModel()
 
-    viewModel.effects
-      .resultIntentSink<DashboardIntent>()
-      .sendResultIntent(DashboardIntent.SortResult(NavResult.Value(SortOrder.PRICE_DESC)))
+    viewModel.onIntent(DashboardIntent.SortResult(NavResult.Value(SortOrder.PRICE_DESC)))
 
     assertEquals(SortOrder.PRICE_DESC, viewModel.uiState.value.order)
     assertEquals(DashboardEffect.ShowMessage("Sıralama: PRICE_DESC"), viewModel.effects.first())
@@ -75,12 +74,20 @@ class StrictMviMigrationTest {
 
     val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
     try {
-      controller.get().setContent { DashboardEffectHandler(viewModel.effects, nav) }
+      // Exactly the wiring ShowcaseScreenRoot performs for this route.
+      controller.get().setContent {
+        LaunchedEffect(viewModel) {
+          viewModel.effects.collect { effect -> handleDashboardEffect(effect, {}, nav) }
+        }
+        DashboardResultCollector(onIntent = viewModel::onIntent, nav = nav)
+      }
 
       awaitComposeCondition("persisted sort result was not handled") {
         viewModel.uiState.value.order == SortOrder.PRICE_DESC
       }
     } finally {
+      controller.get().runOnUiThread { controller.get().setContent {} }
+      shadowOf(Looper.getMainLooper()).idle()
       controller.pause().stop().destroy()
     }
   }

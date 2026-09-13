@@ -1,11 +1,11 @@
 package dev.gezgin.sample.feature.home.screen_dashboard
 
-import androidx.lifecycle.ViewModel
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.gezgin.core.NavResult
-import dev.gezgin.mvi.GezginEffects
-import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.annotation.MviViewModel
-import dev.gezgin.sample.feature.home.resultIntentEffectFlow
+import dev.gezgin.sample.designsystem.BaseViewModel
+import dev.gezgin.sample.designsystem.EffectSink
+import dev.gezgin.sample.designsystem.ViewModelOf
 import dev.gezgin.sample.navigation.HomeGraph
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,15 +13,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-@MviViewModel(HomeGraph.DashboardScreenRoute::class)
-class DashboardViewModel :
-  ViewModel(), GezginMvi<DashboardUiState, DashboardIntent, DashboardEffect> {
+class DashboardViewModel : BaseViewModel<DashboardUiState, DashboardIntent, DashboardEffect>() {
 
   private val _uiState = MutableStateFlow(DashboardUiState())
   override val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
-  private val _effects = GezginEffects<DashboardEffect>()
-  override val effects: Flow<DashboardEffect> = resultIntentEffectFlow(_effects.flow, ::onIntent)
+  private val _effects = EffectSink<DashboardEffect>()
+  override val effects: Flow<DashboardEffect> = _effects.flow
 
   override fun onIntent(intent: DashboardIntent) {
     when (intent) {
@@ -40,3 +38,7 @@ class DashboardViewModel :
     }
   }
 }
+
+@ViewModelOf(HomeGraph.DashboardScreenRoute::class)
+@Composable
+fun dashboardViewModel(): DashboardViewModel = viewModel { DashboardViewModel() }

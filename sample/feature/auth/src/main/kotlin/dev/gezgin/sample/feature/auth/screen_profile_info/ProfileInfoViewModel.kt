@@ -1,23 +1,23 @@
 package dev.gezgin.sample.feature.auth.screen_profile_info
 
-import androidx.lifecycle.ViewModel
-import dev.gezgin.mvi.GezginEffects
-import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.annotation.MviViewModel
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.gezgin.sample.designsystem.BaseViewModel
+import dev.gezgin.sample.designsystem.EffectSink
+import dev.gezgin.sample.designsystem.ViewModelOf
 import dev.gezgin.sample.navigation.SignUpFlow.ProfileInfoScreenRoute
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@MviViewModel(ProfileInfoScreenRoute::class)
 class ProfileInfoViewModel(route: ProfileInfoScreenRoute) :
-  ViewModel(), GezginMvi<ProfileInfoUiState, ProfileInfoIntent, ProfileInfoEffect> {
+  BaseViewModel<ProfileInfoUiState, ProfileInfoIntent, ProfileInfoEffect>() {
 
   private val _uiState = MutableStateFlow(ProfileInfoUiState(route.email))
   override val uiState: StateFlow<ProfileInfoUiState> = _uiState.asStateFlow()
 
-  private val _effects = GezginEffects<ProfileInfoEffect>()
+  private val _effects = EffectSink<ProfileInfoEffect>()
   override val effects: Flow<ProfileInfoEffect> = _effects.flow
 
   // Giriş ipucu entry yaratılırken gönderilir (nav'dan önce DEĞİL); lossless kanal STARTED'da
@@ -31,4 +31,10 @@ class ProfileInfoViewModel(route: ProfileInfoScreenRoute) :
       ProfileInfoIntent.Continue -> _effects.send(ProfileInfoEffect.OpenTerms)
     }
   }
+}
+
+@ViewModelOf(ProfileInfoScreenRoute::class)
+@Composable
+fun profileInfoViewModel(route: ProfileInfoScreenRoute): ProfileInfoViewModel = viewModel {
+  ProfileInfoViewModel(route)
 }

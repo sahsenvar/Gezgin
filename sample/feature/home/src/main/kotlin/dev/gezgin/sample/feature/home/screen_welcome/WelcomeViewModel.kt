@@ -1,23 +1,23 @@
 package dev.gezgin.sample.feature.home.screen_welcome
 
-import androidx.lifecycle.ViewModel
-import dev.gezgin.mvi.GezginEffects
-import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.annotation.MviViewModel
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import dev.gezgin.sample.designsystem.BaseViewModel
+import dev.gezgin.sample.designsystem.EffectSink
+import dev.gezgin.sample.designsystem.ViewModelOf
 import dev.gezgin.sample.navigation.HomeGraph
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@MviViewModel(HomeGraph.WelcomeScreenRoute::class)
 class WelcomeViewModel(route: HomeGraph.WelcomeScreenRoute) :
-  ViewModel(), GezginMvi<WelcomeUiState, WelcomeIntent, WelcomeEffect> {
+  BaseViewModel<WelcomeUiState, WelcomeIntent, WelcomeEffect>() {
 
   private val _uiState = MutableStateFlow(WelcomeUiState(name = route.name))
   override val uiState: StateFlow<WelcomeUiState> = _uiState.asStateFlow()
 
-  private val _effects = GezginEffects<WelcomeEffect>()
+  private val _effects = EffectSink<WelcomeEffect>()
   override val effects: Flow<WelcomeEffect> = _effects.flow
 
   override fun onIntent(intent: WelcomeIntent) {
@@ -31,4 +31,10 @@ class WelcomeViewModel(route: HomeGraph.WelcomeScreenRoute) :
       WelcomeIntent.Continue -> _effects.send(WelcomeEffect.ContinueToDashboard)
     }
   }
+}
+
+@ViewModelOf(HomeGraph.WelcomeScreenRoute::class)
+@Composable
+fun welcomeViewModel(route: HomeGraph.WelcomeScreenRoute): WelcomeViewModel = viewModel {
+  WelcomeViewModel(route)
 }

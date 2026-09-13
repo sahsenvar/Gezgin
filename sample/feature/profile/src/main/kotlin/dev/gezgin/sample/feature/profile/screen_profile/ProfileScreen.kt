@@ -2,6 +2,7 @@ package dev.gezgin.sample.feature.profile.screen_profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -15,7 +16,7 @@ import dev.gezgin.sample.navigation.ProfileGraph.ProfileScreenRoute
 
 @Screen(ProfileScreenRoute::class)
 @Composable
-fun ProfileScreen(state: ProfileUiState, onIntent: (ProfileIntent) -> Unit) {
+fun ColumnScope.ProfileScreen(state: ProfileUiState, onIntent: (ProfileIntent) -> Unit) {
   Surface(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Text("Profil: ${state.name}")

@@ -2,6 +2,7 @@ package dev.gezgin.sample.feature.home.screen_item_detail
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -17,7 +18,7 @@ import dev.gezgin.sample.navigation.HomeGraph
 
 @Screen(HomeGraph.ItemDetailScreenRoute::class)
 @Composable
-fun ItemDetailScreen(state: ItemDetailUiState, onIntent: (ItemDetailIntent) -> Unit) {
+fun ColumnScope.ItemDetailScreen(state: ItemDetailUiState, onIntent: (ItemDetailIntent) -> Unit) {
   // Sayaç composition-anında DEĞİL, entry ömründe tek sefer artmalı → LaunchedEffect ile OnAppear.
   LaunchedEffect(Unit) { onIntent(ItemDetailIntent.OnAppear) }
   Surface(modifier = Modifier.fillMaxSize()) {

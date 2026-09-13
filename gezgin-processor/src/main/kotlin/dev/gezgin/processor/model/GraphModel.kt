@@ -1,15 +1,16 @@
 package dev.gezgin.processor.model
 
 import com.squareup.kotlinpoet.TypeName
+import dev.gezgin.processor.serial.SerialKind
 
 /**
  * A single constructor parameter of a route's primary constructor.
  *
- * [typeFq] is the parameter type's declaration fqName only (no type arguments) — kept for the
- * `gezgin.dumpModel` text dump and back-compat. [typeName] is the FULL KotlinPoet type including
- * generics/nullability (e.g. `List<String>`, `String?`), which navigator codegen forwards verbatim
- * so a generic param compiles instead of degrading to its raw erasure. Carrying a KotlinPoet type
- * makes this model processor-internal (no longer pure data) — an accepted trade for correctness.
+ * [typeFq] is the parameter type's declaration fqName only (no type arguments) — kept for
+ * back-compat. [typeName] is the FULL KotlinPoet type including generics/nullability (e.g.
+ * `List<String>`, `String?`), which navigator codegen forwards verbatim so a generic param compiles
+ * instead of degrading to its raw erasure. Carrying a KotlinPoet type makes this model
+ * processor-internal (no longer pure data) — an accepted trade for correctness.
  */
 internal data class ParamModel(
   val name: String,
@@ -17,6 +18,7 @@ internal data class ParamModel(
   val typeName: TypeName,
   val isNullable: Boolean,
   val hasDefault: Boolean,
+  val kind: SerialKind,
 )
 
 /** The kind of a forward navigation edge declared on a route. */
@@ -67,6 +69,7 @@ internal data class RouteModel(
   val isStart: Boolean,
   val noBack: Boolean,
   val resultTypeFq: String?,
+  val resultTypeKind: SerialKind? = null,
   val edges: List<EdgeModel>,
   val backEdges: List<BackEdgeModel>,
   /**
@@ -77,6 +80,12 @@ internal data class RouteModel(
    * *second*, non-membership graph interface, which is itself the violation.
    */
   val implementedGraphFqs: List<String>,
+  /**
+   * Whether the route declares `@Serializable` itself. Such a route keeps its compiler-generated
+   * serializer and the old `subclass(X::class)` registration; only a route WITHOUT the annotation
+   * gets one emitted for it.
+   */
+  val isSerializable: Boolean = false,
 )
 
 /**
@@ -102,6 +111,7 @@ internal data class GraphModelNode(
    */
   val declaresResultFlowDirectly: Boolean,
   val resultTypeFq: String?,
+  val resultTypeKind: SerialKind? = null,
   val startFq: String?,
   val memberFq: List<String>,
   val parentFlowFq: String?,

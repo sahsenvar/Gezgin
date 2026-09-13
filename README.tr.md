@@ -15,20 +15,19 @@ Gezgin **Navigation 3** üzerinde çalışır. Navigasyon grafiğin bir `sealed 
 ```kotlin
 // 1 · grafik = sealed ağaç — deklare ettiğin kenar = elde ettiğin metot
 @NavGraph
-@Serializable
 sealed interface ShopGraph {
     @GoTo(ProductRoute::class)                              // Catalog → Product
-    @Serializable data object CatalogRoute : ShopGraph
+    data object CatalogRoute : ShopGraph
 
     @GoTo(PaymentResult::class)                             // Product → PaymentResult ("hemen al")
-    @Serializable data class ProductRoute(val id: String) : ShopGraph
+    data class ProductRoute(val id: String) : ShopGraph
 
     // Başarıda checkout ekranını REPLACE et ve alışveriş hunisini Catalog dahil temizle,
     // ki sistem/predictive Back kullanıcıyı yeni bitirdiği akışa geri düşüremesin:
     @ReplaceTo(PaymentResult::class, clearUpTo = CatalogRoute::class, inclusive = true)
-    @Serializable data object CheckoutRoute : ShopGraph
+    data object CheckoutRoute : ShopGraph
 
-    @Serializable data object PaymentResult : ShopGraph     // terminal — ulaşılır, huniye geri gidilmez
+    data object PaymentResult : ShopGraph     // terminal — ulaşılır, huniye geri gidilmez
 }
 
 // 2 · ekranın tipli navigator'ı YALNIZ Catalog'un deklare kenarlarının metotlarına sahip
@@ -41,6 +40,10 @@ fun CatalogScreen(nav: CatalogNavigator) {
 ```
 
 `nav.goToProduct(id)` var, çünkü `CatalogRoute` `@GoTo(ProductRoute::class)` deklare etti. `nav.goToCheckout()` bir **derleme hatası** — `CheckoutRoute` gayet geçerli bir route, sadece *Catalog'dan* ulaşılamıyor. *"Buradan nereye gidebilirim?"* sorusunun cevabı IDE otomatik-tamamlamasında — bir lint kuralıyla değil, **API'nin şekliyle** zorunlu kılınıyor.
+
+`@NavGraph` içindeki route'larda artık `@Serializable` gerekmez; Gezgin bu route'lar için serializer
+üretip kaydeder. Parametre veya result olarak kullanılan generic olmayan sınıflarda `@Serializable`
+bırakılmalıdır. Yalnızca bu konumlarda kullanılan enum'lar annotation olmadan adlarıyla serileştirilir.
 
 ---
 
@@ -59,13 +62,15 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 ## Neden Gezgin? (Artıları)
 
-- **String route yok.** Grafik bir `sealed interface` ağacı; hedef = tip. Namespaced, `@Serializable` → process-death'e dayanıklı ve çok-platform serializable bedava.
+- **String route yok.** Grafik bir `sealed interface` ağacı; hedef = tip. Her route için üretilen
+  serializer route'u process-death'e dayanıklı ve çok-platform serializable yapar; parametre ve
+  result sınıflarında `@Serializable` bırakılır.
 - **Tanımlamadığın yere gidiş derlenmez.** Her route yalnız deklare ettiğin kenarların metotlarına sahip tipli bir navigator alır.
 - **Tüm sözlük deklaratif.** İleri (`@GoTo` / `@ReplaceTo`), geri (`back()` / `@BackTo` / `@BackToStart` / `@NoBack`), ve tipli sonuç döndüren çok-ekranlı **alt-flow'lar** (`@FlowGraph` / `ResultFlow` + `@GoForResult`) — davranış annotation'da, compile-time'da çözülür, runtime lambda yok.
 - **Sonuçlar type-safe *ve* process-death-safe.** `@GoForResult` sana `launchX()` + gerçek process ölümünü sağ atlatan re-attach `xResults: Flow<NavResult<T>>` verir.
 - **Modallar birinci-sınıf back-stack entry'leri.** `@Dialog` / `@BottomSheet` / `@FullscreenModal` = farklı render'lı aynı entry — elle yönetilen ayrı bir dialog state'i yok.
 - **State-as-data.** `backStack: StateFlow`, `events: Flow` — gözlemle, logla, restore et, ve navigasyonu **UI olmadan test et** (`GezginTestNavigator`).
-- **DI-agnostik.** Hilt / Koin / manuel — Gezgin seni bir DI'a mahkûm etmez. MVI ekranlar için opsiyonel `gezgin-mvi` add-on'u; brownfield Fragment interop'u için `@FragmentScreen`.
+- **DI-agnostik.** Hilt / Koin / manuel — Gezgin seni bir DI'a mahkûm etmez ve ViewModel'i o çözmez, `@ScreenWrapper` çözer. Brownfield Fragment interop'u için `@FragmentScreen`.
 - **Boilerplate üretilir.** Graph wiring, sonuç kanalı, entry kaydı — hepsi KSP.
 
 ---
@@ -100,7 +105,10 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 ## Kurulum
 
-KSP + serialization plugin'lerini uygulayıp Maven Central koordinatlarını kullan (`group = io.github.sahsenvar`, `version = 0.2.0`):
+KSP plugin'ini uygula. `kotlin("plugin.serialization")` plugin'ini yalnızca `@Serializable` türleri
+tanımlayan modüllerde uygula; yalnızca serializable parametre veya result türlerine referans veren
+graph modülüne gerek yok. Aşağıdaki snippet common case için iki plugin'i de içerir; koordinatlar
+`group = io.github.sahsenvar`, `version = 0.3.0`:
 
 ```kotlin
 plugins {
@@ -109,11 +117,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:gezgin-core:0.2.0")
-    ksp("io.github.sahsenvar:gezgin-processor:0.2.0")
-
-    // implementation("io.github.sahsenvar:gezgin-mvi:0.2.0")        // opsiyonel MVI add-on
-    // testImplementation("io.github.sahsenvar:gezgin-test:0.2.0")   // UI'sız test: GezginTestNavigator + tipli fromX()
+    implementation("io.github.sahsenvar:gezgin-core:0.3.0")
+    ksp("io.github.sahsenvar:gezgin-processor:0.3.0")
+    // testImplementation("io.github.sahsenvar:gezgin-test:0.3.0")   // UI'sız test: GezginTestNavigator + tipli fromX()
 }
 ```
 
@@ -130,7 +136,6 @@ override val dragHandleMode: BottomSheetDragHandleMode
 |---|---|
 | `gezgin-core` | Zorunlu. Annotation'lar, runtime, `GezginDisplay` (Compose katmanı), modal scene strategy'leri. DI-agnostik. |
 | `gezgin-processor` | Zorunlu. Tipli navigator'ları + entry provider'larını üreten KSP2 işlemcisi. |
-| `gezgin-mvi` | Opsiyonel. `@MviViewModel` / route-bound `@EffectHandler` + `GezginMvi<S, I, E>` + DI-detection (Hilt/Koin, androidx fallback). |
 | `gezgin-test` | Opsiyonel (test). UI'sız `GezginTestNavigator` + tipli `fromX()` erişimcileri. |
 
 İki build sınırı bilinçli olarak ayrıdır:
@@ -150,6 +155,7 @@ Bunlar birbirinin yerine uygulanacak upgrade talimatları değil, farklı build 
 |---|---|---|
 | `gezgin.emitSerializers` | `true` | Polimorfik `Route` `SerializersModule`'ünü kendin sağlıyorsan `false` ver (opt-out). |
 | `gezgin.emitTestAccessors` | `false` | Tipli `GezginTestNavigator.fromX()` test erişimcilerini üretmek için `true` ver (opt-in). Flag'i modülün **`main`** KSP round'unda (graph'ların olduğu round) aç; erişimciler `main`'e üretilir, böylece `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — çok-modül düzeninde de çalışır. `:gezgin-test`'i `main` compile classpath'ine `compileOnly` ekle (erişimciler derlensin; app runtime'ına sızmaz), `test` için `testImplementation` ile yeniden ekle. |
+| `gezgin.wrapperPackages` | boş | Bu modülde değil, bir bağımlılığa derlenmiş `@ScreenWrapper` fonksiyonları ve `@ScreenSlot` annotation'ları için taranacak paketler (virgülle ayrılır). KSP classpath'teki bildirimleri annotation'la sayamaz; çok-modüllü kurulum bunu gerektirir, tek modüllü uygulama gerektirmez. |
 
 ---
 
@@ -159,16 +165,12 @@ Bunlar birbirinin yerine uygulanacak upgrade talimatları değil, farklı build 
 
 ```kotlin
 @NavGraph
-@Serializable
 sealed interface HomeGraph {
-    @Serializable
     data object FeedRoute : HomeGraph               // app-start route'u (host'a verilir)
 
     @GoTo(ProductRoute::class)
-    @Serializable
     data object CatalogRoute : HomeGraph
 
-    @Serializable
     data class ProductRoute(val id: String) : HomeGraph   // route = veri
 }
 ```
@@ -192,12 +194,10 @@ Klasik yol — `navController.navigate("product/$id")` — bir typo'da *runtime*
 
 ```kotlin
 @ReplaceTo(OrderPlacedRoute::class)                 // checkout flow'unu temizle ki geri form'a dönemesin
-@Serializable
 data class PaymentRoute(val cartId: String) : CartGraph
 // → nav.replaceToOrderPlaced(orderId)
 
 @NoBack                                             // terminal ekran: sistem/predictive back burada no-op
-@Serializable
 data class OrderPlacedRoute(val orderId: String) : CartGraph
 ```
 
@@ -214,19 +214,18 @@ data class OrderPlacedRoute(val orderId: String) : CartGraph
 
 ```kotlin
 @FlowGraph
-@Serializable
 sealed interface CheckoutFlow : ShopGraph, ResultFlow<OrderId> {   // tüm flow bir OrderId döndürür
-    @StartDestination @Serializable data object CartRoute : CheckoutFlow
+    @StartDestination data object CartRoute : CheckoutFlow
     // … PaymentRoute … ; nav.quitWith(OrderId(...)) flow'u bitirir ve sonucu teslim eder
 }
 
 // Çağıran result edge'ini deklare eder; route-bound handler başlatır ve sonucu toplar:
 @GoForResult(CheckoutFlow::class)
-@Serializable data object CatalogRoute : HomeGraph
+data object CatalogRoute : HomeGraph
 // → nav.launchCheckout()  +  nav.checkoutResults: Flow<NavResult<OrderId>>
 ```
 
-Maintained strict-MVI deseninde generated navigator route-bound `@EffectHandler`'a aittir: handler `launchX()` çağırır, `xResults`'ı `LaunchedEffect` içinde toplar ve her `NavResult`'ı typed Intent olarak VM'e iletir. Restore sonrası caller route/handler yeniden composition'a girince collector re-attach olur; navigator'ın kaydedilen result-bus slotu in-flight veya teslim edilmiş ama tüketilmemiş sonucu korur. Navigator'ı VM'e koyma; suspend `goToXForResult()` process-ömrü convenience'ıdır, PD-safe strict-MVI ownership modeli değildir.
+Maintained desende generated navigator route-bound slot sağlayıcılarına aittir: effect sağlayıcısı `launchX()` çağırır, composable bir result-collector sağlayıcısı `xResults`'ı `LaunchedEffect` içinde toplar ve her `NavResult`'ı typed Intent olarak ViewModel'e iletir. Restore sonrası caller route'un collector'ı yeniden composition'a girince re-attach olur; navigator'ın kaydedilen result-bus slotu in-flight veya teslim edilmiş ama tüketilmemiş sonucu korur. Navigator'ı VM'e koyma; suspend `goToXForResult()` process-ömrü convenience'ıdır, PD-safe PD-safe sahiplik modeli değildir.
 
 ### 5 · Modallar özel state değil, back-stack entry'leri
 
@@ -243,7 +242,6 @@ Dialog / sheet / fullscreen modal = farklı render'lı, ekranla aynı entry — 
 Sheet'ler üç bağımsız dismiss anahtarı sunar. Kullanıcı tarafından kapatılamaması gereken bir route üçünü de kapatır; `sheetGesturesEnabled` kaynak uyumluluğu için varsayılan olarak `true`'dur:
 
 ```kotlin
-@Serializable
 data object LockedSheetRoute : ShopGraph, BottomSheetContract {
     override val dismissOnBackPress: Boolean get() = false
     override val dismissOnClickOutside: Boolean get() = false
@@ -284,45 +282,93 @@ assertEquals(listOf(CatalogRoute, ProductRoute("sku-42")), nav.backStack)
 
 Back stack `@Serializable` veri olduğundan process-death restore otomatiktir; bozuk / uyumsuz bir snapshot, crash-loop yerine fresh start'a düşer.
 
-### Strict MVI add-on'u
+### Ekran wrapper'ları
 
-Maintained MVI örnekleri yalnız şu yönü kullanır:
+Gezgin bir ekranın içini sahiplenmez. `@ScreenWrapper`, **slot**'ları olan bir uygulama
+composable'ıdır; processor her slot'u o slot'un marker'ını taşıyan bildirimlerden doldurur ve
+wrapper'ı ekran içeriğinin yerine çağırır. Wrapper'ın `Scaffold` ile, ViewModel'le, state
+toplamayla ya da yan-etki politikasıyla ne yaptığı uygulamanın işidir — Gezgin bu tiplerin hiçbirini
+tanımaz.
 
-`intent -> onIntent -> effect -> @EffectHandler(route) -> typed navigator`
-
-ViewModel state'i tutar ve effect emit eder; navigator tutmaz. Route-bound handler effect'i gözler ve tipli navigasyon çağrısına sahip olur:
+Sözlüğü uygulama tanımlar. `@ScreenSlot`, sıradan bir annotation'ı slot marker'ı yapar; işaretlenen
+annotation tam olarak bir `KClass<out Route>` parametresi bildirmelidir, fazlası yok sayılır.
 
 ```kotlin
-@Screen(HomeRoute::class)
-@Screen(FeaturedRoute::class)
-@Composable
-fun ColumnScope.SharedContent(
-    state: SharedState,
-    onIntent: (SharedIntent) -> Unit,
-) { /* state render et; intent emit et */ }
+@ScreenSlot @Repeatable annotation class ViewModelOf(val route: KClass<out Route>)
+@ScreenSlot @Repeatable annotation class Effects(val route: KClass<out Route>)
+@ScreenSlot @Repeatable annotation class TopBar(val route: KClass<out Route>)
 
-@MviViewModel(HomeRoute::class)
-class HomeViewModel : ViewModel(), GezginMvi<SharedState, SharedIntent, HomeEffect> {
-    private val effectSink = GezginEffects<HomeEffect>()
-    override val effects: Flow<HomeEffect> = effectSink.flow
-    // uiState kısaltıldı
-    override fun onIntent(intent: SharedIntent) {
-        if (intent == SharedIntent.OpenNext) effectSink.send(HomeEffect.OpenFeatured)
-    }
-}
-
-@EffectHandler(HomeRoute::class)
+@ScreenWrapper
 @Composable
-fun HomeEffectHandler(effects: Flow<HomeEffect>, nav: HomeNavigator) {
-    ObserveEffects(effects) { effect ->
-        if (effect == HomeEffect.OpenFeatured) nav.goToFeatured()
+fun <S, I, E> AppScreenRoot(
+    @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
+    @FilledBy(Effects::class)     onEffect: (E) -> Unit,
+    @FilledBy(TopBar::class)      topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
+    @FilledBy(Screen::class)      content: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
+) {
+    val vm = viewModel()
+    val state by vm.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(vm) { vm.effects.collect(onEffect) }
+    Scaffold(topBar = { topBar(state, vm::onIntent) }) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) { content(state, vm::onIntent) }
     }
 }
 ```
 
-`@Screen` repeatable'dır. Bağlanan her route'un kendi `@MviViewModel(route)`'u ve route-bound handler'ı vardır. Paylaşılan content fonksiyonu tüm route'larla uyumlu State ve Intent tipleri kullanmalıdır; Effect ve tipli Navigator tipleri route'a göre farklı olabilir.
+Her ekran da birer annotation'la sağlayıcılarını verir:
 
-`@TopBar(route)` ve `@BottomBar(route)`, repeatable, migration-only ve `@ExperimentalGezginMigrationApi` ile korunan `gezgin-mvi` API'leridir. Üretilen yapı dış `Column`, top bar, content'in `ColumnScope`'unu koruyan `Column(Modifier.fillMaxWidth().weight(1f))` ve yalnız IME gizliyken bottom bar sırasındadır. Yalnız mevcut ZAD ekran şeklini korumak için vardır; migration kalıcı app-owned container'a geçtiğinde kaldırılmalıdır. Consumer açıkça `@OptIn(ExperimentalGezginMigrationApi::class)` bildirmelidir.
+```kotlin
+@ViewModelOf(DetailRoute::class)
+@Composable
+fun detailViewModel(route: DetailRoute): DetailViewModel = koinViewModel { parametersOf(route) }
+
+@Effects(DetailRoute::class)
+fun handleDetailEffect(effect: DetailEffect, nav: DetailNavigator) { /* typed navigation */ }
+
+@TopBar(DetailRoute::class)
+@Composable
+fun DetailTopBar(state: DetailUiState, onIntent: (DetailIntent) -> Unit) { /* chrome */ }
+
+@Screen(DetailRoute::class)
+@Composable
+fun ColumnScope.DetailScreen(state: DetailUiState, onIntent: (DetailIntent) -> Unit) { /* body */ }
+```
+
+üretilen entry ise bunları birbirine bağlar:
+
+```kotlin
+register<DetailRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
+    val nav = LocalGezginRawNavigator.current.detailNavigator(LocalGezginEntryId.current)
+    AppScreenRoot<DetailUiState, DetailIntent, DetailEffect>(
+        viewModel = { detailViewModel(route = route) },
+        onEffect = { effect -> handleDetailEffect(effect = effect, nav = nav) },
+        topBar = { state, onIntent -> DetailTopBar(state = state, onIntent = onIntent) },
+        content = { state, onIntent -> DetailScreen(state = state, onIntent = onIntent) },
+    )
+}
+```
+
+**Bir slot nasıl dolar.** Slot'un fonksiyon tipi, receiver dahil, sağlayıcının imzasının ta
+kendisidir: `ColumnScope.(S, (I) -> Unit) -> Unit` diye bildirilen bir slot, `ColumnScope` üzerinde
+bir extension sağlayıcı ister. Tip parametreleri slot'ları dolduranlardan bağlanır — `S` ve `I`
+content sağlayıcısından, `E` effect sağlayıcısından — wrapper'ın `reified`'a, `@Screen`'in de bir
+ViewModel argümanına bu yüzden ihtiyacı yoktur. Bir sağlayıcı ayrıca Gezgin'in verdiği ve
+eşleşmeye sayılmayan **rolleri** bildirebilir: route'un kendi tipi, o route'un typed navigator'ı ve
+`GezginSheetController`. `S`/`I`/`E` üzerinde generic bir wrapper'a typed navigator'ın ulaşması tam
+olarak budur: üretilen slot lambda'sı onu closure'da taşır.
+
+Kotlin default'u olup sağlayıcısı olmayan slot çağrıdan düşer. Content slot'u `@BottomSheet` diyen
+bir wrapper yalnız bottom-sheet route'larına adaydır; yani kind, processor'da özel bir durum
+olmadan eşleşmenin parçasıdır. Hiçbir wrapper'la eşleşmeyen route sarılmadan üretilir ve uyarı
+verilir; iki wrapper eşleşirse hatadır.
+
+Wrapper ve marker'ları feature'ların bağımlı olduğu bir modülde tanımla ve paketini feature modülü
+başına bir kez bildir — KSP classpath'teki bildirimleri annotation'la sayamaz:
+
+```kotlin
+ksp { arg("gezgin.wrapperPackages", "com.example.designsystem") }
+```
+
 
 ### Fragment interop
 

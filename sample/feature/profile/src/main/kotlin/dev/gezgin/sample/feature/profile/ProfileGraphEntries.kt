@@ -6,14 +6,13 @@ import dev.gezgin.sample.feature.profile.dialog_edit_name.provideEditNameDialogE
 import dev.gezgin.sample.feature.profile.screen_crop.provideCropEntry
 import dev.gezgin.sample.feature.profile.screen_pick_source.providePickSourceEntry
 import dev.gezgin.sample.feature.profile.screen_profile.provideProfileEntry
-import dev.gezgin.sample.feature.profile.screen_settings.BuildInfo
 import dev.gezgin.sample.feature.profile.screen_settings.provideSettingsEntry
 import dev.gezgin.sample.feature.profile.screen_zoom.provideZoomEntry
 import dev.gezgin.sample.feature.profile.sheet_notification.provideNotificationsSheetEntry
 
 fun GezginEntryScope.profileGraphEntries() {
   provideProfileEntry()
-  provideSettingsEntry(buildInfo = { BuildInfo(version = "1.0.0") })
+  provideSettingsEntry()
   provideNotificationsSheetEntry()
   provideEditNameDialogEntry()
   provideConfirmResetDialogEntry()

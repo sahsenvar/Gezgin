@@ -1,3 +1,7 @@
+> **0.3.0 notu.** Bu dokümanın MVI ile ilgili bölümleri (`GezginMvi`, `@MviViewModel`,
+> `@EffectHandler`, `@TopBar`, `@BottomBar`, DI algılama) 0.3.0'da kaldırılan API'yi anlatır.
+> Yerine gelen ekran-wrapper tasarımı: `docs/superpowers/specs/2026-09-11-gezgin-screen-wrapper-design.md`.
+
 # Gezgin — Navigasyon Kütüphanesi Tasarım Spec'i
 
 > Durum: **maintained current contract**. Bu belge uygulanan public yüzeyi ve Phase A ZAD-readiness sınırlarını anlatır.
@@ -23,7 +27,7 @@ Mevcut CMP/KMP navigasyon çözümlerinde tek pakette bulunmayan bir kombinasyon
 ## 2. Temel mimari kararlar
 
 ### 2.1 Çekirdek — state-as-data, Gezgin sahibi
-Back stack = gözlemlenebilir + serializable `Route` yapısı; Gezgin tutar. `navigate`/`back` ergonomik bir cephe, altta saf `state → state'` dönüşümü. Sonuç: UI'sız test, restore = serialize, log = state'i dinle, MVI = state'i gözle.
+Back stack = gözlemlenebilir `Route` yapısı; Gezgin her route için serializer üretip `SerializersModule`'e kaydeder. `navigate`/`back` ergonomik bir cephe, altta saf `state → state'` dönüşümü. Sonuç: UI'sız test, restore = serialize, log = state'i dinle, MVI = state'i gözle.
 
 **İç temsil — entry kimliği (R2):** stack elemanı kullanıcının route'u değil, internal `@Serializable` zarf: `GezginKey(route: Route, id: Long, flowPath: List<Long>)`. `id` = push başına monotonik **instance kimliği** → Nav3 `NavEntry.contentKey` (Nav3 sözleşmesi: aynı contentKey = paylaşılan decorator state — eşit-değerli iki route böylece **ayrı** ViewModelStore + saved state alır). `flowPath` = kapsayan flow-instance zinciri (§8.1 flow-unit sınırı). `id` sayacı + stack, saved state'e beraber serialize edilir (PD'de kimlikler korunur). Public yüzey unwrap eder: `backStack: StateFlow<List<Route>>` — kullanıcı ve test API'si zarfı hiç görmez.
 
@@ -47,7 +51,7 @@ Gezgin hiçbir DI'a bağlı değil. Codegen parça üretir (entry'ler, navigator
 **Kural:** navigasyon grafiği & davranışı → **sealed route ağacı**; pikseller & sunum → **composable**.
 
 ### 3.1 Route & Graph
-- Route = `@Serializable` data class/object; ait olduğu graph'ı **doğrudan supertype** olarak deklare eder (`: OrderGraph`). Namespace için graph'ın `sealed interface`'i **içine** nested yazılır **ya da** (büyük graph'larda) aynı pakette **ayrı dosyada top-level** durur — üyelik dosya konumundan değil supertype'tan gelir.
+- Route = data class/object; Gezgin her route için serializer üretip kaydeder; ait olduğu graph'ı **doğrudan supertype** olarak deklare eder (`: OrderGraph`). Namespace için graph'ın `sealed interface`'i **içine** nested yazılır **ya da** (büyük graph'larda) aynı pakette **ayrı dosyada top-level** durur — üyelik dosya konumundan değil supertype'tan gelir.
 - Graph = `sealed interface`; alt-graph subtyping ile bağlanır (`OrderGraph : AppGraph`) — bağ **deklare edilen supertype**, nesting görsel kolaylık.
 - **Her route bir graph içinde** sarılı; graph iki türden biri (V1):
   - **`@NavGraph`** → **şeffaf** grup: üyeleri sırasız, **istenen üyesinden** girilir (container'a `@GoTo` **yasak** → yalnız üyeye); `@StartDestination` **yok**; stand-alone olabilir (birden çok yerden erişilir). Graph'ların çoğu bu.
@@ -57,20 +61,19 @@ Gezgin hiçbir DI'a bağlı değil. Codegen parça üretir (entry'ler, navigator
 - **V1 tek-stack** (Nav3'ün tek listesi). Paralel per-tab stack, tab switcher (`@TabGraph`), deep-link → **V2** (§17). Bottom-nav = uygulama-yönetimli (Gezgin `goTo`/`replaceTo` verir).
 
 ```kotlin
-@NavGraph @Serializable                                  // şeffaf grup; üyeden girilir, start yok
+@NavGraph                                  // şeffaf grup; üyeden girilir, start yok
 sealed interface OrderGraph : AppGraph {
-    @GoTo(OrderDetailRoute::class) @Serializable data object OrdersRoute : OrderGraph
+    @GoTo(OrderDetailRoute::class) data object OrdersRoute : OrderGraph
 
     @GoTo(OrderInvoiceRoute::class)
-    @Serializable
     data class OrderDetailRoute(val orderId: String) : OrderGraph {
         override val transition get() = transition { /* forward; back; predictive */ }
     }
-    @Serializable data class OrderInvoiceRoute(val orderId: String) : OrderGraph
+    data object OrderInvoiceRoute : OrderGraph
 }
 ```
 
-**Flat-file yerleşim (büyük graph'lar için önerilen):** üyelik supertype'tan geldiği için bir alt-graph/flow, kapsayan graph'ın `sealed interface`'i içine nested yazılmak **zorunda değil** — aynı pakette **ayrı bir dosyada** top-level durabilir (`@FlowGraph @Serializable sealed interface SignUpFlow : AuthGraph { … }`; Kotlin sealed kuralı alt-tipi aynı paket+modülde tutar). Nested ve flat-file **denk** okunur; tek-dosya-graph'lar 500-1000 satıra şiştiğinde flow'ları kendi dosyalarına bölmek okunurluğu korur. Canlı kanıt: `sample/navigation` (`SignUpFlow.kt`, `AvatarFlow.kt` — `AvatarFlow` içinde `ZoomFlow` nested kalır).
+**Flat-file yerleşim (büyük graph'lar için önerilen):** üyelik supertype'tan geldiği için bir alt-graph/flow, kapsayan graph'ın `sealed interface`'i içine nested yazılmak **zorunda değil** — aynı pakette **ayrı bir dosyada** top-level durabilir (`@FlowGraph sealed interface SignUpFlow : AuthGraph { … }`; Kotlin sealed kuralı alt-tipi aynı paket+modülde tutar). Nested ve flat-file **denk** okunur; tek-dosya-graph'lar 500-1000 satıra şiştiğinde flow'ları kendi dosyalarına bölmek okunurluğu korur. Canlı kanıt: `sample/navigation` (`SignUpFlow.kt`, `AvatarFlow.kt` — `AvatarFlow` içinde `ZoomFlow` nested kalır).
 
 > **⚠️ Sürüm/PD uyarısı:** bir flow'u nested ↔ top-level arası taşımak **FQ'sunu değiştirir** (`AuthGraph.SignUpFlow` → `SignUpFlow`). `flowPath` ve polimorfik serializer adları FQ-tabanlı olduğundan, **önceki app sürümünden** serialize edilmiş bir back-stack yeni yerleşimle restore **edilemez** (bilinmeyen tip → decode hatası/kayıp entry). Yerleşim değişimi bir migration'dır: canlı kurulu tabanı olan app'te bir flow'u bir kez konumlandır, sonra FQ'sunu sabit tut.
 
@@ -93,7 +96,7 @@ feature:A / feature:B / … / :app   → hepsi core:navigation'ı görür
 - **Codegen dağılımı:** `core:navigation` → tipli navigator'lar + graph topology + `SerializersModule` (deep-link tablosu **🔮 V2**, §5). `feature:X` → `@Screen`/`@EffectHandler`/`@MviViewModel` → codegen `GezginEntryScope.provideXEntry`'ler; **kullanıcı** `xFeatureEntries()` bundle'ını yazar. `:app` → `GezginDisplay { … }` + back stack (montaj).
 - Her feature KSP'si **yalnız kendi modülünü** işler; cross-module **tip** görünürlüğü yeter (annotation okuması gerekmez → ksp#527 yok). Navigator ctor `internal`; core:navigation her navigator için **public factory** üretir (`fun RawNavigator.xNavigator(): XNavigator`) → feature'ın üretilen entry kodu navigator'ı bu factory'den alır (cross-module derlenir).
 - **Nav modülü tek-paket kısıtı (`[PKG]`):** bir nav modülündeki **her graph/route AYNI pakette** olmalı — bu ortak paket navigator'ların üretim hedefidir. Navigator'lar hep bu hedefe üretilir, ama cross-module probe/factory-import route'un **deklarasyon paketinde** arar; alt-paketlere bölünmüş bir nav modülü navigator'ı route'un paketi DIŞINDA üretir → cross-module lookup sessizce ıskalar. Bu yüzden processor ayrışık paketi **derleme hatasıyla reddeder** (fail-loud, sessiz-kırık yerine). Alt-paketlere bölme ihtiyacı → 🔮 V2.
-- Route-arg domain modelleri **`@Serializable` olmalı** (back stack serialize/PD). Tek-modül app: her şey tek modülde, aynı model tam ağaçla çalışır.
+- Route-arg domain **sınıfları** parametre/result payload olarak **`@Serializable` olmalı** (enum'lar Gezgin tarafından isimle serialize edilir). Tek-modül app: her şey tek modülde, aynı model tam ağaçla çalışır.
 
 ---
 
@@ -179,7 +182,7 @@ override val sheetGesturesEnabled: Boolean get() = false
 - **İki graph türü:** `@NavGraph` = şeffaf grup (üyeden giriş, serbest nav, §3.1); `@FlowGraph` = opak transactional flow (§8.1). Rol deklarasyonda sabit, lokal okunur.
 - **Flow davranışı:** flow tamamlanınca `quitWith(result)` = flow'un alt-dizisini **atomik** pop + caller'a sonuç (§6; `ResultFlow<T>`); `@Quit`/entry-`back` = result'suz (`Canceled`); `@QuitAndGoTo(X)` = flow'u yıkıp X'e.
 - **Kök/boş back stack (N5):** kökte (dip) son entry'de `back()` → `GezginDisplay`'in opsiyonel `onRootBack`'i (default = platform `expect/actual`: Android `finish()`, desktop no-op — Esc root'ta yutulur, iOS no-op). Root asla programatik boşalmaz (§8.1 empty-stack invariant'ı, **runtime guard**).
-- Save/restore: serializable state → config change + PD otomatik.
+- Save/restore: Gezgin'in ürettiği route serializer'larıyla serializable state → config change + PD otomatik.
 
 ### 8.1 `@FlowGraph` — katı, opak flow
 Transactional sub-journey (checkout, sign-up, KYC, walkthrough). Kara kutu:
@@ -211,10 +214,9 @@ Transactional sub-journey (checkout, sign-up, KYC, walkthrough). Kara kutu:
 
 **Örnek (checkout, ResultFlow):**
 ```kotlin
-@FlowGraph @Serializable
 sealed interface CheckoutFlow : AppGraph, ResultFlow<OrderId> {
-    @StartDestination @Serializable data object Cart : CheckoutFlow
-    @GoTo @Serializable data object Payment : CheckoutFlow      // içeride @GoTo serbest
+    @StartDestination data object Cart : CheckoutFlow
+    @GoTo data object Payment : CheckoutFlow      // içeride @GoTo serbest
     // bir yerde: nav.quitWith(orderId)  → caller'a Value(orderId), flow atomik yıkılır
     // iptal:     nav.quit()             → Canceled
 }

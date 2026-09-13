@@ -31,10 +31,6 @@ dependencies {
 
   testImplementation(project(":gezgin-core"))
   testImplementation(project(":gezgin-test"))
-  // MVI-mode fixtures (`@MviViewModel`/`@EffectHandler`/`GezginMvi`) compiled by kctfork.
-  // Mirrors the `:gezgin-core` test dep; the processor itself has NO compile dep on gezgin-mvi
-  // (all its annotations are read as string FQNs), only this test sourceset does.
-  testImplementation(project(":gezgin-mvi"))
   testImplementation(libs.kctfork.ksp)
   // Compile-testing resolves the same KSP 2.3.9 API as production; keep it explicit so a
   // transitive fork dependency cannot silently move the processor test toolchain.

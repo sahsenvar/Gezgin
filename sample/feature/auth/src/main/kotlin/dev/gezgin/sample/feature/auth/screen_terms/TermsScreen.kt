@@ -2,6 +2,7 @@ package dev.gezgin.sample.feature.auth.screen_terms
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +19,7 @@ import dev.gezgin.sample.navigation.SignUpFlow.TermsScreenRoute
 
 @Screen(TermsScreenRoute::class)
 @Composable
-fun TermsScreen(state: TermsUiState, onIntent: (TermsIntent) -> Unit) {
+fun ColumnScope.TermsScreen(state: TermsUiState, onIntent: (TermsIntent) -> Unit) {
   Surface(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Text("Kayıt ol — kullanım koşulları")

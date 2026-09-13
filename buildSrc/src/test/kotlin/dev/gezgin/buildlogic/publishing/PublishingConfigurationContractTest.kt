@@ -40,13 +40,12 @@ class PublishingConfigurationContractTest {
   fun `centralizes release coordinates and removes module-local copies`() {
     val rootProperties = properties("gradle.properties")
     assertEquals("io.github.sahsenvar", rootProperties.getProperty("GROUP"))
-    assertEquals("0.2.1-SNAPSHOT", rootProperties.getProperty("VERSION_NAME"))
+    assertEquals("0.3.0-SNAPSHOT", rootProperties.getProperty("VERSION_NAME"))
 
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "providers.gradleProperty(\"GROUP\")")
     assertContains(rootBuild, "providers.gradleProperty(\"VERSION_NAME\")")
     assertContains(rootBuild, "\":gezgin-core\"")
-    assertContains(rootBuild, "\":gezgin-mvi\"")
     assertContains(rootBuild, "\":gezgin-test\"")
     assertContains(rootBuild, "\":gezgin-processor\"")
     assertContains(rootBuild, "configure(publishedProjects)")
@@ -66,7 +65,7 @@ class PublishingConfigurationContractTest {
   }
 
   @Test
-  fun `configures four Central-ready signed publications without manual skeletons`() {
+  fun `configures three Central-ready signed publications without manual skeletons`() {
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "publishToMavenCentral()")
     assertContains(rootBuild, "signAllPublications()")
@@ -109,7 +108,11 @@ class PublishingConfigurationContractTest {
   fun `compatibility consumer resolves the release coordinates from an isolated repository`() {
     val consumerBuild = text("compatibility/zad-consumer/build.gradle.kts")
     assertContains(consumerBuild, "\"io.github.sahsenvar\"")
-    assertContains(consumerBuild, "\"0.2.0\"")
+    // Derived, not hard-coded: this assertion silently went stale across the 0.3.0 bump, and a
+    // literal here would only go stale again at the next one.
+    val releaseVersion =
+      properties("gradle.properties").getProperty("VERSION_NAME").substringBefore("-")
+    assertContains(consumerBuild, "\"$releaseVersion\"")
     assertContains(
       consumerBuild,
       "testImplementation(\"${'$'}gezginGroup:gezgin-test:${'$'}gezginVersion\")",
@@ -152,7 +155,7 @@ class PublishingConfigurationContractTest {
     assertContains(script, "--export")
     assertContains(script, "--import")
     assertContains(script, "gpg --homedir \"\$verify_home\" --batch --verify")
-    assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=53")
+    assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=37")
     assertContains(script, "CORRUPTION_NEGATIVE=PASS")
     assertContains(rootBuild, "\"-PgezginVersion=\$releaseVersion\"")
   }
@@ -207,7 +210,7 @@ class PublishingConfigurationContractTest {
 
   @Test
   fun `uses the supported no compatibility JVM default mode`() {
-    listOf("gezgin-core", "gezgin-mvi").forEach { module ->
+    listOf("gezgin-core").forEach { module ->
       val build = text("$module/build.gradle.kts")
       assertContains(build, "JvmDefaultMode.NO_COMPATIBILITY")
       assertContains(build, "jvmDefault.set(")
@@ -226,7 +229,7 @@ class PublishingConfigurationContractTest {
   }
 
   private companion object {
-    val kmpModules = listOf("gezgin-core", "gezgin-mvi", "gezgin-test")
+    val kmpModules = listOf("gezgin-core", "gezgin-test")
     val publishedModules = kmpModules + "gezgin-processor"
   }
 }

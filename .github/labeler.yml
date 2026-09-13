@@ -3,11 +3,6 @@ core:
       - any-glob-to-any-file:
           - 'gezgin-core/**'
 
-mvi:
-  - changed-files:
-      - any-glob-to-any-file:
-          - 'gezgin-mvi/**'
-
 processor:
   - changed-files:
       - any-glob-to-any-file:

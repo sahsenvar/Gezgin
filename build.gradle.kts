@@ -26,8 +26,7 @@ plugins {
 
 val releaseGroup = providers.gradleProperty("GROUP").get()
 val releaseVersion = providers.gradleProperty("VERSION_NAME").get()
-val publishedProjectPaths =
-  setOf(":gezgin-core", ":gezgin-mvi", ":gezgin-test", ":gezgin-processor")
+val publishedProjectPaths = setOf(":gezgin-core", ":gezgin-test", ":gezgin-processor")
 val publishedProjects = publishedProjectPaths.map(::project)
 val koverMinLineCoverage = providers.gradleProperty("KOVER_MIN_LINE_COVERAGE").map(String::toInt)
 
@@ -93,7 +92,6 @@ val publishedModuleDescriptions =
   mapOf(
     "gezgin-core" to
       "DI-agnostic Kotlin Multiplatform navigation runtime and Compose display layer.",
-    "gezgin-mvi" to "Optional MVI bindings and generated route effect handlers for Gezgin.",
     "gezgin-test" to "UI-free typed navigation test utilities for Gezgin applications.",
     "gezgin-processor" to
       "KSP2 processor that generates typed Gezgin navigators and entry providers.",
@@ -202,7 +200,6 @@ tasks.register("verifyReleasePublications") {
 val publicApiSourceRoots =
   mapOf(
     "gezgin-core" to listOf("commonMain", "androidMain", "jvmMain"),
-    "gezgin-mvi" to listOf("commonMain", "androidMain", "jvmMain"),
     "gezgin-processor" to listOf("main"),
     "gezgin-test" to listOf("commonMain", "androidMain", "jvmMain"),
   )
@@ -221,12 +218,7 @@ dependencies {
 tasks.register<CheckPublicApiKDocTask>("checkPublicApiKDoc") {
   projectRoot.set(layout.projectDirectory)
   expectedInventory.set(
-    mapOf(
-      "gezgin-core" to "136/17",
-      "gezgin-mvi" to "16/0",
-      "gezgin-processor" to "1/1",
-      "gezgin-test" to "12/1",
-    )
+    mapOf("gezgin-core" to "140/17", "gezgin-processor" to "1/1", "gezgin-test" to "12/1")
   )
   scannerClasspath.from(publicApiKDocScannerClasspath)
   val moduleSources =
@@ -259,5 +251,16 @@ apiValidation {
   // kancaları)
   // kilitli ABI yüzeyinden düşürülür → alpha01 sonrası deprecation döngüsü olmadan evrilebilirler.
   nonPublicMarkers += "dev.gezgin.core.GezginInternalApi"
-  ignoredProjects += listOf("shopr", "navigation", "app", "domain", "auth", "home", "profile")
+  ignoredProjects +=
+    listOf(
+      "hello",
+      "shopr",
+      "navigation",
+      "designsystem",
+      "app",
+      "domain",
+      "auth",
+      "home",
+      "profile",
+    )
 }

@@ -3,20 +3,24 @@ package dev.gezgin.sample.shopr
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.RawNavigator
+import dev.gezgin.sample.shopr.nav.CartNavigator
+import dev.gezgin.sample.shopr.nav.CatalogNavigator
 import dev.gezgin.sample.shopr.nav.CheckoutFlow
 import dev.gezgin.sample.shopr.nav.HomeGraph
 import dev.gezgin.sample.shopr.nav.OrderId
+import dev.gezgin.sample.shopr.nav.PaymentNavigator
 import dev.gezgin.sample.shopr.nav.cartNavigator
 import dev.gezgin.sample.shopr.nav.catalogNavigator
 import dev.gezgin.sample.shopr.nav.gezginTopology
 import dev.gezgin.sample.shopr.nav.paymentNavigator
 import dev.gezgin.sample.shopr.screen_cart.CartEffect
 import dev.gezgin.sample.shopr.screen_cart.handleCartEffect
-import dev.gezgin.sample.shopr.screen_catalog.CatalogEffectHandler
+import dev.gezgin.sample.shopr.screen_catalog.CatalogResultCollector
 import dev.gezgin.sample.shopr.screen_catalog.CatalogViewModel
-import dev.gezgin.sample.shopr.screen_catalog.catalogResultIntentEffectFlow
+import dev.gezgin.sample.shopr.screen_catalog.handleCatalogEffect
 import dev.gezgin.sample.shopr.screen_payment.PaymentEffect
 import dev.gezgin.sample.shopr.screen_payment.handlePaymentEffect
 import kotlin.test.Test
@@ -27,90 +31,101 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowToast
 
+/**
+ * The checkout result must re-enter `CatalogViewModel` through the route-bound collector, which is
+ * the slot the screen wrapper drives. The wiring under test is exactly what `ShoprScreenRoot` does:
+ * collect the ViewModel's effects into the effect provider, and compose the result collector with
+ * `onIntent`.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class CatalogCheckoutCollectorTest {
 
   @OptIn(GezginInternalApi::class)
   @Test
-  fun `checkout success and cancellation re-enter CatalogViewModel through the route-bound handler`() {
-    val viewModel = CatalogViewModel()
-    var deliveredIntents = 0
-    val effects =
-      catalogResultIntentEffectFlow(viewModel.effects) { intent ->
-        deliveredIntents += 1
-        viewModel.onIntent(intent)
-      }
-    val raw = RawNavigator(start = HomeGraph.Catalog, topology = gezginTopology)
-    val nav =
-      raw.catalogNavigator(entryId = requireNotNull(raw.entryIdOf(HomeGraph.Catalog::class)))
+  fun `checkout success and cancellation re-enter CatalogViewModel through the route-bound slots`() {
     val controller = Robolectric.buildActivity(ComponentActivity::class.java).setup()
 
     try {
-      controller.get().setContent { CatalogEffectHandler(effects, nav) }
-      shadowOf(Looper.getMainLooper()).idle()
+      val success = CatalogHarness(controller)
+      success.start()
 
-      nav.launchCheckout()
-      handleCartEffect(
-        CartEffect.NavigateToPayment,
-        raw.cartNavigator(entryId = requireNotNull(raw.entryIdOf(CheckoutFlow.Cart::class))),
-        onMessage = {},
-      )
+      success.nav.launchCheckout()
+      handleCartEffect(CartEffect.NavigateToPayment, {}, success.cartNav)
       handlePaymentEffect(
         PaymentEffect.CompletePayment(OrderId(value = "ORD-1001")),
-        raw.paymentNavigator(entryId = requireNotNull(raw.entryIdOf(CheckoutFlow.Payment::class))),
-        onMessage = {},
+        {},
+        success.paymentNav,
       )
 
       awaitComposeCondition("checkout result did not replace Catalog") {
-        raw.current == HomeGraph.OrderPlaced(orderId = "ORD-1001")
+        success.raw.current == HomeGraph.OrderPlaced(orderId = "ORD-1001")
       }
-      assertEquals(1, deliveredIntents)
+      assertEquals(1, success.deliveredIntents)
 
-      ShadowToast.reset()
-      val canceledViewModel = CatalogViewModel()
-      var canceledDeliveredIntents = 0
-      val canceledEffects =
-        catalogResultIntentEffectFlow(canceledViewModel.effects) { intent ->
-          canceledDeliveredIntents += 1
-          canceledViewModel.onIntent(intent)
-        }
-      val canceledRaw = RawNavigator(start = HomeGraph.Catalog, topology = gezginTopology)
-      val canceledNav =
-        canceledRaw.catalogNavigator(
-          entryId = requireNotNull(canceledRaw.entryIdOf(HomeGraph.Catalog::class))
-        )
+      val canceled = CatalogHarness(controller)
+      canceled.start()
       controller.get().runOnUiThread {
-        controller.get().setContent { CatalogEffectHandler(canceledEffects, canceledNav) }
-      }
-      shadowOf(Looper.getMainLooper()).idle()
-      controller.get().runOnUiThread {
-        canceledNav.launchCheckout()
-        canceledRaw
-          .cartNavigator(entryId = requireNotNull(canceledRaw.entryIdOf(CheckoutFlow.Cart::class)))
-          .back()
+        canceled.nav.launchCheckout()
+        canceled.cartNav.back()
       }
 
       awaitComposeCondition("checkout cancellation did not re-enter CatalogViewModel") {
-        canceledDeliveredIntents == 1
+        canceled.deliveredIntents == 1
       }
-      awaitComposeCondition("checkout cancellation did not show the exact toast") {
-        ShadowToast.getTextOfLatestToast() == "Ödeme iptal edildi"
+      awaitComposeCondition("checkout cancellation did not report the exact message") {
+        canceled.messages.lastOrNull() == "Ödeme iptal edildi"
       }
       assertEquals(
         1,
-        canceledDeliveredIntents,
+        canceled.deliveredIntents,
         "the route-bound collector must re-enter the ViewModel once",
       )
-      assertEquals("Ödeme iptal edildi", ShadowToast.getTextOfLatestToast())
-      assertEquals(listOf(HomeGraph.Catalog), canceledRaw.backStack.value)
+      assertEquals(listOf(HomeGraph.Catalog), canceled.raw.backStack.value)
     } finally {
       controller.get().runOnUiThread { controller.get().setContent {} }
       shadowOf(Looper.getMainLooper()).idle()
       controller.pause().stop().destroy()
     }
+  }
+}
+
+/** Reproduces the slot wiring `ShoprScreenRoot` performs, without a real Gezgin host. */
+@OptIn(GezginInternalApi::class)
+private class CatalogHarness(
+  private val controller: org.robolectric.android.controller.ActivityController<ComponentActivity>
+) {
+  val viewModel = CatalogViewModel()
+  val raw = RawNavigator(start = HomeGraph.Catalog, topology = gezginTopology)
+  val messages = mutableListOf<String>()
+  var deliveredIntents = 0
+
+  val nav: CatalogNavigator =
+    raw.catalogNavigator(entryId = requireNotNull(raw.entryIdOf(HomeGraph.Catalog::class)))
+  val cartNav: CartNavigator
+    get() = raw.cartNavigator(entryId = requireNotNull(raw.entryIdOf(CheckoutFlow.Cart::class)))
+
+  val paymentNav: PaymentNavigator
+    get() =
+      raw.paymentNavigator(entryId = requireNotNull(raw.entryIdOf(CheckoutFlow.Payment::class)))
+
+  fun start() {
+    controller.get().runOnUiThread {
+      controller.get().setContent {
+        LaunchedEffect(viewModel) {
+          viewModel.effects.collect { effect -> handleCatalogEffect(effect, messages::add, nav) }
+        }
+        CatalogResultCollector(
+          onIntent = { intent ->
+            deliveredIntents += 1
+            viewModel.onIntent(intent)
+          },
+          nav = nav,
+        )
+      }
+    }
+    shadowOf(Looper.getMainLooper()).idle()
   }
 }
 

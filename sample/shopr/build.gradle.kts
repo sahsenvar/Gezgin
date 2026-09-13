@@ -36,7 +36,6 @@ dependencies {
   // lifecycle-viewmodel-compose/runtime-compose'u transitively getirir (androidx `ViewModel` tabanı
   // +
   // viewModelScope + collectAsStateWithLifecycle üretilen entry'lerden çözülür).
-  implementation(project(":gezgin-mvi"))
   ksp(project(":gezgin-processor"))
 
   implementation(platform(libs.androidx.compose.bom))
@@ -45,6 +44,8 @@ dependencies {
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.activity.compose)
   implementation(libs.kotlinx.serialization.json)
+  implementation(libs.androidx.lifecycle.viewmodel.compose)
+  implementation(libs.androidx.lifecycle.runtime.compose)
 
   testImplementation(kotlin("test-junit"))
   testImplementation("org.robolectric:robolectric:4.14")

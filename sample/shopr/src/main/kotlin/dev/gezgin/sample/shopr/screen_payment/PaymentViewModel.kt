@@ -1,23 +1,23 @@
 package dev.gezgin.sample.shopr.screen_payment
 
-import androidx.lifecycle.ViewModel
-import dev.gezgin.mvi.GezginEffects
-import dev.gezgin.mvi.GezginMvi
-import dev.gezgin.mvi.annotation.MviViewModel
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.gezgin.sample.shopr.nav.CheckoutFlow
 import dev.gezgin.sample.shopr.nav.OrderId
+import dev.gezgin.sample.shopr.ui.BaseViewModel
+import dev.gezgin.sample.shopr.ui.EffectSink
+import dev.gezgin.sample.shopr.ui.ViewModelOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@MviViewModel(CheckoutFlow.Payment::class)
-class PaymentViewModel : ViewModel(), GezginMvi<PaymentUiState, PaymentIntent, PaymentEffect> {
+class PaymentViewModel : BaseViewModel<PaymentUiState, PaymentIntent, PaymentEffect>() {
 
   private val _uiState = MutableStateFlow(PaymentUiState())
   override val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
 
-  private val _effects = GezginEffects<PaymentEffect>()
+  private val _effects = EffectSink<PaymentEffect>()
   override val effects: Flow<PaymentEffect> = _effects.flow
 
   init {
@@ -31,3 +31,7 @@ class PaymentViewModel : ViewModel(), GezginMvi<PaymentUiState, PaymentIntent, P
     }
   }
 }
+
+@ViewModelOf(CheckoutFlow.Payment::class)
+@Composable
+fun paymentViewModel(): PaymentViewModel = viewModel { PaymentViewModel() }

@@ -197,7 +197,7 @@ class WorkflowConfigurationContractTest {
     assertContains(smoke, "wait-for-maven-central.sh")
 
     val waitForCentral = text("gradle/release/wait-for-maven-central.sh")
-    listOf("gezgin-core", "gezgin-processor", "gezgin-mvi", "gezgin-test").forEach {
+    listOf("gezgin-core", "gezgin-processor", "gezgin-test").forEach {
       assertContains(waitForCentral, it)
     }
     assertContains(waitForCentral, "MAX_WAIT_SECONDS")
@@ -234,12 +234,13 @@ class WorkflowConfigurationContractTest {
 
     listOf("README.md", "README.tr.md", "docs/gezgin-zad-readiness-handoff.md").forEach {
       val content = contents.getValue(it)
-      listOf("gezgin-core", "gezgin-processor", "gezgin-mvi", "gezgin-test").forEach { module ->
-        assertContains(content, "io.github.sahsenvar:$module:0.2.0", message = it)
+      listOf("gezgin-core", "gezgin-processor", "gezgin-test").forEach { module ->
+        assertContains(content, "io.github.sahsenvar:$module:0.3.0", message = it)
       }
     }
     assertContains(contents.getValue("README.md"), "ExperimentalGezginMigrationApi")
-    assertContains(contents.getValue("README.md"), "@EffectHandler(route)")
+    assertContains(contents.getValue("README.md"), "@ScreenWrapper")
+    assertContains(contents.getValue("README.md"), "gezgin.wrapperPackages")
   }
 
   @Test
@@ -273,7 +274,7 @@ class WorkflowConfigurationContractTest {
   @Test
   fun `labeler covers published modules documentation build and CI`() {
     val labeler = text(".github/labeler.yml")
-    listOf("gezgin-core", "gezgin-mvi", "gezgin-processor", "gezgin-test").forEach {
+    listOf("gezgin-core", "gezgin-processor", "gezgin-test").forEach {
       assertContains(labeler, "'$it/**'")
     }
     assertContains(labeler, "'docs/**'")

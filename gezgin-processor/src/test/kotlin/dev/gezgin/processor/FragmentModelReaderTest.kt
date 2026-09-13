@@ -7,13 +7,11 @@ import dev.gezgin.processor.CompileHarness.findGeneratedResource
 import dev.gezgin.processor.fixtures.FRAGMENT_ROUTES
 import dev.gezgin.processor.fixtures.FRAGMENT_SOURCE
 import dev.gezgin.processor.fixtures.FRAGMENT_STUB
-import dev.gezgin.processor.fixtures.MVI_SOURCE
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 
 /**
@@ -190,53 +188,6 @@ class FragmentModelReaderTest {
   }
 
   @Test
-  fun `FS3 — a @FragmentScreen and an MVI-mode @Screen(state,onIntent) on the same route are rejected`() {
-    // Coverage nicety (task-6.1 review Minor): `FS3` vs the OTHER cross-kind — an MVI-mode content
-    // @Screen (paired with a @MviViewModel by route) registers R, and a @FragmentScreen(R) would be
-    // a
-    // second register<R>. Structurally identical to the core-@Screen case; the built `entries` list
-    // FragmentModelReader cross-checks already carries MVI-mode content (EntryModelReader shares
-    // one
-    // seenRouteFqs across core + MVI), so `FS3` fires here too.
-    assertViolates(
-      "FS3",
-      """
-      package dev.gezgin.fs3mvi
-
-      import androidx.compose.runtime.Composable
-      import androidx.fragment.app.Fragment
-      import dev.gezgin.core.Route
-      import dev.gezgin.core.annotation.FragmentScreen
-      import dev.gezgin.core.annotation.Screen
-      import dev.gezgin.mvi.GezginMvi
-      import dev.gezgin.mvi.annotation.MviViewModel
-      import kotlinx.coroutines.flow.MutableStateFlow
-      import kotlinx.coroutines.flow.StateFlow
-
-      data class R(val x: Int = 0) : Route
-      data class S(val n: Int)
-      sealed interface I { data object Go : I }
-      data class E(val m: String)
-
-      @MviViewModel(R::class)
-      class Vm(route: R) : GezginMvi<S, I, E> {
-          override val uiState: StateFlow<S> = MutableStateFlow(S(route.x))
-          override fun onIntent(intent: I) {}
-      }
-
-      @Screen(R::class)
-      @Composable
-      fun Content(state: S, onIntent: (I) -> Unit) {
-      }
-
-      @FragmentScreen(R::class)
-      class FooFragment : Fragment()
-      """
-        .trimIndent(),
-    )
-  }
-
-  @Test
   fun `FS6 — @FragmentScreen on a class that does not extend Fragment is rejected`() {
     // The annotated class is a PLAIN class (no `: Fragment()`). Its route arg IS a valid Route →
     // `FS2`
@@ -333,50 +284,6 @@ class FragmentModelReaderTest {
   // endregion
 
   // region Regression — coexistence with core-mode / MVI-mode
-
-  @Test
-  fun `zero regression — @FragmentScreen coexists with MVI-mode content in one module`() {
-    // A valid @FragmentScreen alongside a full Faz-5 MVI triple must read cleanly with no
-    // cross-talk:
-    // no [FS*]/[SC*]/[MV*] errors, both dumps populated independently.
-    val result =
-      compileGezgin(
-        fragmentStub,
-        SourceFile.kotlin("FragmentRoutes.kt", FRAGMENT_ROUTES),
-        SourceFile.kotlin("FragmentSource.kt", FRAGMENT_SOURCE),
-        SourceFile.kotlin("MviSource.kt", MVI_SOURCE),
-        kspArgs =
-          mapOf(
-            "gezgin.dumpFragment" to "true",
-            "gezgin.dumpMvi" to "true",
-            "gezgin.emitSerializers" to "false",
-            "gezgin.emitEntries" to "false",
-          ),
-      )
-    assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
-    assertTrue(
-      !result.messages.contains("[FS") &&
-        !result.messages.contains("[SC") &&
-        !result.messages.contains("[MV"),
-      "unexpected KSP error: ${result.messages}",
-    )
-
-    val fragmentDump = findGeneratedResource("GezginFragmentDump.txt")
-    assertNotNull(fragmentDump, "GezginFragmentDump.txt not generated: ${result.messages}")
-    assertTrue(
-      fragmentDump.readText().lines().any {
-        it.startsWith("fragment dev.gezgin.fragui.OrderChainFragment")
-      },
-      "Fragment model missing from dump:\n${fragmentDump.readText()}",
-    )
-
-    val mviDump = findGeneratedResource("GezginMviDump.txt")
-    assertNotNull(mviDump, "GezginMviDump.txt not generated: ${result.messages}")
-    assertTrue(
-      mviDump.readText().lines().any { it.startsWith("vm dev.gezgin.mviui.CounterViewModel") },
-      "MVI model regressed — CounterViewModel missing:\n${mviDump.readText()}",
-    )
-  }
 
   // endregion
 

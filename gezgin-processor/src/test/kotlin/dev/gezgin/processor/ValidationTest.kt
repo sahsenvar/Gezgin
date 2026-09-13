@@ -252,7 +252,7 @@ class ValidationTest {
       import dev.gezgin.core.annotation.GoTo
       import dev.gezgin.core.annotation.StartDestination
 
-      data class Res(val v: String)
+      @kotlinx.serialization.Serializable data class Res(val v: String)
 
       @FlowGraph
       sealed interface CheckoutFlow : Route, ResultFlow<Res> {
@@ -284,7 +284,7 @@ class ValidationTest {
       import dev.gezgin.core.annotation.GoTo
       import dev.gezgin.core.annotation.StartDestination
 
-      data class Res(val v: String)
+      @kotlinx.serialization.Serializable data class Res(val v: String)
 
       @FlowGraph
       sealed interface AvatarFlow : Route, ResultFlow<Res> {
@@ -365,7 +365,7 @@ class ValidationTest {
       import dev.gezgin.core.annotation.NavGraph
       import dev.gezgin.core.annotation.StartDestination
 
-      data class Res(val v: String)
+      @kotlinx.serialization.Serializable data class Res(val v: String)
 
       @NavGraph
       sealed interface HomeGraph : Route {
@@ -462,7 +462,7 @@ class ValidationTest {
       import dev.gezgin.core.annotation.NavGraph
       import dev.gezgin.core.annotation.StartDestination
 
-      data class Res(val v: String)
+      @kotlinx.serialization.Serializable data class Res(val v: String)
 
       @NavGraph
       sealed interface HomeGraph : Route {
@@ -506,7 +506,7 @@ class ValidationTest {
       import dev.gezgin.core.annotation.NavGraph
       import dev.gezgin.core.annotation.StartDestination
 
-      data class Res(val v: String)
+      @kotlinx.serialization.Serializable data class Res(val v: String)
 
       @NavGraph
       sealed interface HomeGraph : Route {
@@ -659,7 +659,7 @@ class ValidationTest {
       import dev.gezgin.core.ResultFlow
       import dev.gezgin.core.annotation.NavGraph
 
-      data class Res(val v: String)
+      @kotlinx.serialization.Serializable data class Res(val v: String)
 
       @NavGraph
       sealed interface HomeGraph : Route, ResultFlow<Res> {
@@ -683,7 +683,7 @@ class ValidationTest {
       import dev.gezgin.core.annotation.NavGraph
       import dev.gezgin.core.annotation.StartDestination
 
-      data class Res(val v: String)
+      @kotlinx.serialization.Serializable data class Res(val v: String)
 
       @FlowGraph
       sealed interface CheckoutFlow : Route, ResultFlow<Res> {
@@ -839,7 +839,7 @@ class ValidationTest {
       import dev.gezgin.core.annotation.QuitAndGoTo
       import dev.gezgin.core.annotation.StartDestination
 
-      data class Res(val v: String)
+      @kotlinx.serialization.Serializable data class Res(val v: String)
 
       @NavGraph
       sealed interface HomeGraph : Route {
@@ -939,6 +939,42 @@ class ValidationTest {
       """
         .trimIndent(),
     )
+  }
+
+  // endregion
+
+  // region SZ1 — persisted types must have a serializer
+
+  @Test
+  fun `SZ1 — a route parameter with no serializer is rejected`() {
+    val result =
+      compileGezgin(
+        SourceFile.kotlin(
+          "Opaque.kt",
+          """
+          package app
+
+          import dev.gezgin.core.Route
+          import dev.gezgin.core.annotation.GoTo
+          import dev.gezgin.core.annotation.NavGraph
+
+          class Opaque(val x: Int)
+
+          @NavGraph
+          sealed interface AppGraph : Route {
+            @GoTo(Detail::class) data object Start : AppGraph
+
+            data class Detail(val opaque: Opaque) : AppGraph
+          }
+          """
+            .trimIndent(),
+        ),
+        kspArgs = mapOf("gezgin.emitEntries" to "false"),
+      )
+
+    assertContains(result.messages, "[SZ1]")
+    assertContains(result.messages, "opaque")
+    assertContains(result.messages, "app.Opaque")
   }
 
   // endregion

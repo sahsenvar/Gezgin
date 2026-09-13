@@ -2,6 +2,7 @@ package dev.gezgin.sample.feature.auth.screen_credentials
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,7 +18,10 @@ import dev.gezgin.sample.navigation.SignUpFlow.CredentialsScreenRoute
 
 @Screen(CredentialsScreenRoute::class)
 @Composable
-fun CredentialsScreen(state: CredentialsUiState, onIntent: (CredentialsIntent) -> Unit) {
+fun ColumnScope.CredentialsScreen(
+  state: CredentialsUiState,
+  onIntent: (CredentialsIntent) -> Unit,
+) {
   Surface(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
       Text("Kayıt ol — hesap bilgileri")

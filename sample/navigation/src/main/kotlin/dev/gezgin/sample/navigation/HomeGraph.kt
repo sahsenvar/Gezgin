@@ -11,10 +11,8 @@ import dev.gezgin.core.annotation.NavGraph
 import dev.gezgin.core.annotation.NoBack
 import dev.gezgin.core.annotation.ReplaceTo
 import dev.gezgin.sample.domain.model.SortOrder
-import kotlinx.serialization.Serializable
 
 @NavGraph
-@Serializable
 sealed interface HomeGraph : Route {
 
   @GoTo(
@@ -23,23 +21,19 @@ sealed interface HomeGraph : Route {
     HelpScreenRoute::class,
   )
   @GoForResult(FilterBottomSheetRoute::class, name = "pickSort")
-  @Serializable
   data object DashboardScreenRoute : HomeGraph
 
   @GoTo(ItemDetailScreenRoute::class, singleTop = false, name = "goToRelated")
   @GoTo(ItemImageViewerRoute::class)
   @BackTo(DashboardScreenRoute::class)
-  @Serializable
   data class ItemDetailScreenRoute(val id: String) : HomeGraph
 
   @BackTo(ItemDetailScreenRoute::class)
-  @Serializable
   data class ItemImageViewerRoute(val id: String) : HomeGraph, FullscreenModalContract {
     override val dismissOnClickOutside: Boolean
       get() = false
   }
 
-  @Serializable
   data class FilterBottomSheetRoute(val current: String) :
     HomeGraph, ResultRoute<SortOrder>, BottomSheetContract {
     override val skipPartiallyExpanded: Boolean
@@ -48,10 +42,7 @@ sealed interface HomeGraph : Route {
 
   @NoBack
   @ReplaceTo(DashboardScreenRoute::class, name = "continueToDashboard")
-  @Serializable
   data class WelcomeScreenRoute(val name: String? = null) : HomeGraph
 
-  @BackTo(DashboardScreenRoute::class)
-  @Serializable
-  data class HelpScreenRoute(val topic: String) : HomeGraph
+  @BackTo(DashboardScreenRoute::class) data class HelpScreenRoute(val topic: String) : HomeGraph
 }

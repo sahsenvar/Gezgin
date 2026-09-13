@@ -42,7 +42,7 @@ class ReleasePublicationVerifierTest {
   fun `rejects a broken project dependency mapping`() {
     val repository = publicationRepository(signatures = false)
     val pom =
-      repository.resolve("io/github/sahsenvar/gezgin-mvi-jvm/0.2.1/gezgin-mvi-jvm-0.2.1.pom")
+      repository.resolve("io/github/sahsenvar/gezgin-test-jvm/0.2.1/gezgin-test-jvm-0.2.1.pom")
     pom.writeText(pom.toFile().readText().replace("gezgin-core-jvm", "gezgin-core-android"))
 
     val failure =
@@ -51,7 +51,7 @@ class ReleasePublicationVerifierTest {
       }
 
     assertContains(failure.message.orEmpty(), "POM project dependencies")
-    assertContains(failure.message.orEmpty(), "gezgin-mvi-jvm")
+    assertContains(failure.message.orEmpty(), "gezgin-test-jvm")
   }
 
   @Test
@@ -81,7 +81,7 @@ class ReleasePublicationVerifierTest {
   @Test
   fun `rejects duplicate internal dependencies`() {
     val repository = publicationRepository(signatures = false)
-    val pom = pomPath(repository, "gezgin-mvi-jvm")
+    val pom = pomPath(repository, "gezgin-test-jvm")
     val internalDependency =
       dependencyXml(PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.2.1", "compile"))
     pom.writeText(
@@ -100,7 +100,7 @@ class ReleasePublicationVerifierTest {
   @Test
   fun `rejects the wrong internal dependency scope`() {
     val repository = publicationRepository(signatures = false)
-    val pom = pomPath(repository, "gezgin-mvi-jvm")
+    val pom = pomPath(repository, "gezgin-test-jvm")
     val expected =
       dependencyXml(PomDependency("io.github.sahsenvar", "gezgin-core-jvm", "0.2.1", "compile"))
     val wrongScope =
@@ -113,7 +113,7 @@ class ReleasePublicationVerifierTest {
       }
 
     assertContains(failure.message.orEmpty(), "POM project dependencies")
-    assertContains(failure.message.orEmpty(), "gezgin-mvi-jvm")
+    assertContains(failure.message.orEmpty(), "gezgin-test-jvm")
   }
 
   @Test
@@ -155,7 +155,8 @@ class ReleasePublicationVerifierTest {
   @Test
   fun `rejects an unexpected external Gradle module dependency`() {
     val repository = publicationRepository(signatures = false)
-    val module = repository.resolve("io/github/sahsenvar/gezgin-mvi/0.2.1/gezgin-mvi-0.2.1.module")
+    val module =
+      repository.resolve("io/github/sahsenvar/gezgin-test/0.2.1/gezgin-test-0.2.1.module")
     val unexpected =
       """{"group":"com.example","module":"unexpected","version":{"requires":"1.0.0"}},"""
     module.writeText(
@@ -398,7 +399,6 @@ class ReleasePublicationVerifierTest {
       when (projectName) {
         "gezgin-core" ->
           "DI-agnostic Kotlin Multiplatform navigation runtime and Compose display layer."
-        "gezgin-mvi" -> "Optional MVI bindings and generated route effect handlers for Gezgin."
         "gezgin-test" -> "UI-free typed navigation test utilities for Gezgin applications."
         "gezgin-processor" ->
           "KSP2 processor that generates typed Gezgin navigators and entry providers."
@@ -514,40 +514,6 @@ class ReleasePublicationVerifierTest {
             ),
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
           )
-        "gezgin-mvi" ->
-          listOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"))
-        "gezgin-mvi-android" ->
-          listOf(
-            PomDependency(
-              "androidx.lifecycle",
-              "lifecycle-viewmodel-compose-android",
-              "2.10.0",
-              "compile",
-            ),
-            PomDependency(
-              "androidx.lifecycle",
-              "lifecycle-runtime-compose-android",
-              "2.10.0",
-              "compile",
-            ),
-            PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
-          )
-        "gezgin-mvi-jvm" ->
-          listOf(
-            PomDependency(
-              "org.jetbrains.androidx.lifecycle",
-              "lifecycle-viewmodel-compose-desktop",
-              "2.11.0",
-              "compile",
-            ),
-            PomDependency(
-              "org.jetbrains.androidx.lifecycle",
-              "lifecycle-runtime-compose-desktop",
-              "2.11.0",
-              "compile",
-            ),
-            PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
-          )
         "gezgin-test" ->
           listOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"))
         "gezgin-test-android",
@@ -614,27 +580,6 @@ class ReleasePublicationVerifierTest {
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
           )
-        "gezgin-mvi" -> listOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
-        "gezgin-mvi-android" ->
-          listOf(
-            ModuleDependency("androidx.lifecycle", "lifecycle-runtime-compose", "2.10.0"),
-            ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-compose", "2.10.0"),
-            ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
-          )
-        "gezgin-mvi-jvm" ->
-          listOf(
-            ModuleDependency(
-              "org.jetbrains.androidx.lifecycle",
-              "lifecycle-runtime-compose",
-              "2.11.0",
-            ),
-            ModuleDependency(
-              "org.jetbrains.androidx.lifecycle",
-              "lifecycle-viewmodel-compose",
-              "2.11.0",
-            ),
-            ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
-          )
         "gezgin-test",
         "gezgin-test-android",
         "gezgin-test-jvm" ->
@@ -658,26 +603,6 @@ class ReleasePublicationVerifierTest {
         ),
         ExpectedArtifact("gezgin-core-android", ".aar", componentArtifactId = "gezgin-core"),
         ExpectedArtifact("gezgin-core-jvm", ".jar", componentArtifactId = "gezgin-core"),
-        ExpectedArtifact(
-          "gezgin-mvi",
-          ".jar",
-          "gezgin-core",
-          setOf("gezgin-mvi-android", "gezgin-mvi-jvm"),
-        ),
-        ExpectedArtifact(
-          "gezgin-mvi-android",
-          ".aar",
-          "gezgin-core-android",
-          componentArtifactId = "gezgin-mvi",
-          moduleProjectDependency = "gezgin-core",
-        ),
-        ExpectedArtifact(
-          "gezgin-mvi-jvm",
-          ".jar",
-          "gezgin-core-jvm",
-          componentArtifactId = "gezgin-mvi",
-          moduleProjectDependency = "gezgin-core",
-        ),
         ExpectedArtifact(
           "gezgin-test",
           ".jar",
