@@ -102,7 +102,8 @@ jobs:
           echo "iosSimulatorArm64Test executed $total tests."
           test "$total" -gt 0
           for suite in GezginDisplayTest GezginBottomSheetSceneTest GezginLocalsTest \
-            PlatformViewModelStoreDecoratorTest RememberNavigatorSaveableRegistryTest; do
+            PlatformViewModelStoreDecoratorTest RememberNavigatorSaveableRegistryTest \
+            GezginDisplayProductionBackTest; do
             ls "$results" | grep -q "$suite" || {
               echo "the shared suite $suite did not run on the simulator" >&2
               exit 1
@@ -210,6 +211,17 @@ jobs:
           unzip -q "$archive" -d "$RUNNER_TEMP"
           printf '%s\n' "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
 
+      # The app's own console is the only place a swallowed exception would surface; Maestro's log
+      # reports the command, not what the app did with it.
+      - name: Capture the app's console
+        shell: bash
+        run: |
+          set -uo pipefail
+          nohup xcrun simctl spawn "$GEZGIN_SIMULATOR_UDID" log stream --style compact \
+            --predicate 'processImagePath CONTAINS "iosApp"' \
+            > "$RUNNER_TEMP/app-console.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/app-console.pid"
+
       - name: Run the iOS flows
         shell: bash
         env:
@@ -229,12 +241,23 @@ jobs:
             echo "Maestro wrote no run directory — it failed before starting a flow."
           else
             echo "== $latest =="
-            ls -la "$latest"
-            for log in "$latest"/*.log "$latest"/maestro.log; do
+            ls -laR "$latest"
+            for log in "$latest"/*.log; do
               [ -f "$log" ] || continue
               echo "---- $log ----"
-              tail -200 "$log"
+              tail -120 "$log"
             done
+            # The view hierarchy at the failing step is the evidence an assertion message lacks:
+            # it says which screen was actually on top when the assertion ran.
+            find "$latest" -name '*.json' -print0 | while IFS= read -r -d '' dump; do
+              echo "---- $dump ----"
+              head -c 20000 "$dump"
+              echo
+            done
+          fi
+          if [ -f "$RUNNER_TEMP/app-console.log" ]; then
+            echo "---- app console ----"
+            tail -200 "$RUNNER_TEMP/app-console.log"
           fi
           crash="$(ls -dt "$HOME"/Library/Logs/DiagnosticReports/iosApp-*.ips 2>/dev/null | head -1 || true)"
           if [ -n "$crash" ]; then
