@@ -93,9 +93,19 @@ maestro/run-ios-all.sh
 | Dosya | App | Kapsam |
 |---|---|---|
 | `hello-ios-01-push-back.yaml` | hello | liste→detay push; üst-bar geri'si pop'lar, liste canlı döner |
-| `hello-ios-02-edge-swipe.yaml` | hello | kenar-çekme jesti detayı pop'lar (üst-bar geri'siyle aynı sonuç) |
+| `hello-ios-02-edge-swipe.yaml` | hello | kenar-çekme jesti detayı pop'lar — **CI'da koşmaz**, aşağıya bakın |
 | `hello-ios-03-root-back.yaml` | hello | kökte geri no-op: uygulama kapanmaz, yığın bozulmaz |
 | `hello-ios-04-background-restore.yaml` | hello | arka plan→ön plan turunda yığın ve ekran durumu korunur |
+
+**`hello-ios-02` neden kapıda değil.** Kenar-çekme jesti bu yapılandırmada geri olayı üretmiyor
+(spec S-7.2). Bu bir ölçüm sorunu değil: aynı jestle Apple'ın Ayarlar uygulaması geri gidiyor,
+buna karşılık Compose hiyerarşisinin köküne konan her zaman açık bir `BackHandler` jest sonrası
+hiç tetiklenmiyor. Akış silinmedi; doğrulanmamış bir davranış otomatik kapı yapılmadı. Elle
+sürmek için:
+
+```bash
+GEZGIN_RUN_GESTURE_FLOW=1 maestro/run-ios-all.sh
+```
 
 **Kapsam sınırı (bilinçli).** `hello` graph'ında `@NoBack`, `@Dialog`, `@BottomSheet` ve
 `@GoForResult` yoktur; bu davranışlar iOS'ta simülatör UI testleriyle (`iosSimulatorArm64Test`)

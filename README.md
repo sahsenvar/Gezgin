@@ -101,7 +101,10 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 
 [^ios]: iOS ships as `iosArm64` and `iosSimulatorArm64`. There is no `iosX64` target, because the
     upstream JetBrains Navigation 3 artifacts Gezgin builds on do not publish one — Intel-Mac
-    simulators are therefore unsupported.
+    simulators are therefore unsupported. In-app back (top bar, programmatic, `@NoBack`, root)
+    is verified on a simulator by UI tests and end-to-end flows; the **edge-swipe gesture does
+    not yet deliver a back event** in this configuration — see `docs/gezgin-ios-support-spec.md`
+    S-7.2.
 
 > 🔮 **Honest gaps — deliberately out of this artifact, on the V2 roadmap:** **multiple back stacks** and **deep-link route dispatch**. Gezgin is single-stack and does not expose or generate a URL↔route dispatch contract in this release. Generic `Throwable` serialization, permanent screen-container/chrome APIs, and Fragment modal interop are also outside this artifact. Gezgin is **alpha**; its Android Navigation 3 family is stable while the desktop JetBrains port remains alpha.
 

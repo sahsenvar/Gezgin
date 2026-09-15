@@ -101,7 +101,9 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 
 [^ios]: iOS `iosArm64` ve `iosSimulatorArm64` olarak yayınlanır. `iosX64` hedefi **yoktur**, çünkü
     Gezgin'in üstüne kurulduğu JetBrains Navigation 3 artefaktları onu yayınlamıyor — bu yüzden
-    Intel-Mac simülatörleri desteklenmez.
+    Intel-Mac simülatörleri desteklenmez. Uygulama içi geri (üst bar, programatik, `@NoBack`,
+    kök) simülatörde UI testleri ve e2e akışlarıyla doğrulanmıştır; **kenar-çekme jesti bu
+    yapılandırmada henüz geri olayı üretmiyor** — `docs/gezgin-ios-support-spec.md` S-7.2.
 
 > 🔮 **Dürüst eksikler — bu artefaktın bilinçli kapsamı dışında, V2 yol haritasında:** **çoklu back stack** ve **deep-link route dispatch**. Gezgin tek-stack'tir ve bu sürüm URL↔route dispatch sözleşmesi sunmaz ya da üretmez. Generic `Throwable` serileştirme, kalıcı screen-container/chrome API'leri ve Fragment modal interop da bu artefaktın dışındadır. Gezgin **alpha**'dır; Android Navigation 3 ailesi stable, desktop JetBrains portu ise alpha'dır.
 

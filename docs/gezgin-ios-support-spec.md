@@ -91,18 +91,38 @@ ile **aynı** Gezgin sözleşmesini taşır:
 olarak sonlandırmasını yasaklar; Android'deki `finish()` karşılığı yoktur. Kök davranışını isteyen
 uygulama `rememberNavigator(onRootBack = …)` ile kendi politikasını verir.
 
-**S-7.** Zincir baştan sona hazır bileşenlerden kuruludur; Gezgin kendi jest tanıma kodunu yazmaz:
+**S-7.** Tasarlanan zincir baştan sona hazır bileşenlerden kuruludur; Gezgin kendi jest tanıma
+kodunu yazmaz:
 
 ```
-UIScreenEdgePanGestureRecognizer        (Compose Multiplatform, UIKitNavigationEventInput)
+UIScreenEdgePanGestureRecognizer        (Compose Multiplatform)
   → androidx.navigationevent dispatcher
   → NavDisplay'in kendi NavigationBackHandler'ı   (JB navigation3-ui)
   → onBack = gezginOnBack                          (§4'ün tüm kurallarını uygulayan yer)
 ```
 
-Yani `GezginNavDisplay`'in mevcut actual'ı jesti zaten taşır; `gezginOnBack` de `@NoBack`'in ve kök
-muafiyetinin **davranışsal taşıyıcısıdır** (`GezginDisplay.kt`). iOS bu ikisiyle §4'ü eksiksiz
-karşılar ve `GezginNoBackHandler` desktop'taki gibi no-op kalır.
+`gezginOnBack`, `@NoBack`'in ve kök muafiyetinin **davranışsal taşıyıcısıdır**
+(`GezginDisplay.kt`) ve `GezginNoBackHandler` desktop'taki gibi no-op kalır. Zincirin bu son iki
+halkası kanıtlıdır: `GezginDisplayProductionBackTest` `rememberNavigator` + `GezginDisplay`
+bileşimini iOS simülatöründe `back()` ve `backTo()` için doğruluyor, üç e2e akışı da gerçek
+uygulamada geçiyor. İLK halka ise doğrulanmadı — bkz. S-7.2.
+
+**S-7.2 — kenar-çekme jesti bu yapılandırmada geri olayı üretmiyor.** Bu spec'in ilk hâli zincirin
+tamamının hazır olduğunu söylüyordu; o ifade kaynak okumasına dayanıyordu ve **yanlıştı**. e2e
+süiti şunları ölçtü:
+
+- Aynı jest parametreleriyle Apple'ın Ayarlar uygulaması geri gidiyor → koşum ortamı iOS
+  kenar-çekmesini sürebiliyor, sorun ölçüm aracında değil.
+- Compose hiyerarşisinin KÖKÜNE her zaman açık bir `BackHandler` konduğunda jest sonrası hiç
+  tetiklenmiyor → olay `NavDisplay` tarafından yok sayılmıyor, ortada olay yok.
+- `ComposeUIViewController`'ı bir `UINavigationController` içine alıp pop jestini zorla açmak da
+  değiştirmiyor.
+
+JetBrains dokümanı jestin `ComposeUIViewController`'da varsayılan olarak açık olduğunu söylüyor
+(`enableBackGesture`), dolayısıyla bu bir upstream/entegrasyon sorusudur ve tahminle kapatılmadı.
+`maestro/hello-ios-02-edge-swipe.yaml` **silinmedi**: elle sürülebilir durumda duruyor
+(`GEZGIN_RUN_GESTURE_FLOW=1`), yalnız doğrulanmamış bir davranış otomatik kapı yapılmıyor.
+Sıradaki adım gerçek bir cihaz/simülatörde elle doğrulama.
 
 **S-7.1 — bilinen boşluk.** Android'de `GezginNoBackHandler` ayrıca entry-kapsamlı bir
 `BackHandler` kurar; bunun tek ek kazancı, `@NoBack` bir ekranda predictive-back **önizleme
@@ -220,7 +240,8 @@ akış kümesi bunu doğrular (`hello-ios-04-background-restore.yaml`). Kalıcı
 ayrı bir iştir ve bu spec'in kapsamı dışındadır.
 
 **S-17.** iOS Maestro akışları her PR'da **CI'da koşar** (`ios-maestro-e2e` job'ı, macOS runner):
-simülatör boot edilir, `sample/iosApp` derlenip kurulur ve `maestro/run-ios-all.sh` sürülür. Aynı
+simülatör boot edilir, `sample/iosApp` derlenip kurulur ve `maestro/run-ios-all.sh` sürülür.
+Kapıda üç akış vardır; kenar-çekme akışı S-7.2 gereği elle sürülür. Aynı
 script yerelde de aynı şekilde çalışır. Maestro dağıtımı tam sürüme ve sha256'sına sabitlenir —
 ağdan çekilen bir kurulum script'i runner'da ne koşacağına kendi karar verirdi. Android suite'i
 CI'da koşmamaya devam eder (emülatör + iki app kurulumu gerektirir; ayrı iş).
