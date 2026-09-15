@@ -7,10 +7,14 @@ appId: dev.gezgin.sample.hello
     clearState: true
 - tapOn: "Barbara Liskov"
 - assertVisible: "Favorilere ekle ☆"
-# sol kenardan sağa tam çekme = iOS "interactive pop"
+# Sol kenardan sağa çekme = iOS "interactive pop". Süre bilinçli olarak insan hızında:
+# `UIScreenEdgePanGestureRecognizer` ani bir sıçramayı jest saymaz, kabul etmez.
 - swipe:
-    start: "2%, 50%"
-    end: "95%, 50%"
+    start: "1%, 50%"
+    end: "80%, 50%"
+    duration: 900
+- waitForAnimationToEnd:
+    timeout: 5000
 - assertNotVisible: "Favorilere ekle ☆"
 - assertVisible: "Barbara Liskov"
 - assertVisible: "Ada Lovelace"
@@ -18,6 +22,9 @@ appId: dev.gezgin.sample.hello
 - tapOn: "Ada Lovelace"
 - assertVisible: "Favorilere ekle ☆"
 - swipe:
-    start: "2%, 50%"
-    end: "95%, 50%"
+    start: "1%, 50%"
+    end: "80%, 50%"
+    duration: 900
+- waitForAnimationToEnd:
+    timeout: 5000
 - assertVisible: "Grace Hopper"

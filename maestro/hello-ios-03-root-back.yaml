@@ -6,9 +6,14 @@ appId: dev.gezgin.sample.hello
 - launchApp:
     clearState: true
 - assertVisible: "Ada Lovelace"
+# Akış 2'nin GEÇTİĞİ jestle birebir aynı olmalı: etkisiz bir jest, "kökte no-op" iddiasını
+# boşlukta doğrulardı.
 - swipe:
-    start: "2%, 50%"
-    end: "95%, 50%"
+    start: "1%, 50%"
+    end: "80%, 50%"
+    duration: 900
+- waitForAnimationToEnd:
+    timeout: 5000
 # hâlâ liste ekranındayız (uygulama kapanmadı, boş ekran da yok)
 - assertVisible: "Ada Lovelace"
 - assertVisible: "Barbara Liskov"
