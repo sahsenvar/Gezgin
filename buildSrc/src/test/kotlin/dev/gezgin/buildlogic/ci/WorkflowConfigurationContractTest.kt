@@ -93,8 +93,12 @@ class WorkflowConfigurationContractTest {
     assertContains(job, "MAESTRO_SHA256")
     assertContains(job, "shasum -a 256 -c -")
     assertFalse(job.contains("get.maestro.mobile.dev"))
-    // A red X with no artifacts leaves the flows undebuggable from the runner.
-    assertContains(job, "if: failure()")
+    // A red X with no artifacts leaves the flows undebuggable from the runner, and a plain
+    // `failure()` would skip the report on a timeout — exactly when the evidence is needed.
+    assertContains(job, "if: always() && steps.flows.outcome != 'success'")
+    // Each flow writes its own run directory, so reporting only the newest hides the rest.
+    assertContains(job, "screen-hierarchy")
+    assertContains(job, "screenshots")
     // A wedged simulator or driver would otherwise hold a macOS runner for the six-hour default.
     assertContains(job, "timeout-minutes:")
   }

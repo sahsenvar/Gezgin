@@ -134,7 +134,7 @@ jobs:
     needs: wrapper-validation
     runs-on: macos-latest
     # A wedged simulator or driver otherwise holds a macOS runner for the six-hour default.
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       # The iOS driver installs itself on the simulator on first use; CI runners are slower than
       # a laptop and the default startup budget expires before it is ready.
@@ -173,6 +173,13 @@ jobs:
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
           printf 'GEZGIN_SIMULATOR_UDID=%s\n' "$udid" >> "$GITHUB_ENV"
+
+      # xcodebuild's build phase calls Gradle for the framework. Left cold that call carries the
+      # whole Kotlin/Native build inside the Xcode step, where it is slow and hard to read.
+      - name: Warm the shared framework
+        run: >-
+          ./gradlew :sample:hello-shared:linkDebugFrameworkIosSimulatorArm64
+          --no-daemon --console=plain
 
       - name: Build and install the sample app on the simulator
         shell: bash
@@ -223,6 +230,7 @@ jobs:
           echo "$!" > "$RUNNER_TEMP/app-console.pid"
 
       - name: Run the iOS flows
+        id: flows
         shell: bash
         env:
           MAESTRO_DEVICE: ${{ env.GEZGIN_SIMULATOR_UDID }}
@@ -232,27 +240,35 @@ jobs:
       # this a failure here is only a red X, and the flows cannot be debugged from the runner. A
       # crash on launch leaves its reason only in the simulator's own report, not in Maestro's log.
       - name: Report the failing flow
-        if: failure()
+        # `failure()` alone skips this on a timeout, which is exactly when the evidence is needed.
+        if: always() && steps.flows.outcome != 'success'
         shell: bash
         run: |
           set -uo pipefail
-          latest="$(ls -dt "$HOME"/.maestro/tests/* 2>/dev/null | head -1 || true)"
-          if [ -z "$latest" ]; then
+          runs="$(ls -dt "$HOME"/.maestro/tests/* 2>/dev/null || true)"
+          if [ -z "$runs" ]; then
             echo "Maestro wrote no run directory — it failed before starting a flow."
           else
-            echo "== $latest =="
-            ls -laR "$latest"
-            for log in "$latest"/*.log; do
-              [ -f "$log" ] || continue
-              echo "---- $log ----"
-              tail -120 "$log"
-            done
-            # The view hierarchy at the failing step is the evidence an assertion message lacks:
-            # it says which screen was actually on top when the assertion ran.
-            find "$latest" -name '*.json' -print0 | while IFS= read -r -d '' dump; do
-              echo "---- $dump ----"
-              head -c 20000 "$dump"
-              echo
+            # Every flow gets its own run directory, so reporting only the newest hides three of
+            # the four failures.
+            for run in $runs; do
+              echo "======== $run ========"
+              ls -laR "$run"
+              # The view hierarchy at the failing step says which screen was actually on top.
+              find "$run" -path '*screen-hierarchy*' -name '*.json' -print0 |
+                while IFS= read -r -d '' dump; do
+                  echo "---- $dump ----"
+                  head -c 20000 "$dump"
+                  echo
+                done
+              # A hierarchy can disagree with the pixels — an empty tree over a rendered screen is
+              # an accessibility fault, not a navigation one, and only the image tells them apart.
+              find "$run" -path '*screenshots*' -name '*.png' -print0 |
+                while IFS= read -r -d '' shot; do
+                  echo "---- $shot (base64) ----"
+                  base64 "$shot"
+                  echo "---- end $shot ----"
+                done
             done
           fi
           if [ -f "$RUNNER_TEMP/app-console.log" ]; then
