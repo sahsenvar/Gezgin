@@ -48,7 +48,7 @@ jobs:
           :gezgin-test:compileKotlinJvm :gezgin-test:compileDebugKotlinAndroid
           :gezgin-processor:compileKotlin
           :sample:navigation:compileKotlin :sample:app:compileDebugKotlin
-          :sample:hello:compileDebugKotlin
+          :sample:hello:compileDebugKotlinAndroid
           --no-daemon --console=plain
 
       - name: Analyze

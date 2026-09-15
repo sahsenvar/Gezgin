@@ -67,6 +67,12 @@ class WorkflowConfigurationContractTest {
     assertContains(workflow, ":gezgin-core:iosSimulatorArm64Test")
     assertContains(workflow, ":gezgin-test:iosSimulatorArm64Test")
     assertContains(workflow, "uses: ./.github/actions/setup-android-sdk")
+    // A multiplatform module compiles its Android variant under a different task name than a
+    // plain Android one, so CodeQL's manual build names the multiplatform task for every module
+    // that has gained Apple targets.
+    val codeql = text(".github/workflows/codeql.yml")
+    assertContains(codeql, ":sample:hello:compileDebugKotlinAndroid")
+    assertFalse(codeql.contains(":sample:hello:compileDebugKotlin\n"))
     // A target that runs zero tests also reports success, so the run is only evidence once the
     // shared suites are named in its results.
     assertContains(workflow, "Verify the simulator ran the shared suites")
