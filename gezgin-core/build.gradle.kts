@@ -35,6 +35,12 @@ kotlin {
   // yalnız desktop uiTest'te gerekebilir, burada eklenmedi.
   jvm { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
   androidTarget { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
+  // iOS hedef kümesi upstream tarafından kilitli: JB `navigation3-ui` yalnız `iosArm64` ve
+  // `iosSimulatorArm64` yayınlıyor, `iosX64` YOK → Intel Mac simülatörü desteklenmez
+  // (spec S-1). Apple hedefleri yalnız macOS host'ta derlenir; Linux job'larında
+  // `kotlin.native.ignoreDisabledTargets` (gradle.properties) onları sessizce devre dışı bırakır.
+  iosArm64()
+  iosSimulatorArm64()
   sourceSets {
     commonMain.dependencies {
       api(libs.kotlinx.coroutines.core)
@@ -79,6 +85,13 @@ kotlin {
       api(libs.androidx.lifecycle.viewmodel.compose)
     }
     jvmMain.dependencies {
+      api(libs.jb.navigation3.ui)
+      api(libs.jb.lifecycle.viewmodel.navigation3)
+      api(libs.jb.lifecycle.viewmodel.compose)
+    }
+    // iOS, desktop ile AYNI JetBrains ailesini kullanır; AndroidX UI/lifecycle artefaktları
+    // yalnız androidMain'de kalır (§2.2 adapter sınırı).
+    iosMain.dependencies {
       api(libs.jb.navigation3.ui)
       api(libs.jb.lifecycle.viewmodel.navigation3)
       api(libs.jb.lifecycle.viewmodel.compose)
