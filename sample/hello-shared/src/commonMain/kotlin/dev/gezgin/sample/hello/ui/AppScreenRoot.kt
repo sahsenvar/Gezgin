@@ -17,11 +17,17 @@ import dev.gezgin.core.annotation.ScreenSlot
 import dev.gezgin.core.annotation.ScreenWrapper
 import kotlin.reflect.KClass
 
-@ScreenSlot @Repeatable annotation class ViewModelOf(val route: KClass<out Route>)
+@ScreenSlot
+@Repeatable
+annotation class ViewModelOf(val route: KClass<out Route>)
 
-@ScreenSlot @Repeatable annotation class EffectHandler(val route: KClass<out Route>)
+@ScreenSlot
+@Repeatable
+annotation class EffectHandler(val route: KClass<out Route>)
 
-@ScreenSlot @Repeatable annotation class TopBar(val route: KClass<out Route>)
+@ScreenSlot
+@Repeatable
+annotation class TopBar(val route: KClass<out Route>)
 
 /**
  * The application's single screen root. It owns the container, the ViewModel, state collection and
@@ -31,20 +37,25 @@ import kotlin.reflect.KClass
 @ScreenWrapper
 @Composable
 fun <S : UiState, I : UiIntent, E : UiEvent> AppScreenRoot(
-  @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
-  @FilledBy(EffectHandler::class) onEffect: (E) -> Unit,
-  @FilledBy(TopBar::class) topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
-  @FilledBy(Screen::class) screen: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
+    @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
+    @FilledBy(EffectHandler::class) onEffect: (E) -> Unit,
+    @FilledBy(TopBar::class) topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
+    @FilledBy(Screen::class) screen: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
 ) {
-  val vm = viewModel()
-  val state by vm.uiState.collectAsStateWithLifecycle()
+    val vm = viewModel()
+    val state by vm.uiState.collectAsStateWithLifecycle()
 
-  LaunchedEffect(vm) { vm.effects.collect(onEffect) }
+    LaunchedEffect(vm) { vm.effects.collect(onEffect) }
 
-  Scaffold(modifier = Modifier.fillMaxSize(), topBar = { topBar(state, vm::onIntent) }) { padding ->
-    Column(
-      modifier = Modifier.padding(padding).fillMaxSize(),
-      content = { screen(state, vm::onIntent) },
-    )
-  }
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = { topBar(state, vm::onIntent) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize(),
+            content = { screen(state, vm::onIntent) },
+        )
+    }
 }

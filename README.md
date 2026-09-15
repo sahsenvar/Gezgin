@@ -137,7 +137,7 @@ The two build boundaries are intentionally separate:
 
 | Boundary | Verified versions |
 |---|---|
-| Gezgin root | Gradle 9.0.0, Kotlin 2.3.21, KSP 2.3.9, AGP 8.13.2, Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0 on Android; JetBrains Navigation 3 1.0.0-alpha05 + lifecycle Navigation 3 2.10.0-alpha05 on desktop and iOS; min SDK 24; iOS targets `iosArm64` and `iosSimulatorArm64`, built on macOS. |
+| Gezgin root | Gradle 9.6.0, Kotlin 2.3.21, KSP 2.3.10, AGP 9.4.0, Compose Multiplatform 1.11.1; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0 on Android; JetBrains Navigation 3 1.2.0-alpha02 + lifecycle Navigation 3 2.11.0 on desktop and iOS; min SDK 24; iOS targets `iosArm64` and `iosSimulatorArm64`, built on macOS. |
 | Independent ZAD-shaped consumer | Its own Gradle 9.4.1 wrapper, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0. It resolves all four Gezgin artifacts from one exclusive repository (Maven Central in release smoke) and does not use a composite/source substitution or Maven Local fallback. |
 
 These are different build roles, not interchangeable upgrade instructions. Full contracts: [docs/gezgin-design.md](docs/gezgin-design.md) §15.
