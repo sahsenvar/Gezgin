@@ -151,7 +151,7 @@ private val spikeJson = Json {
 
 class GeneratedRouteSerializerRoundTripTest {
   @Test
-  fun `a route with no @Serializable round-trips through the real save and restore path`() {
+  fun `a route with no Serializable round-trips through the real save and restore path`() {
     val topology = GezginTopology(emptyMap(), emptyMap(), emptyMap())
     val navigator = RawNavigator(start = SpikeGraph.ListRoute, topology = topology, onRootBack = {})
     val detail =
@@ -166,7 +166,7 @@ class GeneratedRouteSerializerRoundTripTest {
   }
 
   @Test
-  fun `a snapshot written by an @Serializable route decodes with the generated serializer`() {
+  fun `a snapshot written by a Serializable route decodes with the generated serializer`() {
     val topology = GezginTopology(emptyMap(), emptyMap(), emptyMap())
     val legacy =
       """{"keys":[{"route":{"type":"dev.gezgin.core.SpikeGraph.DetailRoute","id":"a","name":null,""" +

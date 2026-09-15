@@ -22,13 +22,13 @@ import kotlin.test.assertSame
 class GezginTransitionCascadeTest {
 
   @Test
-  fun `route kendi transition'ini override ederse o kazanir (screen greater than graph)`() {
+  fun `route kendi transition'ini override ederse o kazanir - screen greater than graph`() {
     val resolved = resolveTransition(ScreenOwnTransition, null)
     assertSame(screenTransitionFixture, resolved)
   }
 
   @Test
-  fun `route override etmezse graph'in transition'i miras alinir (graph greater than app)`() {
+  fun `route override etmezse graph'in transition'i miras alinir - graph greater than app`() {
     val resolved = resolveTransition(ScreenInheritsGraphTransition, null)
     assertSame(graphTransitionFixture, resolved)
   }
@@ -40,7 +40,7 @@ class GezginTransitionCascadeTest {
   }
 
   @Test
-  fun `hicbir seviye (route, graph, app) bir sey soylemezse null doner`() {
+  fun `hicbir seviye route graph app bir sey soylemezse null doner`() {
     val resolved = resolveTransition(ScreenNoTransitionAnywhere, null)
     assertNull(resolved)
   }

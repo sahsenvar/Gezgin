@@ -26,7 +26,7 @@ import kotlinx.coroutines.test.runTest
 class GezginBottomSheetDismissTest {
 
   @Test
-  fun `ResultRoute sheet dismiss (gezginOnBack) - caller Canceled alir`() = runTest {
+  fun `ResultRoute sheet dismiss gezginOnBack - caller Canceled alir`() = runTest {
     val nav = RawNavigator(start = Feed, topology = testTopology)
     val scope =
       GezginEntryScope().apply {
@@ -52,7 +52,7 @@ class GezginBottomSheetDismissTest {
   // back(sheetId) }.
   // Sheet HÂLÂ top iken pop + Canceled.
   @Test
-  fun `pinned sheet dismiss - back(entryId) top iken Canceled teslim eder`() = runTest {
+  fun `pinned sheet dismiss - back entryId top iken Canceled teslim eder`() = runTest {
     val nav = RawNavigator(start = Feed, topology = testTopology)
     val callerId = nav.currentEntryId
     nav.launchForResult(callerId, edgeId = "Feed→Sheet", route = SheetDefault("s"))

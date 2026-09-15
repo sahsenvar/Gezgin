@@ -70,7 +70,7 @@ class NavigatorIdentityRestoreTest {
   }
 
   @Test
-  fun `adoptRestored idempotent - ayni snapshot iki kez re-point ederse state sabit, StateFlow instance korunur (MN-1)`() {
+  fun `adoptRestored idempotent - ayni snapshot iki kez re-point ederse state sabit StateFlow instance korunur - MN-1`() {
     // MN-1 idempotence pin: adoptRestored'ın AYNI snapshot'la tekrar çağrılması state'i aynı değere
     // sabitler (ne stack büyür ne slot diriltilir). Android caller `adoptChecked` ile
     // config-change'te
@@ -96,7 +96,7 @@ class NavigatorIdentityRestoreTest {
   }
 
   @Test
-  fun `adoptRestored farkli bir stack'i benimser - taze instance snapshot'a doner (PD yolu)`() {
+  fun `adoptRestored farkli bir stack'i benimser - taze instance snapshot'a doner - PD yolu`() {
     // PD: rememberNavigator taze bir navigator'ı `start`'ta kurar, sonra Bundle'daki snapshot'ı
     // adopt eder.
     val session1 = RawNavigator(start = Feed, topology = testTopology)
@@ -112,7 +112,7 @@ class NavigatorIdentityRestoreTest {
   }
 
   @Test
-  fun `karakterizasyon - eski cift-instance restore VM ve display referanslarini AYRISTIRIR (C1 bug)`() {
+  fun `karakterizasyon - eski cift-instance restore VM ve display referanslarini AYRISTIRIR - C1 bug`() {
     // HEAD davranışı: `rememberSaveable` restore'da YENİ bir RawNavigator kurardı
     // (decodeNavigatorState).
     // VM eskisini, display yenisini tutardı → VM-driven navigasyon display'de GÖRÜNMEZDİ.
@@ -135,7 +135,7 @@ class NavigatorIdentityRestoreTest {
   }
 
   @Test
-  fun `decodeSavedStateOrNull gecerli snapshot'i decode eder, bozuk-bos null doner`() {
+  fun `decodeSavedStateOrNull gecerli snapshot'i decode eder bozuk-bos null doner`() {
     val nav = RawNavigator(start = Feed, topology = testTopology)
     nav.navigate(Catalog)
     val encoded = encodeNavigatorState(nav, testJson)

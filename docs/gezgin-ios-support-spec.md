@@ -103,6 +103,16 @@ Taşınanlar: `GezginDisplayTest`, `GezginDisplaySceneTest`, `GezginDisplayR2Tes
 Desktop'a özgü oldukları için `jvmTest`'te kalanlar: `DesktopViewModelStoreDecoratorTest`,
 `RememberNavigatorJvmSaveableRegistryTest`.
 
+**S-8.1.** Kotlin/Native, backtick'li bildirim adlarında `(`, `)`, `@`, `,` ve `§` karakterlerine izin
+vermez ("Name contains illegal characters"). JVM'de yaygın olan `` `back() pops the top entry` ``
+biçimi bu yüzden `commonTest`'te kullanılamaz; parantezler cümle sonundaysa tire'ye, cümle
+içindeyse satır içine iner. `-`, `'`, `_`, `=`, `+` ve Türkçe harfler serbesttir.
+
+Buna bağlı bir gözlem: Apple **klib** derlemesi Linux host'ta da yapılır — yalnız Apple *binary*
+link'i (framework, test çalıştırılabiliri) macOS ister. Dolayısıyla `kotlin.native.ignoreDisabledTargets`
+bu hedefleri tamamen kapatmaz ve Linux `check` job'ı da iOS kaynaklarını derler. Bu istenen bir
+durumdur: derleme hataları PR'da macOS job'ını beklemeden yakalanır.
+
 **S-9.** "iOS testleri yeşil" ölçütü yetersizdir — sıfır test koşan bir hedef de yeşil görünür.
 Kabul ölçütü: `iosSimulatorArm64Test`'in **koşan test sayısı > 0** ve taşınan sınıfların her
 birinin iOS raporunda göründüğü doğrulanır.

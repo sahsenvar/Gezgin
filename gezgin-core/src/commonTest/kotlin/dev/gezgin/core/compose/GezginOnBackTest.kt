@@ -22,7 +22,7 @@ class GezginOnBackTest {
     RawNavigator(start = Feed, topology = testTopology, onRootBack = onRootBack)
 
   @Test
-  fun `noBack top entry - onBack pop YAPMAZ (geri yutulur)`() {
+  fun `noBack top entry - onBack pop YAPMAZ - geri yutulur`() {
     val nav = nav()
     val scope =
       GezginEntryScope().apply {
@@ -55,7 +55,7 @@ class GezginOnBackTest {
   }
 
   @Test
-  fun `kok muafiyeti - tek entry noBack olsa bile onBack onRootBack tetikler (app'e hapsolmaz)`() {
+  fun `kok muafiyeti - tek entry noBack olsa bile onBack onRootBack tetikler - app'e hapsolmaz`() {
     var rootBackCount = 0
     // start = Product (noBack kaydedilecek), stack tek entry → kök.
     val nav =
