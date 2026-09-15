@@ -171,19 +171,29 @@ ve Central smoke script'lerine eklenir:
 
 ## 7. Örnek uygulama
 
-**S-14.** `sample/hello` KMP'ye çevrilir (`androidTarget` + iosArm64 + iosSimulatorArm64);
-`androidx.compose.*` koordinatları `org.jetbrains.compose.*`'a, `androidx.lifecycle.*` ise
-catalog'daki `jb-lifecycle-*` alias'larına geçer. `MainActivity` androidMain'e, `HelloApp`
-composable'ı commonMain'e, `MainViewController` iosMain'e gider. `sample/iosApp` altında
-checked-in bir Xcode projesi framework'ü tüketir.
+**S-14.** Örnek İKİ modüldür. `sample/hello-shared` saf bir KMP kütüphanesidir (`androidTarget`
++ iosArm64 + iosSimulatorArm64): graph, ekranlar, MVI tabanı, paylaşılan `HelloApp` ve iOS
+`MainViewController` oradadır; Apple hedefleri `HelloShared` adlı statik framework üretir.
+`sample/hello` ise yalnız Android host'udur — `MainActivity`, manifest ve `activity-compose`.
+
+Bölmenin sebebi mimari değil, çözümlemedir: tek modülde ortak kaynak kümesine konan lifecycle
+bağımlılığı — hangi scope'ta olursa olsun — Android derleme sınıf yoluna düşer ve orada üç sürüm
+çarpışır (bkz. S-15.1). İki modül, Compose ve lifecycle ailesini `api` ile tek yerden yayarak bu
+çakışmayı ortadan kaldırır.
 
 `sample/app`, `sample/shopr` ve `sample/feature/*` **Android-only kalır** — `sample/app` Fragment +
 AppCompat kullanır, KMP'ye çevrilmesi bu spec'in kapsamı değildir.
 
-**S-15.** KMP'de `ksp(project(":gezgin-processor"))` tek satırı yeterli değildir;
-`kspCommonMainMetadata` kullanılır, üretilen kaynak commonMain'e `srcDir` olarak eklenir ve compile
-task'ları `kspCommonMainKotlinMetadata`'ya bağlanır. `hello`'da `@FragmentScreen` bulunmadığından
+**S-15.** KMP'de `ksp(project(...))` tek satırı hedeflere ulaşmaz; `kspCommonMainMetadata`
+kullanılır, üretilen kaynak `commonMain`'e `srcDir` olarak eklenir ve derleme görevleri
+`kspCommonMainKotlinMetadata`'ya bağlanır. `hello`'da `@FragmentScreen` bulunmadığından
 processor'ın Android'e özel ürettiği tek yol (`AndroidFragment` çağrısı) devrede değildir.
+
+**S-15.1.** Lifecycle sürümü **2.10.0**'dır ve bu bir tercih değil, tek geçerli seçenektir:
+JetBrains bu artefaktı Compose Multiplatform 1.11.1'in Android'de sabitlediği **2.9.6** olarak
+yayınlamaz (en düşük 2.10.0), **2.11.0** hattının Android varyantı ise AGP 9.1 ve compileSdk 37
+ister. `compileOnly` de çözüm değildir: runtime sınıf yolunda görünmediğinden AGP'nin tutarlı
+çözümlemesi derleme tarafını 2.9.6'ya sabitler ve uyuşmazlık çıkar.
 
 **S-16 — bilinçli kapsam sınırı.** `hello` graph'ında `@NoBack`, `@Dialog`, `@BottomSheet` ve
 `@GoForResult` yoktur. Dolayısıyla iOS Maestro akışları liste→detay push/back, edge-swipe pop,

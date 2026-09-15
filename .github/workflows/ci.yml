@@ -86,6 +86,7 @@ jobs:
           :gezgin-core:iosSimulatorArm64Test
           :gezgin-test:compileKotlinIosArm64
           :gezgin-test:iosSimulatorArm64Test
+          :sample:hello-shared:linkDebugFrameworkIosSimulatorArm64
           --no-daemon --console=plain
 
       # A target that runs zero tests also reports success, so the simulator run is only evidence

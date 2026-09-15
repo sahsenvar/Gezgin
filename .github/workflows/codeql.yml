@@ -49,6 +49,7 @@ jobs:
           :gezgin-processor:compileKotlin
           :sample:navigation:compileKotlin :sample:app:compileDebugKotlin
           :sample:hello:compileDebugKotlin
+          :sample:hello-shared:compileDebugKotlinAndroid
           --no-daemon --console=plain
 
       - name: Analyze
