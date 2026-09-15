@@ -125,6 +125,114 @@ jobs:
           CODE_SIGN_IDENTITY=""
           build
 
+  # The Maestro flows are the only iOS tests a compiler cannot reach: they drive the real
+  # back gesture on a booted simulator. They run in their own job so their simulator boot and
+  # driver startup stay off the compile job's critical path.
+  ios-e2e:
+    name: ios-maestro-e2e
+    needs: wrapper-validation
+    runs-on: macos-latest
+    env:
+      # The iOS driver installs itself on the simulator on first use; CI runners are slower than
+      # a laptop and the default startup budget expires before it is ready.
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Set up an Android SDK
+        uses: ./.github/actions/setup-android-sdk
+
+      # The image's device list changes between runner updates, so the simulator is chosen from
+      # what is actually available rather than pinned to a model name that may disappear.
+      - name: Boot an iOS simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          udid="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          for runtime, devices in sorted(json.load(sys.stdin)["devices"].items()):
+              for device in devices:
+                  if device.get("isAvailable") and device["name"].startswith("iPhone"):
+                      print(device["udid"])
+                      raise SystemExit
+          raise SystemExit("no available iPhone simulator on this runner")
+          ')"
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          printf 'GEZGIN_SIMULATOR_UDID=%s\n' "$udid" >> "$GITHUB_ENV"
+
+      - name: Build and install the sample app on the simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project sample/iosApp/iosApp.xcodeproj \
+            -target iosApp \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -arch arm64 \
+            -derivedDataPath build/ios-e2e \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+          app="$(find build/ios-e2e/Build/Products -maxdepth 2 -name 'iosApp.app' | head -1)"
+          test -n "$app"
+          xcrun simctl install "$GEZGIN_SIMULATOR_UDID" "$app"
+          xcrun simctl get_app_container "$GEZGIN_SIMULATOR_UDID" dev.gezgin.sample.hello
+
+      # Pinned to an exact release and checked against its digest: an install script fetched over
+      # the network would decide for itself what runs here.
+      - name: Install Maestro
+        shell: bash
+        env:
+          MAESTRO_VERSION: '2.10.0'
+          MAESTRO_SHA256: '29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991'
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/maestro.zip"
+          curl -fsSL -o "$archive" \
+            "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "$MAESTRO_SHA256  $archive" | shasum -a 256 -c -
+          unzip -q "$archive" -d "$RUNNER_TEMP"
+          printf '%s\n' "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run the iOS flows
+        shell: bash
+        env:
+          MAESTRO_DEVICE: ${{ env.GEZGIN_SIMULATOR_UDID }}
+        run: maestro/run-ios-all.sh
+
+      # Maestro keeps each step's screenshot and command log under its own run directory; without
+      # this a failure here is only a red X, and the flows cannot be debugged from the runner.
+      - name: Report the failing flow
+        if: failure()
+        shell: bash
+        run: |
+          set -uo pipefail
+          latest="$(ls -dt "$HOME"/.maestro/tests/* 2>/dev/null | head -1 || true)"
+          if [ -z "$latest" ]; then
+            echo "Maestro wrote no run directory — it failed before starting a flow."
+            exit 0
+          fi
+          echo "== $latest =="
+          ls -la "$latest"
+          for log in "$latest"/*.log "$latest"/maestro.log; do
+            [ -f "$log" ] || continue
+            echo "---- $log ----"
+            tail -200 "$log"
+          done
+
   # Publishing runs on macOS because Kotlin/Native Apple targets only compile there. On Linux this
   # job would still succeed and silently omit every iOS artifact.
   release-artifacts:

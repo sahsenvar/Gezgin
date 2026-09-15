@@ -78,6 +78,26 @@ class WorkflowConfigurationContractTest {
   }
 
   @Test
+  fun `the iOS end to end flows run on a booted simulator`() {
+    val job = jobBlock(text(".github/workflows/ci.yml"), "ios-e2e")
+    assertContains(job, "runs-on: macos-latest")
+    assertContains(job, "xcrun simctl boot")
+    assertContains(job, "xcrun simctl bootstatus")
+    // Installing the app is what separates this job from the compile-only one: a flow driving an
+    // app that was never installed fails for the wrong reason.
+    assertContains(job, "xcrun simctl install")
+    assertContains(job, "maestro/run-ios-all.sh")
+    // An install script fetched over the network decides for itself what runs on the runner, so
+    // the archive is pinned to a release and checked against its digest.
+    assertContains(job, "MAESTRO_VERSION")
+    assertContains(job, "MAESTRO_SHA256")
+    assertContains(job, "shasum -a 256 -c -")
+    assertFalse(job.contains("get.maestro.mobile.dev"))
+    // A red X with no artifacts leaves the flows undebuggable from the runner.
+    assertContains(job, "if: failure()")
+  }
+
+  @Test
   fun `every publishing job runs on macOS so the Apple klibs are included`() {
     // Kotlin/Native Apple targets only compile on a macOS host. A publishing job left on Linux
     // still succeeds — it just omits every iOS artifact — so the host is pinned by contract.

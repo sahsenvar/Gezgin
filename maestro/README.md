@@ -73,7 +73,11 @@ Android suite'inden ayrı, kendi runner'ı olan küçük bir set. Gezgin'in iOS'
 gerçek bir simülatörde sürer: kenar-çekme jesti, üst-bar geri'siyle aynı sonucu vermeli ve kökte
 no-op kalmalı.
 
-Ön koşullar (Android suite'inden bağımsız):
+**Android suite'inin aksine bu set CI'da koşar** (`ios-maestro-e2e` job'ı): macOS runner'ında bir
+simülatör boot edilir, `sample/iosApp` derlenip kurulur ve aşağıdaki runner sürülür. Aşağıdaki
+ön koşullar yerel koşum içindir.
+
+Ön koşullar (yerel koşum; Android suite'inden bağımsız):
 
 - macOS + booted iOS simülatörü (`xcrun simctl list devices booted`).
 - `dev.gezgin.sample.hello` simülatörde kurulu. Kurulumu bu suite YAPMAZ: `sample/iosApp`'i Xcode'da

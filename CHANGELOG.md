@@ -22,7 +22,8 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   host'u olarak ikiye bölündü; iOS host'u `sample/iosApp` olarak eklendi ve CI'da `xcodebuild`
   ile derleniyor.
 - `maestro/run-ios-all.sh` ve dört iOS akışı (push/back, kenar-çekme, kökte geri, arka plan turu).
-  Android suite'i gibi CI'da koşmaz, elle sürülür.
+  Her PR'da CI'da koşar: macOS runner'ında simülatör boot edilir, örnek uygulama kurulur ve akışlar
+  sürülür. Maestro dağıtımı tam sürüme ve sha256'sına sabitlenmiştir.
 
 ### Changed
 

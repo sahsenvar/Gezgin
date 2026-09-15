@@ -219,8 +219,11 @@ değildir). iOS'ta gözlemlenebilir tek kesinti, process'in yaşadığı arka pl
 akış kümesi bunu doğrular (`hello-ios-04-background-restore.yaml`). Kalıcı iOS state-restoration
 ayrı bir iştir ve bu spec'in kapsamı dışındadır.
 
-**S-17.** iOS Maestro akışları, mevcut Android suite'i gibi **CI'da koşmaz**; `maestro/run-ios-all.sh`
-ile elle sürülür ve `maestro/README.md`'de belgelenir.
+**S-17.** iOS Maestro akışları her PR'da **CI'da koşar** (`ios-maestro-e2e` job'ı, macOS runner):
+simülatör boot edilir, `sample/iosApp` derlenip kurulur ve `maestro/run-ios-all.sh` sürülür. Aynı
+script yerelde de aynı şekilde çalışır. Maestro dağıtımı tam sürüme ve sha256'sına sabitlenir —
+ağdan çekilen bir kurulum script'i runner'da ne koşacağına kendi karar verirdi. Android suite'i
+CI'da koşmamaya devam eder (emülatör + iki app kurulumu gerektirir; ayrı iş).
 
 ---
 
