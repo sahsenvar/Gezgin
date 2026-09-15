@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.window.ComposeUIViewController
 import platform.UIKit.UIViewController
@@ -14,6 +15,7 @@ import platform.UIKit.UIViewController
  * The entry point the Xcode project instantiates. Root back is a no-op because iOS forbids an
  * application from terminating itself, so the edge-swipe simply stops at the start destination.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 fun MainViewController(): UIViewController = ComposeUIViewController {
   // TEMPORARY PROBE — remove once the edge-swipe question is settled. The e2e suite proved the
   // harness can drive an iOS edge swipe (Apple's own Settings navigates back with the same
