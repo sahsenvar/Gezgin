@@ -185,6 +185,12 @@ AppCompat kullanır, KMP'ye çevrilmesi bu spec'in kapsamı değildir.
 task'ları `kspCommonMainKotlinMetadata`'ya bağlanır. `hello`'da `@FragmentScreen` bulunmadığından
 processor'ın Android'e özel ürettiği tek yol (`AndroidFragment` çağrısı) devrede değildir.
 
+**S-15.1.** Örnek uygulama da §2.2'nin aile ayrımını korumak ZORUNDADIR: lifecycle bağımlılıkları
+Android'de AndroidX (2.10.0), non-Android'de JetBrains (2.11.0) olmalıdır. JetBrains 2.11.0
+hattının Android varyantı AGP 9.1 ve compileSdk 37 ister; ortak koda konulursa Android derlemesi
+daha bağımlılık çözümlemesinde kırılır. Ortak kaynak tiplere `compileOnly` ile derlenir, gerçek
+artefaktı her platform kendi kaynak kümesinden getirir — `gezgin-core`'un deseninin aynısı.
+
 **S-16 — bilinçli kapsam sınırı.** `hello` graph'ında `@NoBack`, `@Dialog`, `@BottomSheet` ve
 `@GoForResult` yoktur. Dolayısıyla iOS Maestro akışları liste→detay push/back, edge-swipe pop,
 kökte root-back ve process-death restore ile sınırlıdır. §4'teki modal ve `@NoBack` davranışları

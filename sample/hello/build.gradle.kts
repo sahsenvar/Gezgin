@@ -38,11 +38,23 @@ kotlin {
       implementation(
         "org.jetbrains.compose.material3:material3:${libs.versions.compose.material3.get()}"
       )
-      // Sarmalayıcı kendi ViewModel'ini çözer ve state'i toplar.
+      // Sarmalayıcı kendi ViewModel'ini çözer ve state'i toplar. gezgin-core'un §2.2 ayrımı
+      // burada da geçerli: lifecycle ailesi Android'de AndroidX, non-Android'de JetBrains
+      // olmalı. JetBrains 2.11.0 hattının Android varyantı AGP 9.1 ve compileSdk 37 istiyor;
+      // ortak koda konursa Android derlemesi çözümleme aşamasında kırılır. Ortak kaynak yalnız
+      // tiplere KARŞI derlenir, gerçek artefaktı her platform kendi kümesinden getirir.
+      compileOnly(libs.jb.lifecycle.viewmodel.compose)
+      compileOnly(libs.jb.lifecycle.runtime.compose)
+    }
+    androidMain.dependencies {
+      implementation(libs.androidx.activity.compose)
+      implementation(libs.androidx.lifecycle.viewmodel.compose)
+      implementation(libs.androidx.lifecycle.runtime.compose)
+    }
+    iosMain.dependencies {
       implementation(libs.jb.lifecycle.viewmodel.compose)
       implementation(libs.jb.lifecycle.runtime.compose)
     }
-    androidMain.dependencies { implementation(libs.androidx.activity.compose) }
   }
 }
 
