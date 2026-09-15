@@ -5,6 +5,31 @@ Bu projenin tüm kayda değer değişiklikleri bu dosyada belgelenir.
 Biçim [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/)'e,
 sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
+## [Unreleased]
+
+### Added
+
+- **iOS desteği.** `gezgin-core` ve `gezgin-test` artık `iosArm64` ve `iosSimulatorArm64`
+  hedeflerini yayınlıyor (`.klib`). `iosX64` **yoktur**: üstüne kurulduğumuz JetBrains
+  Navigation 3 artefaktları onu yayınlamıyor, dolayısıyla Intel-Mac simülatörleri desteklenmez.
+- Platforma bağımlı beş `expect` bildirimi için ortak bir `nonAndroidMain` kaynak kümesi: desktop
+  ve iOS aynı `actual`'ları paylaşır, davranış sürüklenmesi mimari olarak imkânsız hale gelir.
+- iOS'ta kenar-çekme (edge-swipe) geri jesti, Android'in predictive-back'iyle aynı sözleşmeyi
+  verir; kökte geri no-op'tur (Apple bir uygulamanın kendini sonlandırmasını yasaklar).
+- Compose UI testleri `nonAndroidTest`'e taşındı ve her PR'da iOS simülatöründe de koşuyor
+  (`iosSimulatorArm64Test`).
+- `sample/hello` paylaşılan bir KMP kütüphanesi (`sample/hello-shared`) ve ince bir Android
+  host'u olarak ikiye bölündü; iOS host'u `sample/iosApp` olarak eklendi ve CI'da `xcodebuild`
+  ile derleniyor.
+- `maestro/run-ios-all.sh` ve dört iOS akışı (push/back, kenar-çekme, kökte geri, arka plan turu).
+  Android suite'i gibi CI'da koşmaz, elle sürülür.
+
+### Changed
+
+- Yayın (`release`/`snapshot`) ve imzalı yerel yayın doğrulaması artık macOS runner'da koşuyor —
+  Apple hedefleri yalnız orada derlenir; Linux'ta bu job'lar başarılı görünüp iOS artefaktlarını
+  sessizce atlardı.
+
 ## [0.3.0] - 2026-09-12
 
 Kırıcı sürüm. Gezgin artık bir MVI tarzı dayatmıyor: ekranın container'ı, ViewModel'i, state

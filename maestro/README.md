@@ -67,6 +67,38 @@ process-death/rotation adımlarının arasına yerleştirilerek çağrılır. Pa
 `launchApp` İÇERMEZ (app'i durdurup saved-state'i yok etmemek için) — mevcut foreground ekran üzerinde
 assert eder.
 
+## iOS akışları (hello, simülatör)
+
+Android suite'inden ayrı, kendi runner'ı olan küçük bir set. Gezgin'in iOS'taki geri sözleşmesini
+gerçek bir simülatörde sürer: kenar-çekme jesti, üst-bar geri'siyle aynı sonucu vermeli ve kökte
+no-op kalmalı.
+
+Ön koşullar (Android suite'inden bağımsız):
+
+- macOS + booted iOS simülatörü (`xcrun simctl list devices booted`).
+- `dev.gezgin.sample.hello` simülatörde kurulu. Kurulumu bu suite YAPMAZ: `sample/iosApp`'i Xcode'da
+  bir kez simülatöre çalıştırın.
+- Maestro CLI (`~/.maestro/bin/maestro`) PATH'te — runner bu yolu kendisi ekler.
+- Birden çok simülatör booted ise `MAESTRO_DEVICE` ile UDID zorunlu (Android'deki `ANDROID_SERIAL`
+  ile aynı sözleşme).
+
+```bash
+maestro/run-ios-all.sh
+```
+
+| Dosya | App | Kapsam |
+|---|---|---|
+| `hello-ios-01-push-back.yaml` | hello | liste→detay push; üst-bar geri'si pop'lar, liste canlı döner |
+| `hello-ios-02-edge-swipe.yaml` | hello | kenar-çekme jesti detayı pop'lar (üst-bar geri'siyle aynı sonuç) |
+| `hello-ios-03-root-back.yaml` | hello | kökte geri no-op: uygulama kapanmaz, yığın bozulmaz |
+| `hello-ios-04-background-restore.yaml` | hello | arka plan→ön plan turunda yığın ve ekran durumu korunur |
+
+**Kapsam sınırı (bilinçli).** `hello` graph'ında `@NoBack`, `@Dialog`, `@BottomSheet` ve
+`@GoForResult` yoktur; bu davranışlar iOS'ta simülatör UI testleriyle (`iosSimulatorArm64Test`)
+kanıtlanır, e2e düzeyinde değil. Ayrıca iOS'ta Android'in process-death restore'unun karşılığı
+**yoktur**: `rememberSaveable` durumunu kurtaracak bir platform host'u bulunmadığından madde 4'ün iOS
+karşılığı, process'in yaşadığı arka plan turudur (`hello-ios-04`).
+
 ## Otomatikleştirilemeyen / görsel maddeler
 
 - **Görsel — insan gözü:** 9 (scrim/z-order opaklığı), 11 preview-frame yarısı (yarım-jest önizlemesi),

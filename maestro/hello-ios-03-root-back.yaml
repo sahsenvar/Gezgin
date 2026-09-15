@@ -1,0 +1,19 @@
+# iOS 3 — kökte geri no-op'tur; uygulama kendini KAPATMAZ.
+# `MainViewController` root-back'i boş bırakır çünkü Apple bir uygulamanın kendini sonlandırmasını
+# yasaklar. Kökteki kenar-çekme bu yüzden yığını boşaltmaz, ekranı da bozmaz.
+appId: dev.gezgin.sample.hello
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Ada Lovelace"
+- swipe:
+    start: "2%, 50%"
+    end: "95%, 50%"
+# hâlâ liste ekranındayız (uygulama kapanmadı, boş ekran da yok)
+- assertVisible: "Ada Lovelace"
+- assertVisible: "Barbara Liskov"
+# ve ekran ETKİLEŞİLEBİLİR: jest yığını bozmadı
+- tapOn: "Grace Hopper"
+- assertVisible: "Favorilere ekle ☆"
+- tapOn: "‹ Kişiler"
+- assertVisible: "Ada Lovelace"

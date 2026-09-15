@@ -207,10 +207,17 @@ yazılır ve boru hattının başka hiçbir yerinde derlenmez — doğrulanmadan
 zinciri (~20 dk), iOS job'ı ise ~10,6 dk sürüyor ve paralel koşuyor.
 
 **S-16 — bilinçli kapsam sınırı.** `hello` graph'ında `@NoBack`, `@Dialog`, `@BottomSheet` ve
-`@GoForResult` yoktur. Dolayısıyla iOS Maestro akışları liste→detay push/back, edge-swipe pop,
-kökte root-back ve process-death restore ile sınırlıdır. §4'teki modal ve `@NoBack` davranışları
-iOS'ta **§5'in simülatör UI testleriyle** kanıtlanır, e2e düzeyinde değil. Bu bilinen bir boşluktur;
-kapatmak için `sample/shopr`'un KMP'ye çevrilmesi gerekir (ayrı iş).
+`@GoForResult` yoktur. Dolayısıyla iOS Maestro akışları liste→detay push/back, edge-swipe pop ve
+kökte root-back ile sınırlıdır. §4'teki modal ve `@NoBack` davranışları iOS'ta **§5'in simülatör UI
+testleriyle** kanıtlanır, e2e düzeyinde değil. Bu bilinen bir boşluktur; kapatmak için
+`sample/shopr`'un KMP'ye çevrilmesi gerekir (ayrı iş).
+
+**S-16.1 — process-death'in iOS karşılığı yoktur.** Android akışlarındaki process-death round-trip
+iOS'ta doğrudan karşılanamaz: `rememberSaveable` durumunu sonlandırılmış bir uygulamaya geri
+taşıyacak bir platform host'u yoktur (Android'deki `SavedStateRegistry`nin eşleniği devrede
+değildir). iOS'ta gözlemlenebilir tek kesinti, process'in yaşadığı arka plan→ön plan turudur ve
+akış kümesi bunu doğrular (`hello-ios-04-background-restore.yaml`). Kalıcı iOS state-restoration
+ayrı bir iştir ve bu spec'in kapsamı dışındadır.
 
 **S-17.** iOS Maestro akışları, mevcut Android suite'i gibi **CI'da koşmaz**; `maestro/run-ios-all.sh`
 ile elle sürülür ve `maestro/README.md`'de belgelenir.
