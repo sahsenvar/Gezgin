@@ -215,7 +215,8 @@ jobs:
         run: maestro/run-ios-all.sh
 
       # Maestro keeps each step's screenshot and command log under its own run directory; without
-      # this a failure here is only a red X, and the flows cannot be debugged from the runner.
+      # this a failure here is only a red X, and the flows cannot be debugged from the runner. A
+      # crash on launch leaves its reason only in the simulator's own report, not in Maestro's log.
       - name: Report the failing flow
         if: failure()
         shell: bash
@@ -224,15 +225,22 @@ jobs:
           latest="$(ls -dt "$HOME"/.maestro/tests/* 2>/dev/null | head -1 || true)"
           if [ -z "$latest" ]; then
             echo "Maestro wrote no run directory — it failed before starting a flow."
-            exit 0
+          else
+            echo "== $latest =="
+            ls -la "$latest"
+            for log in "$latest"/*.log "$latest"/maestro.log; do
+              [ -f "$log" ] || continue
+              echo "---- $log ----"
+              tail -200 "$log"
+            done
           fi
-          echo "== $latest =="
-          ls -la "$latest"
-          for log in "$latest"/*.log "$latest"/maestro.log; do
-            [ -f "$log" ] || continue
-            echo "---- $log ----"
-            tail -200 "$log"
-          done
+          crash="$(ls -dt "$HOME"/Library/Logs/DiagnosticReports/iosApp-*.ips 2>/dev/null | head -1 || true)"
+          if [ -n "$crash" ]; then
+            echo "---- $crash ----"
+            head -120 "$crash"
+          else
+            echo "The simulator recorded no crash report for iosApp."
+          fi
 
   # Publishing runs on macOS because Kotlin/Native Apple targets only compile there. On Linux this
   # job would still succeed and silently omit every iOS artifact.
