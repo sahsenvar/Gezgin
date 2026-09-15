@@ -254,6 +254,7 @@ apiValidation {
   ignoredProjects +=
     listOf(
       "hello",
+      "hello-shared",
       "shopr",
       "navigation",
       "designsystem",
