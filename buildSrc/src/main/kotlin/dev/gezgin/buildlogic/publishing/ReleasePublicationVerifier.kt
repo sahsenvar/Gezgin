@@ -389,9 +389,14 @@ object ReleasePublicationVerifier {
           ),
           PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
         )
+      "gezgin-core-iosarm64" -> iosCorePomDependencies("iosarm64", "uikitarm64")
+      "gezgin-core-iossimulatorarm64" ->
+        iosCorePomDependencies("iossimulatorarm64", "uikitsimarm64")
       "gezgin-test" ->
         setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"))
       "gezgin-test-android",
+      "gezgin-test-iosarm64",
+      "gezgin-test-iossimulatorarm64",
       "gezgin-test-jvm" ->
         setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"))
       "gezgin-processor" ->
@@ -403,6 +408,62 @@ object ReleasePublicationVerifier {
         )
       else -> error("Unknown publication: $artifactId")
     }
+
+  /**
+   * A Kotlin/Native publication carries platform-suffixed POM coordinates while its Gradle module
+   * metadata keeps the unsuffixed root modules. Compose material3 is the one dependency whose
+   * native artifacts are named after UIKit rather than the Kotlin target, so both suffixes are
+   * passed in. Navigation 3's runtime resolves to the version the JetBrains UI artifact requires,
+   * exactly as it already does on the desktop target.
+   */
+  private fun iosCorePomDependencies(target: String, material3Target: String): Set<PomDependency> =
+    setOf(
+      PomDependency(
+        "org.jetbrains.androidx.navigation3",
+        "navigation3-ui-$target",
+        "1.2.0-alpha02",
+        "compile",
+      ),
+      PomDependency(
+        "org.jetbrains.androidx.lifecycle",
+        "lifecycle-viewmodel-navigation3-$target",
+        "2.11.0",
+        "compile",
+      ),
+      PomDependency(
+        "org.jetbrains.androidx.lifecycle",
+        "lifecycle-viewmodel-compose-$target",
+        "2.11.0",
+        "compile",
+      ),
+      PomDependency(
+        "org.jetbrains.kotlinx",
+        "kotlinx-coroutines-core-$target",
+        "1.11.0",
+        "compile",
+      ),
+      PomDependency(
+        "org.jetbrains.kotlinx",
+        "kotlinx-serialization-json-$target",
+        "1.9.0",
+        "compile",
+      ),
+      PomDependency("org.jetbrains.compose.runtime", "runtime-$target", "1.11.1", "compile"),
+      PomDependency("org.jetbrains.compose.foundation", "foundation-$target", "1.11.1", "compile"),
+      PomDependency(
+        "org.jetbrains.compose.material3",
+        "material3-$material3Target",
+        "1.9.0",
+        "compile",
+      ),
+      PomDependency(
+        "androidx.navigation3",
+        "navigation3-runtime-$target",
+        "1.2.0-alpha04",
+        "compile",
+      ),
+      PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+    )
 
   private fun expectedModuleExternalDependenciesFor(artifactId: String): Set<ModuleDependency> =
     when (artifactId) {
@@ -430,6 +491,8 @@ object ReleasePublicationVerifier {
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
         )
+      "gezgin-core-iosarm64",
+      "gezgin-core-iossimulatorarm64",
       "gezgin-core-jvm" ->
         setOf(
           ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
@@ -453,6 +516,8 @@ object ReleasePublicationVerifier {
         )
       "gezgin-test",
       "gezgin-test-android",
+      "gezgin-test-iosarm64",
+      "gezgin-test-iossimulatorarm64",
       "gezgin-test-jvm" ->
         setOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
       "gezgin-processor" ->
@@ -470,20 +535,51 @@ object ReleasePublicationVerifier {
       ExpectedArtifact(
         "gezgin-core",
         ".jar",
-        targets = setOf("gezgin-core-android", "gezgin-core-jvm"),
+        targets =
+          setOf(
+            "gezgin-core-android",
+            "gezgin-core-iosarm64",
+            "gezgin-core-iossimulatorarm64",
+            "gezgin-core-jvm",
+          ),
       ),
       ExpectedArtifact("gezgin-core-android", ".aar", componentArtifactId = "gezgin-core"),
+      ExpectedArtifact("gezgin-core-iosarm64", ".klib", componentArtifactId = "gezgin-core"),
+      ExpectedArtifact(
+        "gezgin-core-iossimulatorarm64",
+        ".klib",
+        componentArtifactId = "gezgin-core",
+      ),
       ExpectedArtifact("gezgin-core-jvm", ".jar", componentArtifactId = "gezgin-core"),
       ExpectedArtifact(
         "gezgin-test",
         ".jar",
         "gezgin-core",
-        setOf("gezgin-test-android", "gezgin-test-jvm"),
+        setOf(
+          "gezgin-test-android",
+          "gezgin-test-iosarm64",
+          "gezgin-test-iossimulatorarm64",
+          "gezgin-test-jvm",
+        ),
       ),
       ExpectedArtifact(
         "gezgin-test-android",
         ".aar",
         "gezgin-core-android",
+        componentArtifactId = "gezgin-test",
+        moduleProjectDependency = "gezgin-core",
+      ),
+      ExpectedArtifact(
+        "gezgin-test-iosarm64",
+        ".klib",
+        "gezgin-core-iosarm64",
+        componentArtifactId = "gezgin-test",
+        moduleProjectDependency = "gezgin-core",
+      ),
+      ExpectedArtifact(
+        "gezgin-test-iossimulatorarm64",
+        ".klib",
+        "gezgin-core-iossimulatorarm64",
         componentArtifactId = "gezgin-test",
         moduleProjectDependency = "gezgin-core",
       ),
