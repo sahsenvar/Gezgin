@@ -31,6 +31,10 @@ kotlin {
   jvmToolchain(17)
   jvm()
   androidTarget()
+  // gezgin-core ile AYNI Apple hedef kümesi (bkz. gezgin-core/build.gradle.kts). Bu modülde
+  // platforma bağımlı bildirim YOK — hedefler yalnız commonMain'i Apple klib'lerine derler.
+  iosArm64()
+  iosSimulatorArm64()
   sourceSets {
     commonMain.dependencies { api(project(":gezgin-core")) }
     commonTest.dependencies {

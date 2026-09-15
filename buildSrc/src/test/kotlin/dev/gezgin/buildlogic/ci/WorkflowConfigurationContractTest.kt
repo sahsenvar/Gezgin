@@ -26,6 +26,16 @@ class WorkflowConfigurationContractTest {
         .findAll(contents)
         .map { it.groupValues[1] }
         .forEach { action ->
+          // Repository-local composite actions carry no upstream revision to pin; they are
+          // reviewed with the rest of the tree. Everything fetched from another repository is
+          // pinned to a full commit SHA.
+          if (action.startsWith("./")) {
+            assertTrue(
+              Files.isRegularFile(projectRoot.resolve(action.removePrefix("./") + "/action.yml")),
+              "$action in ${workflow.fileName} does not resolve to a local composite action",
+            )
+            return@forEach
+          }
           assertTrue(
             Regex("^[^@]+@[0-9a-f]{40}$").matches(action),
             "$action in ${workflow.fileName} is not pinned to a full commit SHA",
@@ -47,6 +57,47 @@ class WorkflowConfigurationContractTest {
     assertContains(workflow, "./gradle/verify-release-publications.sh")
     assertContains(workflow, "./gradle/release/test-release-scripts.sh")
     assertFalse(workflow.contains("MAVEN_CENTRAL_USERNAME"))
+  }
+
+  @Test
+  fun `apple targets are built and tested on a macOS runner`() {
+    val workflow = text(".github/workflows/ci.yml")
+    assertContains(workflow, "runs-on: macos-latest")
+    assertContains(workflow, ":gezgin-core:compileKotlinIosArm64")
+    assertContains(workflow, ":gezgin-core:iosSimulatorArm64Test")
+    assertContains(workflow, ":gezgin-test:iosSimulatorArm64Test")
+    assertContains(workflow, "uses: ./.github/actions/setup-android-sdk")
+  }
+
+  @Test
+  fun `every publishing job runs on macOS so the Apple klibs are included`() {
+    // Kotlin/Native Apple targets only compile on a macOS host. A publishing job left on Linux
+    // still succeeds — it just omits every iOS artifact — so the host is pinned by contract.
+    listOf(
+        ".github/workflows/ci.yml" to "release-artifacts",
+        ".github/workflows/release.yml" to "validate",
+        ".github/workflows/release.yml" to "publish",
+        ".github/workflows/snapshot.yml" to "publish-snapshot",
+      )
+      .forEach { (path, job) ->
+        val jobBlock = jobBlock(text(path), job)
+        assertContains(jobBlock, "runs-on: macos-latest", message = "$path/$job")
+        assertContains(
+          jobBlock,
+          "uses: ./.github/actions/setup-android-sdk",
+          message = "$path/$job",
+        )
+      }
+  }
+
+  @Test
+  fun `the Apple targets stay disabled on the Linux gates instead of breaking them`() {
+    assertContains(text("gradle.properties"), "kotlin.native.ignoreDisabledTargets=true")
+    // CodeQL's java-kotlin extractor does not read Kotlin/Native output, so the Apple targets are
+    // deliberately absent from its manual build.
+    val codeql = text(".github/workflows/codeql.yml")
+    assertFalse(codeql.contains("IosArm64"))
+    assertFalse(codeql.contains("IosSimulatorArm64"))
   }
 
   @Test
@@ -290,6 +341,16 @@ class WorkflowConfigurationContractTest {
         .sorted()
         .toList()
     }
+  }
+
+  /** Returns the lines of one top-level job, which are indented further than its own key. */
+  private fun jobBlock(workflow: String, job: String): String {
+    val lines = workflow.lines()
+    val start = lines.indexOfFirst { it == "  $job:" }
+    assertTrue(start >= 0, "Missing job: $job")
+    val rest = lines.drop(start + 1)
+    val end = rest.indexOfFirst { it.isNotBlank() && !it.startsWith("    ") }
+    return rest.take(if (end < 0) rest.size else end).joinToString(separator = "\n")
   }
 
   private fun text(relativePath: String): String {

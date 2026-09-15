@@ -12,7 +12,7 @@ concurrency:
 jobs:
   publish-snapshot:
     name: publish-snapshot
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     env:
       DISPATCH_REF: ${{ github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
@@ -47,6 +47,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Set up an Android SDK
+        uses: ./.github/actions/setup-android-sdk
 
       - name: Validate snapshot release gates
         run: |

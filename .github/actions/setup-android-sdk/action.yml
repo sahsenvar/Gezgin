@@ -1,0 +1,25 @@
+name: Set up an Android SDK
+description: >-
+  Guarantees a resolvable Android SDK on runners that ship without one. The arm64 macOS images
+  carry no SDK, but the root build applies the Android Gradle plugin to every published module, so
+  even an Apple-only or Kotlin-only task list needs one. Installed from Homebrew rather than a
+  third-party action so the workflow SHA-pinning contract keeps holding.
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve or install the SDK
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -n "${ANDROID_HOME:-}" && -d "${ANDROID_HOME:-}/platform-tools" ]]; then
+          echo "Using the preinstalled SDK at $ANDROID_HOME."
+          exit 0
+        fi
+        brew install --cask android-commandlinetools
+        sdk_root="$(brew --prefix)/share/android-commandlinetools"
+        test -d "$sdk_root"
+        yes | sdkmanager --sdk_root="$sdk_root" --licenses > /dev/null
+        sdkmanager --sdk_root="$sdk_root" "platform-tools" "platforms;android-36" > /dev/null
+        printf 'ANDROID_HOME=%s\n' "$sdk_root" >> "$GITHUB_ENV"
+        printf 'ANDROID_SDK_ROOT=%s\n' "$sdk_root" >> "$GITHUB_ENV"
