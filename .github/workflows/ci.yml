@@ -132,6 +132,8 @@ jobs:
     name: ios-maestro-e2e
     needs: wrapper-validation
     runs-on: macos-latest
+    # A wedged simulator or driver otherwise holds a macOS runner for the six-hour default.
+    timeout-minutes: 45
     env:
       # The iOS driver installs itself on the simulator on first use; CI runners are slower than
       # a laptop and the default startup budget expires before it is ready.

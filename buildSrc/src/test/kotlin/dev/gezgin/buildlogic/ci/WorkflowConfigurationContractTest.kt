@@ -95,6 +95,8 @@ class WorkflowConfigurationContractTest {
     assertFalse(job.contains("get.maestro.mobile.dev"))
     // A red X with no artifacts leaves the flows undebuggable from the runner.
     assertContains(job, "if: failure()")
+    // A wedged simulator or driver would otherwise hold a macOS runner for the six-hour default.
+    assertContains(job, "timeout-minutes:")
   }
 
   @Test
