@@ -175,20 +175,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The product directory is named outright rather than derived: xcodebuild rejects
+          # -derivedDataPath without a scheme, and this project is driven by target.
+          build_dir="$PWD/build/ios-e2e"
           xcodebuild \
             -project sample/iosApp/iosApp.xcodeproj \
             -target iosApp \
             -configuration Debug \
             -sdk iphonesimulator \
             -arch arm64 \
-            -derivedDataPath build/ios-e2e \
+            CONFIGURATION_BUILD_DIR="$build_dir" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             build
-          app="$(find build/ios-e2e/Build/Products -maxdepth 2 -name 'iosApp.app' | head -1)"
-          test -n "$app"
-          xcrun simctl install "$GEZGIN_SIMULATOR_UDID" "$app"
+          xcrun simctl install "$GEZGIN_SIMULATOR_UDID" "$build_dir/iosApp.app"
           xcrun simctl get_app_container "$GEZGIN_SIMULATOR_UDID" dev.gezgin.sample.hello
 
       # Pinned to an exact release and checked against its digest: an install script fetched over
