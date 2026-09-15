@@ -244,6 +244,8 @@ jobs:
         if: always() && steps.flows.outcome != 'success'
         shell: bash
         run: |
+          # No single artifact is worth losing the rest of the report, so nothing here is fatal.
+          set +e
           set -uo pipefail
           runs="$(ls -dt "$HOME"/.maestro/tests/* 2>/dev/null || true)"
           if [ -z "$runs" ]; then
@@ -263,10 +265,12 @@ jobs:
                 done
               # A hierarchy can disagree with the pixels — an empty tree over a rendered screen is
               # an accessibility fault, not a navigation one, and only the image tells them apart.
+              # macOS base64 reads a file through -i; a bare path makes it exit 64 and, under the
+              # runner's -e shell, takes the whole report down with it.
               find "$run" -path '*screenshots*' -name '*.png' -print0 |
                 while IFS= read -r -d '' shot; do
                   echo "---- $shot (base64) ----"
-                  base64 "$shot"
+                  base64 -i "$shot" || echo "(could not encode $shot)"
                   echo "---- end $shot ----"
                 done
             done
