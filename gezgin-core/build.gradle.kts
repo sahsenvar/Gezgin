@@ -97,8 +97,21 @@ kotlin {
       api(libs.androidx.lifecycle.viewmodel.compose)
     }
     // Desktop ve iOS AYNI JetBrains ailesini kullanır; AndroidX UI/lifecycle artefaktları yalnız
-    // androidMain'de kalır (§2.2 adapter sınırı).
+    // androidMain'de kalır (§2.2 adapter sınırı). commonMain'in deseni burada da geçerli:
+    // paylaşılan actual'lar bu aileye KARŞI derlenir, ama yayınlanan bağımlılık olarak hedeflerin
+    // KENDİ kaynak kümelerinden dışa verilir. Bir ARA kaynak kümesinin `api`'si ortak metadata
+    // POM'una çıkar; oradan da JB artefaktları Maven ile çözen bir Android tüketicisinin grafiğine
+    // sızardı.
     getByName("nonAndroidMain").dependencies {
+      compileOnly(libs.jb.navigation3.ui)
+      compileOnly(libs.jb.lifecycle.viewmodel.navigation3)
+    }
+    jvmMain.dependencies {
+      api(libs.jb.navigation3.ui)
+      api(libs.jb.lifecycle.viewmodel.navigation3)
+      api(libs.jb.lifecycle.viewmodel.compose)
+    }
+    iosMain.dependencies {
       api(libs.jb.navigation3.ui)
       api(libs.jb.lifecycle.viewmodel.navigation3)
       api(libs.jb.lifecycle.viewmodel.compose)

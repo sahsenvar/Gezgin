@@ -62,6 +62,13 @@ aynıdır; tek kopya `nonAndroidMain`'de tutulur:
 | `platformDefaultRootBack` | no-op | no-op | — |
 | `GezginNoBackHandler` | `BackHandler` | no-op (desktop) | **evet** (§4) |
 
+**S-3.1.** `nonAndroidMain` JetBrains ailesini `compileOnly` olarak alır; `api` olarak dışa vermeyi
+`jvmMain` ve `iosMain` üstlenir. Bir **ara** kaynak kümesinin `api` bağımlılığı ortak metadata
+POM'una çıkar — bu da JB `navigation3-ui`/`lifecycle` artefaktlarını, Maven ile çözen bir Android
+tüketicisinin grafiğine sızdırırdı ve §2.2'nin adapter sınırını delerdi. `commonMain` aynı deseni
+aynı sebeple zaten kullanır. Yayınlanan bağımlılık yüzeyi bu sayede iOS öncesiyle birebir aynı kalır
+ve `ReleasePublicationVerifier` bunu her koşumda kanıtlar.
+
 **S-4.** Tek kopya tutmanın üç ölçülebilir sonucu vardır ve bunlar kabul ölçütüdür:
 kök `koverVerify` gate'i (%94 satır) gevşemez, çünkü kod jvmTest'te ölçülmeye devam eder;
 `checkPublicApiKDoc` envanteri yalnız gerçekten yeni bildirimler kadar büyür;
