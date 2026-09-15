@@ -25,14 +25,11 @@ class NativeIdentifierContractTest {
   @Test
   fun `declaration names in Apple compiled source sets avoid illegal characters`() {
     val sources =
-      appleCompiledSourceSets
-        .map(projectRoot::resolve)
-        .filter(Files::isDirectory)
-        .flatMap { root ->
-          Files.walk(root).use { paths ->
-            paths.filter(Path::isRegularFile).toList().filter { it.extension == "kt" }
-          }
+      appleCompiledSourceSets.map(projectRoot::resolve).filter(Files::isDirectory).flatMap { root ->
+        Files.walk(root).use { paths ->
+          paths.filter(Path::isRegularFile).toList().filter { it.extension == "kt" }
         }
+      }
     val findings =
       sources
         .flatMap { path ->
