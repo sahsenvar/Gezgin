@@ -217,6 +217,9 @@ class ReleasePublicationVerifierTest {
       jar(base.resolveSibling("${base.fileName}-sources.jar"), "sample.kt")
       jar(base.resolveSibling("${base.fileName}-javadoc.jar"), "index.html")
       jar(base.resolveSibling("${base.fileName}${artifact.primaryExtension}"), "payload.bin")
+      artifact.additionalFiles.forEach { suffix ->
+        jar(base.resolveSibling("${base.fileName}$suffix"), "payload.bin")
+      }
 
       val signable =
         listOf(
@@ -225,7 +228,7 @@ class ReleasePublicationVerifierTest {
           base.resolveSibling("${base.fileName}-sources.jar"),
           base.resolveSibling("${base.fileName}-javadoc.jar"),
           base.resolveSibling("${base.fileName}${artifact.primaryExtension}"),
-        )
+        ) + artifact.additionalFiles.map { base.resolveSibling("${base.fileName}$it") }
       if (artifact.targets.isNotEmpty()) {
         val tooling = base.resolveSibling("${base.fileName}-kotlin-tooling-metadata.json")
         tooling.writeText("{}")
@@ -383,6 +386,7 @@ class ReleasePublicationVerifierTest {
     val internalPomScope: String = if (targets.isNotEmpty()) "runtime" else "compile",
     val projectName: String = componentArtifactId,
     val description: String = descriptionFor(componentArtifactId),
+    val additionalFiles: Set<String> = emptySet(),
   )
 
   private data class PomDependency(
@@ -396,6 +400,10 @@ class ReleasePublicationVerifierTest {
 
   private companion object {
     /** Mirrors the platform-suffixed POM coordinates a Kotlin/Native publication carries. */
+    val nativeFiles = setOf("-metadata.jar")
+
+    val nativeComposeFiles = nativeFiles + "-kotlin_resources.kotlin_resources.zip"
+
     fun iosCorePomDependencies(target: String, material3Target: String): List<PomDependency> =
       listOf(
         PomDependency(
@@ -672,11 +680,17 @@ class ReleasePublicationVerifierTest {
             ),
         ),
         ExpectedArtifact("gezgin-core-android", ".aar", componentArtifactId = "gezgin-core"),
-        ExpectedArtifact("gezgin-core-iosarm64", ".klib", componentArtifactId = "gezgin-core"),
+        ExpectedArtifact(
+          "gezgin-core-iosarm64",
+          ".klib",
+          componentArtifactId = "gezgin-core",
+          additionalFiles = nativeComposeFiles,
+        ),
         ExpectedArtifact(
           "gezgin-core-iossimulatorarm64",
           ".klib",
           componentArtifactId = "gezgin-core",
+          additionalFiles = nativeComposeFiles,
         ),
         ExpectedArtifact("gezgin-core-jvm", ".jar", componentArtifactId = "gezgin-core"),
         ExpectedArtifact(
@@ -703,6 +717,7 @@ class ReleasePublicationVerifierTest {
           "gezgin-core-iosarm64",
           componentArtifactId = "gezgin-test",
           moduleProjectDependency = "gezgin-core",
+          additionalFiles = nativeFiles,
         ),
         ExpectedArtifact(
           "gezgin-test-iossimulatorarm64",
@@ -710,6 +725,7 @@ class ReleasePublicationVerifierTest {
           "gezgin-core-iossimulatorarm64",
           componentArtifactId = "gezgin-test",
           moduleProjectDependency = "gezgin-core",
+          additionalFiles = nativeFiles,
         ),
         ExpectedArtifact(
           "gezgin-test-jvm",

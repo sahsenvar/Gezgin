@@ -54,7 +54,8 @@ object ReleasePublicationVerifier {
       val sources = versionDirectory.resolve("$baseName-sources.jar")
       val javadoc = versionDirectory.resolve("$baseName-javadoc.jar")
       val primary = versionDirectory.resolve("$baseName${artifact.primaryExtension}")
-      val signable = listOf(pom, module, sources, javadoc, primary)
+      val extras = artifact.additionalFiles.map { versionDirectory.resolve("$baseName$it") }
+      val signable = listOf(pom, module, sources, javadoc, primary) + extras
 
       signable.forEach { file ->
         check(Files.isRegularFile(file) && Files.size(file) > 0L) {
@@ -274,6 +275,7 @@ object ReleasePublicationVerifier {
       expectedExternalDependenciesFor(artifactId),
     val expectedModuleExternalDependencies: Set<ModuleDependency> =
       expectedModuleExternalDependenciesFor(artifactId),
+    val additionalFiles: Set<String> = emptySet(),
   )
 
   private data class PomDependency(
@@ -530,6 +532,15 @@ object ReleasePublicationVerifier {
       else -> error("Unknown publication: $artifactId")
     }
 
+  /**
+   * A Kotlin/Native publication also carries its source set metadata jar, and a module that applies
+   * the Compose plugin additionally carries its packaged multiplatform resources. Both are signed,
+   * so both belong to the expected signature set.
+   */
+  private val nativeFiles = setOf("-metadata.jar")
+
+  private val nativeComposeFiles = nativeFiles + "-kotlin_resources.kotlin_resources.zip"
+
   private val expectedArtifacts =
     listOf(
       ExpectedArtifact(
@@ -544,11 +555,17 @@ object ReleasePublicationVerifier {
           ),
       ),
       ExpectedArtifact("gezgin-core-android", ".aar", componentArtifactId = "gezgin-core"),
-      ExpectedArtifact("gezgin-core-iosarm64", ".klib", componentArtifactId = "gezgin-core"),
+      ExpectedArtifact(
+        "gezgin-core-iosarm64",
+        ".klib",
+        componentArtifactId = "gezgin-core",
+        additionalFiles = nativeComposeFiles,
+      ),
       ExpectedArtifact(
         "gezgin-core-iossimulatorarm64",
         ".klib",
         componentArtifactId = "gezgin-core",
+        additionalFiles = nativeComposeFiles,
       ),
       ExpectedArtifact("gezgin-core-jvm", ".jar", componentArtifactId = "gezgin-core"),
       ExpectedArtifact(
@@ -575,6 +592,7 @@ object ReleasePublicationVerifier {
         "gezgin-core-iosarm64",
         componentArtifactId = "gezgin-test",
         moduleProjectDependency = "gezgin-core",
+        additionalFiles = nativeFiles,
       ),
       ExpectedArtifact(
         "gezgin-test-iossimulatorarm64",
@@ -582,6 +600,7 @@ object ReleasePublicationVerifier {
         "gezgin-core-iossimulatorarm64",
         componentArtifactId = "gezgin-test",
         moduleProjectDependency = "gezgin-core",
+        additionalFiles = nativeFiles,
       ),
       ExpectedArtifact(
         "gezgin-test-jvm",
