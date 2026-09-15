@@ -64,7 +64,7 @@ class GezginDisplaySceneTest {
   }
 
   @Test
-  fun `DialogContract'li DIALOG entry overlay render olur - arka SCREEN gorunur (4_1)`() =
+  fun `DialogContract'li DIALOG entry overlay render olur - arka SCREEN gorunur - 4_1`() =
     runComposeUiTest {
       val nav = RawNavigator(start = Catalog, topology = testTopology)
       setContent {
@@ -83,7 +83,7 @@ class GezginDisplaySceneTest {
     }
 
   @Test
-  fun `dialog dismiss (back) - overlay kapanir, arka SCREEN kalir (4_1)`() = runComposeUiTest {
+  fun `dialog dismiss back - overlay kapanir arka SCREEN kalir - 4_1`() = runComposeUiTest {
     val nav = RawNavigator(start = Catalog, topology = testTopology)
     setContent {
       GezginDisplay(navigator = nav) {
@@ -106,7 +106,7 @@ class GezginDisplaySceneTest {
   }
 
   @Test
-  fun `FULLSCREEN_MODAL entry overlay olarak render olur - DialogScene yolu (4_3)`() =
+  fun `FULLSCREEN_MODAL entry overlay olarak render olur - DialogScene yolu - 4_3`() =
     runComposeUiTest {
       val nav = RawNavigator(start = Catalog, topology = testTopology)
       setContent {
@@ -134,7 +134,7 @@ class GezginDisplaySceneTest {
     }
 
   @Test
-  fun `FULLSCREEN_MODAL dismiss (back) - overlay kapanir, arka SCREEN geri gelir (4_3)`() =
+  fun `FULLSCREEN_MODAL dismiss back - overlay kapanir arka SCREEN geri gelir - 4_3`() =
     runComposeUiTest {
       val nav = RawNavigator(start = Catalog, topology = testTopology)
       setContent {

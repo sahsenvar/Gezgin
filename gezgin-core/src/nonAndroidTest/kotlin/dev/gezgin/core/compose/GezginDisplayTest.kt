@@ -45,7 +45,7 @@ class GezginDisplayTest {
   }
 
   @Test
-  fun `b - navigate sonrasi yeni ekran gorunur, eski gorunmez`() = runComposeUiTest {
+  fun `b - navigate sonrasi yeni ekran gorunur eski gorunmez`() = runComposeUiTest {
     val nav = navigator()
     setContent {
       GezginDisplay(navigator = nav) {
@@ -62,7 +62,7 @@ class GezginDisplayTest {
   }
 
   @Test
-  fun `c - back geri doner (eski ekran yeniden gorunur)`() = runComposeUiTest {
+  fun `c - back geri doner - eski ekran yeniden gorunur`() = runComposeUiTest {
     val nav = navigator()
     setContent {
       GezginDisplay(navigator = nav) {
@@ -81,7 +81,7 @@ class GezginDisplayTest {
   }
 
   @Test
-  fun `d - programatik navigator back kokte onRootBack tetikler (render altinda)`() =
+  fun `d - programatik navigator back kokte onRootBack tetikler - render altinda`() =
     runComposeUiTest {
       // Task 3.3 (4c) devri: eski ad `NavDisplay onBack navigator back'e bagli` YANLIŞTI — bu test
       // NavDisplay'in `onBack`'ini HİÇ çağırmaz, doğrudan `navigator.back()`'i (programatik)
@@ -104,7 +104,7 @@ class GezginDisplayTest {
     }
 
   @Test
-  fun `e - transition tanimli route'a navigate edilince icerik yine dogru gorunur (smoke, Task 3-5)`() =
+  fun `e - transition tanimli route'a navigate edilince icerik yine dogru gorunur - smoke Task 3-5`() =
     runComposeUiTest {
       // Animasyonun kendisini assert etmiyoruz (§9 predictive/forward/back spec'leri NavDisplay'in
       // iç AnimatedContent'ine gider, uiTest'ten gözlenemez) — yalnız: transition'lı bir route'a

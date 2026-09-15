@@ -66,7 +66,7 @@ class PlatformViewModelStoreDecoratorTest {
   }
 
   @Test
-  fun `desktop entry-scoped VM - iki instance ayri VM, pop clear eder, cover-recompose korur`() =
+  fun `desktop entry-scoped VM - iki instance ayri VM pop clear eder cover-recompose korur`() =
     runComposeUiTest {
       val nav = RawNavigator(start = Product("a"), topology = testTopology)
       var topVm: ProbeVm? = null

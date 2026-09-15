@@ -225,7 +225,7 @@ class GezginBottomSheetSceneTest {
     }
 
   @Test
-  fun `sheet dismiss (back) - overlay kapanir, arka SCREEN kalir`() = runComposeUiTest {
+  fun `sheet dismiss back - overlay kapanir arka SCREEN kalir`() = runComposeUiTest {
     val nav = RawNavigator(start = Catalog, topology = testTopology)
     setContent {
       GezginDisplay(navigator = nav) {

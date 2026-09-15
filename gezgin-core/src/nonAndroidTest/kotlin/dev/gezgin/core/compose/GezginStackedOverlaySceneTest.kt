@@ -35,7 +35,7 @@ import kotlin.test.assertEquals
 class GezginStackedOverlaySceneTest {
 
   @Test
-  fun `iki dialog ust uste - hepsi render, back tek tek kapatir (N8)`() = runComposeUiTest {
+  fun `iki dialog ust uste - hepsi render back tek tek kapatir - N8`() = runComposeUiTest {
     val nav = RawNavigator(start = Catalog, topology = testTopology)
     setContent {
       GezginDisplay(navigator = nav) {
@@ -71,7 +71,7 @@ class GezginStackedOverlaySceneTest {
   }
 
   @Test
-  fun `karisik stack - dialog uzerinde sheet, back sheet'i kapatir dialog kalir (N8)`() =
+  fun `karisik stack - dialog uzerinde sheet back sheet'i kapatir dialog kalir - N8`() =
     runComposeUiTest {
       val nav = RawNavigator(start = Catalog, topology = testTopology)
       setContent {

@@ -51,7 +51,7 @@ class GezginDisplayR2Test {
   }
 
   @Test
-  fun `R2 - ayni-degerli iki Detail entry AYRI saved state alir (id bazli, deger bazli degil)`() =
+  fun `R2 - ayni-degerli iki Detail entry AYRI saved state alir - id bazli deger bazli degil`() =
     runComposeUiTest {
       // start = Detail("42") = #a (dip). Stack sonunda [Detail(42)#a, Other, Detail(42)#b].
       val nav = RawNavigator(start = Product("42"), topology = testTopology)
