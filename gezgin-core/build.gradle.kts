@@ -41,6 +41,18 @@ kotlin {
   // `kotlin.native.ignoreDisabledTargets` (gradle.properties) onları sessizce devre dışı bırakır.
   iosArm64()
   iosSimulatorArm64()
+  // `nonAndroidMain` = jvm + ios. Beş platform `expect`'inin dördü bu iki hedefte AYNI JetBrains
+  // Navigation 3 ailesi üzerinde çalışır; tek kopya tutmak davranış sürüklenmesini yapısal olarak
+  // imkânsız kılar ve kodu jvmTest üzerinden Kover kapsamında bırakır. Yalnız `GezginNoBackHandler`
+  // ayrışır (desktop no-op, iOS geri jesti) ve hedef-özel kaynak kümelerinde kalır.
+  applyDefaultHierarchyTemplate {
+    common {
+      group("nonAndroid") {
+        withJvm()
+        withIos()
+      }
+    }
+  }
   sourceSets {
     commonMain.dependencies {
       api(libs.kotlinx.coroutines.core)
@@ -84,14 +96,9 @@ kotlin {
       // ile AYNI KMP artefaktı (org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose).
       api(libs.androidx.lifecycle.viewmodel.compose)
     }
-    jvmMain.dependencies {
-      api(libs.jb.navigation3.ui)
-      api(libs.jb.lifecycle.viewmodel.navigation3)
-      api(libs.jb.lifecycle.viewmodel.compose)
-    }
-    // iOS, desktop ile AYNI JetBrains ailesini kullanır; AndroidX UI/lifecycle artefaktları
-    // yalnız androidMain'de kalır (§2.2 adapter sınırı).
-    iosMain.dependencies {
+    // Desktop ve iOS AYNI JetBrains ailesini kullanır; AndroidX UI/lifecycle artefaktları yalnız
+    // androidMain'de kalır (§2.2 adapter sınırı).
+    getByName("nonAndroidMain").dependencies {
       api(libs.jb.navigation3.ui)
       api(libs.jb.lifecycle.viewmodel.navigation3)
       api(libs.jb.lifecycle.viewmodel.compose)

@@ -14,11 +14,12 @@ import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.Route
 
 /**
- * Provides a per-entry `ViewModelStore` on desktop, matching Android entry ownership. Each stack
- * entry receives a child store that is cleared when popped, while covered or recomposed entries
- * retain their ViewModels. A remembered window owner is supplied explicitly because desktop hosts
- * need not provide `LocalViewModelStoreOwner`; its root store is cleared when the display leaves
- * composition. [GezginDisplay] places this after the saveable-state decorator.
+ * Provides a per-entry `ViewModelStore`, matching Android entry ownership. Each stack entry
+ * receives a child store that is cleared when popped, while covered or recomposed entries retain
+ * their ViewModels. A remembered root owner is supplied explicitly because neither a desktop window
+ * nor a `UIViewController` host need provide `LocalViewModelStoreOwner`; its root store is cleared
+ * when the display leaves composition. [GezginDisplay] places this after the saveable-state
+ * decorator.
  */
 @Composable
 internal actual fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Route>> {
@@ -27,21 +28,26 @@ internal actual fun rememberPlatformEntryDecorators(): List<NavEntryDecorator<Ro
   return listOf(rememberViewModelStoreNavEntryDecorator(viewModelStoreOwner = storeOwner))
 }
 
-/** Window-scoped root owner for the per-entry desktop ViewModel stores. */
+/** Display-scoped root owner for the per-entry ViewModel stores. */
 private class GezginWindowViewModelStoreOwner : ViewModelStoreOwner {
   override val viewModelStore: ViewModelStore = ViewModelStore()
 }
 
-/** Desktop has no system or predictive back; [gezginOnBack] enforces `@NoBack` instead. */
+/**
+ * Installs no entry-scoped back handler. Desktop dispatches no system back at all, and on iOS the
+ * edge-swipe reaches `NavDisplay`'s own navigation-event handler, whose `onBack` is [gezginOnBack]
+ * — already the behavioural carrier of `@NoBack`. An entry-scoped handler would only suppress the
+ * predictive preview animation that iOS starts before the guard refuses the pop.
+ */
 @Composable
 internal actual fun GezginNoBackHandler() {
   /* No platform back handler is needed on desktop. */
 }
 
 /**
- * Uses ordered desktop scene strategies: dialog and sheet overlays precede the single-pane
- * fallback, and each overlay pins dismissal to its owning entry. The built-in dialog strategy
- * cannot preserve that ownership.
+ * Uses ordered scene strategies: dialog and sheet overlays precede the single-pane fallback, and
+ * each overlay pins dismissal to its owning entry. The built-in dialog strategy cannot preserve
+ * that ownership.
  */
 @Composable
 internal actual fun GezginNavDisplay(

@@ -10,9 +10,9 @@ import dev.gezgin.core.Route
 import kotlinx.serialization.json.Json
 
 /**
- * Keeps the iOS navigator stable for the composition lifetime and restores its state through
- * [navigatorSaver]. Apple platforms have no Activity configuration-change boundary, so this actual
- * does not need the Android ViewModel holder and one-time adoption mechanism.
+ * Keeps the navigator stable for the composition lifetime and restores its state through
+ * [navigatorSaver]. Neither desktop nor iOS has an Activity configuration-change boundary, so this
+ * actual does not need the Android ViewModel holder and one-time adoption mechanism.
  */
 @Composable
 internal actual fun rememberRawNavigatorInstance(

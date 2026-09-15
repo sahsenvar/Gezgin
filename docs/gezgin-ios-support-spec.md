@@ -84,10 +84,25 @@ ile **aynı** Gezgin sözleşmesini taşır:
 olarak sonlandırmasını yasaklar; Android'deki `finish()` karşılığı yoktur. Kök davranışını isteyen
 uygulama `rememberNavigator(onRootBack = …)` ile kendi politikasını verir.
 
-**S-7.** Jest, JB navigation3-ui'nin geri olay altyapısı
-(`org.jetbrains.androidx.navigationevent:navigationevent-compose`) üzerinden alınır; Gezgin kendi
-jest tanıma kodunu yazmaz. `GezginNoBackHandler`'ın iOS actual'ı bu dispatcher'a bağlanıp olayı
-tüketir — `androidMain`'deki `BackHandler` kullanımının birebir karşılığı.
+**S-7.** Zincir baştan sona hazır bileşenlerden kuruludur; Gezgin kendi jest tanıma kodunu yazmaz:
+
+```
+UIScreenEdgePanGestureRecognizer        (Compose Multiplatform, UIKitNavigationEventInput)
+  → androidx.navigationevent dispatcher
+  → NavDisplay'in kendi NavigationBackHandler'ı   (JB navigation3-ui)
+  → onBack = gezginOnBack                          (§4'ün tüm kurallarını uygulayan yer)
+```
+
+Yani `GezginNavDisplay`'in mevcut actual'ı jesti zaten taşır; `gezginOnBack` de `@NoBack`'in ve kök
+muafiyetinin **davranışsal taşıyıcısıdır** (`GezginDisplay.kt`). iOS bu ikisiyle §4'ü eksiksiz
+karşılar ve `GezginNoBackHandler` desktop'taki gibi no-op kalır.
+
+**S-7.1 — bilinen boşluk.** Android'de `GezginNoBackHandler` ayrıca entry-kapsamlı bir
+`BackHandler` kurar; bunun tek ek kazancı, `@NoBack` bir ekranda predictive-back **önizleme
+animasyonunun hiç başlamamasıdır**. iOS'ta bu önizleme başlar ve guard pop'u reddedince geri döner —
+stack doğru kalır, yalnız görsel bir pürüz oluşur. Kapatmak `androidx.navigationevent.compose`'un
+entry-kapsamlı handler API'sini gerektirir; bu artefaktın sınıfları Google Maven'da olduğundan
+imzası çevrimdışı doğrulanamadı ve tahminle yazılmadı. Ayrı bir iş olarak ele alınır.
 
 ---
 

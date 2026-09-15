@@ -199,7 +199,7 @@ tasks.register("verifyReleasePublications") {
 
 val publicApiSourceRoots =
   mapOf(
-    "gezgin-core" to listOf("commonMain", "androidMain", "jvmMain"),
+    "gezgin-core" to listOf("commonMain", "androidMain", "nonAndroidMain", "jvmMain"),
     "gezgin-processor" to listOf("main"),
     "gezgin-test" to listOf("commonMain", "androidMain", "jvmMain"),
   )
