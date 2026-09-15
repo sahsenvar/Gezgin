@@ -20,8 +20,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun HelloApp(onRootBack: () -> Unit) {
-  val navigator =
-    rememberNavigator(
+  val navigator = rememberNavigator(
       start = HelloGraph.ContactListScreenRoute,
       topology = gezginTopology,
       json = gezginJson,
@@ -29,5 +28,12 @@ private fun HelloApp(onRootBack: () -> Unit) {
       onRootBack = onRootBack,
     )
 
-  MaterialTheme { GezginDisplay(navigator = navigator) { ContractGraphEntries() } }
+  MaterialTheme {
+      GezginDisplay(navigator = navigator) {
+          ContractGraphEntries()
+          //OnboardingGraphEntries()
+          //LoginGraphEntries()
+          //...
+      }
+  }
 }
