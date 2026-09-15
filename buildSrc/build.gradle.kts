@@ -7,8 +7,8 @@ repositories {
 }
 
 dependencies {
-  compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21")
-  testImplementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21")
+  compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.10")
+  testImplementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.10")
   testImplementation(kotlin("test"))
 }
 

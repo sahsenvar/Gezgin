@@ -212,7 +212,7 @@ val publicApiKDocScannerClasspath by
   }
 
 dependencies {
-  publicApiKDocScannerClasspath("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21")
+  publicApiKDocScannerClasspath("org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.10")
 }
 
 tasks.register<CheckPublicApiKDocTask>("checkPublicApiKDoc") {
