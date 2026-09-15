@@ -71,6 +71,10 @@ class WorkflowConfigurationContractTest {
     // shared suites are named in its results.
     assertContains(workflow, "Verify the simulator ran the shared suites")
     assertContains(workflow, "gezgin-core/build/test-results/iosSimulatorArm64Test")
+    // An Xcode project cannot be compiled anywhere else in this pipeline, so a hand-written one
+    // would otherwise reach a reviewer unverified.
+    assertContains(workflow, "xcodebuild")
+    assertContains(workflow, "-project sample/iosApp/iosApp.xcodeproj")
   }
 
   @Test

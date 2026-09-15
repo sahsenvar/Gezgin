@@ -195,6 +195,17 @@ yayınlamaz (en düşük 2.10.0), **2.11.0** hattının Android varyantı ise AG
 ister. `compileOnly` de çözüm değildir: runtime sınıf yolunda görünmediğinden AGP'nin tutarlı
 çözümlemesi derleme tarafını 2.9.6'ya sabitler ve uyuşmazlık çıkar.
 
+**S-15.2.** `sample/iosApp` checked-in bir Xcode projesidir ve `HelloShared` framework'ünü
+Compose Multiplatform'un kanonik kurulumuyla tüketir: hedefin bir build fazı
+`:sample:hello-shared:embedAndSignAppleFrameworkForXcode`'u çağırır, `FRAMEWORK_SEARCH_PATHS` ise
+`hello-shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)`'i gösterir. Framework bu yüzden
+**dinamiktir** (varsayılan); statik olsaydı bu görev kullanılamazdı.
+
+**S-15.3.** Xcode projesi macOS job'ında `xcodebuild` ile derlenir. Gerekçe: proje dosyası elle
+yazılır ve boru hattının başka hiçbir yerinde derlenmez — doğrulanmadan bir gözden geçirene ulaşırdı.
+Ölçülen süreler bunun bedelsiz olduğunu gösteriyor: kritik yol `build` → `release-artifacts`
+zinciri (~20 dk), iOS job'ı ise ~10,6 dk sürüyor ve paralel koşuyor.
+
 **S-16 — bilinçli kapsam sınırı.** `hello` graph'ında `@NoBack`, `@Dialog`, `@BottomSheet` ve
 `@GoForResult` yoktur. Dolayısıyla iOS Maestro akışları liste→detay push/back, edge-swipe pop,
 kökte root-back ve process-death restore ile sınırlıdır. §4'teki modal ve `@NoBack` davranışları

@@ -109,6 +109,22 @@ jobs:
             }
           done
 
+      # The Xcode project cannot be compiled anywhere else in this pipeline, so a hand-written
+      # project would otherwise reach a reviewer unverified. Its build phase calls Gradle for the
+      # Kotlin framework, which the step above has already warmed.
+      - name: Build the iOS sample app
+        run: >-
+          xcodebuild
+          -project sample/iosApp/iosApp.xcodeproj
+          -target iosApp
+          -configuration Debug
+          -sdk iphonesimulator
+          -arch arm64
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGN_IDENTITY=""
+          build
+
   # Publishing runs on macOS because Kotlin/Native Apple targets only compile there. On Linux this
   # job would still succeed and silently omit every iOS artifact.
   release-artifacts:

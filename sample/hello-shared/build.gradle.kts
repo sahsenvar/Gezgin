@@ -15,11 +15,9 @@ kotlin {
   androidTarget { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
   // gezgin-core ile AYNI Apple hedef kümesi; iosX64 upstream'de yayınlanmıyor.
   listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
-    target.binaries.framework {
-      baseName = "HelloShared"
-      // Xcode projesi framework'ü doğrudan gömer; dinamik bağlama ek bir kurulum ister.
-      isStatic = true
-    }
+    // Dinamik framework (varsayılan): `embedAndSignAppleFrameworkForXcode` bunun için tasarlı ve
+    // sample/iosApp'in build fazı onu çağırıyor.
+    target.binaries.framework { baseName = "HelloShared" }
   }
 
   sourceSets {
