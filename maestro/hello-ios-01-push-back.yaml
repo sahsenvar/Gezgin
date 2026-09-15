@@ -12,7 +12,9 @@ appId: dev.gezgin.sample.hello
 - assertVisible: "‹ Kişiler"
 - tapOn: "‹ Kişiler"
 - assertNotVisible: "Favorilere ekle ☆"
-- assertVisible: "Ada Lovelace"
+# Detayın üst barı da kişinin adını gösterir, bu yüzden "Ada Lovelace" tek başına geri gidildiğini
+# KANITLAMAZ. Yalnız listede bulunan bir kişi aranır.
+- assertVisible: "Barbara Liskov"
 # liste gerçekten canlı mı: ikinci bir kişiye navige et
 - tapOn: "Grace Hopper"
 - assertVisible: "Favorilere ekle ☆"

@@ -11,7 +11,10 @@ appId: dev.gezgin.sample.hello
 - tapOn: "Favorilere ekle ☆"
 - assertVisible: "Favorilerde ★"
 - pressKey: Home
-- launchApp
+# `stopApp: false` ŞART: Maestro varsayılanı uygulamayı öldürüp başlatır, bu da arka plan turunu
+# soğuk başlangıca çevirip testi anlamsız kılardı (durum zaten kaybolurdu).
+- launchApp:
+    stopApp: false
 # yığın hâlâ detayda ve ekran durumu (yıldız) korunmuş
 - assertVisible: "Favorilerde ★"
 - assertVisible: "‹ Kişiler"
