@@ -19,7 +19,7 @@ import kotlin.reflect.KClass
 
 @ScreenSlot @Repeatable annotation class ViewModelOf(val route: KClass<out Route>)
 
-@ScreenSlot @Repeatable annotation class Effects(val route: KClass<out Route>)
+@ScreenSlot @Repeatable annotation class EffectHandler(val route: KClass<out Route>)
 
 @ScreenSlot @Repeatable annotation class TopBar(val route: KClass<out Route>)
 
@@ -32,14 +32,19 @@ import kotlin.reflect.KClass
 @Composable
 fun <S : UiState, I : UiIntent, E : UiEvent> AppScreenRoot(
   @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
-  @FilledBy(Effects::class) onEffect: (E) -> Unit,
+  @FilledBy(EffectHandler::class) onEffect: (E) -> Unit,
   @FilledBy(TopBar::class) topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
-  @FilledBy(Screen::class) content: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
+  @FilledBy(Screen::class) screen: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
 ) {
   val vm = viewModel()
   val state by vm.uiState.collectAsStateWithLifecycle()
+
   LaunchedEffect(vm) { vm.effects.collect(onEffect) }
+
   Scaffold(modifier = Modifier.fillMaxSize(), topBar = { topBar(state, vm::onIntent) }) { padding ->
-    Column(Modifier.padding(padding).fillMaxSize()) { content(state, vm::onIntent) }
+    Column(
+      modifier = Modifier.padding(padding).fillMaxSize(),
+      content = { screen(state, vm::onIntent) },
+    )
   }
 }
