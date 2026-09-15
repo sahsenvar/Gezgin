@@ -15,6 +15,12 @@ androidx-navigation3 = "1.0.0"
 androidx-lifecycle = "2.10.0"
 jb-navigation3 = "1.2.0-alpha02"
 jb-lifecycle-nav3 = "2.11.0"
+# Örnek uygulamanın JB lifecycle hattı, kütüphaneninkinden AYRI ve daha düşük olmak ZORUNDA.
+# Compose Multiplatform 1.11.1 Android'de JB lifecycle'ı 2.9.6'ya sabitler; JetBrains 2.9.6
+# yayınlamaz (en düşük 2.10.0) ve 2.11.0 hattının Android varyantı AGP 9.1 ile compileSdk 37 ister.
+# Bu modüller androidx.lifecycle atomik grubunda olduğundan 2.10.0, gezgin-core'un Android tarafına
+# getirdiği AndroidX 2.10.0 ile hizalanır.
+jb-lifecycle-sample = "2.10.0"
 kotlinpoet = "2.2.0"
 kctfork = "0.9.0"
 androidx-activity-compose = "1.9.3"
@@ -75,6 +81,8 @@ jb-lifecycle-viewmodel-navigation3 = { module = "org.jetbrains.androidx.lifecycl
 # `api` çünkü codegen'li provideXEntry (feature modülünde) bu API'leri KULLANIR (androidx-fallback resolver + state gözleme).
 jb-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "jb-lifecycle-nav3" }
 jb-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "jb-lifecycle-nav3" }
+jb-lifecycle-viewmodel-compose-sample = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "jb-lifecycle-sample" }
+jb-lifecycle-runtime-compose-sample = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "jb-lifecycle-sample" }
 # DI-detection hedefleri (gezgin-mvi RUNTIME dep'i DEĞİL — 5.2/5.3 sample/kullanıcı için kayıt; bkz. [versions] koin/hilt notları).
 koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }

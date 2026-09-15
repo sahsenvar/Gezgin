@@ -34,13 +34,10 @@ kotlin {
       )
       api("org.jetbrains.compose.ui:ui:${libs.versions.compose.multiplatform.get()}")
       api("org.jetbrains.compose.material3:material3:${libs.versions.compose.material3.get()}")
-      // Sarmalayıcı kendi ViewModel'ini çözer ve state'i toplar. Sürüm 2.10.0: JetBrains bu
-      // artefaktı 2.9.6 olarak YAYINLAMIYOR (en düşük 2.10.0) ve 2.11.0 hattının Android varyantı
-      // AGP 9.1 ile compileSdk 37 istiyor. `compileOnly` de çözüm değil — runtime sınıf yolunda
-      // görünmediğinden AGP'nin tutarlı çözümlemesi derleme tarafını compose-ui'nin 2.9.6'sına
-      // sabitler ve uyuşmazlık çıkar.
-      api(libs.jb.lifecycle.viewmodel.compose)
-      api(libs.jb.lifecycle.runtime.compose)
+      // Sarmalayıcı kendi ViewModel'ini çözer ve state'i toplar. Örneğe özel, daha düşük
+      // lifecycle hattı kullanılır; gerekçesi libs.versions.toml'da `jb-lifecycle-sample`.
+      api(libs.jb.lifecycle.viewmodel.compose.sample)
+      api(libs.jb.lifecycle.runtime.compose.sample)
     }
   }
 }
