@@ -22,5 +22,5 @@ fun HelloApp(onRootBack: () -> Unit) {
       restoreKey = "hello",
       onRootBack = onRootBack,
     )
-  MaterialTheme { GezginDisplay(navigator = navigator) { helloGraphEntries() } }
+  MaterialTheme { GezginDisplay(navigator = navigator) { ContractGraphEntries() } }
 }
