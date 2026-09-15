@@ -111,7 +111,14 @@ kotlin {
       api(libs.jb.lifecycle.viewmodel.navigation3)
       api(libs.jb.lifecycle.viewmodel.compose)
     }
-    iosMain.dependencies {
+    // `iosMain` de bir ARA kaynak kümesidir (iki hedefin ebeveyni), `jvmMain` ise bir YAPRAK.
+    // Bu yüzden dışa verme, yalnız yaprak kaynak kümelerinden yapılır.
+    iosArm64Main.dependencies {
+      api(libs.jb.navigation3.ui)
+      api(libs.jb.lifecycle.viewmodel.navigation3)
+      api(libs.jb.lifecycle.viewmodel.compose)
+    }
+    iosSimulatorArm64Main.dependencies {
       api(libs.jb.navigation3.ui)
       api(libs.jb.lifecycle.viewmodel.navigation3)
       api(libs.jb.lifecycle.viewmodel.compose)
