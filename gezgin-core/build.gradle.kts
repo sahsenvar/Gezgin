@@ -107,13 +107,17 @@ kotlin {
       implementation(kotlin("test"))
       implementation(libs.kotlinx.coroutines.test)
     }
-    // Desktop uiTest altyapısı (test-only) — NavDisplay'in gerçek render/back döngüsünü
-    // cihazsız (JVM/desktop) doğrulamak için. `compose.uiTest`/`compose.desktop.uiTestJUnit4`
-    // (String-tipli DSL yardımcıları) da aynı şekilde hard-deprecated — doğrudan koordinat.
-    jvmTest.dependencies {
+    // uiTest altyapısı (test-only) — NavDisplay'in gerçek render/back döngüsünü cihazsız
+    // doğrular. Testler `runComposeUiTest` (kotlin.test tabanlı) kullandığından AYNI test
+    // gövdeleri hem desktop hem iOS simülatöründe koşar. `compose.uiTest` (String-tipli DSL
+    // yardımcısı) bu plugin sürümünde hard-deprecated — doğrudan koordinat.
+    getByName("nonAndroidTest").dependencies {
       implementation(
         "org.jetbrains.compose.ui:ui-test:${libs.versions.compose.multiplatform.get()}"
       )
+    }
+    // Desktop'ta uiTest'in çalışması için gereken host runtime'ı; iOS karşılığı simülatörden gelir.
+    jvmTest.dependencies {
       implementation(compose.desktop.currentOs)
       implementation(
         "org.jetbrains.compose.ui:ui-test-junit4:${libs.versions.compose.multiplatform.get()}"

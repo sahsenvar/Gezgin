@@ -41,7 +41,7 @@ import kotlin.test.assertSame
  * - (c) cover + recompose boyunca hâlâ stack'te olan entry AYNI VM'i korur.
  */
 @OptIn(ExperimentalTestApi::class)
-class DesktopViewModelStoreDecoratorTest {
+class PlatformViewModelStoreDecoratorTest {
 
   private class ProbeVm : ViewModel() {
     var clearedCount = 0

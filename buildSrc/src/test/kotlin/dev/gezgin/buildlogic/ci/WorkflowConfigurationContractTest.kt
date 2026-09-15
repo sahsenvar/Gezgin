@@ -67,6 +67,10 @@ class WorkflowConfigurationContractTest {
     assertContains(workflow, ":gezgin-core:iosSimulatorArm64Test")
     assertContains(workflow, ":gezgin-test:iosSimulatorArm64Test")
     assertContains(workflow, "uses: ./.github/actions/setup-android-sdk")
+    // A target that runs zero tests also reports success, so the run is only evidence once the
+    // shared suites are named in its results.
+    assertContains(workflow, "Verify the simulator ran the shared suites")
+    assertContains(workflow, "gezgin-core/build/test-results/iosSimulatorArm64Test")
   }
 
   @Test

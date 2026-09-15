@@ -88,6 +88,26 @@ jobs:
           :gezgin-test:iosSimulatorArm64Test
           --no-daemon --console=plain
 
+      # A target that runs zero tests also reports success, so the simulator run is only evidence
+      # once the shared suites are named in its results.
+      - name: Verify the simulator ran the shared suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          results=gezgin-core/build/test-results/iosSimulatorArm64Test
+          test -d "$results"
+          total="$(grep -ho 'tests="[0-9]*"' "$results"/*.xml |
+            grep -o '[0-9]*' | awk '{ sum += $1 } END { print sum + 0 }')"
+          echo "iosSimulatorArm64Test executed $total tests."
+          test "$total" -gt 0
+          for suite in GezginDisplayTest GezginBottomSheetSceneTest GezginLocalsTest \
+            PlatformViewModelStoreDecoratorTest RememberNavigatorSaveableRegistryTest; do
+            ls "$results" | grep -q "$suite" || {
+              echo "the shared suite $suite did not run on the simulator" >&2
+              exit 1
+            }
+          done
+
   # Publishing runs on macOS because Kotlin/Native Apple targets only compile there. On Linux this
   # job would still succeed and silently omit every iOS artifact.
   release-artifacts:

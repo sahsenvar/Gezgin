@@ -108,15 +108,17 @@ imzası çevrimdışı doğrulanamadı ve tahminle yazılmadı. Ayrı bir iş ol
 
 ## 5. Test sözleşmesi
 
-**S-8.** `gezgin-core/src/jvmTest/.../compose/` altındaki Compose UI testleri JUnit4
-`createComposeRule()` kullanır; iOS'ta JUnit4 yoktur. Bu testler `nonAndroidTest`'e taşınır ve
-`runComposeUiTest {}` (`org.jetbrains.compose.ui:ui-test`, kotlin.test tabanlı) biçimine çevrilir →
-**aynı test gövdesi** hem desktop hem iOS simülatöründe koşar.
+**S-8.** `gezgin-core/src/jvmTest/.../compose/` altındaki Compose UI testleri zaten
+`runComposeUiTest {}` (`org.jetbrains.compose.ui:ui-test`, kotlin.test tabanlı) kullanır; hiçbirinde
+JUnit4, `java.*` veya `compose.desktop` kullanımı yoktur. Dolayısıyla bir dönüştürme gerekmez —
+sekiz dosyanın tamamı olduğu gibi `nonAndroidTest`'e taşınır ve **aynı test gövdeleri** hem desktop
+hem iOS simülatöründe koşar. `jvmTest` yalnız desktop host runtime'ını (`compose.desktop.currentOs`)
+sağlayan bağımlılık kümesi olarak kalır.
 
-Taşınanlar: `GezginDisplayTest`, `GezginDisplaySceneTest`, `GezginDisplayR2Test`,
-`GezginBottomSheetSceneTest`, `GezginStackedOverlaySceneTest`, `GezginLocalsTest`.
-Desktop'a özgü oldukları için `jvmTest`'te kalanlar: `DesktopViewModelStoreDecoratorTest`,
-`RememberNavigatorJvmSaveableRegistryTest`.
+Adları artık yanıltıcı olan ikisi yeniden adlandırılır: `DesktopViewModelStoreDecoratorTest` →
+`PlatformViewModelStoreDecoratorTest`, `RememberNavigatorJvmSaveableRegistryTest` →
+`RememberNavigatorSaveableRegistryTest`. İkisi de `nonAndroidMain`'deki paylaşılan kodu sınar;
+platforma özgü değildirler.
 
 **S-8.1.** Kotlin/Native, backtick'li bildirim adlarında `(`, `)`, `@`, `,` ve `§` karakterlerine izin
 vermez ("Name contains illegal characters"). JVM'de yaygın olan `` `back() pops the top entry` ``
@@ -129,8 +131,9 @@ bu hedefleri tamamen kapatmaz ve Linux `check` job'ı da iOS kaynaklarını derl
 durumdur: derleme hataları PR'da macOS job'ını beklemeden yakalanır.
 
 **S-9.** "iOS testleri yeşil" ölçütü yetersizdir — sıfır test koşan bir hedef de yeşil görünür.
-Kabul ölçütü: `iosSimulatorArm64Test`'in **koşan test sayısı > 0** ve taşınan sınıfların her
-birinin iOS raporunda göründüğü doğrulanır.
+Kabul ölçütü: `iosSimulatorArm64Test`'in **koşan test sayısı > 0** ve taşınan sınıfların adlarının
+iOS test raporunda göründüğü doğrulanır. Bu, macOS job'ında ayrı bir adım olarak uygulanır ve
+sözleşme testiyle kilitlenir — yoksa boş bir koşum "yeşil iOS desteği" gibi görünürdü.
 
 ---
 

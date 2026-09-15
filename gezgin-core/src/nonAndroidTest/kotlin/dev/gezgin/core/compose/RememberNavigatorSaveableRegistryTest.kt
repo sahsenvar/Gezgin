@@ -21,7 +21,7 @@ import kotlinx.serialization.json.Json
 private val jvmSaveableTestJson = Json { serializersModule = testSerializersModule }
 
 @OptIn(ExperimentalTestApi::class)
-class RememberNavigatorJvmSaveableRegistryTest {
+class RememberNavigatorSaveableRegistryTest {
   @Test
   fun `rememberNavigator restores same namespace through production saveable path`() {
     val initial =
