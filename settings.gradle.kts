@@ -23,6 +23,8 @@ include(":gezgin-processor")
 
 include(":sample:hello")
 
+include(":sample:hello-shared")
+
 include(":sample:shopr")
 
 include(":sample:domain")

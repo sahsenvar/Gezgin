@@ -67,6 +67,52 @@ process-death/rotation adımlarının arasına yerleştirilerek çağrılır. Pa
 `launchApp` İÇERMEZ (app'i durdurup saved-state'i yok etmemek için) — mevcut foreground ekran üzerinde
 assert eder.
 
+## iOS akışları (hello, simülatör)
+
+Android suite'inden ayrı, kendi runner'ı olan küçük bir set. Gezgin'in iOS'taki geri sözleşmesini
+gerçek bir simülatörde sürer: kenar-çekme jesti, üst-bar geri'siyle aynı sonucu vermeli ve kökte
+no-op kalmalı.
+
+**Android suite'inin aksine bu set CI'da koşar** (`ios-maestro-e2e` job'ı): macOS runner'ında bir
+simülatör boot edilir, `sample/iosApp` derlenip kurulur ve aşağıdaki runner sürülür. Aşağıdaki
+ön koşullar yerel koşum içindir.
+
+Ön koşullar (yerel koşum; Android suite'inden bağımsız):
+
+- macOS + booted iOS simülatörü (`xcrun simctl list devices booted`).
+- `dev.gezgin.sample.hello` simülatörde kurulu. Kurulumu bu suite YAPMAZ: `sample/iosApp`'i Xcode'da
+  bir kez simülatöre çalıştırın.
+- Maestro CLI (`~/.maestro/bin/maestro`) PATH'te — runner bu yolu kendisi ekler.
+- Birden çok simülatör booted ise `MAESTRO_DEVICE` ile UDID zorunlu (Android'deki `ANDROID_SERIAL`
+  ile aynı sözleşme).
+
+```bash
+maestro/run-ios-all.sh
+```
+
+| Dosya | App | Kapsam |
+|---|---|---|
+| `hello-ios-01-push-back.yaml` | hello | liste→detay push; üst-bar geri'si pop'lar, liste canlı döner |
+| `hello-ios-02-edge-swipe.yaml` | hello | kenar-çekme jesti detayı pop'lar — **CI'da koşmaz**, aşağıya bakın |
+| `hello-ios-03-root-back.yaml` | hello | kökte geri no-op: uygulama kapanmaz, yığın bozulmaz |
+| `hello-ios-04-background-restore.yaml` | hello | arka plan→ön plan turunda yığın ve ekran durumu korunur |
+
+**`hello-ios-02` neden kapıda değil.** Kenar-çekme jesti bu yapılandırmada geri olayı üretmiyor
+(spec S-7.2). Bu bir ölçüm sorunu değil: aynı jestle Apple'ın Ayarlar uygulaması geri gidiyor,
+buna karşılık Compose hiyerarşisinin köküne konan her zaman açık bir `BackHandler` jest sonrası
+hiç tetiklenmiyor. Akış silinmedi; doğrulanmamış bir davranış otomatik kapı yapılmadı. Elle
+sürmek için:
+
+```bash
+GEZGIN_RUN_GESTURE_FLOW=1 maestro/run-ios-all.sh
+```
+
+**Kapsam sınırı (bilinçli).** `hello` graph'ında `@NoBack`, `@Dialog`, `@BottomSheet` ve
+`@GoForResult` yoktur; bu davranışlar iOS'ta simülatör UI testleriyle (`iosSimulatorArm64Test`)
+kanıtlanır, e2e düzeyinde değil. Ayrıca iOS'ta Android'in process-death restore'unun karşılığı
+**yoktur**: `rememberSaveable` durumunu kurtaracak bir platform host'u bulunmadığından madde 4'ün iOS
+karşılığı, process'in yaşadığı arka plan turudur (`hello-ios-04`).
+
 ## Otomatikleştirilemeyen / görsel maddeler
 
 - **Görsel — insan gözü:** 9 (scrim/z-order opaklığı), 11 preview-frame yarısı (yarım-jest önizlemesi),

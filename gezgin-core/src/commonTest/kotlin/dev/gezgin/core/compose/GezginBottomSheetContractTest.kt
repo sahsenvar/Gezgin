@@ -100,7 +100,7 @@ class GezginBottomSheetContractTest {
   }
 
   @Test
-  fun `dismissOnClickOutside - contract'tan iner (Important 1 - scrim-tap knob acikta)`() {
+  fun `dismissOnClickOutside - contract'tan iner - Important 1 - scrim-tap knob acikta`() {
     // Contract false → props false (scrim-tap kapatmaz); contract'sız → default true.
     assertTrue(!sheetPropsOf(SheetCustom("x"), 31L).dismissOnClickOutside, "contract false → false")
     assertTrue(
@@ -138,7 +138,7 @@ class GezginBottomSheetContractTest {
   }
 
   @Test
-  fun `guard - @NoBack contract'siz sheet tip default'lariyla require firlatir`() {
+  fun `guard - NoBack contract'siz sheet tip default'lariyla require firlatir`() {
     val noContractScope =
       GezginEntryScope().apply {
         register<Feed> {}
@@ -156,7 +156,7 @@ class GezginBottomSheetContractTest {
   }
 
   @Test
-  fun `guard - @NoBack + default BottomSheetContract require firlatir`() {
+  fun `guard - NoBack + default BottomSheetContract require firlatir`() {
     val ex =
       assertFailsWith<IllegalArgumentException> {
         scope()

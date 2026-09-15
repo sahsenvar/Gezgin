@@ -44,7 +44,7 @@ class GezginEntryMetadataTest {
     }
 
   @Test
-  fun `back-only route'un entry metadata'sinda popTransitionSpec anahtari VAR, forward YOK`() {
+  fun `back-only route'un entry metadata'sinda popTransitionSpec anahtari VAR forward YOK`() {
     val entry =
       scope()
         .toNavEntry(
@@ -63,7 +63,7 @@ class GezginEntryMetadataTest {
   }
 
   @Test
-  fun `predictive yazilmamis backward'li route'ta predictive anahtari backward fallback'iyle VAR (§9)`() {
+  fun `predictive yazilmamis backward'li route'ta predictive anahtari backward fallback'iyle VAR - bolum 9`() {
     val entry =
       scope()
         .toNavEntry(
@@ -78,7 +78,7 @@ class GezginEntryMetadataTest {
   }
 
   @Test
-  fun `transition'siz route'un (app default'u da yokken) entry metadata'si BOS`() {
+  fun `transition'siz route'un app default'u da yokken entry metadata'si BOS`() {
     val entry = scope().toNavEntry(GezginKey(route = Feed, id = 1L), navigator, navTransitions {})
     assertTrue(
       entry.metadata.isEmpty(),
@@ -87,7 +87,7 @@ class GezginEntryMetadataTest {
   }
 
   @Test
-  fun `forward-only route'ta forward anahtari VAR, pop ve predictive YOK (null alan anahtar eklemez)`() {
+  fun `forward-only route'ta forward anahtari VAR pop ve predictive YOK - null alan anahtar eklemez`() {
     val entry =
       scope()
         .toNavEntry(GezginKey(route = ScreenOwnTransition, id = 3L), navigator, navTransitions {})
@@ -103,7 +103,7 @@ class GezginEntryMetadataTest {
   }
 
   @Test
-  fun `transition'siz route app default'u varsa ONUN metadata'sini tasir (cascade app basamagi)`() {
+  fun `transition'siz route app default'u varsa ONUN metadata'sini tasir - cascade app basamagi`() {
     val entry =
       scope()
         .toNavEntry(

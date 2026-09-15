@@ -217,6 +217,9 @@ class ReleasePublicationVerifierTest {
       jar(base.resolveSibling("${base.fileName}-sources.jar"), "sample.kt")
       jar(base.resolveSibling("${base.fileName}-javadoc.jar"), "index.html")
       jar(base.resolveSibling("${base.fileName}${artifact.primaryExtension}"), "payload.bin")
+      artifact.additionalFiles.forEach { suffix ->
+        jar(base.resolveSibling("${base.fileName}$suffix"), "payload.bin")
+      }
 
       val signable =
         listOf(
@@ -225,7 +228,7 @@ class ReleasePublicationVerifierTest {
           base.resolveSibling("${base.fileName}-sources.jar"),
           base.resolveSibling("${base.fileName}-javadoc.jar"),
           base.resolveSibling("${base.fileName}${artifact.primaryExtension}"),
-        )
+        ) + artifact.additionalFiles.map { base.resolveSibling("${base.fileName}$it") }
       if (artifact.targets.isNotEmpty()) {
         val tooling = base.resolveSibling("${base.fileName}-kotlin-tooling-metadata.json")
         tooling.writeText("{}")
@@ -383,6 +386,7 @@ class ReleasePublicationVerifierTest {
     val internalPomScope: String = if (targets.isNotEmpty()) "runtime" else "compile",
     val projectName: String = componentArtifactId,
     val description: String = descriptionFor(componentArtifactId),
+    val additionalFiles: Set<String> = emptySet(),
   )
 
   private data class PomDependency(
@@ -395,6 +399,65 @@ class ReleasePublicationVerifierTest {
   private data class ModuleDependency(val group: String, val module: String, val version: String)
 
   private companion object {
+    /** Mirrors the platform-suffixed POM coordinates a Kotlin/Native publication carries. */
+    val nativeFiles = setOf("-metadata.jar")
+
+    val nativeComposeFiles = nativeFiles + "-kotlin_resources.kotlin_resources.zip"
+
+    fun iosCorePomDependencies(target: String, material3Target: String): List<PomDependency> =
+      listOf(
+        PomDependency(
+          "org.jetbrains.androidx.navigation3",
+          "navigation3-ui-$target",
+          "1.2.0-alpha02",
+          "compile",
+        ),
+        PomDependency(
+          "org.jetbrains.androidx.lifecycle",
+          "lifecycle-viewmodel-navigation3-$target",
+          "2.11.0",
+          "compile",
+        ),
+        PomDependency(
+          "org.jetbrains.androidx.lifecycle",
+          "lifecycle-viewmodel-compose-$target",
+          "2.11.0",
+          "compile",
+        ),
+        PomDependency(
+          "org.jetbrains.kotlinx",
+          "kotlinx-coroutines-core-$target",
+          "1.11.0",
+          "compile",
+        ),
+        PomDependency(
+          "org.jetbrains.kotlinx",
+          "kotlinx-serialization-json-$target",
+          "1.9.0",
+          "compile",
+        ),
+        PomDependency("org.jetbrains.compose.runtime", "runtime-$target", "1.11.1", "compile"),
+        PomDependency(
+          "org.jetbrains.compose.foundation",
+          "foundation-$target",
+          "1.11.1",
+          "compile",
+        ),
+        PomDependency(
+          "org.jetbrains.compose.material3",
+          "material3-$material3Target",
+          "1.9.0",
+          "compile",
+        ),
+        PomDependency(
+          "androidx.navigation3",
+          "navigation3-runtime-$target",
+          "1.2.0-alpha04",
+          "compile",
+        ),
+        PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+      )
+
     fun descriptionFor(projectName: String): String =
       when (projectName) {
         "gezgin-core" ->
@@ -514,9 +577,14 @@ class ReleasePublicationVerifierTest {
             ),
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
           )
+        "gezgin-core-iosarm64" -> iosCorePomDependencies("iosarm64", "uikitarm64")
+        "gezgin-core-iossimulatorarm64" ->
+          iosCorePomDependencies("iossimulatorarm64", "uikitsimarm64")
         "gezgin-test" ->
           listOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"))
         "gezgin-test-android",
+        "gezgin-test-iosarm64",
+        "gezgin-test-iossimulatorarm64",
         "gezgin-test-jvm" ->
           listOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"))
         "gezgin-processor" ->
@@ -555,6 +623,8 @@ class ReleasePublicationVerifierTest {
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
           )
+        "gezgin-core-iosarm64",
+        "gezgin-core-iossimulatorarm64",
         "gezgin-core-jvm" ->
           listOf(
             ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
@@ -582,6 +652,8 @@ class ReleasePublicationVerifierTest {
           )
         "gezgin-test",
         "gezgin-test-android",
+        "gezgin-test-iosarm64",
+        "gezgin-test-iossimulatorarm64",
         "gezgin-test-jvm" ->
           listOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
         "gezgin-processor" ->
@@ -599,15 +671,38 @@ class ReleasePublicationVerifierTest {
         ExpectedArtifact(
           "gezgin-core",
           ".jar",
-          targets = setOf("gezgin-core-android", "gezgin-core-jvm"),
+          targets =
+            setOf(
+              "gezgin-core-android",
+              "gezgin-core-iosarm64",
+              "gezgin-core-iossimulatorarm64",
+              "gezgin-core-jvm",
+            ),
         ),
         ExpectedArtifact("gezgin-core-android", ".aar", componentArtifactId = "gezgin-core"),
+        ExpectedArtifact(
+          "gezgin-core-iosarm64",
+          ".klib",
+          componentArtifactId = "gezgin-core",
+          additionalFiles = nativeComposeFiles,
+        ),
+        ExpectedArtifact(
+          "gezgin-core-iossimulatorarm64",
+          ".klib",
+          componentArtifactId = "gezgin-core",
+          additionalFiles = nativeComposeFiles,
+        ),
         ExpectedArtifact("gezgin-core-jvm", ".jar", componentArtifactId = "gezgin-core"),
         ExpectedArtifact(
           "gezgin-test",
           ".jar",
           "gezgin-core",
-          setOf("gezgin-test-android", "gezgin-test-jvm"),
+          setOf(
+            "gezgin-test-android",
+            "gezgin-test-iosarm64",
+            "gezgin-test-iossimulatorarm64",
+            "gezgin-test-jvm",
+          ),
         ),
         ExpectedArtifact(
           "gezgin-test-android",
@@ -615,6 +710,22 @@ class ReleasePublicationVerifierTest {
           "gezgin-core-android",
           componentArtifactId = "gezgin-test",
           moduleProjectDependency = "gezgin-core",
+        ),
+        ExpectedArtifact(
+          "gezgin-test-iosarm64",
+          ".klib",
+          "gezgin-core-iosarm64",
+          componentArtifactId = "gezgin-test",
+          moduleProjectDependency = "gezgin-core",
+          additionalFiles = nativeFiles,
+        ),
+        ExpectedArtifact(
+          "gezgin-test-iossimulatorarm64",
+          ".klib",
+          "gezgin-core-iossimulatorarm64",
+          componentArtifactId = "gezgin-test",
+          moduleProjectDependency = "gezgin-core",
+          additionalFiles = nativeFiles,
         ),
         ExpectedArtifact(
           "gezgin-test-jvm",

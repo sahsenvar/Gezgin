@@ -51,7 +51,7 @@ class GezginDialogContractTest {
   }
 
   @Test
-  fun `DialogContract'siz DIALOG - tip-varsayilan DialogProperties (hepsi true)`() {
+  fun `DialogContract'siz DIALOG - tip-varsayilan DialogProperties - hepsi true`() {
     val props = dialogPropsOf(DialogDefault("x"), 2L)
     assertEquals(DialogProperties(true, true, true), props)
   }
@@ -89,7 +89,7 @@ class GezginDialogContractTest {
   }
 
   @Test
-  fun `FULLSCREEN_MODAL - usePlatformDefaultWidth SABIT false, dismiss'ler contract'tan`() {
+  fun `FULLSCREEN_MODAL - usePlatformDefaultWidth SABIT false dismiss'ler contract'tan`() {
     val props = dialogPropsOf(FullModal, 4L)
     assertTrue(!props.usePlatformDefaultWidth, "tam-ekran = usePlatformDefaultWidth false")
     assertTrue(!props.dismissOnClickOutside, "contract dismissOnClickOutside=false inmeli")
@@ -97,7 +97,7 @@ class GezginDialogContractTest {
   }
 
   @Test
-  fun `guard - @NoBack + dismissOnBackPress=true DIALOG kurulusu require firlatir`() {
+  fun `guard - NoBack + dismissOnBackPress=true DIALOG kurulusu require firlatir`() {
     val ex =
       assertFailsWith<IllegalArgumentException> {
         scope()
@@ -111,7 +111,7 @@ class GezginDialogContractTest {
   }
 
   @Test
-  fun `guard - @NoBack + dismissOnBackPress=false DIALOG kurulusu GECER`() {
+  fun `guard - NoBack + dismissOnBackPress=false DIALOG kurulusu GECER`() {
     val props = dialogPropsOf(DialogNoBackCompatible, 6L)
     assertTrue(!props.dismissOnBackPress)
   }
@@ -121,7 +121,7 @@ class GezginDialogContractTest {
   // tipi,
   // farklı ctor-param → biri fırlatır, diğeri geçer.
   @Test
-  fun `guard - @NoBack + KOSULLU dismissOnBackPress=true (ctor-param) require firlatir`() {
+  fun `guard - NoBack + KOSULLU dismissOnBackPress=true ctor-param require firlatir`() {
     val ex =
       assertFailsWith<IllegalArgumentException> {
         scope()
@@ -135,7 +135,7 @@ class GezginDialogContractTest {
   }
 
   @Test
-  fun `guard - @NoBack + KOSULLU dismissOnBackPress=false (ctor-param) GECER`() {
+  fun `guard - NoBack + KOSULLU dismissOnBackPress=false ctor-param GECER`() {
     val props = dialogPropsOf(ConditionalBackDialog(backDismiss = false), 8L)
     assertTrue(
       !props.dismissOnBackPress,

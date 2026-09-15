@@ -56,11 +56,11 @@ while IFS= read -r -d '' signature; do
     verified_signatures=$((verified_signatures + 1))
 done < <(find "$repository" -type f -name '*.asc' -print0)
 
-if [[ "$verified_signatures" -ne 37 ]]; then
-    echo "Expected 37 cryptographically verified signatures, found $verified_signatures." >&2
+if [[ "$verified_signatures" -ne 63 ]]; then
+    echo "Expected 63 cryptographically verified signatures, found $verified_signatures." >&2
     exit 1
 fi
-echo "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=37"
+echo "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=63"
 
 corrupted_artifact="$verification_root/corrupted-gezgin-processor.pom"
 processor_pom="$repository/io/github/sahsenvar/gezgin-processor/$version/gezgin-processor-$version.pom"

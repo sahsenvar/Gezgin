@@ -26,7 +26,7 @@ class GezginEntryScopeTest {
   private val navigator = RawNavigator(start = Feed, topology = testTopology)
 
   @Test
-  fun `register - iki route kaydeder, ikisi de registry'de ve kind'lari dogru`() {
+  fun `register - iki route kaydeder ikisi de registry'de ve kind'lari dogru`() {
     val scope = GezginEntryScope()
     scope.register<Feed>(kind = EntryKind.SCREEN) {}
     scope.register<Product>(kind = EntryKind.DIALOG) {}
@@ -57,7 +57,7 @@ class GezginEntryScopeTest {
   }
 
   @Test
-  fun `toNavEntry - kayitsiz route icin lookup aninda hata firlatir (content invoke edilmeden)`() {
+  fun `toNavEntry - kayitsiz route icin lookup aninda hata firlatir - content invoke edilmeden`() {
     val scope = GezginEntryScope()
     // Catalog hiç kaydedilmedi.
     val key = GezginKey(route = Catalog, id = 1L)
@@ -71,7 +71,7 @@ class GezginEntryScopeTest {
   }
 
   @Test
-  fun `toNavEntry - contentKey key id'ye esittir (R2)`() {
+  fun `toNavEntry - contentKey key id'ye esittir - R2`() {
     val scope = GezginEntryScope()
     scope.register<Feed> {}
     val key = GezginKey(route = Feed, id = 42L)
@@ -82,7 +82,7 @@ class GezginEntryScopeTest {
   }
 
   @Test
-  fun `toNavEntry - farkli id'ler ayni route icin farkli contentKey uretir (aynı-route iki instance ayrimi)`() {
+  fun `toNavEntry - farkli id'ler ayni route icin farkli contentKey uretir - aynı-route iki instance ayrimi`() {
     val scope = GezginEntryScope()
     scope.register<Product> {}
 

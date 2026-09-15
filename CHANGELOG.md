@@ -5,6 +5,40 @@ Bu projenin tüm kayda değer değişiklikleri bu dosyada belgelenir.
 Biçim [Keep a Changelog](https://keepachangelog.com/tr/1.1.0/)'e,
 sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
+## [Unreleased]
+
+### Added
+
+- **iOS desteği.** `gezgin-core` ve `gezgin-test` artık `iosArm64` ve `iosSimulatorArm64`
+  hedeflerini yayınlıyor (`.klib`). `iosX64` **yoktur**: üstüne kurulduğumuz JetBrains
+  Navigation 3 artefaktları onu yayınlamıyor, dolayısıyla Intel-Mac simülatörleri desteklenmez.
+- Platforma bağımlı beş `expect` bildirimi için ortak bir `nonAndroidMain` kaynak kümesi: desktop
+  ve iOS aynı `actual`'ları paylaşır, davranış sürüklenmesi mimari olarak imkânsız hale gelir.
+- iOS'ta geri, `@NoBack` ve kök muafiyeti dahil Android ile aynı sözleşmeyi verir; kökte geri
+  no-op'tur (Apple bir uygulamanın kendini sonlandırmasını yasaklar). Uygulama içi geri hem
+  simülatör UI testleriyle hem de üç e2e akışıyla doğrulanmıştır.
+- Compose UI testleri `nonAndroidTest`'e taşındı ve her PR'da iOS simülatöründe de koşuyor
+  (`iosSimulatorArm64Test`).
+- `sample/hello` paylaşılan bir KMP kütüphanesi (`sample/hello-shared`) ve ince bir Android
+  host'u olarak ikiye bölündü; iOS host'u `sample/iosApp` olarak eklendi ve CI'da `xcodebuild`
+  ile derleniyor.
+- `maestro/run-ios-all.sh` ve dört iOS akışı (push/back, kenar-çekme, kökte geri, arka plan turu).
+  Üçü her PR'da CI'da koşar: macOS runner'ında simülatör boot edilir, örnek uygulama kurulur ve
+  akışlar sürülür. Maestro dağıtımı tam sürüme ve sha256'sına sabitlenmiştir.
+
+### Known issues
+
+- **iOS kenar-çekme geri jesti henüz çalışmıyor.** Jest bu yapılandırmada Compose'a geri olayı
+  ulaştırmıyor: aynı jestle Apple'ın kendi uygulaması geri giderken, Compose hiyerarşisinin
+  köküne konan her zaman açık bir `BackHandler` hiç tetiklenmiyor. Uygulama içi geri (üst bar,
+  programatik) etkilenmiyor. Ayrıntı ve kanıt: `docs/gezgin-ios-support-spec.md` S-7.2.
+
+### Changed
+
+- Yayın (`release`/`snapshot`) ve imzalı yerel yayın doğrulaması artık macOS runner'da koşuyor —
+  Apple hedefleri yalnız orada derlenir; Linux'ta bu job'lar başarılı görünüp iOS artefaktlarını
+  sessizce atlardı.
+
 ## [0.3.0] - 2026-09-12
 
 Kırıcı sürüm. Gezgin artık bir MVI tarzı dayatmıyor: ekranın container'ı, ViewModel'i, state

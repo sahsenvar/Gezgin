@@ -96,7 +96,7 @@ class RememberNavigatorSaverTest {
   }
 
   @Test
-  fun `decode sonrasi start TEKRAR PUSH EDILMEZ (restored stack tek kaynak)`() {
+  fun `decode sonrasi start TEKRAR PUSH EDILMEZ - restored stack tek kaynak`() {
     val nav = RawNavigator(start = Feed, topology = testTopology)
     nav.navigate(Catalog)
     val stackSizeBefore = nav.keys.size
@@ -118,7 +118,7 @@ class RememberNavigatorSaverTest {
   // crash-loop'a değil, `null`'a (Saver sözleşmesi → fresh init at `start`) düşmeli.
 
   @Test
-  fun `bozuk json ile decodeNavigatorStateOrNull null doner (crash-loop yerine fresh-start)`() {
+  fun `bozuk json ile decodeNavigatorStateOrNull null doner - crash-loop yerine fresh-start`() {
     val restored =
       decodeNavigatorStateOrNull(
         encoded = "{ this is not valid json at all",
@@ -132,7 +132,7 @@ class RememberNavigatorSaverTest {
   }
 
   @Test
-  fun `sema-disi (eksik alan) json ile decodeNavigatorStateOrNull null doner`() {
+  fun `sema-disi eksik alan json ile decodeNavigatorStateOrNull null doner`() {
     // Gecerli JSON ama SavedState semasina uymuyor (beklenen alanlar yok) — SerializationException.
     val restored =
       decodeNavigatorStateOrNull(
@@ -147,7 +147,7 @@ class RememberNavigatorSaverTest {
   }
 
   @Test
-  fun `gecerli JSON ama bilinmeyen route tipi (module'e kayitsiz) ile null doner`() {
+  fun `gecerli JSON ama bilinmeyen route tipi module'e kayitsiz ile null doner`() {
     // "Uygulama guncellemesi bir route'u kaldirdi" senaryosu: state, Otp'yi TANIYAN daha genis bir
     // module ile encode edilir (yapisal olarak tamamen gecerli JSON), ama testJson'in
     // testSerializersModule'unde Otp POLIMORFIK KAYITLI DEGIL — decode'da polymorphic-discriminator
@@ -179,7 +179,7 @@ class RememberNavigatorSaverTest {
   }
 
   @Test
-  fun `sema-gecerli ama BOS stack'li state ile null doner (composition'da keys-first patlamasi onlenir)`() {
+  fun `sema-gecerli ama BOS stack'li state ile null doner - composition'da keys-first patlamasi onlenir`() {
     // Final re-review Minor 2: kesyfsel olarak uretilemese de sema-gecerli bir bos-keys SavedState
     // decode'dan gecer, sonra GezginDisplay `keys.first()` ile composition'da patlardi →
     // fresh-start.

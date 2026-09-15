@@ -58,7 +58,7 @@ class GezginModalRootGuardTest {
   }
 
   @Test
-  fun `modal entry kok DEGILSE (isRoot=false) GECER`() {
+  fun `modal entry kok DEGILSE isRoot=false GECER`() {
     // Aynı DIALOG route kök değilken (bir SCREEN üstünde) meşru — guard yalnız isRoot'a bakar.
     scope()
       .toNavEntry(

@@ -1,0 +1,22 @@
+# iOS 1 — liste→detay push ve üst-bar geri'si ile pop.
+# Gezgin'in iOS'taki temel yığın davranışı: navigate detayı üste iter, geri onu atar ve
+# liste ekranı ETKİLEŞİLEBİLİR döner (tekrar navige edilebiliyor olması canlı olduğunun kanıtı).
+appId: dev.gezgin.sample.hello
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Ada Lovelace"
+- assertVisible: "Grace Hopper"
+- tapOn: "Ada Lovelace"
+- assertVisible: "Favorilere ekle ☆"
+- assertVisible: "‹ Kişiler"
+- tapOn: "‹ Kişiler"
+- assertNotVisible: "Favorilere ekle ☆"
+# Detayın üst barı da kişinin adını gösterir, bu yüzden "Ada Lovelace" tek başına geri gidildiğini
+# KANITLAMAZ. Yalnız listede bulunan bir kişi aranır.
+- assertVisible: "Barbara Liskov"
+# liste gerçekten canlı mı: ikinci bir kişiye navige et
+- tapOn: "Grace Hopper"
+- assertVisible: "Favorilere ekle ☆"
+- tapOn: "‹ Kişiler"
+- assertVisible: "Barbara Liskov"

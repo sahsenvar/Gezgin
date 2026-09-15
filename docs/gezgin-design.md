@@ -35,7 +35,7 @@ Back stack = gözlemlenebilir `Route` yapısı; Gezgin her route için serialize
 - **Nav3**: render (`NavDisplay`), `List<NavKey>` back stack, transition + predictive back, per-entry lifecycle & saved state, scene (modal/two-pane).
 - **Gezgin**: codegen, type-safe route/graph, typed result, MVI scoping, transition DSL. (deep-link + multiple back stack → V2, §17)
 - `GezginDisplay` Nav3'ü tamamen sarar → Nav3 churn'ünü kullanıcıdan gizler.
-- KMP durumu (2026-07 checkout'u): Android hedefi AndroidX `navigation3-runtime`/`navigation3-ui` **1.0.0** ve `lifecycle-viewmodel-navigation3` **2.10.0** kullanır. Desktop hedefi JetBrains `navigation3-ui` **1.0.0-alpha05** ve `lifecycle-viewmodel-navigation3` **2.10.0-alpha05** kullanır. `GezginDisplay` adapter sınırı platform ailelerini ayırır; Android runtime graph'ına JetBrains Navigation 3 UI/lifecycle artefaktı sızmamalıdır.
+- KMP durumu (2026-07 checkout'u): Android hedefi AndroidX `navigation3-runtime`/`navigation3-ui` **1.0.0** ve `lifecycle-viewmodel-navigation3` **2.10.0** kullanır. Desktop ve iOS hedefleri JetBrains `navigation3-ui` **1.0.0-alpha05** ve `lifecycle-viewmodel-navigation3` **2.10.0-alpha05** kullanır; bu iki hedef `nonAndroidMain` kaynak kümesinde aynı `actual`'ları paylaşır. iOS yalnız `iosArm64` ve `iosSimulatorArm64` olarak yayınlanır — upstream `iosX64` yayınlamadığı için Intel-Mac simülatörü desteklenmez. `GezginDisplay` adapter sınırı platform ailelerini ayırır; Android runtime graph'ına JetBrains Navigation 3 UI/lifecycle artefaktı sızmamalıdır.
 
 ### 2.3 DI-agnostik (Ktorfit modeli)
 Gezgin hiçbir DI'a bağlı değil. Codegen parça üretir (entry'ler, navigator'lar, `provideXEntry`); kullanıcı DI'ı kendi bağlar (Koin/Hilt/manuel). Magic yok.
@@ -181,7 +181,7 @@ override val sheetGesturesEnabled: Boolean get() = false
 - **Temsil:** V1'de **tek** back stack (Nav3'ün düz listesi). Paralel per-tab stack (Map-of-stacks) + tab switcher → **V2** (§17).
 - **İki graph türü:** `@NavGraph` = şeffaf grup (üyeden giriş, serbest nav, §3.1); `@FlowGraph` = opak transactional flow (§8.1). Rol deklarasyonda sabit, lokal okunur.
 - **Flow davranışı:** flow tamamlanınca `quitWith(result)` = flow'un alt-dizisini **atomik** pop + caller'a sonuç (§6; `ResultFlow<T>`); `@Quit`/entry-`back` = result'suz (`Canceled`); `@QuitAndGoTo(X)` = flow'u yıkıp X'e.
-- **Kök/boş back stack (N5):** kökte (dip) son entry'de `back()` → `GezginDisplay`'in opsiyonel `onRootBack`'i (default = platform `expect/actual`: Android `finish()`, desktop no-op — Esc root'ta yutulur, iOS no-op). Root asla programatik boşalmaz (§8.1 empty-stack invariant'ı, **runtime guard**).
+- **Kök/boş back stack (N5):** kökte (dip) son entry'de `back()` → `GezginDisplay`'in opsiyonel `onRootBack`'i (default = platform `expect/actual`: Android `finish()`, desktop no-op — Esc root'ta yutulur, iOS no-op — Apple bir uygulamanın kendini sonlandırmasını yasaklar, kenar-çekme kökte durur). Root asla programatik boşalmaz (§8.1 empty-stack invariant'ı, **runtime guard**).
 - Save/restore: Gezgin'in ürettiği route serializer'larıyla serializable state → config change + PD otomatik.
 
 ### 8.1 `@FlowGraph` — katı, opak flow
@@ -393,7 +393,7 @@ Enforcement'ı test etmeye gerek yok (compile-time garanti). Tipli `fromX()` eri
 
 | Sınır | Exact sürümler ve rol |
 |---|---|
-| Gezgin root | Gradle 9.0.0; Kotlin 2.3.21; KSP 2.3.9; AGP 8.13.2; Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop JetBrains Navigation 3 1.0.0-alpha05 + lifecycle 2.10.0-alpha05; min SDK 24. |
+| Gezgin root | Gradle 9.6.0; Kotlin 2.3.21; KSP 2.3.10; AGP 9.4.0; Compose Multiplatform 1.11.1; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop/iOS JetBrains Navigation 3 1.2.0-alpha02 + lifecycle 2.11.0; min SDK 24; Apple hedefleri yalnız macOS host'ta derlenir/yayınlanır. |
 | `compatibility/zad-consumer` | Kendi Gradle 9.4.1 wrapper'ı; Kotlin 2.3.21; KSP 2.3.9; AGP 9.2.1; JDK/JVM 21; compile/target SDK 37; Koin 4.2.2 + compiler plugin 1.0.1; AndroidX Navigation 3 1.0.0 + lifecycle 2.10.0. Dört `io.github.sahsenvar` artefaktını tek exclusive repository'den çözer; `includeBuild`, composite substitution, `projectDir`, Maven Local veya başka source dependency kullanmaz. |
 
 ---

@@ -13,7 +13,7 @@ concurrency:
 jobs:
   validate:
     name: validate
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -29,6 +29,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Set up an Android SDK
+        uses: ./.github/actions/setup-android-sdk
 
       - name: Validate stable tag, project version and changelog
         env:
@@ -59,7 +62,7 @@ jobs:
   publish:
     name: publish
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     env:
       ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
       ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
@@ -78,6 +81,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+
+      - name: Set up an Android SDK
+        uses: ./.github/actions/setup-android-sdk
 
       - name: Verify publishing credentials are configured
         run: |

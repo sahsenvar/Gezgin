@@ -1,0 +1,23 @@
+# iOS 4 — arka plan → ön plan turunda yığın ve ekran durumu korunur.
+# iOS'ta Android'in Activity-yeniden-yaratımına karşılık gelen tek gözlemlenebilir kesinti budur:
+# process yaşar, `UIViewController` askıya alınıp geri döner. Derin bir yığın ve ekran-içi durum
+# (yıldız) turdan sağ çıkmalı.
+appId: dev.gezgin.sample.hello
+---
+- launchApp:
+    clearState: true
+- tapOn: "Grace Hopper"
+- assertVisible: "Favorilere ekle ☆"
+- tapOn: "Favorilere ekle ☆"
+- assertVisible: "Favorilerde ★"
+- pressKey: Home
+# `stopApp: false` ŞART: Maestro varsayılanı uygulamayı öldürüp başlatır, bu da arka plan turunu
+# soğuk başlangıca çevirip testi anlamsız kılardı (durum zaten kaybolurdu).
+- launchApp:
+    stopApp: false
+# yığın hâlâ detayda ve ekran durumu (yıldız) korunmuş
+- assertVisible: "Favorilerde ★"
+- assertVisible: "‹ Kişiler"
+# geri hâlâ çalışıyor
+- tapOn: "‹ Kişiler"
+- assertVisible: "Ada Lovelace"

@@ -22,12 +22,12 @@ class PublishingConfigurationContractTest {
   fun `uses the supported release toolchain and publishing plugin`() {
     val wrapperProperties = properties("gradle/wrapper/gradle-wrapper.properties")
     assertEquals(
-      "https://services.gradle.org/distributions/gradle-9.0.0-bin.zip",
+      "https://services.gradle.org/distributions/gradle-9.6.0-bin.zip",
       wrapperProperties.getProperty("distributionUrl"),
     )
 
     val catalog = text("gradle/libs.versions.toml")
-    assertContains(catalog, "agp = \"8.13.2\"")
+    assertContains(catalog, "agp = \"9.4.0\"")
     assertContains(catalog, "vanniktech-maven-publish = \"0.37.0\"")
     assertContains(
       catalog,
@@ -155,7 +155,7 @@ class PublishingConfigurationContractTest {
     assertContains(script, "--export")
     assertContains(script, "--import")
     assertContains(script, "gpg --homedir \"\$verify_home\" --batch --verify")
-    assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=37")
+    assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=63")
     assertContains(script, "CORRUPTION_NEGATIVE=PASS")
     assertContains(rootBuild, "\"-PgezginVersion=\$releaseVersion\"")
   }

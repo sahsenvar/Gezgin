@@ -35,6 +35,24 @@ kotlin {
   // yalnız desktop uiTest'te gerekebilir, burada eklenmedi.
   jvm { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
   androidTarget { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
+  // iOS hedef kümesi upstream tarafından kilitli: JB `navigation3-ui` yalnız `iosArm64` ve
+  // `iosSimulatorArm64` yayınlıyor, `iosX64` YOK → Intel Mac simülatörü desteklenmez
+  // (spec S-1). Apple hedefleri yalnız macOS host'ta derlenir; Linux job'larında
+  // `kotlin.native.ignoreDisabledTargets` (gradle.properties) onları sessizce devre dışı bırakır.
+  iosArm64()
+  iosSimulatorArm64()
+  // `nonAndroidMain` = jvm + ios. Beş platform `expect`'inin dördü bu iki hedefte AYNI JetBrains
+  // Navigation 3 ailesi üzerinde çalışır; tek kopya tutmak davranış sürüklenmesini yapısal olarak
+  // imkânsız kılar ve kodu jvmTest üzerinden Kover kapsamında bırakır. Yalnız `GezginNoBackHandler`
+  // ayrışır (desktop no-op, iOS geri jesti) ve hedef-özel kaynak kümelerinde kalır.
+  applyDefaultHierarchyTemplate {
+    common {
+      group("nonAndroid") {
+        withJvm()
+        withIos()
+      }
+    }
+  }
   sourceSets {
     commonMain.dependencies {
       api(libs.kotlinx.coroutines.core)
@@ -78,7 +96,29 @@ kotlin {
       // ile AYNI KMP artefaktı (org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose).
       api(libs.androidx.lifecycle.viewmodel.compose)
     }
+    // Desktop ve iOS AYNI JetBrains ailesini kullanır; AndroidX UI/lifecycle artefaktları yalnız
+    // androidMain'de kalır (§2.2 adapter sınırı). commonMain'in deseni burada da geçerli:
+    // paylaşılan actual'lar bu aileye KARŞI derlenir, ama yayınlanan bağımlılık olarak hedeflerin
+    // KENDİ kaynak kümelerinden dışa verilir. Bir ARA kaynak kümesinin `api`'si ortak metadata
+    // POM'una çıkar; oradan da JB artefaktları Maven ile çözen bir Android tüketicisinin grafiğine
+    // sızardı.
+    getByName("nonAndroidMain").dependencies {
+      compileOnly(libs.jb.navigation3.ui)
+      compileOnly(libs.jb.lifecycle.viewmodel.navigation3)
+    }
     jvmMain.dependencies {
+      api(libs.jb.navigation3.ui)
+      api(libs.jb.lifecycle.viewmodel.navigation3)
+      api(libs.jb.lifecycle.viewmodel.compose)
+    }
+    // `iosMain` de bir ARA kaynak kümesidir (iki hedefin ebeveyni), `jvmMain` ise bir YAPRAK.
+    // Bu yüzden dışa verme, yalnız yaprak kaynak kümelerinden yapılır.
+    iosArm64Main.dependencies {
+      api(libs.jb.navigation3.ui)
+      api(libs.jb.lifecycle.viewmodel.navigation3)
+      api(libs.jb.lifecycle.viewmodel.compose)
+    }
+    iosSimulatorArm64Main.dependencies {
       api(libs.jb.navigation3.ui)
       api(libs.jb.lifecycle.viewmodel.navigation3)
       api(libs.jb.lifecycle.viewmodel.compose)
@@ -87,13 +127,17 @@ kotlin {
       implementation(kotlin("test"))
       implementation(libs.kotlinx.coroutines.test)
     }
-    // Desktop uiTest altyapısı (test-only) — NavDisplay'in gerçek render/back döngüsünü
-    // cihazsız (JVM/desktop) doğrulamak için. `compose.uiTest`/`compose.desktop.uiTestJUnit4`
-    // (String-tipli DSL yardımcıları) da aynı şekilde hard-deprecated — doğrudan koordinat.
-    jvmTest.dependencies {
+    // uiTest altyapısı (test-only) — NavDisplay'in gerçek render/back döngüsünü cihazsız
+    // doğrular. Testler `runComposeUiTest` (kotlin.test tabanlı) kullandığından AYNI test
+    // gövdeleri hem desktop hem iOS simülatöründe koşar. `compose.uiTest` (String-tipli DSL
+    // yardımcısı) bu plugin sürümünde hard-deprecated — doğrudan koordinat.
+    getByName("nonAndroidTest").dependencies {
       implementation(
         "org.jetbrains.compose.ui:ui-test:${libs.versions.compose.multiplatform.get()}"
       )
+    }
+    // Desktop'ta uiTest'in çalışması için gereken host runtime'ı; iOS karşılığı simülatörden gelir.
+    jvmTest.dependencies {
       implementation(compose.desktop.currentOs)
       implementation(
         "org.jetbrains.compose.ui:ui-test-junit4:${libs.versions.compose.multiplatform.get()}"

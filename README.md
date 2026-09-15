@@ -91,13 +91,20 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 | State-as-data (observable + serializable back stack) | ✅ | ◑ | ◑ | ◑ | ✅ |
 | UI-less testing of navigation | ✅ | ◑ | ◑ | ◑ | ✅ |
 | No manual graph wiring (codegen) | ✅ | ◑ | ✅ | ❌ | ❌ |
-| Compose Multiplatform | ◑ *(Android + desktop; iOS/web compile-level)* | ◑ | ◑ | ✅ | ✅ |
+| Compose Multiplatform | ✅ *(Android + desktop + iOS[^ios]; web compile-level)* | ◑ | ◑ | ✅ | ✅ |
 | Brownfield Fragment interop | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Multiple back stacks** (bottom-nav tabs, master/detail) | ❌ *(V2)* | ✅ | ✅ | ✅ | ✅ |
 | **Deep links** | ❌ *(V2)* | ✅ | ✅ | ◑ | ◑ |
 | Maturity | ⚠️ *alpha* | ✅ stable | ✅ | ✅ | ✅ |
 
 **Gezgin's niche:** the *per-source* compile-time restriction, plus integrated **flows-with-result**, **modals-as-entries**, and **PD-safe-by-default** — all on Navigation 3. If you already like Jetpack Nav's new type-safe routes but want the compiler to also reject *undeclared* edges and hand you results / flows / modals / process-death out of the box, that's the gap Gezgin fills.
+
+[^ios]: iOS ships as `iosArm64` and `iosSimulatorArm64`. There is no `iosX64` target, because the
+    upstream JetBrains Navigation 3 artifacts Gezgin builds on do not publish one — Intel-Mac
+    simulators are therefore unsupported. In-app back (top bar, programmatic, `@NoBack`, root)
+    is verified on a simulator by UI tests and end-to-end flows; the **edge-swipe gesture does
+    not yet deliver a back event** in this configuration — see `docs/gezgin-ios-support-spec.md`
+    S-7.2.
 
 > 🔮 **Honest gaps — deliberately out of this artifact, on the V2 roadmap:** **multiple back stacks** and **deep-link route dispatch**. Gezgin is single-stack and does not expose or generate a URL↔route dispatch contract in this release. Generic `Throwable` serialization, permanent screen-container/chrome APIs, and Fragment modal interop are also outside this artifact. Gezgin is **alpha**; its Android Navigation 3 family is stable while the desktop JetBrains port remains alpha.
 
@@ -133,7 +140,7 @@ The two build boundaries are intentionally separate:
 
 | Boundary | Verified versions |
 |---|---|
-| Gezgin root | Gradle 9.0.0, Kotlin 2.3.21, KSP 2.3.9, AGP 8.13.2, Compose Multiplatform 1.11.0; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0 on Android; JetBrains Navigation 3 1.0.0-alpha05 + lifecycle Navigation 3 2.10.0-alpha05 on desktop; min SDK 24. |
+| Gezgin root | Gradle 9.6.0, Kotlin 2.3.21, KSP 2.3.10, AGP 9.4.0, Compose Multiplatform 1.11.1; AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0 on Android; JetBrains Navigation 3 1.2.0-alpha02 + lifecycle Navigation 3 2.11.0 on desktop and iOS; min SDK 24; iOS targets `iosArm64` and `iosSimulatorArm64`, built on macOS. |
 | Independent ZAD-shaped consumer | Its own Gradle 9.4.1 wrapper, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0. It resolves all four Gezgin artifacts from one exclusive repository (Maven Central in release smoke) and does not use a composite/source substitution or Maven Local fallback. |
 
 These are different build roles, not interchangeable upgrade instructions. Full contracts: [docs/gezgin-design.md](docs/gezgin-design.md) §15.

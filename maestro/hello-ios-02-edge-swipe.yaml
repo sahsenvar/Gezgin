@@ -1,0 +1,30 @@
+# iOS 2 — kenar-çekme (edge-swipe) jesti detayı pop'lar.
+# Android'in predictive-back'iyle aynı sözleşme: jest, üst-bar geri'siyle birebir aynı sonucu verir.
+# Jest, CMP'nin UIKit geri-olayı girdisinden `NavDisplay` üzerinden Gezgin'e ulaşır.
+appId: dev.gezgin.sample.hello
+---
+- launchApp:
+    clearState: true
+- tapOn: "Barbara Liskov"
+- assertVisible: "Favorilere ekle ☆"
+# Sol kenardan sağa çekme = iOS "interactive pop". Süre bilinçli olarak insan hızında:
+# `UIScreenEdgePanGestureRecognizer` ani bir sıçramayı jest saymaz, kabul etmez.
+- swipe:
+    start: "1%, 50%"
+    end: "80%, 50%"
+    duration: 900
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertNotVisible: "Favorilere ekle ☆"
+- assertVisible: "Barbara Liskov"
+- assertVisible: "Ada Lovelace"
+# jest sonrası yığın tutarlı mı: yeniden push/pop edilebiliyor
+- tapOn: "Ada Lovelace"
+- assertVisible: "Favorilere ekle ☆"
+- swipe:
+    start: "1%, 50%"
+    end: "80%, 50%"
+    duration: 900
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Grace Hopper"

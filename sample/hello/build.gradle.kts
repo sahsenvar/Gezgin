@@ -2,7 +2,6 @@ plugins {
   alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.android.application)
-  alias(libs.plugins.ksp)
 }
 
 android {
@@ -28,16 +27,9 @@ android {
 kotlin { jvmToolchain(17) }
 
 dependencies {
-  implementation(project(":gezgin-core"))
-  ksp(project(":gezgin-processor"))
-
-  implementation(platform(libs.androidx.compose.bom))
-  implementation(libs.androidx.compose.ui)
-  implementation(libs.androidx.compose.material3)
+  // Ekranlar, graph ve codegen paylaşılan modülde; bu modül yalnız Android host'u.
+  // Compose ve lifecycle ailesi oradan `api` ile gelir — iki modülün aynı aileyi
+  // kullanması, Android sınıf yolunda sürüm çakışmasını önler.
+  implementation(project(":sample:hello-shared"))
   implementation(libs.androidx.activity.compose)
-  implementation(libs.kotlinx.serialization.json)
-  // The wrapper resolves its own ViewModel and collects state; gezgin-core no longer
-  // brings these in, so the app declares them itself.
-  implementation(libs.androidx.lifecycle.viewmodel.compose)
-  implementation(libs.androidx.lifecycle.runtime.compose)
 }

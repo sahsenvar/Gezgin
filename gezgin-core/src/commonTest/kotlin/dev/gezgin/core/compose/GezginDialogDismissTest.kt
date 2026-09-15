@@ -29,7 +29,7 @@ import kotlinx.coroutines.test.runTest
 class GezginDialogDismissTest {
 
   @Test
-  fun `ResultRoute dialog dismiss (gezginOnBack) - caller Canceled alir`() = runTest {
+  fun `ResultRoute dialog dismiss gezginOnBack - caller Canceled alir`() = runTest {
     val nav = RawNavigator(start = Feed, topology = testTopology)
     val scope =
       GezginEntryScope().apply {
@@ -52,7 +52,7 @@ class GezginDialogDismissTest {
   }
 
   @Test
-  fun `dogrudan back() de ayni Canceled'i uretir (dismiss = back esdegerligi)`() = runTest {
+  fun `dogrudan back de ayni Canceled'i uretir - dismiss = back esdegerligi`() = runTest {
     val nav = RawNavigator(start = Feed, topology = testTopology)
     val callerId = nav.currentEntryId
     nav.launchForResult(callerId, edgeId = "Feed→Dialog", route = DialogDefault("d"))
@@ -64,7 +64,7 @@ class GezginDialogDismissTest {
   }
 
   @Test
-  fun `FULLSCREEN_MODAL dismiss (gezginOnBack) - caller Canceled alir (4_3)`() = runTest {
+  fun `FULLSCREEN_MODAL dismiss gezginOnBack - caller Canceled alir - 4_3`() = runTest {
     // FULLSCREEN_MODAL, DIALOG ile AYNI dismiss yolundan geçer: DialogScene.onDismissRequest =
     // NavDisplay.onBack = gezginOnBack → back() → ResultRoute-benzeri pending target'a Canceled.
     // 4.1 guard'ı FULLSCREEN_MODAL'ı kapsıyordu; bu test dismiss→Canceled'ın da kapsandığını
@@ -95,7 +95,7 @@ class GezginDialogDismissTest {
   // Dialog HÂLÂ top iken pop + Canceled (eski davranışla aynı sonuç, artık sahibe-pinli kapı
   // üzerinden).
   @Test
-  fun `pinned dialog dismiss - back(entryId) top iken Canceled teslim eder`() = runTest {
+  fun `pinned dialog dismiss - back entryId top iken Canceled teslim eder`() = runTest {
     val nav = RawNavigator(start = Feed, topology = testTopology)
     val callerId = nav.currentEntryId
     nav.launchForResult(callerId, edgeId = "Feed→Dialog", route = DialogDefault("d"))
@@ -108,7 +108,7 @@ class GezginDialogDismissTest {
   // C-MJ-1 (asıl bug) — dialog artık top DEĞİLKEN pinli dismiss NO-OP: çifte-dismiss / geç-dismiss
   // ALTTAKİ SCREEN'i poplamaz. Eski (pinsiz) `back()` yolu ikinci dismiss'te Catalog'u poplardı.
   @Test
-  fun `pinned dialog dismiss - top degilken NO-OP (cifte-dismiss altindaki ekrani korur)`() =
+  fun `pinned dialog dismiss - top degilken NO-OP - cifte-dismiss altindaki ekrani korur`() =
     runTest {
       val nav = RawNavigator(start = Feed, topology = testTopology)
       nav.navigate(Catalog) // [Feed, Catalog]

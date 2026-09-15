@@ -91,13 +91,19 @@ Grafiğin **tek bakışta okunan veri** olmasını, ulaşılabilir hedeflerin **
 | State-as-data (gözlemlenebilir + serializable back stack) | ✅ | ◑ | ◑ | ◑ | ✅ |
 | Navigasyonun UI'sız testi | ✅ | ◑ | ◑ | ◑ | ✅ |
 | Elle graph wiring yok (codegen) | ✅ | ◑ | ✅ | ❌ | ❌ |
-| Compose Multiplatform | ◑ *(Android + desktop; iOS/web derleme-düzeyi)* | ◑ | ◑ | ✅ | ✅ |
+| Compose Multiplatform | ✅ *(Android + desktop + iOS[^ios]; web derleme-düzeyi)* | ◑ | ◑ | ✅ | ✅ |
 | Brownfield Fragment interop | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Çoklu back stack** (alt-nav sekmeleri, master/detail) | ❌ *(V2)* | ✅ | ✅ | ✅ | ✅ |
 | **Deep link** | ❌ *(V2)* | ✅ | ✅ | ◑ | ◑ |
 | Olgunluk | ⚠️ *alpha* | ✅ stabil | ✅ | ✅ | ✅ |
 
 **Gezgin'in nişi:** *ekran-başına* compile-time kısıtı + entegre **sonuçlu-flow'lar**, **entry-olarak-modallar**, ve **PD-safe-varsayılan** — hepsi Navigation 3 üstünde. Jetpack Nav'ın yeni type-safe route'larını seviyorsan ama derleyicinin *tanımlanmamış* kenarları da reddetmesini ve sonuç/flow/modal/process-death'i kutudan çıkar çıkmaz vermesini istiyorsan, Gezgin tam o boşluğu doldurur.
+
+[^ios]: iOS `iosArm64` ve `iosSimulatorArm64` olarak yayınlanır. `iosX64` hedefi **yoktur**, çünkü
+    Gezgin'in üstüne kurulduğu JetBrains Navigation 3 artefaktları onu yayınlamıyor — bu yüzden
+    Intel-Mac simülatörleri desteklenmez. Uygulama içi geri (üst bar, programatik, `@NoBack`,
+    kök) simülatörde UI testleri ve e2e akışlarıyla doğrulanmıştır; **kenar-çekme jesti bu
+    yapılandırmada henüz geri olayı üretmiyor** — `docs/gezgin-ios-support-spec.md` S-7.2.
 
 > 🔮 **Dürüst eksikler — bu artefaktın bilinçli kapsamı dışında, V2 yol haritasında:** **çoklu back stack** ve **deep-link route dispatch**. Gezgin tek-stack'tir ve bu sürüm URL↔route dispatch sözleşmesi sunmaz ya da üretmez. Generic `Throwable` serileştirme, kalıcı screen-container/chrome API'leri ve Fragment modal interop da bu artefaktın dışındadır. Gezgin **alpha**'dır; Android Navigation 3 ailesi stable, desktop JetBrains portu ise alpha'dır.
 
@@ -142,7 +148,7 @@ override val dragHandleMode: BottomSheetDragHandleMode
 
 | Sınır | Doğrulanan sürümler |
 |---|---|
-| Gezgin root | Gradle 9.0.0, Kotlin 2.3.21, KSP 2.3.9, AGP 8.13.2, Compose Multiplatform 1.11.0; Android'de AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop'ta JetBrains Navigation 3 1.0.0-alpha05 + lifecycle Navigation 3 2.10.0-alpha05; min SDK 24. |
+| Gezgin root | Gradle 9.6.0, Kotlin 2.3.21, KSP 2.3.10, AGP 9.4.0, Compose Multiplatform 1.11.1; Android'de AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0; desktop ve iOS'ta JetBrains Navigation 3 1.2.0-alpha02 + lifecycle Navigation 3 2.11.0; min SDK 24; iOS hedefleri `iosArm64` ve `iosSimulatorArm64`, macOS'ta derlenir. |
 | Bağımsız ZAD-shaped consumer | Kendi Gradle 9.4.1 wrapper'ı, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.0.0 + lifecycle Navigation 3 2.10.0. Dört Gezgin artefaktını tek exclusive repository'den (release smoke'ta Maven Central) çözer; composite/source substitution veya Maven Local fallback kullanmaz. |
 
 Bunlar birbirinin yerine uygulanacak upgrade talimatları değil, farklı build rolleridir. Tam sözleşme: [docs/gezgin-design.md](docs/gezgin-design.md) §15.
