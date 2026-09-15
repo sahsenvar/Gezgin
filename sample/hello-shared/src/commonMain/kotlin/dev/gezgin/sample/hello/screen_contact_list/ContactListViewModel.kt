@@ -12,7 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class ContactListViewModel : BaseViewModel<ContactListUiState, ContactListIntent, ContactListEffect>() {
+class ContactListViewModel :
+  BaseViewModel<ContactListUiState, ContactListIntent, ContactListEffect>() {
 
   private val _uiState = MutableStateFlow(ContactListUiState(contacts = CONTACTS))
   override val uiState: StateFlow<ContactListUiState> = _uiState.asStateFlow()

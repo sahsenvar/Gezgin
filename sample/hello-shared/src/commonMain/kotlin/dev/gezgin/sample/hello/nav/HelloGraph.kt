@@ -8,8 +8,7 @@ import dev.gezgin.core.annotation.NavGraph
 @NavGraph
 sealed interface HelloGraph : Route {
 
-  @GoTo(ContactDetailScreenRoute::class)
-  data object ContactListScreenRoute : HelloGraph
+  @GoTo(ContactDetailScreenRoute::class) data object ContactListScreenRoute : HelloGraph
 
   @BackTo(ContactListScreenRoute::class)
   data class ContactDetailScreenRoute(val contactId: String) : HelloGraph
