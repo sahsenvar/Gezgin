@@ -17,6 +17,16 @@ class SlotUnifierTest {
 
   private val detailState = ClassName("app", "DetailUiState")
   private val detailIntent = ClassName("app", "DetailIntent")
+  private val detailEffect = ClassName("app", "DetailEffect")
+  private val flow = ClassName("kotlinx.coroutines.flow", "Flow")
+
+  private fun effectFlowSlot(argument: SlotType) =
+    SlotType.Parameterized(
+      "kotlinx.coroutines.flow.Flow",
+      flow,
+      listOf(argument),
+      isNullable = false,
+    )
 
   @Test
   fun `a concrete slot type matches an equal concrete type`() {
@@ -100,6 +110,70 @@ class SlotUnifierTest {
     val asParameterized = ClassName("kotlin", "Function1").parameterizedBy(detailIntent, UNIT)
 
     assertTrue(SlotUnifier.unify(slot, asParameterized, bindings))
+    assertEquals(mapOf<String, TypeName>("I" to detailIntent), bindings)
+  }
+
+  @Test
+  fun `a parameterized slot binds the variable carried by its type argument`() {
+    val bindings = mutableMapOf<String, TypeName>()
+
+    assertTrue(
+      SlotUnifier.unify(
+        effectFlowSlot(SlotType.Variable("E")),
+        flow.parameterizedBy(detailEffect),
+        bindings,
+      )
+    )
+    assertEquals(mapOf<String, TypeName>("E" to detailEffect), bindings)
+  }
+
+  @Test
+  fun `a parameterized slot rejects a different raw type`() {
+    val other = ClassName("kotlinx.coroutines.channels", "Channel")
+
+    assertFalse(
+      SlotUnifier.unify(
+        effectFlowSlot(SlotType.Variable("E")),
+        other.parameterizedBy(detailEffect),
+        mutableMapOf(),
+      )
+    )
+  }
+
+  @Test
+  fun `a parameterized slot rejects a type with no arguments`() {
+    assertFalse(SlotUnifier.unify(effectFlowSlot(SlotType.Variable("E")), flow, mutableMapOf()))
+  }
+
+  @Test
+  fun `a parameterized slot honours a binding an earlier slot already made`() {
+    val bindings = mutableMapOf<String, TypeName>("E" to detailEffect)
+
+    assertFalse(
+      SlotUnifier.unify(
+        effectFlowSlot(SlotType.Variable("E")),
+        flow.parameterizedBy(detailIntent),
+        bindings,
+      )
+    )
+  }
+
+  @Test
+  fun `a parameterized slot descends into a lambda type argument`() {
+    val bindings = mutableMapOf<String, TypeName>()
+    val slot =
+      effectFlowSlot(
+        SlotType.Lambda(listOf(SlotType.Variable("I")), SlotType.Concrete("kotlin.Unit", UNIT))
+      )
+    val concrete =
+      flow.parameterizedBy(
+        LambdaTypeName.get(
+          parameters = listOf(ParameterSpec.unnamed(detailIntent)),
+          returnType = UNIT,
+        )
+      )
+
+    assertTrue(SlotUnifier.unify(slot, concrete, bindings))
     assertEquals(mapOf<String, TypeName>("I" to detailIntent), bindings)
   }
 }

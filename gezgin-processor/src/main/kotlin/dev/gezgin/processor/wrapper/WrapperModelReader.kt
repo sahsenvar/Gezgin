@@ -10,6 +10,8 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeParameter
 import com.google.devtools.ksp.symbol.KSValueParameter
+import com.squareup.kotlinpoet.UNIT
+import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 
 internal const val SCREEN_WRAPPER_FQ = "dev.gezgin.core.annotation.ScreenWrapper"
@@ -142,11 +144,27 @@ internal class WrapperModelReader(
           )
           return@mapNotNull null
         }
+        val slotParameters =
+          type.functionArguments().map { argument ->
+            argument.toSlotType(typeParameterNames)
+              ?: run {
+                error(
+                  "SW12",
+                  "@FilledBy parameter '${parameter.name?.asString()}' of $packageName.$simpleName " +
+                    "uses type parameter " +
+                    "'${argument.foreignTypeParameter(typeParameterNames) ?: argument}', which the " +
+                    "wrapper does not declare; a slot may only use concrete types, the wrapper's " +
+                    "own type parameters, function types over those, and generic types whose " +
+                    "arguments are themselves such types",
+                )
+                return@mapNotNull null
+              }
+          }
         WrapperSlotModel(
           parameterName = parameter.name!!.asString(),
           markerFq = markerFq,
           hasDefault = parameter.hasDefault,
-          parameters = type.functionArguments().map { it.toSlotType(typeParameterNames) },
+          parameters = slotParameters,
         )
       }
 
@@ -195,21 +213,52 @@ private fun KSType.functionArguments(): List<KSType> =
 
 private fun KSType.functionReturn(): KSType? = arguments.lastOrNull()?.type?.resolve()
 
-internal fun KSType.toSlotType(typeParameterNames: List<String>): SlotType {
+/**
+ * Models one slot type, or null when Gezgin cannot express it — the caller turns that into `SW12`.
+ *
+ * A type variable only renders into a [com.squareup.kotlinpoet.TypeName] with the declaring
+ * function's `TypeParameterResolver`, which this reader deliberately does not carry: the wrapper's
+ * type arguments are not known until a route binds them. So a type that carries a variable must
+ * never reach [toTypeName]. A variable standing alone becomes a [SlotType.Variable]; one under a
+ * function type or under a generic type's arguments is decomposed; a variable the wrapper does not
+ * declare — from an enclosing generic class, say — is reported rather than crashed on.
+ */
+internal fun KSType.toSlotType(typeParameterNames: List<String>): SlotType? {
   val declaration = this.declaration
-  if (declaration is KSTypeParameter && declaration.name.asString() in typeParameterNames) {
-    return SlotType.Variable(declaration.name.asString())
+  if (declaration is KSTypeParameter) {
+    val name = declaration.name.asString()
+    return if (name in typeParameterNames) SlotType.Variable(name) else null
   }
   if (isFunctionType) {
-    return SlotType.Lambda(
-      parameters = functionArguments().map { it.toSlotType(typeParameterNames) },
-      returnType =
-        functionReturn()?.toSlotType(typeParameterNames)
-          ?: SlotType.Concrete("kotlin.Unit", com.squareup.kotlinpoet.UNIT),
-    )
+    val parameters = functionArguments().map { it.toSlotType(typeParameterNames) ?: return null }
+    val declaredReturn = functionReturn()
+    val returnType =
+      if (declaredReturn == null) SlotType.Concrete("kotlin.Unit", UNIT)
+      else declaredReturn.toSlotType(typeParameterNames) ?: return null
+    return SlotType.Lambda(parameters, returnType)
   }
-  return SlotType.Concrete(
-    declaration.qualifiedName?.asString() ?: declaration.simpleName.asString(),
-    toTypeName(),
-  )
+  val fq = declaration.qualifiedName?.asString() ?: declaration.simpleName.asString()
+  if (!carriesTypeParameter()) return SlotType.Concrete(fq, toTypeName())
+  val rawType = (declaration as? KSClassDeclaration)?.toClassName() ?: return null
+  val typeArguments =
+    arguments.map { argument ->
+      argument.type?.resolve()?.toSlotType(typeParameterNames) ?: return null
+    }
+  return SlotType.Parameterized(fq, rawType, typeArguments, isMarkedNullable)
+}
+
+/** True when a type variable appears anywhere inside, which is what rules out rendering it. */
+private fun KSType.carriesTypeParameter(): Boolean =
+  declaration is KSTypeParameter ||
+    arguments.any { it.type?.resolve()?.carriesTypeParameter() == true }
+
+/** The first type variable inside that the wrapper does not declare, for the `SW11` message. */
+private fun KSType.foreignTypeParameter(typeParameterNames: List<String>): String? {
+  val declaration = this.declaration
+  if (declaration is KSTypeParameter) {
+    return declaration.name.asString().takeUnless { it in typeParameterNames }
+  }
+  return arguments.firstNotNullOfOrNull {
+    it.type?.resolve()?.foreignTypeParameter(typeParameterNames)
+  }
 }

@@ -37,6 +37,21 @@ internal object SlotUnifier {
             } && unify(slot.returnType, function.returnType, bindings)
         }
       }
+
+      is SlotType.Parameterized -> {
+        val parameterized = concrete.bare() as? ParameterizedTypeName
+        when {
+          parameterized == null -> false
+          parameterized.rawType != slot.rawType -> false
+          parameterized.isNullable != slot.isNullable -> false
+          parameterized.typeArguments.size != slot.arguments.size -> false
+          else ->
+            slot.arguments.zip(parameterized.typeArguments).all { (slotArgument, concreteArgument)
+              ->
+              unify(slotArgument, concreteArgument, bindings)
+            }
+        }
+      }
     }
 
   private data class FunctionShape(val parameters: List<TypeName>, val returnType: TypeName)

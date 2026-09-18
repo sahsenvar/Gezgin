@@ -1,5 +1,6 @@
 package dev.gezgin.processor.wrapper
 
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeName
 
 /** The kind annotations that may fill a wrapper's content slot. */
@@ -13,7 +14,8 @@ internal val CONTENT_MARKER_FQS =
 
 /**
  * A slot's declared type, in the only shape [SlotUnifier] understands: a concrete type, one of the
- * wrapper's own type parameters, or a function type over those.
+ * wrapper's own type parameters, a function type over those, or a generic type whose arguments are
+ * themselves such types.
  */
 internal sealed interface SlotType {
   data class Concrete(val fq: String, val typeName: TypeName) : SlotType
@@ -21,6 +23,19 @@ internal sealed interface SlotType {
   data class Variable(val name: String) : SlotType
 
   data class Lambda(val parameters: List<SlotType>, val returnType: SlotType) : SlotType
+
+  /**
+   * A generic type that carries a type parameter in its arguments — `Flow<E>`. It cannot be a
+   * [Concrete], because rendering a type variable into a [TypeName] needs the declaring function's
+   * type-parameter resolver, which the reader deliberately does not carry; and it must not be one,
+   * because unification has to descend into the arguments to bind the variable.
+   */
+  data class Parameterized(
+    val fq: String,
+    val rawType: ClassName,
+    val arguments: List<SlotType>,
+    val isNullable: Boolean,
+  ) : SlotType
 }
 
 /** An application annotation carrying `@ScreenSlot`. */

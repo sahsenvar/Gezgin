@@ -196,6 +196,14 @@ wrapper's type parameters binds to the provider's concrete type; a slot type of 
 `(X) -> Unit` unifies with `(Concrete) -> Unit` by binding `X`. Nothing deeper is attempted, and an
 un-unifiable pair is a plain mismatch error naming both sides.
 
+*Amended during implementation.* A slot may also carry a type parameter inside a generic type —
+`Flow<E>`, the shape an effect-stream slot takes. Such a type unifies argument by argument against a
+provider's `Flow<Concrete>` (same raw type, same arity, same nullability), which binds `E`.
+Rendering it as an ordinary concrete type is not an option: a type variable has no `TypeName`
+without the declaring function's type-parameter resolver, so what used to happen was a KotlinPoet
+`NoSuchElementException` out of the reader rather than any diagnostic at all. Variance and subtyping
+stay out of scope; a type variable the wrapper does not declare is `SW12`.
+
 Receiver mismatch is deliberately not reported by the processor beyond candidate elimination. When
 elimination leaves no candidate the error names the screen's receiver and every wrapper's content
 receiver, and the underlying Kotlin error at the generated call site
@@ -296,6 +304,7 @@ existing `SC`/`MV` convention with a new `SW` prefix.
 | `SW9` | a package named by `gezgin.wrapperPackages` yields no wrapper and no slot marker |
 | `SW10` | a provider names a route that has a `@Screen` in this module, but no wrapper slot consumes that provider's marker |
 | `SW11` | a provider parameter does not resolve and is not this route's navigator. *Added during implementation:* in a single-module app the navigator is emitted by the same KSP round, so its type is an error type while providers are read and resolving it throws. The navigator is matched by its written name before anything is resolved; anything else that fails to resolve gets this error instead of a processor crash. |
+| `SW12` | a slot's type uses a type parameter the wrapper does not declare — one from an enclosing generic class, say. *Added during implementation:* a type variable can only be rendered into a `TypeName` with the declaring function's type-parameter resolver, which the wrapper reader does not carry, so a variable it cannot model as `SlotType.Variable` (alone, under a function type, or under a generic type's arguments) is reported here instead of crashing KotlinPoet. |
 
 Zero `@ScreenWrapper` in scope is not an error. Content is then called bare, exactly as core-mode
 entries are emitted today, and the double `Column` disappears for everyone.

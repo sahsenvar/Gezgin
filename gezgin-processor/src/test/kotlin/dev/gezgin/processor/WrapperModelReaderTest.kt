@@ -171,4 +171,30 @@ class WrapperModelReaderTest {
     assertContains(result.messages, "[SW2]")
     assertContains(result.messages, "topBar")
   }
+
+  @Test
+  fun `SW12 fires when a slot uses a type parameter the wrapper does not declare`() {
+    val result =
+      compileGezgin(
+        SourceFile.kotlin(
+          "ForeignTypeParameter.kt",
+          """
+          package app
+
+          import dev.gezgin.core.annotation.FilledBy
+          import dev.gezgin.core.annotation.Screen
+          import dev.gezgin.core.annotation.ScreenWrapper
+
+          class Holder<T> {
+            @ScreenWrapper
+            fun root(@FilledBy(Screen::class) content: (T) -> Unit) = Unit
+          }
+          """
+            .trimIndent(),
+        )
+      )
+
+    assertContains(result.messages, "[SW12]")
+    assertContains(result.messages, "content")
+  }
 }
