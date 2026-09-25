@@ -41,7 +41,8 @@ public class EdgeSpec(
  * The generated, loadable navigation topology. Constructed only by generated code
  * (`GezginGenerated.kt`), so the constructor is gated behind [GezginInternalApi];
  * [flowChain]/[startOf] stay public for introspection, while [edges] is `internal` (read only by
- * the same-module runtime).
+ * the same-module runtime). [transientRoutes] lists callback routes, whose entries hold caller
+ * lambdas and are therefore never written to the process-death snapshot.
  *
  * @author @sahsenvar
  */
@@ -51,6 +52,7 @@ constructor(
   private val flowChains: Map<KClass<out Route>, List<FlowType>>,
   private val flowStarts: Map<String, KClass<out Route>>,
   internal val edges: Map<String, EdgeSpec>,
+  internal val transientRoutes: Set<KClass<out Route>> = emptySet(),
 ) {
   /** Returns the outer-to-inner flow chain enclosing [route]. */
   public fun flowChain(route: KClass<out Route>): List<FlowType> {

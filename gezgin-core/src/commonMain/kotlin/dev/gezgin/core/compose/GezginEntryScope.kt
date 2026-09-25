@@ -39,13 +39,24 @@ public enum class EntryKind {
  * wraps the content with an entry-scoped back handler ([GezginNoBackHandler]) OUTER (BEFORE the
  * screen content — in the dispatcher LIFO the screen's own `BackHandler` registers more INNER/later
  * and wins). Generated entries read `@NoBack` and set this register-time flag.
+ *
+ * [onDismiss] is the `@OnDismiss` hook of a callback modal. A container dismissal (back, outside
+ * tap, swipe) calls it before Gezgin pops the entry (see [gezginModalDismiss]).
  */
 @PublishedApi
 internal class RegisteredEntry(
   val kind: EntryKind,
   val noBack: Boolean,
   val content: @Composable (Route) -> Unit,
-)
+  val onDismiss: ((Route) -> Unit)?,
+) {
+  // Keeps the pre-callback-modal ABI for entries compiled against an older inlined `register`.
+  constructor(
+    kind: EntryKind,
+    noBack: Boolean,
+    content: @Composable (Route) -> Unit,
+  ) : this(kind, noBack, content, onDismiss = null)
+}
 
 /**
  * The trailing-lambda receiver of `GezginDisplay` — the user (or codegen's generated
@@ -66,10 +77,14 @@ public class GezginEntryScope internal constructor() {
   /**
    * Registers content for `R`. If the same `R` is registered twice it throws a descriptive error
    * (at register time, without waiting for the first render — a wrong setup blows up early).
+   *
+   * [onDismiss] runs when the modal container is dismissed by the user; Gezgin pops the entry
+   * afterwards only if the hook left it on top.
    */
   public inline fun <reified R : Route> register(
     kind: EntryKind = EntryKind.SCREEN,
     noBack: Boolean = false,
+    noinline onDismiss: ((R) -> Unit)? = null,
     noinline content: @Composable (R) -> Unit,
   ) {
     val routeClass = R::class
@@ -77,6 +92,12 @@ public class GezginEntryScope internal constructor() {
       error("Entry is already registered for route: ${routeClass.simpleName}")
     }
     @Suppress("UNCHECKED_CAST")
-    registry[routeClass] = RegisteredEntry(kind, noBack) { route -> content(route as R) }
+    registry[routeClass] =
+      RegisteredEntry(
+        kind = kind,
+        noBack = noBack,
+        content = { route -> content(route as R) },
+        onDismiss = onDismiss?.let { hook -> { route -> hook(route as R) } },
+      )
   }
 }

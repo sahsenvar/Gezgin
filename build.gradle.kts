@@ -218,7 +218,7 @@ dependencies {
 tasks.register<CheckPublicApiKDocTask>("checkPublicApiKDoc") {
   projectRoot.set(layout.projectDirectory)
   expectedInventory.set(
-    mapOf("gezgin-core" to "140/17", "gezgin-processor" to "1/1", "gezgin-test" to "12/1")
+    mapOf("gezgin-core" to "145/18", "gezgin-processor" to "1/1", "gezgin-test" to "12/1")
   )
   scannerClasspath.from(publicApiKDocScannerClasspath)
   val moduleSources =

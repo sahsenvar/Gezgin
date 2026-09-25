@@ -194,6 +194,7 @@ public final class dev/gezgin/core/RawNavigator {
 	public final fun navigate (Ldev/gezgin/core/Route;Z)V
 	public static synthetic fun navigate$default (Ldev/gezgin/core/RawNavigator;Ldev/gezgin/core/Route;ZILjava/lang/Object;)V
 	public final fun navigateForResult (Ljava/lang/String;Ldev/gezgin/core/Route;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun open (Ldev/gezgin/core/Route;)V
 	public final fun quit ()V
 	public final fun quitAndGoTo (Ldev/gezgin/core/Route;)V
 	public final fun quitWith (Ljava/lang/Object;)V
@@ -275,6 +276,18 @@ public abstract interface annotation class dev/gezgin/core/annotation/NavGraph :
 }
 
 public abstract interface annotation class dev/gezgin/core/annotation/NoBack : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/OnDismiss : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/Open : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+	public abstract fun target ()[Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/Open$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/Open;
 }
 
 public abstract interface annotation class dev/gezgin/core/annotation/Quit : java/lang/annotation/Annotation {
@@ -370,9 +383,11 @@ public final class dev/gezgin/core/compose/GezginTransitionKt {
 public final class dev/gezgin/core/compose/RegisteredEntry {
 	public static final field $stable I
 	public fun <init> (Ldev/gezgin/core/compose/EntryKind;ZLkotlin/jvm/functions/Function3;)V
+	public fun <init> (Ldev/gezgin/core/compose/EntryKind;ZLkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function1;)V
 	public final fun getContent ()Lkotlin/jvm/functions/Function3;
 	public final fun getKind ()Ldev/gezgin/core/compose/EntryKind;
 	public final fun getNoBack ()Z
+	public final fun getOnDismiss ()Lkotlin/jvm/functions/Function1;
 }
 
 public final class dev/gezgin/core/compose/RememberNavigatorKt {
