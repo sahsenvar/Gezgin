@@ -59,7 +59,7 @@ Uygulamanın sözlüğü ve tek ekran kökü `:sample:designsystem` içindedir; 
 @Composable
 fun <S, I, E> ShowcaseScreenRoot(
     @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
-    @FilledBy(Effects::class)     onEffect: (E, (String) -> Unit) -> Unit,
+    @FilledBy(Effects::class)     onEffect: (E, (String) -> Unit, (I) -> Unit) -> Unit,
     @FilledBy(Screen::class)      content: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
 ) { /* container, state toplama ve effect politikası burada */ }
 

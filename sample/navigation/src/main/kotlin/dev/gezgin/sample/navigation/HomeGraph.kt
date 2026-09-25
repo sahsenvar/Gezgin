@@ -1,6 +1,7 @@
 package dev.gezgin.sample.navigation
 
 import dev.gezgin.core.BottomSheetContract
+import dev.gezgin.core.DialogContract
 import dev.gezgin.core.FullscreenModalContract
 import dev.gezgin.core.ResultRoute
 import dev.gezgin.core.Route
@@ -9,7 +10,10 @@ import dev.gezgin.core.annotation.GoForResult
 import dev.gezgin.core.annotation.GoTo
 import dev.gezgin.core.annotation.NavGraph
 import dev.gezgin.core.annotation.NoBack
+import dev.gezgin.core.annotation.OnDismiss
+import dev.gezgin.core.annotation.Open
 import dev.gezgin.core.annotation.ReplaceTo
+import dev.gezgin.sample.domain.model.ShareTarget
 import dev.gezgin.sample.domain.model.SortOrder
 
 @NavGraph
@@ -25,8 +29,18 @@ sealed interface HomeGraph : Route {
 
   @GoTo(ItemDetailScreenRoute::class, singleTop = false, name = "goToRelated")
   @GoTo(ItemImageViewerRoute::class)
+  @Open(DeleteItemDialogRoute::class, ShareTargetSheetRoute::class)
   @BackTo(DashboardScreenRoute::class)
   data class ItemDetailScreenRoute(val id: String) : HomeGraph
+
+  data class DeleteItemDialogRoute(
+    val itemId: String,
+    val onConfirm: () -> Unit,
+    @OnDismiss val onCancel: () -> Unit,
+  ) : HomeGraph, DialogContract
+
+  data class ShareTargetSheetRoute(val itemId: String, val onSelect: (ShareTarget) -> Unit) :
+    HomeGraph, BottomSheetContract
 
   @BackTo(ItemDetailScreenRoute::class)
   data class ItemImageViewerRoute(val id: String) : HomeGraph, FullscreenModalContract {

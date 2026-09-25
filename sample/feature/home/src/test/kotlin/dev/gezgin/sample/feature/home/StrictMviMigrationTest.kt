@@ -43,7 +43,7 @@ class StrictMviMigrationTest {
       assertEquals(DashboardEffect.OpenItem("item-42"), effect)
 
       val raw = RawNavigator(start = DashboardScreenRoute, topology = gezginTopology)
-      handleDashboardEffect(effect, {}, raw.dashboardNavigator(entryId = 1L))
+      handleDashboardEffect(effect, {}, {}, raw.dashboardNavigator(entryId = 1L))
       assertEquals(ItemDetailScreenRoute("item-42"), raw.current)
     }
 
@@ -77,7 +77,9 @@ class StrictMviMigrationTest {
       // Exactly the wiring ShowcaseScreenRoot performs for this route.
       controller.get().setContent {
         LaunchedEffect(viewModel) {
-          viewModel.effects.collect { effect -> handleDashboardEffect(effect, {}, nav) }
+          viewModel.effects.collect { effect ->
+            handleDashboardEffect(effect, {}, viewModel::onIntent, nav)
+          }
         }
         DashboardResultCollector(onIntent = viewModel::onIntent, nav = nav)
       }

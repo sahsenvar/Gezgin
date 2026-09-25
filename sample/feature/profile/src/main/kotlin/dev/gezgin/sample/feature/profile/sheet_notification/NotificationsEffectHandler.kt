@@ -8,6 +8,7 @@ import dev.gezgin.sample.navigation.ProfileGraph.NotificationsSheetRoute
 fun handleNotificationsEffect(
   effect: NotificationsEffect,
   show: (String) -> Unit,
+  onIntent: (NotificationsIntent) -> Unit,
   nav: NotificationsSheetNavigator,
 ) {
   when (effect) {

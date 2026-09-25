@@ -11,6 +11,7 @@ import dev.gezgin.sample.navigation.HomeGraph.DashboardScreenRoute
 fun handleDashboardEffect(
   effect: DashboardEffect,
   show: (String) -> Unit,
+  onIntent: (DashboardIntent) -> Unit,
   nav: DashboardNavigator,
 ) {
   when (effect) {

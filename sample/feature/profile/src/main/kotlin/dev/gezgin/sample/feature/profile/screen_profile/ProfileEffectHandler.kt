@@ -8,7 +8,12 @@ import dev.gezgin.sample.navigation.ProfileGraph.ProfileScreenRoute
 import dev.gezgin.sample.navigation.ProfileNavigator
 
 @Effects(ProfileScreenRoute::class)
-fun handleProfileEffect(effect: ProfileEffect, show: (String) -> Unit, nav: ProfileNavigator) {
+fun handleProfileEffect(
+  effect: ProfileEffect,
+  show: (String) -> Unit,
+  onIntent: (ProfileIntent) -> Unit,
+  nav: ProfileNavigator,
+) {
   when (effect) {
     is ProfileEffect.ShowMessage -> show(effect.text)
     is ProfileEffect.EditName -> nav.launchEditNameDialog(effect.current)

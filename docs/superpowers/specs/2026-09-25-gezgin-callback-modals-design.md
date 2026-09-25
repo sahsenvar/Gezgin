@@ -1,6 +1,6 @@
 # Callback taşıyan `@Dialog` / `@BottomSheet` route'ları — tasarım notu
 
-Durum: TASLAK v2 — kullanıcı onayı bekliyor. Tüketici: ZAD Android, `feature-contract.md` F11 / K7.
+Durum: v2 — onaylandı ve uygulandı. Tüketici: ZAD Android, `feature-contract.md` F11 / K7.
 
 v1 taslağı (callback imzası composable'da, `XOpener` + feature-modülü extension'ı) ZAD incelemesinde
 düştü. 40 çağıran-modül/modal çifti modül sınırını geçiyor ve ZAD'da feature→feature bağımlılığı
@@ -87,18 +87,19 @@ Entry codegen callback'leri bir "hâlâ yığında mı" koruyucusuyla sarar:
 
 ```kotlin
 register<LevelConfirmationDialog>(kind = EntryKind.DIALOG, noBack = false, onDismiss = { it.onDismiss() }) { route ->
-    val guard = rememberEntryGuard()          // LocalGezginEntryId + raw
+    val raw = LocalGezginRawNavigator.current
+    val entryId = LocalGezginEntryId.current
     LevelConfirmationDialog(
         optionLevel = route.optionLevel,
-        onConfirm = guard { route.onConfirm() },
-        onDismiss = guard { route.onDismiss() },
+        onConfirm = { if (raw.isOnStack(entryId)) route.onConfirm() },
+        onDismiss = { if (raw.isOnStack(entryId)) route.onDismiss() },
     )
 }
 ```
 
-`guard`, entry pop edildikten sonra gelen çağrıyı sessizce yok sayar. Çift tıklamada ikinci
+`isOnStack` kontrolü, entry pop edildikten sonra gelen çağrıyı sessizce yok sayar. Çift tıklamada ikinci
 `nav.back()` alttaki ekranı kapatamaz. Parametreli callback'ler de aynı biçimde sarılır:
-`guard { item -> route.onSelect(item) }`.
+`{ p0 -> if (raw.isOnStack(entryId)) route.onSelect(p0) }`.
 
 ## 5. Runtime
 

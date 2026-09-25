@@ -47,7 +47,7 @@ class StrictMviMigrationTest {
       assertEquals(LoginEffect.LoginSuccess, effect)
 
       val raw = RawNavigator(start = LoginScreenRoute, topology = gezginTopology)
-      handleLoginEffect(effect, {}, raw.loginNavigator(entryId = 1L))
+      handleLoginEffect(effect, {}, {}, raw.loginNavigator(entryId = 1L))
       assertEquals(DashboardScreenRoute, raw.current)
     }
 
@@ -80,7 +80,9 @@ class StrictMviMigrationTest {
       // Exactly the wiring ShowcaseScreenRoot performs for this route.
       controller.get().setContent {
         LaunchedEffect(viewModel) {
-          viewModel.effects.collect { effect -> handleLoginEffect(effect, messages::add, nav) }
+          viewModel.effects.collect { effect ->
+            handleLoginEffect(effect, messages::add, viewModel::onIntent, nav)
+          }
         }
         LoginResultCollector(onIntent = viewModel::onIntent, nav = nav)
       }

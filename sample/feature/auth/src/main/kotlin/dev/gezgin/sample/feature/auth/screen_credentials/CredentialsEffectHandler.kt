@@ -8,6 +8,7 @@ import dev.gezgin.sample.navigation.SignUpFlow.CredentialsScreenRoute
 fun handleCredentialsEffect(
   effect: CredentialsEffect,
   show: (String) -> Unit,
+  onIntent: (CredentialsIntent) -> Unit,
   nav: CredentialsNavigator,
 ) {
   when (effect) {

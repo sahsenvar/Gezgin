@@ -8,6 +8,7 @@ import dev.gezgin.sample.navigation.ItemDetailNavigator
 fun handleItemDetailEffect(
   effect: ItemDetailEffect,
   show: (String) -> Unit,
+  onIntent: (ItemDetailIntent) -> Unit,
   nav: ItemDetailNavigator,
 ) {
   when (effect) {
@@ -15,5 +16,25 @@ fun handleItemDetailEffect(
     is ItemDetailEffect.OpenRelated -> nav.goToRelated(effect.id)
     is ItemDetailEffect.OpenImage -> nav.goToItemImageViewer(effect.id)
     ItemDetailEffect.BackToDashboard -> nav.backToDashboard()
+    is ItemDetailEffect.ConfirmDelete ->
+      nav.openDeleteItemDialog(
+        itemId = effect.id,
+        onConfirm = {
+          nav.back()
+          onIntent(ItemDetailIntent.DeleteConfirmed)
+        },
+        onCancel = {
+          onIntent(ItemDetailIntent.DeleteCancelled)
+          nav.back()
+        },
+      )
+    is ItemDetailEffect.ChooseShareTarget ->
+      nav.openShareTargetSheet(
+        itemId = effect.id,
+        onSelect = { target ->
+          onIntent(ItemDetailIntent.ShareTargetChosen(target))
+          nav.back()
+        },
+      )
   }
 }

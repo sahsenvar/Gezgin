@@ -8,4 +8,8 @@ sealed interface ItemDetailEffect {
   data class OpenImage(val id: String) : ItemDetailEffect
 
   data object BackToDashboard : ItemDetailEffect
+
+  data class ConfirmDelete(val id: String) : ItemDetailEffect
+
+  data class ChooseShareTarget(val id: String) : ItemDetailEffect
 }
