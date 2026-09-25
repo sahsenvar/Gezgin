@@ -97,6 +97,7 @@ internal object NavigatorCodegen {
         EdgeKind.GO_TO -> members += goToFun(edge, graphsByFq, routesByFq)
         EdgeKind.REPLACE_TO -> members += replaceToFun(edge, graphsByFq, routesByFq)
         EdgeKind.QUIT_AND_GO_TO -> members += quitAndGoToFun(edge, graphsByFq, routesByFq)
+        EdgeKind.OPEN -> members += openFun(edge, graphsByFq, routesByFq)
         EdgeKind.GO_FOR_RESULT -> {
           val (funs, props) = goForResultMembers(route, edge, graphsByFq, routesByFq)
           members += funs
@@ -205,6 +206,20 @@ internal object NavigatorCodegen {
     val constructCall: CodeBlock,
     val params: List<ParameterSpec>,
   )
+
+  /** `@Open`: pushes the callback route built from the caller's arguments and lambdas. */
+  private fun openFun(
+    edge: EdgeModel,
+    graphsByFq: Map<String, GraphModelNode>,
+    routesByFq: Map<String, RouteModel>,
+  ): FunSpec {
+    val target = resolveTarget(edge.targetFq, graphsByFq, routesByFq)
+    val name = edge.name.ifEmpty { "open" + stripSuffix(target.simpleName) }
+    return FunSpec.builder(name)
+      .addParameters(target.params)
+      .addStatement("raw.open(%L)", target.constructCall)
+      .build()
+  }
 
   private fun goToFun(
     edge: EdgeModel,

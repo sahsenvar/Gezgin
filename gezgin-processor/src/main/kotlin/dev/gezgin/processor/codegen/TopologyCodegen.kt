@@ -79,6 +79,17 @@ internal object TopologyCodegen {
         .add("flowChains = %L,\n", flowChainsMap(model, graphsByFq))
         .add("flowStarts = %L,\n", flowStartsMap(model))
         .add("edges = %L,\n", edgesMap(model, graphsByFq, routesByFq))
+        .apply {
+          val transient = model.routes.filter(RouteModel::isCallbackRoute).sortedBy { it.fqName }
+          if (transient.isNotEmpty()) {
+            add("transientRoutes = setOf(")
+            transient.forEachIndexed { index, route ->
+              if (index > 0) add(", ")
+              add("%T::class", ClassName.bestGuess(route.fqName))
+            }
+            add("),\n")
+          }
+        }
         .unindent()
         .add(")")
         .build()
@@ -129,7 +140,8 @@ internal object TopologyCodegen {
    */
   fun generateSerializers(model: GraphModel, packageName: String): FileSpec {
     val polymorphicBody = CodeBlock.builder()
-    model.routes.forEach { route ->
+    // Callback routes are never persisted, so they have no serializer to register.
+    model.routes.filterNot(RouteModel::isCallbackRoute).forEach { route ->
       val routeClass = ClassName.bestGuess(route.fqName)
       if (route.isSerializable) {
         polymorphicBody.addStatement("%M(%T::class)", SUBCLASS, routeClass)

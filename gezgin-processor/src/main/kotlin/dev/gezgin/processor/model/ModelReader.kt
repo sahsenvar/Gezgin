@@ -21,6 +21,7 @@ private const val GO_TO_FQ = "dev.gezgin.core.annotation.GoTo"
 private const val REPLACE_TO_FQ = "dev.gezgin.core.annotation.ReplaceTo"
 private const val GO_FOR_RESULT_FQ = "dev.gezgin.core.annotation.GoForResult"
 private const val QUIT_AND_GO_TO_FQ = "dev.gezgin.core.annotation.QuitAndGoTo"
+private const val OPEN_FQ = "dev.gezgin.core.annotation.Open"
 private const val BACK_TO_FQ = "dev.gezgin.core.annotation.BackTo"
 private const val BACK_TO_START_FQ = "dev.gezgin.core.annotation.BackToStart"
 private const val QUIT_FQ = "dev.gezgin.core.annotation.Quit"
@@ -253,6 +254,8 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
         isNullable = resolved.isMarkedNullable,
         hasDefault = param.hasDefault,
         kind = SerialTypeClassifier.classify(resolved),
+        callback = resolved.callbackModelOrNull(),
+        isOnDismiss = param.isOnDismiss(),
       )
     }
 
@@ -269,12 +272,14 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
             REPLACE_TO_FQ -> EdgeKind.REPLACE_TO
             GO_FOR_RESULT_FQ -> EdgeKind.GO_FOR_RESULT
             QUIT_AND_GO_TO_FQ -> EdgeKind.QUIT_AND_GO_TO
+            OPEN_FQ -> EdgeKind.OPEN
             else -> null
           } ?: return@flatMap emptyList()
 
         val targetTypes =
           when (kind) {
-            EdgeKind.GO_TO -> annotation.classArgs("target")
+            EdgeKind.GO_TO,
+            EdgeKind.OPEN -> annotation.classArgs("target")
             EdgeKind.REPLACE_TO,
             EdgeKind.GO_FOR_RESULT,
             EdgeKind.QUIT_AND_GO_TO -> listOfNotNull(annotation.classArg("target"))

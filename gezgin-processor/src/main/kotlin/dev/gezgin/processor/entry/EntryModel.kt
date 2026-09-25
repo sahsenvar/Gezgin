@@ -49,4 +49,26 @@ internal data class EntryFunctionModel(
    * from the no-wrapper codegen, so a route is never registered twice.
    */
   val wrapper: dev.gezgin.processor.wrapper.WrapperBindingModel? = null,
+  /**
+   * Non-null when the route is a callback route: the composable's parameters in declaration order,
+   * each bound to `route`, `nav`, a route field or a guarded route callback.
+   */
+  val callbackArgs: List<CallbackEntryArg>? = null,
+  /** The route's `@OnDismiss` field, wired as the container-dismissal hook. */
+  val onDismissField: String? = null,
 )
+
+/** One composable argument of a callback-route entry. */
+internal data class CallbackEntryArg(val name: String, val source: CallbackArgSource)
+
+internal sealed interface CallbackArgSource {
+  data object RouteInstance : CallbackArgSource
+
+  data object Nav : CallbackArgSource
+
+  /** A plain route field, forwarded as `route.<name>`. */
+  data object Field : CallbackArgSource
+
+  /** A route callback, forwarded behind the `isOnStack` guard. */
+  data class Callback(val arity: Int) : CallbackArgSource
+}

@@ -39,9 +39,10 @@ internal object RouteSerializerCodegen {
 
   fun generate(model: GraphModel, packageName: String): FileSpec? {
     val routeTypes =
-      model.routes.filterNot(RouteModel::isSerializable).sortedBy(RouteModel::fqName).map {
-        routeSerializer(it, packageName)
-      }
+      model.routes
+        .filterNot { it.isSerializable || it.isCallbackRoute }
+        .sortedBy(RouteModel::fqName)
+        .map { routeSerializer(it, packageName) }
     val enumTypes =
       bareEnumTypes(model)
         .filter { it.packageName == packageName }
@@ -228,7 +229,7 @@ internal object RouteSerializerCodegen {
 
   private fun bareEnumTypes(model: GraphModel): List<ClassName> {
     val enumTypes = linkedMapOf<String, ClassName>()
-    model.routes.forEach { route ->
+    model.routes.filterNot(RouteModel::isCallbackRoute).forEach { route ->
       route.ctorParams.forEach { param -> collectBareEnums(param.kind, param.typeName, enumTypes) }
       collectResultEnum(route.resultTypeKind, route.resultTypeFq, enumTypes)
     }
