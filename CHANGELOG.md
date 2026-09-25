@@ -9,6 +9,20 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ### Added
 
+- **Callback taşıyan modallar.** Route'un ctor'unda lambda alanları bulunan bir `@Dialog` ya da
+  `@BottomSheet` (`val onConfirm: () -> Unit`, `val onSelect: (Item) -> Unit`) graph'ta
+  `@Open(Hedef::class)` ile açılır. Navigator'a `openX(args, callbacks)` üretilir ve sonuç doğrudan
+  lambda ile döner; `ResultRoute`, `launchX` ya da `xResults` gerekmez. Modal composable'ı route
+  alanlarını ad ve tip olarak parametre alır.
+  - Kapanışı çağıran yapar (callback içinde `nav.back()`). `@OnDismiss` ile işaretli alan geri
+    tuşu, dışarı dokunma ve swipe'ta çağrılır; modal hâlâ tepedeyse Gezgin ardından kapatır.
+  - Modal kapandıktan sonra gelen callback çağrısı yok sayılır. Tepede aynı tipte modal varken
+    ikinci açılış da yok sayılır.
+  - Callback modalları process-death kaydına yazılmaz; geri yüklemede kullanıcı arkasındaki
+    ekranı görür. Android'de navigator config change dışında bir sebeple bırakılırsa bu modallar
+    düşürülür.
+  - Yeni derleme kuralları: `OP1`–`OP5` ve `CB1`–`CB2`.
+
 - **iOS desteği.** `gezgin-core` ve `gezgin-test` artık `iosArm64` ve `iosSimulatorArm64`
   hedeflerini yayınlıyor (`.klib`). `iosX64` **yoktur**: üstüne kurulduğumuz JetBrains
   Navigation 3 artefaktları onu yayınlamıyor, dolayısıyla Intel-Mac simülatörleri desteklenmez.

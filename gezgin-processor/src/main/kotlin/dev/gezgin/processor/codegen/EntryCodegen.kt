@@ -5,6 +5,8 @@ import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.MemberName
+import dev.gezgin.processor.entry.CallbackArgSource
+import dev.gezgin.processor.entry.CallbackEntryArg
 import dev.gezgin.processor.entry.EntryFunctionModel
 
 private const val COMPOSE_PKG = "dev.gezgin.core.compose"
@@ -47,12 +49,15 @@ internal object EntryCodegen {
         FileSpec.builder(packageName, "GezginEntries")
           // A nav-wired register body reads the @GezginInternalApi LocalGezginRawNavigator and
           // LocalGezginEntryId; opt in the file only when at least one entry wires nav.
-          .apply { if (group.any { it.hasNavParam }) optInGezginInternalApi() }
+          .apply {
+            if (group.any { it.hasNavParam || it.callbackArgs != null }) optInGezginInternalApi()
+          }
           .apply { group.forEach { addFunction(provideEntryFun(it)) } }
           .build()
       }
 
   private fun provideEntryFun(entry: EntryFunctionModel): FunSpec {
+    if (entry.callbackArgs != null) return provideCallbackEntryFun(entry, entry.callbackArgs)
     val routeClass = ClassName.bestGuess(entry.routeFq)
     val composableFun = MemberName(entry.packageName, entry.functionSimpleName)
 
@@ -91,6 +96,60 @@ internal object EntryCodegen {
     body.add(")\n")
     body.unindent().add("}\n")
 
+    return FunSpec.builder("provide${entry.x}Entry")
+      .receiver(ENTRY_SCOPE)
+      .addCode(body.build())
+      .build()
+  }
+
+  /**
+   * A callback-route entry: route fields are forwarded by name, and each callback runs only while
+   * the entry is still on the stack, so a late or duplicate click after the modal closed is
+   * ignored. The route's `@OnDismiss` field becomes the container-dismissal hook.
+   */
+  private fun provideCallbackEntryFun(
+    entry: EntryFunctionModel,
+    args: List<CallbackEntryArg>,
+  ): FunSpec {
+    val routeClass = ClassName.bestGuess(entry.routeFq)
+    val composableFun = MemberName(entry.packageName, entry.functionSimpleName)
+    val body = CodeBlock.builder()
+    body.add(
+      "register<%T>(kind = %T.%L, noBack = %L",
+      routeClass,
+      ENTRY_KIND,
+      entry.kind.name,
+      entry.noBack,
+    )
+    entry.onDismissField?.let { body.add(", onDismiss·=·{·it.%N()·}", it) }
+    body.add(") { route ->\n").indent()
+    body.add("val raw = %M.current\n", LOCAL_RAW_NAVIGATOR)
+    body.add("val entryId = %M.current\n", LOCAL_ENTRY_ID)
+    if (args.any { it.source == CallbackArgSource.Nav }) {
+      val factoryFun =
+        MemberName(entry.routePackageName, NavigatorCodegen.rawFactoryFunName(entry.x))
+      body.add("val nav = raw.%M(entryId)\n", factoryFun)
+    }
+    body.add("%M(\n", composableFun).indent()
+    args.forEach { arg ->
+      when (val source = arg.source) {
+        CallbackArgSource.RouteInstance -> body.add("%N = route,\n", arg.name)
+        CallbackArgSource.Nav -> body.add("%N = nav,\n", arg.name)
+        CallbackArgSource.Field -> body.add("%N = route.%N,\n", arg.name, arg.name)
+        is CallbackArgSource.Callback -> {
+          val params = List(source.arity) { "p$it" }
+          val lambdaHead = if (params.isEmpty()) "" else params.joinToString(", ") + " -> "
+          body.add(
+            "%N = { ${lambdaHead}if (raw.isOnStack(entryId)) route.%N(${params.joinToString(", ")}) },\n"
+              .replace(" ", "·"),
+            arg.name,
+            arg.name,
+          )
+        }
+      }
+    }
+    body.unindent().add(")\n")
+    body.unindent().add("}\n")
     return FunSpec.builder("provide${entry.x}Entry")
       .receiver(ENTRY_SCOPE)
       .addCode(body.build())

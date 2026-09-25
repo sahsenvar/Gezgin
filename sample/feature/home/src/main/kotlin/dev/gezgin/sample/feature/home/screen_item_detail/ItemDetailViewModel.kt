@@ -30,6 +30,17 @@ class ItemDetailViewModel(route: HomeGraph.ItemDetailScreenRoute) :
       ItemDetailIntent.OpenRelated -> _effects.send(ItemDetailEffect.OpenRelated(_uiState.value.id))
       ItemDetailIntent.OpenImage -> _effects.send(ItemDetailEffect.OpenImage(_uiState.value.id))
       ItemDetailIntent.Back -> _effects.send(ItemDetailEffect.BackToDashboard)
+      ItemDetailIntent.DeleteRequested ->
+        _effects.send(ItemDetailEffect.ConfirmDelete(_uiState.value.id))
+      ItemDetailIntent.DeleteConfirmed -> {
+        _effects.send(ItemDetailEffect.ShowMessage("${_uiState.value.id} silindi"))
+        _effects.send(ItemDetailEffect.BackToDashboard)
+      }
+      ItemDetailIntent.DeleteCancelled -> _effects.send(ItemDetailEffect.ShowMessage("Silme iptal"))
+      ItemDetailIntent.ShareRequested ->
+        _effects.send(ItemDetailEffect.ChooseShareTarget(_uiState.value.id))
+      is ItemDetailIntent.ShareTargetChosen ->
+        _effects.send(ItemDetailEffect.ShowMessage("${intent.target} ile paylaşıldı"))
     }
   }
 }

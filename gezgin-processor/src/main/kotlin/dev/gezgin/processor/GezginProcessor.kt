@@ -21,6 +21,7 @@ import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.RouteModel
 import dev.gezgin.processor.model.dumpText
+import dev.gezgin.processor.model.isCallbackRoute
 import dev.gezgin.processor.wrapper.SlotProviderReader
 import dev.gezgin.processor.wrapper.WrapperBinder
 import dev.gezgin.processor.wrapper.WrapperModelReader
@@ -139,7 +140,9 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
           SlotProviderReader(resolver, environment.logger, wrapperResult.markers).read()
 
         val (wrapperBindings, bindOk) =
-          WrapperBinder(environment.logger).bind(wrapperResult.wrappers, slotProviders)
+          WrapperBinder(environment.logger).bind(wrapperResult.wrappers, slotProviders) { fq ->
+            resolver.isCallbackRoute(fq)
+          }
 
         val (entries, entriesOk) =
           EntryModelReader(resolver, environment.logger, model, wrapperBindings.keys).read()

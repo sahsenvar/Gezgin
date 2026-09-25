@@ -110,43 +110,51 @@ internal constructor(
    */
   @Suppress("UNCHECKED_CAST")
   internal fun save(): SavedState {
+    val transientIds =
+      state.stack.filter { it.route::class in topology.transientRoutes }.map { it.id }.toSet()
     val pendingSlots =
-      bus.slots.map { slot ->
-        when (val result = slot.result) {
-          null ->
-            SavedSlot(
-              slot.callerEntryId,
-              slot.edgeId,
-              slot.targetEntryId,
-              payloadJson = null,
-              canceled = false,
-            )
-          NavResult.Canceled ->
-            SavedSlot(
-              slot.callerEntryId,
-              slot.edgeId,
-              slot.targetEntryId,
-              payloadJson = null,
-              canceled = true,
-            )
-          is NavResult.Value<*> -> {
-            val serializer =
-              requireNotNull(topology.edges[slot.edgeId]?.resultSerializer) {
-                "Edge '${slot.edgeId}' has no resultSerializer; delivered Value slot cannot be serialized."
-              }
-                as KSerializer<Any?>
-            val payload = json.encodeToString(serializer, result.value)
-            SavedSlot(
-              slot.callerEntryId,
-              slot.edgeId,
-              slot.targetEntryId,
-              payloadJson = payload,
-              canceled = false,
-            )
+      bus.slots
+        .filter { it.callerEntryId !in transientIds && it.targetEntryId !in transientIds }
+        .map { slot ->
+          when (val result = slot.result) {
+            null ->
+              SavedSlot(
+                slot.callerEntryId,
+                slot.edgeId,
+                slot.targetEntryId,
+                payloadJson = null,
+                canceled = false,
+              )
+            NavResult.Canceled ->
+              SavedSlot(
+                slot.callerEntryId,
+                slot.edgeId,
+                slot.targetEntryId,
+                payloadJson = null,
+                canceled = true,
+              )
+            is NavResult.Value<*> -> {
+              val serializer =
+                requireNotNull(topology.edges[slot.edgeId]?.resultSerializer) {
+                  "Edge '${slot.edgeId}' has no resultSerializer; delivered Value slot cannot be serialized."
+                }
+                  as KSerializer<Any?>
+              val payload = json.encodeToString(serializer, result.value)
+              SavedSlot(
+                slot.callerEntryId,
+                slot.edgeId,
+                slot.targetEntryId,
+                payloadJson = payload,
+                canceled = false,
+              )
+            }
           }
         }
-      }
-    return SavedState(keys = state.stack, nextId = state.nextId, pendingSlots = pendingSlots)
+    return SavedState(
+      keys = state.stack.filter { it.id !in transientIds },
+      nextId = state.nextId,
+      pendingSlots = pendingSlots,
+    )
   }
 
   @Suppress("UNCHECKED_CAST")
@@ -189,6 +197,29 @@ internal constructor(
     val pushed = state.push(route, enterFlow = enterFlow, singleTop = singleTop) ?: return
     refreshBackStack()
     _events.tryEmit(NavEvent.Pushed(pushed.route))
+  }
+
+  /**
+   * Opens a callback route: a modal whose constructor carries caller lambdas. Single-top compares
+   * the route TYPE, because two instances never compare equal once they hold fresh lambdas; a
+   * second open of the same modal while it is on top is ignored. Such entries are not written to
+   * the process-death snapshot, so after restore the user sees the screen underneath.
+   */
+  public fun open(route: Route) {
+    if (state.stack.last().route::class == route::class) return
+    navigate(route, singleTop = false)
+  }
+
+  /**
+   * Removes every callback-route entry, releasing the caller lambdas they hold. Called when the
+   * navigator is abandoned for a reason other than a configuration change (e.g. a `restoreKey`
+   * switch), so an Activity-scoped holder does not keep stale lambdas alive.
+   */
+  internal fun dropTransientEntries() {
+    val removed = state.removeAll { it.route::class in topology.transientRoutes }
+    if (removed.isEmpty()) return
+    refreshBackStack()
+    settleRemoved(removed)
   }
 
   /**
@@ -328,6 +359,13 @@ internal constructor(
     if (state.stack.last().id != entryId) return // Ignore callbacks from entries that lost the top.
     back()
   }
+
+  /**
+   * Whether [entryId] is still on the stack. Generated callback-modal entries check it before
+   * forwarding a callback, so a late or duplicate click after the modal closed is ignored.
+   */
+  @GezginInternalApi
+  public fun isOnStack(entryId: Long): Boolean = state.stack.any { it.id == entryId }
 
   /**
    * The call-time top entry id — the hook generated navigators bind to the explicit-caller

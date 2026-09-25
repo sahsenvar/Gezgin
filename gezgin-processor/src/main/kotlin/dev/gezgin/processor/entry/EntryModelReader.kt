@@ -10,11 +10,14 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSValueArgument
+import com.google.devtools.ksp.symbol.KSValueParameter
 import dev.gezgin.processor.codegen.NavigatorCodegen
 import dev.gezgin.processor.codegen.NavigatorProbe
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
+import dev.gezgin.processor.model.callbackModelOrNull
+import dev.gezgin.processor.model.isOnDismiss
 
 private const val SCREEN_FQ = "dev.gezgin.core.annotation.Screen"
 private const val DIALOG_FQ = "dev.gezgin.core.annotation.Dialog"
@@ -187,7 +190,18 @@ internal class EntryModelReader(
     val navParam = params.firstOrNull { it.name?.asString() == "nav" }
     val unknownParams = params.filter { it.name?.asString() !in setOf("route", "nav") }
 
-    if (unknownParams.isNotEmpty() && !wrapped) {
+    val resolvedRouteType = resolveMandatoryRoute(annotation, fnName) ?: return null
+
+    val callbackRoute =
+      (resolvedRouteType.declaration as? KSClassDeclaration)?.callbackRouteFields()
+    val callbackArgs =
+      if (callbackRoute != null) {
+        readCallbackArgs(fn, kind, callbackRoute) ?: return null
+      } else {
+        null
+      }
+
+    if (callbackArgs == null && unknownParams.isNotEmpty() && !wrapped) {
       error(
         "SC3",
         "$fnName has unsupported parameter(s): " +
@@ -196,8 +210,6 @@ internal class EntryModelReader(
       )
       return null
     }
-
-    val resolvedRouteType = resolveMandatoryRoute(annotation, fnName) ?: return null
 
     // A `route:` param stays legal — it carries route DATA into the composable — but its type MUST
     // equal the mandatory annotation route; a mismatch would bind the wrong route (copy-paste bug).
@@ -322,7 +334,68 @@ internal class EntryModelReader(
       // routes while KSP still resolves their annotations.
       noBack = routeDecl.hasAnnotation(NO_BACK_FQ),
       x = x,
+      callbackArgs = callbackArgs,
+      onDismissField = callbackRoute?.firstOrNull { it.isOnDismiss() }?.name?.asString(),
     )
+  }
+
+  // endregion
+
+  // region Callback routes
+
+  /** The route's constructor parameters when at least one is a callback; `null` otherwise. */
+  private fun KSClassDeclaration.callbackRouteFields(): List<KSValueParameter>? {
+    val ctorParams = primaryConstructor?.parameters.orEmpty()
+    return ctorParams.takeIf { fields ->
+      fields.any { it.type.resolve().callbackModelOrNull() != null }
+    }
+  }
+
+  /**
+   * Binds each composable parameter of a callback-route entry (`CB1`/`CB2`): `route`, `nav`, or a
+   * route field matched by name whose type the parameter accepts.
+   */
+  private fun readCallbackArgs(
+    fn: KSFunctionDeclaration,
+    kind: EntryKindModel,
+    fields: List<KSValueParameter>,
+  ): List<CallbackEntryArg>? {
+    val fnName = fn.simpleName.asString()
+    if (kind != EntryKindModel.DIALOG && kind != EntryKindModel.BOTTOM_SHEET) {
+      error(
+        "CB1",
+        "$fnName: a callback route can only be bound with @Dialog or @BottomSheet; its callbacks " +
+          "belong to a modal opened through @Open",
+      )
+      return null
+    }
+    val fieldsByName = fields.associateBy { it.name?.asString() }
+    val args =
+      fn.parameters.map { param ->
+        val name = param.name?.asString().orEmpty()
+        val field = fieldsByName[name]
+        when {
+          name == "route" -> CallbackEntryArg(name, CallbackArgSource.RouteInstance)
+          name == "nav" -> CallbackEntryArg(name, CallbackArgSource.Nav)
+          field != null && param.type.resolve().isAssignableFrom(field.type.resolve()) -> {
+            val callback = field.type.resolve().callbackModelOrNull()
+            val source =
+              if (callback != null) CallbackArgSource.Callback(callback.parameterCount)
+              else CallbackArgSource.Field
+            CallbackEntryArg(name, source)
+          }
+          else -> {
+            error(
+              "CB2",
+              "$fnName: parameter '$name' matches no field of the callback route by name and " +
+                "type; a callback-modal composable takes route fields (same name and type), " +
+                "route or nav",
+            )
+            return null
+          }
+        }
+      }
+    return args
   }
 
   // endregion

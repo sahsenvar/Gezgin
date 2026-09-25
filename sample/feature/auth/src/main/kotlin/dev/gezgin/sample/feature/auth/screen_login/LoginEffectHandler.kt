@@ -8,7 +8,12 @@ import dev.gezgin.sample.navigation.AuthGraph.LoginScreenRoute
 import dev.gezgin.sample.navigation.LoginNavigator
 
 @Effects(LoginScreenRoute::class)
-fun handleLoginEffect(effect: LoginEffect, show: (String) -> Unit, nav: LoginNavigator) {
+fun handleLoginEffect(
+  effect: LoginEffect,
+  show: (String) -> Unit,
+  onIntent: (LoginIntent) -> Unit,
+  nav: LoginNavigator,
+) {
   when (effect) {
     is LoginEffect.ShowMessage -> show(effect.text)
     LoginEffect.LoginSuccess -> nav.loginSuccess()

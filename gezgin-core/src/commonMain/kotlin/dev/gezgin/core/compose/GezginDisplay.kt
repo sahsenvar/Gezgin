@@ -105,7 +105,8 @@ public fun GezginDisplay(
   // Keep callback identity stable while navigator and registration scope remain unchanged.
   val onBack = remember(navigator, scope) { gezginOnBack(navigator, scope) }
   // Pin modal dismissal to its owner so duplicate or late callbacks cannot pop the next screen.
-  val pinnedBack: (Long) -> Unit = remember(navigator) { { id -> navigator.back(id) } }
+  val pinnedBack: (Long) -> Unit =
+    remember(navigator, scope) { gezginModalDismiss(navigator, scope) }
   // The platform wrapper reconciles Android and desktop scene-strategy signatures.
   GezginNavDisplay(
     entries = decoratedEntries,
@@ -140,6 +141,18 @@ internal fun gezginOnBack(navigator: RawNavigator, scope: GezginEntryScope): () 
     navigator.back()
   }
 }
+
+/**
+ * The modal container's dismissal callback, pinned to the owning entry. A registered `@OnDismiss`
+ * hook runs first; the entry is popped afterwards only while it is still on top, so a hook that
+ * already closed the modal (or popped further) is never followed by a second pop.
+ */
+internal fun gezginModalDismiss(navigator: RawNavigator, scope: GezginEntryScope): (Long) -> Unit =
+  { entryId ->
+    val key = navigator.keys.lastOrNull { it.id == entryId }
+    if (key != null) scope.registry[key.route::class]?.onDismiss?.invoke(key.route)
+    navigator.back(entryId)
+  }
 
 /** Returns whether [entryId] belongs to the bottom entry that defines root behavior. */
 private fun isRootEntry(keys: List<GezginKey>, entryId: Long): Boolean =

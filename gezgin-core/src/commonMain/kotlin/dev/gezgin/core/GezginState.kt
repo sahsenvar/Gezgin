@@ -81,6 +81,12 @@ internal class GezginState(
     return removed
   }
 
+  fun removeAll(predicate: (GezginKey) -> Boolean): List<GezginKey> {
+    val removed = _stack.filter(predicate)
+    _stack.removeAll(predicate)
+    return removed
+  }
+
   fun currentFlowId(): Long? = _stack.lastOrNull()?.flowPath?.lastOrNull()
 
   fun quitFlow(flowInstanceId: Long): List<GezginKey>? {

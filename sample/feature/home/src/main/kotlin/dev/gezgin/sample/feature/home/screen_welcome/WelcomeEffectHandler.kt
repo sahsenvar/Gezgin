@@ -5,7 +5,12 @@ import dev.gezgin.sample.navigation.HomeGraph.WelcomeScreenRoute
 import dev.gezgin.sample.navigation.WelcomeNavigator
 
 @Effects(WelcomeScreenRoute::class)
-fun handleWelcomeEffect(effect: WelcomeEffect, show: (String) -> Unit, nav: WelcomeNavigator) {
+fun handleWelcomeEffect(
+  effect: WelcomeEffect,
+  show: (String) -> Unit,
+  onIntent: (WelcomeIntent) -> Unit,
+  nav: WelcomeNavigator,
+) {
   when (effect) {
     is WelcomeEffect.ShowMessage -> show(effect.text)
     WelcomeEffect.ContinueToDashboard -> nav.continueToDashboard()

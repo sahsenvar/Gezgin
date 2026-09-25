@@ -8,6 +8,7 @@ import dev.gezgin.sample.navigation.PickSourceNavigator
 fun handlePickSourceEffect(
   effect: PickSourceEffect,
   show: (String) -> Unit,
+  onIntent: (PickSourceIntent) -> Unit,
   nav: PickSourceNavigator,
 ) {
   when (effect) {

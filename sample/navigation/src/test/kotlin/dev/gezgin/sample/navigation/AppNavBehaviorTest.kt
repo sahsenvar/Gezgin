@@ -4,6 +4,7 @@ import dev.gezgin.core.GezginInternalApi
 import dev.gezgin.core.NavResult
 import dev.gezgin.sample.domain.model.AvatarChoice
 import dev.gezgin.sample.domain.model.NotificationLevel
+import dev.gezgin.sample.domain.model.ShareTarget
 import dev.gezgin.sample.domain.model.SortOrder
 import dev.gezgin.test.GezginTestNavigator
 import kotlin.test.Test
@@ -346,5 +347,42 @@ class AppNavBehaviorTest {
     nav.fromNotificationsSheet().back()
 
     assertEquals(NavResult.Canceled, resultDeferred.await())
+  }
+
+  @Test
+  fun itemDetailDeleteDialog_confirmCallbackClosesItAndReachesTheCaller() {
+    val nav = GezginTestNavigator(start = HomeGraph.DashboardScreenRoute, topology = gezginTopology)
+    nav.fromDashboard().goToItemDetail("42")
+    val events = mutableListOf<String>()
+
+    nav
+      .fromItemDetail()
+      .openDeleteItemDialog(
+        itemId = "42",
+        onConfirm = {
+          nav.fromItemDetail().back()
+          events += "confirmed"
+        },
+        onCancel = { events += "cancelled" },
+      )
+    (nav.backStack.last() as HomeGraph.DeleteItemDialogRoute).onConfirm()
+
+    assertEquals(listOf("confirmed"), events)
+    assertEquals(
+      listOf(HomeGraph.DashboardScreenRoute, HomeGraph.ItemDetailScreenRoute("42")),
+      nav.backStack,
+    )
+  }
+
+  @Test
+  fun itemDetailShareSheet_selectCallbackCarriesTheChosenTarget() {
+    val nav = GezginTestNavigator(start = HomeGraph.DashboardScreenRoute, topology = gezginTopology)
+    nav.fromDashboard().goToItemDetail("42")
+    var chosen: ShareTarget? = null
+
+    nav.fromItemDetail().openShareTargetSheet(itemId = "42", onSelect = { chosen = it })
+    (nav.backStack.last() as HomeGraph.ShareTargetSheetRoute).onSelect(ShareTarget.EMAIL)
+
+    assertEquals(ShareTarget.EMAIL, chosen)
   }
 }

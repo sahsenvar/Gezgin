@@ -37,7 +37,7 @@ import kotlin.reflect.KClass
 @Composable
 fun <S, I, E> ShowcaseScreenRoot(
   @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
-  @FilledBy(Effects::class) onEffect: (E, (String) -> Unit) -> Unit,
+  @FilledBy(Effects::class) onEffect: (E, (String) -> Unit, (I) -> Unit) -> Unit,
   @FilledBy(TopBar::class) topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
   @FilledBy(ResultCollector::class) resultCollector: @Composable ((I) -> Unit) -> Unit = { _ -> },
   @FilledBy(Screen::class) content: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,
@@ -47,7 +47,11 @@ fun <S, I, E> ShowcaseScreenRoot(
   val state by vm.uiState.collectAsStateWithLifecycle()
   LaunchedEffect(vm) {
     vm.effects.collect { effect ->
-      onEffect(effect) { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
+      onEffect(
+        effect,
+        { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() },
+        vm::onIntent,
+      )
     }
   }
   resultCollector(vm::onIntent)
@@ -71,7 +75,7 @@ fun <S, I, E> ShowcaseScreenRoot(
 @Composable
 fun <S, I, E> ShowcaseSheetRoot(
   @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
-  @FilledBy(Effects::class) onEffect: (E, (String) -> Unit) -> Unit,
+  @FilledBy(Effects::class) onEffect: (E, (String) -> Unit, (I) -> Unit) -> Unit,
   @FilledBy(BottomSheet::class) content: @Composable (S, (I) -> Unit) -> Unit,
 ) {
   val context = LocalContext.current
@@ -79,7 +83,11 @@ fun <S, I, E> ShowcaseSheetRoot(
   val state by vm.uiState.collectAsStateWithLifecycle()
   LaunchedEffect(vm) {
     vm.effects.collect { effect ->
-      onEffect(effect) { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
+      onEffect(
+        effect,
+        { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() },
+        vm::onIntent,
+      )
     }
   }
   content(state, vm::onIntent)

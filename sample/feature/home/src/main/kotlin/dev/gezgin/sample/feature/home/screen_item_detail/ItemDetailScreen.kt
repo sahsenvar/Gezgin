@@ -29,6 +29,8 @@ fun ColumnScope.ItemDetailScreen(state: ItemDetailUiState, onIntent: (ItemDetail
         Text("İlgili ürün (aynı id, yeni entry)")
       }
       Button(onClick = { onIntent(ItemDetailIntent.OpenImage) }) { Text("Görseli tam ekran gör") }
+      Button(onClick = { onIntent(ItemDetailIntent.ShareRequested) }) { Text("Paylaş") }
+      Button(onClick = { onIntent(ItemDetailIntent.DeleteRequested) }) { Text("Sil") }
       TextButton(onClick = { onIntent(ItemDetailIntent.Back) }) { Text("Panoya dön") }
     }
   }

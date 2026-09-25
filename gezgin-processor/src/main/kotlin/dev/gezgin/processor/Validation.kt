@@ -44,6 +44,8 @@ internal class GezginValidator(private val model: GraphModel, private val logger
       checkE5(route)
       checkE6(route)
       checkSZ1(route)
+      checkOpenEdges(route)
+      checkCallbackRoute(route)
       checkN9(route)
       checkN10Members(route)
       checkNB1(route)
@@ -251,10 +253,76 @@ internal class GezginValidator(private val model: GraphModel, private val logger
 
   // endregion
 
+  // region OP — callback routes and @Open
+
+  /** `@Open` must target a callback route, and a callback route is reachable only via `@Open`. */
+  private fun checkOpenEdges(route: RouteModel) {
+    route.edges.forEach { edge ->
+      val target = routesByFq[edge.targetFq]
+      val targetIsCallbackRoute = target?.isCallbackRoute == true
+      if (edge.kind == EdgeKind.OPEN && !targetIsCallbackRoute) {
+        error(
+          "OP1",
+          "@Open target ${simple(edge.targetFq)} is not a callback route (source: " +
+            "${route.simpleName}); @Open opens a route whose constructor declares at least one " +
+            "function-typed callback",
+        )
+      } else if (edge.kind != EdgeKind.OPEN && targetIsCallbackRoute) {
+        error(
+          "OP2",
+          "@${edge.kind.annotationName()} target ${simple(edge.targetFq)} is a callback route " +
+            "(source: ${route.simpleName}); a callback route can only be opened with @Open, " +
+            "which passes its callbacks",
+        )
+      }
+    }
+  }
+
+  private fun checkCallbackRoute(route: RouteModel) {
+    val callbacks = route.ctorParams.filter { it.callback != null }
+    if (callbacks.isEmpty()) {
+      route.ctorParams
+        .filter { it.isOnDismiss }
+        .forEach { error("OP5", onDismissMessage(route, it.name)) }
+      return
+    }
+    if (route.resultTypeFq != null || route.isStart) {
+      error(
+        "OP3",
+        "${route.fqName}: a callback route cannot be a ResultRoute or a @StartDestination; its " +
+          "callbacks replace the result, and it is never restored after process death",
+      )
+    }
+    callbacks
+      .filter { it.callback!!.isSuspend || !it.callback.returnsUnit }
+      .forEach {
+        error(
+          "OP4",
+          "${route.fqName}: callback '${it.name}' must be a non-suspend function returning Unit",
+        )
+      }
+    val onDismiss = route.ctorParams.filter { it.isOnDismiss }
+    onDismiss
+      .filter { param ->
+        val callback = param.callback
+        callback == null || callback.parameterCount != 0 || callback.isSuspend
+      }
+      .forEach { error("OP5", onDismissMessage(route, it.name)) }
+    if (onDismiss.size > 1) {
+      error("OP5", "${route.fqName}: @OnDismiss may be used at most once per route")
+    }
+  }
+
+  private fun onDismissMessage(route: RouteModel, name: String): String =
+    "${route.fqName}: @OnDismiss on '$name' requires a parameterless () -> Unit callback"
+
+  // endregion
+
   // region Persisted type serializer reachability
 
   private fun checkSZ1(route: RouteModel) {
-    if (route.isSerializable) return
+    // A callback route is never persisted, so its parameters need no serializer.
+    if (route.isSerializable || route.isCallbackRoute) return
 
     route.ctorParams.forEach { param ->
       val kind = param.kind as? SerialKind.Unsupported ?: return@forEach
@@ -436,6 +504,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
         EdgeKind.REPLACE_TO -> record(edge.name.ifEmpty { "replaceTo$derived" }, edge.targetFq)
         EdgeKind.QUIT_AND_GO_TO ->
           record(edge.name.ifEmpty { "quitAndGoTo$derived" }, edge.targetFq)
+        EdgeKind.OPEN -> record(edge.name.ifEmpty { "open$derived" }, edge.targetFq)
         EdgeKind.GO_FOR_RESULT -> {
           val x = edge.name.ifEmpty { derived }.replaceFirstChar { it.uppercase() }
           record("launch$x", edge.targetFq)
@@ -651,6 +720,7 @@ internal class GezginValidator(private val model: GraphModel, private val logger
       EdgeKind.REPLACE_TO -> "ReplaceTo"
       EdgeKind.GO_FOR_RESULT -> "GoForResult"
       EdgeKind.QUIT_AND_GO_TO -> "QuitAndGoTo"
+      EdgeKind.OPEN -> "Open"
     }
 
   private fun error(code: String, message: String) {

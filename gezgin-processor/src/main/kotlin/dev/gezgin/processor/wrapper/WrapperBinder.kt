@@ -18,14 +18,20 @@ internal class WrapperBinder(private val logger: KSPLogger) {
   fun bind(
     wrappers: List<WrapperModel>,
     providers: List<SlotProviderModel>,
+    isCallbackRoute: (String) -> Boolean = { false },
   ): Pair<Map<String, WrapperBindingModel>, Boolean> {
     if (wrappers.isEmpty()) return emptyMap<String, WrapperBindingModel>() to true
 
     // The routes to bind are exactly those with a content-marker provider — a `@Screen`,
     // `@Dialog`, `@BottomSheet` or `@FullscreenModal` function. Deriving the set here rather than
     // from the entry models keeps the wrapper pipeline independent of how entries are read.
+    // A callback modal is a plain composable taking route fields and callbacks; no wrapper owns it.
     val routesWithContent =
-      providers.filter { it.markerFq in CONTENT_MARKER_FQS }.map { it.routeFq }.toSet()
+      providers
+        .filter { it.markerFq in CONTENT_MARKER_FQS }
+        .map { it.routeFq }
+        .filterNot(isCallbackRoute)
+        .toSet()
     val providersByRoute = providers.groupBy { it.routeFq }
     val bindings = mutableMapOf<String, WrapperBindingModel>()
 

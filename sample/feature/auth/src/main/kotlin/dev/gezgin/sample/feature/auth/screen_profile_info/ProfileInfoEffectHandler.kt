@@ -8,6 +8,7 @@ import dev.gezgin.sample.navigation.SignUpFlow.ProfileInfoScreenRoute
 fun handleProfileInfoEffect(
   effect: ProfileInfoEffect,
   show: (String) -> Unit,
+  onIntent: (ProfileInfoIntent) -> Unit,
   nav: ProfileInfoNavigator,
 ) {
   when (effect) {

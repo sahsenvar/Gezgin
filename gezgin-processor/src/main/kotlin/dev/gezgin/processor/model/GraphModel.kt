@@ -19,6 +19,17 @@ internal data class ParamModel(
   val isNullable: Boolean,
   val hasDefault: Boolean,
   val kind: SerialKind,
+  /** Non-null when the parameter has a function type: a caller callback of a callback route. */
+  val callback: CallbackModel? = null,
+  /** Whether the parameter carries `@OnDismiss`. */
+  val isOnDismiss: Boolean = false,
+)
+
+/** The shape of a function-typed constructor parameter, read for the `OP4`/`OP5` rules. */
+internal data class CallbackModel(
+  val isSuspend: Boolean,
+  val returnsUnit: Boolean,
+  val parameterCount: Int,
 )
 
 /** The kind of a forward navigation edge declared on a route. */
@@ -27,6 +38,7 @@ internal enum class EdgeKind {
   REPLACE_TO,
   GO_FOR_RESULT,
   QUIT_AND_GO_TO,
+  OPEN,
 }
 
 /** The kind of a backward navigation edge declared on a route. */
@@ -86,7 +98,14 @@ internal data class RouteModel(
    * gets one emitted for it.
    */
   val isSerializable: Boolean = false,
-)
+) {
+  /**
+   * A callback route carries caller lambdas in its constructor. It is opened only through `@Open`,
+   * never persisted, and therefore needs no serializer.
+   */
+  val isCallbackRoute: Boolean
+    get() = ctorParams.any { it.callback != null }
+}
 
 /**
  * A `@NavGraph`/`@FlowGraph`-annotated interface that groups routes (and possibly nested graphs).

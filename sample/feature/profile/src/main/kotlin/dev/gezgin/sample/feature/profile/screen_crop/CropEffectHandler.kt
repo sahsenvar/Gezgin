@@ -5,7 +5,12 @@ import dev.gezgin.sample.navigation.AvatarFlow.CropScreenRoute
 import dev.gezgin.sample.navigation.CropNavigator
 
 @Effects(CropScreenRoute::class)
-fun handleCropEffect(effect: CropEffect, show: (String) -> Unit, nav: CropNavigator) {
+fun handleCropEffect(
+  effect: CropEffect,
+  show: (String) -> Unit,
+  onIntent: (CropIntent) -> Unit,
+  nav: CropNavigator,
+) {
   when (effect) {
     is CropEffect.ShowMessage -> show(effect.text)
     CropEffect.OpenZoom -> nav.goToZoom()

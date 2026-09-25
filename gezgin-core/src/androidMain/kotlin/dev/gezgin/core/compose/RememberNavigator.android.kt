@@ -1,9 +1,14 @@
 package dev.gezgin.core.compose
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -68,6 +73,12 @@ internal actual fun rememberRawNavigatorInstance(
           },
       )
     val navigator = holder.navigator
+    // Callback modals hold caller lambdas. Release them when this navigator leaves composition for
+    // any reason other than a configuration change, since the holder outlives the composition.
+    val activity = LocalContext.current.findActivity()
+    DisposableEffect(navigator) {
+      onDispose { if (activity?.isChangingConfigurations != true) navigator.dropTransientEntries() }
+    }
     val pdSnapshot =
       rememberSaveable(
         restoreKey,
@@ -101,6 +112,13 @@ internal actual fun rememberRawNavigatorInstance(
       }
     }
     navigator
+  }
+
+private tailrec fun Context.findActivity(): Activity? =
+  when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
   }
 
 /** Activity-scoped holder that adopts a saved snapshot at most once during its lifetime. */

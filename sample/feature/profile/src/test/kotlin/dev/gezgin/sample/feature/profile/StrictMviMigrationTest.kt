@@ -43,7 +43,7 @@ class StrictMviMigrationTest {
       assertEquals(ProfileEffect.OpenSettings, effect)
 
       val raw = RawNavigator(start = ProfileScreenRoute, topology = gezginTopology)
-      handleProfileEffect(effect, {}, raw.profileNavigator(entryId = 1L))
+      handleProfileEffect(effect, {}, {}, raw.profileNavigator(entryId = 1L))
       assertEquals(SettingsScreenRoute, raw.current)
     }
 

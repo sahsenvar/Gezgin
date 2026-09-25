@@ -64,3 +64,26 @@ public annotation class GoForResult(val target: KClass<out Route>, val name: Str
  * @author @sahsenvar
  */
 @Target(AnnotationTarget.CLASS) public annotation class QuitAndGoTo(val target: KClass<out Route>)
+
+/**
+ * Callback-modal edge: opens each `target`, a route whose constructor carries caller lambdas (e.g.
+ * `val onConfirm: () -> Unit`). Codegen emits a typed `openX(args, callbacks)` per target. The
+ * modal is closed by the caller (`nav.back()` inside a callback); its entry is not written to the
+ * process-death snapshot, so after restore the user sees the screen underneath.
+ *
+ * @property target callback routes that can be opened through this edge
+ * @property name an optional method name replacing the derived `openX`
+ * @author @sahsenvar
+ */
+@Target(AnnotationTarget.CLASS)
+@Repeatable
+public annotation class Open(vararg val target: KClass<out Route>, val name: String = "")
+
+/**
+ * Marks the callback-route constructor property invoked when the user dismisses the modal container
+ * (back, outside tap, swipe). Gezgin pops the entry afterwards only if the callback left it on top.
+ * At most one per route, on a parameterless `() -> Unit` property.
+ *
+ * @author @sahsenvar
+ */
+@Target(AnnotationTarget.VALUE_PARAMETER) public annotation class OnDismiss
