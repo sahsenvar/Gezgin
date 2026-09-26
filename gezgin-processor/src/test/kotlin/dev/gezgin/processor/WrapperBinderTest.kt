@@ -132,6 +132,100 @@ class WrapperBinderTest {
     assertContains(result.messages, "[SW7]")
   }
 
+  private val viewModelWrapper =
+    """
+    interface Vm<S, I, E>
+
+    sealed interface DetailEvent
+
+    class DetailViewModel : Vm<DetailUiState, DetailIntent, DetailEvent>
+
+    @ScreenSlot annotation class ViewModelOf(val route: KClass<out Route>)
+
+    @ScreenSlot annotation class EffectHandler(val route: KClass<out Route>)
+
+    @ScreenWrapper
+    @Composable
+    fun <S, I, E> appRoot(
+      @FilledBy(ViewModelOf::class) viewModel: @Composable () -> Vm<S, I, E>,
+      @FilledBy(EffectHandler::class) effectHandler: @Composable (E, (I) -> Unit) -> Unit = { _, _ -> },
+      @FilledBy(Screen::class) content: @Composable (S, (I) -> Unit) -> Unit,
+    ) = Unit
+    """
+      .trimIndent()
+
+  @Test
+  fun `a type parameter no slot parameter binds is bound from a filled slot's return supertype`() {
+    val result =
+      compileGezgin(
+        fixture(
+          viewModelWrapper,
+          """
+          @ViewModelOf(AppGraph.DetailRoute::class)
+          @Composable fun detailViewModel(): DetailViewModel = DetailViewModel()
+
+          $detailScreen
+          """
+            .trimIndent(),
+        ),
+        kspArgs = mapOf("gezgin.dumpWrapper" to "true", "gezgin.emitEntries" to "false"),
+      )
+
+    assertFalse(result.messages.contains("[SW7]"), result.messages)
+    val dump = findGeneratedResource("GezginWrapperDump.txt")!!.readText()
+    assertContains(dump, "binding app.AppGraph.DetailRoute wrapper=app.appRoot")
+    assertContains(dump, "typeArgs=[app.DetailUiState, app.DetailIntent, app.DetailEvent]")
+  }
+
+  @Test
+  fun `a return type binding never overrides what the slot parameters already bound`() {
+    val result =
+      compileGezgin(
+        fixture(
+          viewModelWrapper,
+          """
+          sealed interface OtherEvent
+
+          class OtherViewModel : Vm<DetailUiState, DetailIntent, OtherEvent>
+
+          @ViewModelOf(AppGraph.DetailRoute::class)
+          @Composable fun detailViewModel(): OtherViewModel = OtherViewModel()
+
+          @EffectHandler(AppGraph.DetailRoute::class)
+          @Composable fun detailEffects(effect: DetailEvent, onIntent: (DetailIntent) -> Unit) = Unit
+
+          $detailScreen
+          """
+            .trimIndent(),
+        ),
+        kspArgs = mapOf("gezgin.dumpWrapper" to "true", "gezgin.emitEntries" to "false"),
+      )
+
+    assertFalse(result.messages.contains("[SW7]"), result.messages)
+    val dump = findGeneratedResource("GezginWrapperDump.txt")!!.readText()
+    assertContains(dump, "typeArgs=[app.DetailUiState, app.DetailIntent, app.DetailEvent]")
+  }
+
+  @Test
+  fun `SW7 still fires when the provider's return type does not carry the missing argument`() {
+    val result =
+      compileGezgin(
+        fixture(
+          viewModelWrapper,
+          """
+          @ViewModelOf(AppGraph.DetailRoute::class)
+          @Composable fun detailViewModel(): Any = DetailViewModel()
+
+          $detailScreen
+          """
+            .trimIndent(),
+        ),
+        kspArgs = mapOf("gezgin.emitEntries" to "false"),
+      )
+
+    assertContains(result.messages, "[SW7]")
+  }
+
   @Test
   fun `SW6 fires when two wrappers are candidates for one route`() {
     val result =

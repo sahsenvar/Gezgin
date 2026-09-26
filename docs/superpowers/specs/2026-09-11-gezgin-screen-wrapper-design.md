@@ -230,8 +230,15 @@ only from §6.1 unification, applied across all filled slots:
 
 - `S`, `I` bind from the content slot against the `@Screen` provider.
 - `E` binds from the effect slot against its provider.
-- A type parameter appearing in no filled slot cannot be bound. This is an error (§9, `SW7`) whose
-  message names the parameter and instructs the author to surface it in a slot.
+- A type parameter still unbound after that falls back to the filled slots' return types: a slot
+  `viewModel: () -> Vm<S, I, E>` filled by `fun detailViewModel(): DetailViewModel` binds `E`
+  through `DetailViewModel : Vm<DetailState, DetailIntent, DetailEvent>` (the provider's return
+  type and all of its supertypes are tried). This lets a route leave the effect slot to its default
+  when a host outside the screen owns the effect stream. The fallback runs after parameter
+  unification and commits a candidate only when it unifies completely, so it never changes a
+  binding a parameter produced.
+- A type parameter bound by neither cannot be bound. This is an error (§9, `SW7`) whose message
+  names the parameter and instructs the author to surface it in a slot's parameters or return type.
 
 This rule is why the design carries no `@Screen(viewModel = …)` argument and why the wrapper needs
 no `reified` type parameter: the ViewModel type reaches the wrapper as the return type of a slot
