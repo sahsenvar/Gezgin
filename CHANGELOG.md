@@ -9,6 +9,15 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ### Added
 
+- **Wrapper tip parametresi slotun dönüş tipinden bağlanır.** Slot parametrelerinden bağlanamayan
+  bir tip parametresi artık doldurulan slotun dönüş tipinden okunur: `viewModel: () -> Vm<S, I, E>`
+  slotu `fun detailViewModel(): DetailViewModel` ile doldurulunca `E`,
+  `DetailViewModel : Vm<DetailState, DetailIntent, DetailEvent>` üzerinden bağlanır (dönüş tipi ve
+  tüm üst tipleri denenir). Böylece efekt akışını ekran dışında bir host tüketen route'lar efekt
+  slotunu varsayılanına bırakabilir; eskiden bu `SW7` verirdi. Yedek bağlama parametre
+  birleştirmesinden sonra çalışır ve yalnızca tamamen birleşen adayı işler, yani parametrelerin
+  ürettiği bir bağlamayı hiçbir zaman değiştirmez.
+
 - **Callback taşıyan modallar.** Route'un ctor'unda lambda alanları bulunan bir `@Dialog` ya da
   `@BottomSheet` (`val onConfirm: () -> Unit`, `val onSelect: (Item) -> Unit`) graph'ta
   `@Open(Hedef::class)` ile açılır. Navigator'a `openX(args, callbacks)` üretilir ve sonuç doğrudan

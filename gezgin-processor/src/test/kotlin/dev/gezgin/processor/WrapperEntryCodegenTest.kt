@@ -180,6 +180,85 @@ class WrapperEntryCodegenTest {
     assertContains(text, "handleDetailEffects(effects = effects, onIntent = onIntent)")
   }
 
+  /**
+   * A route that leaves the effect slot — the only slot naming `E` in its parameters — to its
+   * default: an application whose effects are consumed by a host elsewhere. `E` binds through the
+   * view-model slot's return type instead, and the generated call names it explicitly.
+   */
+  private val returnTypeFixture =
+    SourceFile.kotlin(
+      "ReturnTypeFixture.kt",
+      """
+      package app
+
+      import androidx.compose.runtime.Composable
+      import dev.gezgin.core.Route
+      import dev.gezgin.core.annotation.BackTo
+      import dev.gezgin.core.annotation.FilledBy
+      import dev.gezgin.core.annotation.GoTo
+      import dev.gezgin.core.annotation.NavGraph
+      import dev.gezgin.core.annotation.Screen
+      import dev.gezgin.core.annotation.ScreenSlot
+      import dev.gezgin.core.annotation.ScreenWrapper
+      import kotlin.reflect.KClass
+      import kotlinx.coroutines.flow.Flow
+      import kotlinx.serialization.Serializable
+
+      @NavGraph
+      @Serializable
+      sealed interface AppGraph : Route {
+        @GoTo(DetailRoute::class) @Serializable data object ListRoute : AppGraph
+
+        @BackTo(ListRoute::class)
+        @Serializable
+        data class DetailRoute(val id: String) : AppGraph
+      }
+
+      data class DetailUiState(val title: String)
+
+      sealed interface DetailIntent
+
+      sealed interface DetailEffect
+
+      interface Vm<S, I, E>
+
+      class DetailViewModel : Vm<DetailUiState, DetailIntent, DetailEffect>
+
+      @ScreenSlot annotation class ViewModelOf(val route: KClass<out Route>)
+
+      @ScreenSlot annotation class Effects(val route: KClass<out Route>)
+
+      @ScreenWrapper
+      @Composable
+      fun <S, I, E> appRoot(
+        @FilledBy(ViewModelOf::class) viewModel: @Composable () -> Vm<S, I, E>,
+        @FilledBy(Effects::class) onEffect: @Composable (Flow<E>, (I) -> Unit) -> Unit = { _, _ -> },
+        @FilledBy(Screen::class) content: @Composable (S, (I) -> Unit) -> Unit,
+      ) = Unit
+
+      @ViewModelOf(AppGraph.DetailRoute::class)
+      @Composable
+      fun detailViewModel(): DetailViewModel = DetailViewModel()
+
+      @Screen(AppGraph.DetailRoute::class)
+      @Composable
+      fun detailScreen(state: DetailUiState, onIntent: (DetailIntent) -> Unit) = Unit
+      """
+        .trimIndent(),
+    )
+
+  @Test
+  fun `a type parameter bound only through a slot's return supertype is called`() {
+    val result = compileGezgin(returnTypeFixture)
+    val generated = result.generatedSourceFor("GezginWrapperEntries.kt")
+
+    assertNotNull(generated, "GezginWrapperEntries.kt was not generated: ${result.messages}")
+    val text = generated.readText()
+    assertContains(text, "appRoot<DetailUiState, DetailIntent, DetailEffect>(")
+    assertContains(text, "viewModel = { detailViewModel() }")
+    assertFalse(text.contains("onEffect ="), "the defaulted effect slot must be omitted:\n$text")
+  }
+
   @Test
   fun `the route registers once - no core-mode entry is emitted alongside`() {
     val result = compileGezgin(fixture)

@@ -1,12 +1,15 @@
 package dev.gezgin.processor.wrapper
 
+import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSClassifierReference
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.KSTypeReference
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import dev.gezgin.processor.codegen.NavigatorCodegen
 
@@ -116,7 +119,25 @@ internal class SlotProviderReader(
       receiverTypeName = declaration.extensionReceiver?.resolve()?.toTypeName(),
       slotParams = slotParams,
       roleParams = roleParams,
+      returnTypeCandidates = declaration.returnTypeCandidates(),
     )
+  }
+
+  /**
+   * The declared return type and every supertype of it, in that order. A return type that does not
+   * resolve contributes nothing: it can only ever be a fallback for binding, never a requirement.
+   */
+  private fun KSFunctionDeclaration.returnTypeCandidates(): List<TypeName> {
+    val returned = returnType?.resolve()?.takeUnless { it.isError } ?: return emptyList()
+    val supertypes =
+      (returned.declaration as? KSClassDeclaration)
+        ?.getAllSuperTypes()
+        ?.filterNot { it.isError }
+        ?.toList()
+        .orEmpty()
+    return (listOf(returned) + supertypes).mapNotNull {
+      runCatching { it.toTypeName() }.getOrNull()
+    }
   }
 
   /** `app.AppGraph.DetailRoute` -> `DetailNavigator`, matching `NavigatorCodegen`'s naming. */

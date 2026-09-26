@@ -165,6 +165,11 @@ internal class WrapperModelReader(
           markerFq = markerFq,
           hasDefault = parameter.hasDefault,
           parameters = slotParameters,
+          returnType =
+            type
+              .functionReturn()
+              ?.takeUnless { it.declaration.qualifiedName?.asString() == "kotlin.Unit" }
+              ?.toSlotType(typeParameterNames),
         )
       }
 

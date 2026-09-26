@@ -49,12 +49,17 @@ internal data class SlotMarkerModel(val annotationFq: String, val routeParamName
  * reliably mark a `@Composable` extension function type with `@ExtensionFunctionType`, so the
  * receiver is not split out; the provider side counts its own receiver the same way, which makes
  * the comparison symmetric without depending on that annotation.
+ *
+ * [returnType] is the slot's declared return type, or null when it is `Unit` or cannot be modelled.
+ * It never decides whether a provider fits; it is only a fallback source of type-argument bindings
+ * for a type parameter that no slot's parameters bind (see [WrapperBinder]).
  */
 internal data class WrapperSlotModel(
   val parameterName: String,
   val markerFq: String,
   val hasDefault: Boolean,
   val parameters: List<SlotType>,
+  val returnType: SlotType? = null,
 )
 
 /** One `@ScreenWrapper` function. */
@@ -79,7 +84,13 @@ internal data class ProviderParam(val name: String, val typeName: TypeName)
 
 internal data class ProviderRoleParam(val name: String, val role: ProviderRole)
 
-/** One declaration annotated with a slot marker, resolved against one route. */
+/**
+ * One declaration annotated with a slot marker, resolved against one route.
+ *
+ * [returnTypeCandidates] is the provider's declared return type followed by all of its supertypes,
+ * so a slot returning `Vm<S, I, E>` can read its type arguments off a provider returning a concrete
+ * `DetailViewModel : Vm<DetailState, DetailIntent, DetailEvent>`.
+ */
 internal data class SlotProviderModel(
   val functionSimpleName: String,
   val packageName: String,
@@ -88,6 +99,7 @@ internal data class SlotProviderModel(
   val receiverTypeName: TypeName?,
   val slotParams: List<ProviderParam>,
   val roleParams: List<ProviderRoleParam>,
+  val returnTypeCandidates: List<TypeName> = emptyList(),
 )
 
 /** The wrapper chosen for one route, with every slot filled and every type argument bound. */

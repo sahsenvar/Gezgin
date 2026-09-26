@@ -131,13 +131,18 @@ internal class WrapperBinder(private val logger: KSPLogger) {
         }
       }
 
+    if (wrapper.typeParameterNames.any { it !in bindings }) {
+      bindFromReturnTypes(wrapper, filled, bindings)
+    }
+
     val unbound = wrapper.typeParameterNames.filterNot { it in bindings }
     if (unbound.isNotEmpty()) {
       error(
         "SW7",
         "type parameter(s) ${unbound.joinToString()} of " +
           "${wrapper.packageName}.${wrapper.functionSimpleName} are bound by no filled slot for " +
-          "route $routeFq; surface them in a slot's signature so the processor can resolve them",
+          "route $routeFq; surface them in a filled slot's parameters, or in a filled slot's return " +
+          "type that the provider's return type (or one of its supertypes) matches",
       )
       return null
     }
@@ -147,6 +152,32 @@ internal class WrapperBinder(private val logger: KSPLogger) {
       typeArguments = wrapper.typeParameterNames.map { bindings.getValue(it) },
       filledSlots = filled,
     )
+  }
+
+  /**
+   * Binds type parameters that no slot's parameters bind from a filled slot's return type, matched
+   * against the provider's return type or one of its supertypes. A `viewModel: () -> Vm<S, I, E>`
+   * slot filled by `fun detailViewModel(): DetailViewModel` binds `E` through `DetailViewModel :
+   * Vm<DetailState, DetailIntent, DetailEvent>` even when the route leaves the effect-handler slot
+   * — the only slot that names `E` in its parameters — to its default.
+   *
+   * Runs only after parameter unification, so it can never change a binding a parameter already
+   * produced; each candidate is tried on a copy and committed only when it unifies completely.
+   */
+  private fun bindFromReturnTypes(
+    wrapper: WrapperModel,
+    filled: Map<String, SlotProviderModel>,
+    bindings: MutableMap<String, TypeName>,
+  ) {
+    wrapper.slots.forEach { slot ->
+      val returnType = slot.returnType ?: return@forEach
+      val provider = filled[slot.parameterName] ?: return@forEach
+      provider.returnTypeCandidates
+        .firstNotNullOfOrNull { candidate ->
+          bindings.toMutableMap().takeIf { SlotUnifier.unify(returnType, candidate, it) }
+        }
+        ?.let { bindings.putAll(it) }
+    }
   }
 
   /**
