@@ -154,6 +154,7 @@ Set via `ksp { arg("<name>", "<value>") }`:
 | `gezgin.emitSerializers` | `true` | Set `false` to opt out if you register the polymorphic `Route` `SerializersModule` yourself. |
 | `gezgin.emitTestAccessors` | `false` | Set `true` to generate the typed `GezginTestNavigator.fromX()` test accessors. Enable it in the module's **main** KSP round (where the graphs live); the accessors are generated into `main`, so the `test` source set can call `nav.fromX()` directly — works across modules. Add `:gezgin-test` as `compileOnly` on the main classpath (so the accessors compile; it never leaks into the app runtime) and re-add it as `testImplementation` for tests. |
 | `gezgin.wrapperPackages` | empty | Comma-separated packages to scan for `@ScreenWrapper` functions and `@ScreenSlot` annotations compiled into a dependency rather than declared in this module. KSP cannot enumerate classpath declarations by annotation, so a multi-module setup needs this; a single-module app does not. |
+| `gezgin.wrapperDeclarations` | empty | Comma-separated fully-qualified names of the `@ScreenWrapper` function (or `@ScreenSlot` annotation) to use. Resolution by name works against a Kotlin *metadata* classpath, where package enumeration does not — so this is what a `kspCommonMainMetadata` round needs. Naming the wrapper is enough: its markers are reached through its parameters' `@FilledBy`. |
 
 ---
 
@@ -370,12 +371,24 @@ whose content slot names `@BottomSheet` is a candidate only for bottom-sheet rou
 part of the match with no special-casing. A route that matches no wrapper is generated unwrapped,
 with a warning; two matching wrappers is an error.
 
-Declare wrappers and markers in a module the features depend on, and name its package once per
-feature module — KSP cannot enumerate classpath declarations by annotation:
+Declare wrappers and markers in a module the features depend on, and name them once per feature
+module — KSP cannot enumerate classpath declarations by annotation:
 
 ```kotlin
 ksp { arg("gezgin.wrapperPackages", "com.example.designsystem") }
 ```
+
+In a Kotlin Multiplatform build whose screens live in `commonMain`, register the processor on
+`kspCommonMainMetadata` and name the wrapper itself instead. That round sees a project dependency as
+Kotlin metadata rather than class files, and `getDeclarationsFromPackage` — which is what
+`gezgin.wrapperPackages` uses — returns nothing for metadata. Resolution by name does work:
+
+```kotlin
+ksp { arg("gezgin.wrapperDeclarations", "com.example.designsystem.AppScreenRoot") }
+```
+
+One name covers the whole vocabulary: the markers are reached through the wrapper's `@FilledBy`
+parameters, so they never have to be listed.
 
 
 ### Fragment interop

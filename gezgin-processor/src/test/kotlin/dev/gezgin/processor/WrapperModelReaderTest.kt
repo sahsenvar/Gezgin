@@ -79,6 +79,47 @@ class WrapperModelReaderTest {
   }
 
   @Test
+  fun `naming the wrapper function in gezgin wrapperDeclarations discovers it and its markers`() {
+    val lib = compileGezginModule(vocabulary)
+    assertEquals(KotlinCompilation.ExitCode.OK, lib.exitCode, lib.messages)
+
+    val feature =
+      compileGezginModule(
+        SourceFile.kotlin(
+          "Feature.kt",
+          """
+          package feature
+
+          object Placeholder
+          """
+            .trimIndent(),
+        ),
+        kspArgs =
+          mapOf("gezgin.dumpWrapper" to "true", "gezgin.wrapperDeclarations" to "app.appRoot"),
+        extraClasspath = listOf(lib.outputDirectory),
+      )
+    assertEquals(KotlinCompilation.ExitCode.OK, feature.exitCode, feature.messages)
+
+    val dump = findGeneratedResource("GezginWrapperDump.txt")!!.readText()
+    assertContains(dump, "wrapper app.appRoot")
+    // The marker is never named in the option - it is reached through the wrapper's @FilledBy.
+    assertContains(dump, "marker app.TopBar route=route")
+    assertContains(dump, "slot topBar marker=app.TopBar default=true")
+  }
+
+  @Test
+  fun `SW9 fires when a configured declaration name resolves to nothing`() {
+    val result =
+      compileGezgin(
+        vocabulary,
+        kspArgs = mapOf("gezgin.wrapperDeclarations" to "does.not.Exist"),
+      )
+
+    assertContains(result.messages, "[SW9]")
+    assertContains(result.messages, "does.not.Exist")
+  }
+
+  @Test
   fun `SW9 fires when a configured package yields nothing`() {
     val result =
       compileGezgin(vocabulary, kspArgs = mapOf("gezgin.wrapperPackages" to "does.not.exist"))

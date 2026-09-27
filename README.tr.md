@@ -162,6 +162,7 @@ Bunlar birbirinin yerine uygulanacak upgrade talimatları değil, farklı build 
 | `gezgin.emitSerializers` | `true` | Polimorfik `Route` `SerializersModule`'ünü kendin sağlıyorsan `false` ver (opt-out). |
 | `gezgin.emitTestAccessors` | `false` | Tipli `GezginTestNavigator.fromX()` test erişimcilerini üretmek için `true` ver (opt-in). Flag'i modülün **`main`** KSP round'unda (graph'ların olduğu round) aç; erişimciler `main`'e üretilir, böylece `test` kaynak kümesi `nav.fromX()`'i doğrudan çağırır — çok-modül düzeninde de çalışır. `:gezgin-test`'i `main` compile classpath'ine `compileOnly` ekle (erişimciler derlensin; app runtime'ına sızmaz), `test` için `testImplementation` ile yeniden ekle. |
 | `gezgin.wrapperPackages` | boş | Bu modülde değil, bir bağımlılığa derlenmiş `@ScreenWrapper` fonksiyonları ve `@ScreenSlot` annotation'ları için taranacak paketler (virgülle ayrılır). KSP classpath'teki bildirimleri annotation'la sayamaz; çok-modüllü kurulum bunu gerektirir, tek modüllü uygulama gerektirmez. |
+| `gezgin.wrapperDeclarations` | boş | Kullanılacak `@ScreenWrapper` fonksiyonunun (ya da `@ScreenSlot` annotation'ının) tam nitelikli adları (virgülle ayrılır). İsimle çözümleme, paket taramasının çalışmadığı Kotlin *metadata* classpath'inde de çalışır — `kspCommonMainMetadata` round'unun ihtiyacı budur. Wrapper'ı adlandırmak yeter: marker'larına parametrelerindeki `@FilledBy` üzerinden ulaşılır. |
 
 ---
 
@@ -368,12 +369,25 @@ bir wrapper yalnız bottom-sheet route'larına adaydır; yani kind, processor'da
 olmadan eşleşmenin parçasıdır. Hiçbir wrapper'la eşleşmeyen route sarılmadan üretilir ve uyarı
 verilir; iki wrapper eşleşirse hatadır.
 
-Wrapper ve marker'ları feature'ların bağımlı olduğu bir modülde tanımla ve paketini feature modülü
-başına bir kez bildir — KSP classpath'teki bildirimleri annotation'la sayamaz:
+Wrapper ve marker'ları feature'ların bağımlı olduğu bir modülde tanımla ve feature modülü başına bir
+kez bildir — KSP classpath'teki bildirimleri annotation'la sayamaz:
 
 ```kotlin
 ksp { arg("gezgin.wrapperPackages", "com.example.designsystem") }
 ```
+
+Ekranları `commonMain`'de duran bir Kotlin Multiplatform kurulumunda işlemciyi
+`kspCommonMainMetadata`'ya kaydet ve paket yerine wrapper'ın kendisini adlandır. O round bir proje
+bağımlılığını class dosyası olarak değil Kotlin metadata olarak görür ve
+`gezgin.wrapperPackages`'in kullandığı `getDeclarationsFromPackage` metadata için boş döner. İsimle
+çözümleme ise çalışır:
+
+```kotlin
+ksp { arg("gezgin.wrapperDeclarations", "com.example.designsystem.AppScreenRoot") }
+```
+
+Tek bir ad tüm sözlüğü kapsar: marker'lara wrapper'ın `@FilledBy` parametreleri üzerinden ulaşılır,
+yani ayrıca listelenmeleri gerekmez.
 
 
 ### Fragment interop
