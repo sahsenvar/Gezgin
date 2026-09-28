@@ -110,10 +110,7 @@ class WrapperModelReaderTest {
   @Test
   fun `SW9 fires when a configured declaration name resolves to nothing`() {
     val result =
-      compileGezgin(
-        vocabulary,
-        kspArgs = mapOf("gezgin.wrapperDeclarations" to "does.not.Exist"),
-      )
+      compileGezgin(vocabulary, kspArgs = mapOf("gezgin.wrapperDeclarations" to "does.not.Exist"))
 
     assertContains(result.messages, "[SW9]")
     assertContains(result.messages, "does.not.Exist")
