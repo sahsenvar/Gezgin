@@ -7,6 +7,15 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ## [Unreleased]
 
+### Changed
+
+- **Bağımlılık güncellemeleri.** Yayınlanan artefaktlara yansıyanlar: AndroidX Navigation 3
+  `1.0.0` → `1.1.4` (`gezgin-core`), kotlinx-serialization-json `1.9.0` → `1.11.0` (`gezgin-core`),
+  KotlinPoet `2.2.0` → `2.3.0` (`gezgin-processor`). Yalnız derleme/test/örnek: Gradle `9.6.1`,
+  Robolectric `4.16.1`, kctfork `0.13.0`, Compose BOM `2026.06.01` ve activity-compose `1.13.0`
+  (örnek uygulama), CI action sürümleri (setup-java `6.0.1`, CodeQL `4.38.2`, setup-gradle,
+  wrapper-validation, codecov, deploy-pages, stale `11.0.0`).
+
 ### Added
 
 - **`gezgin.wrapperDeclarations` — wrapper'ı adıyla bildirme.** `gezgin.wrapperPackages`'in

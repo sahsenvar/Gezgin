@@ -187,9 +187,9 @@ class WorkflowConfigurationContractTest {
 
     assertEquals(setOf("init", "analyze"), actionCommits.keys)
     assertEquals(
-      "e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81",
+      "2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2",
       actionCommits.getValue("init"),
-      "CodeQL must use the peeled immutable commit for v4.37.3",
+      "CodeQL must use the peeled immutable commit for v4.38.2",
     )
     assertEquals(actionCommits.getValue("init"), actionCommits.getValue("analyze"))
   }

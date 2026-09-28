@@ -48,5 +48,5 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.compose)
 
   testImplementation(kotlin("test-junit"))
-  testImplementation("org.robolectric:robolectric:4.14")
+  testImplementation("org.robolectric:robolectric:4.16.1")
 }

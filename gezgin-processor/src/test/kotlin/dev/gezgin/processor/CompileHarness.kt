@@ -31,7 +31,7 @@ object CompileHarness {
     val compilation =
       KotlinCompilation().apply {
         this.sources = sources.toList()
-        configureKsp(useKsp2 = true) {
+        configureKsp {
           symbolProcessorProviders += GezginProcessorProvider()
           processorOptions.putAll(kspArgs)
         }
@@ -73,7 +73,7 @@ object CompileHarness {
     val compilation =
       KotlinCompilation().apply {
         this.sources = sources.toList()
-        configureKsp(useKsp2 = true) {
+        configureKsp {
           symbolProcessorProviders += GezginProcessorProvider()
           processorOptions.putAll(kspArgs)
         }

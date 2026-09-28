@@ -86,7 +86,7 @@ class Faz8SpikeTest {
       val compilation =
         KotlinCompilation().apply {
           sources = listOf(graphFile, crossFileRouteFile, subFlowFile)
-          configureKsp(useKsp2 = true) { symbolProcessorProviders += SealedProbeProvider() }
+          configureKsp { symbolProcessorProviders += SealedProbeProvider() }
           inheritClassPath = true
           messageOutputStream = messages
           jvmTarget = "17"

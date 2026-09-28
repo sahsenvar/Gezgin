@@ -433,7 +433,7 @@ class ReleasePublicationVerifierTest {
         PomDependency(
           "org.jetbrains.kotlinx",
           "kotlinx-serialization-json-$target",
-          "1.9.0",
+          "1.11.0",
           "compile",
         ),
         PomDependency("org.jetbrains.compose.runtime", "runtime-$target", "1.11.1", "compile"),
@@ -476,18 +476,18 @@ class ReleasePublicationVerifierTest {
             PomDependency(
               "org.jetbrains.kotlinx",
               "kotlinx-serialization-json",
-              "1.9.0",
+              "1.11.0",
               "runtime",
             ),
             PomDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1", "runtime"),
             PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1", "runtime"),
             PomDependency("org.jetbrains.compose.material3", "material3", "1.9.0", "runtime"),
-            PomDependency("androidx.navigation3", "navigation3-runtime", "1.0.0", "runtime"),
+            PomDependency("androidx.navigation3", "navigation3-runtime", "1.1.4", "runtime"),
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"),
           )
         "gezgin-core-android" ->
           listOf(
-            PomDependency("androidx.navigation3", "navigation3-ui-android", "1.0.0", "compile"),
+            PomDependency("androidx.navigation3", "navigation3-ui-android", "1.1.4", "compile"),
             PomDependency(
               "androidx.lifecycle",
               "lifecycle-viewmodel-navigation3-android",
@@ -509,7 +509,7 @@ class ReleasePublicationVerifierTest {
             PomDependency(
               "org.jetbrains.kotlinx",
               "kotlinx-serialization-json-jvm",
-              "1.9.0",
+              "1.11.0",
               "compile",
             ),
             PomDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1", "compile"),
@@ -518,7 +518,7 @@ class ReleasePublicationVerifierTest {
             PomDependency(
               "androidx.navigation3",
               "navigation3-runtime-android",
-              "1.0.0",
+              "1.1.4",
               "compile",
             ),
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
@@ -553,7 +553,7 @@ class ReleasePublicationVerifierTest {
             PomDependency(
               "org.jetbrains.kotlinx",
               "kotlinx-serialization-json-jvm",
-              "1.9.0",
+              "1.11.0",
               "compile",
             ),
             PomDependency("org.jetbrains.compose.runtime", "runtime-desktop", "1.11.1", "compile"),
@@ -591,8 +591,8 @@ class ReleasePublicationVerifierTest {
           listOf(
             PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
             PomDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.10", "runtime"),
-            PomDependency("com.squareup", "kotlinpoet-jvm", "2.2.0", "runtime"),
-            PomDependency("com.squareup", "kotlinpoet-ksp", "2.2.0", "runtime"),
+            PomDependency("com.squareup", "kotlinpoet-jvm", "2.3.0", "runtime"),
+            PomDependency("com.squareup", "kotlinpoet-ksp", "2.3.0", "runtime"),
           )
         else -> error("Unknown publication: $artifactId")
       }
@@ -601,33 +601,33 @@ class ReleasePublicationVerifierTest {
       when (artifactId) {
         "gezgin-core" ->
           listOf(
-            ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
+            ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.1.4"),
             ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1"),
             ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
             ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
-            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.11.0"),
           )
         "gezgin-core-android" ->
           listOf(
             ModuleDependency("androidx.fragment", "fragment-compose", "1.8.9"),
             ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-compose", "2.10.0"),
             ModuleDependency("androidx.lifecycle", "lifecycle-viewmodel-navigation3", "2.10.0"),
-            ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
-            ModuleDependency("androidx.navigation3", "navigation3-ui", "1.0.0"),
+            ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.1.4"),
+            ModuleDependency("androidx.navigation3", "navigation3-ui", "1.1.4"),
             ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1"),
             ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
             ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
-            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.11.0"),
           )
         "gezgin-core-iosarm64",
         "gezgin-core-iossimulatorarm64",
         "gezgin-core-jvm" ->
           listOf(
-            ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.0.0"),
+            ModuleDependency("androidx.navigation3", "navigation3-runtime", "1.1.4"),
             ModuleDependency(
               "org.jetbrains.androidx.lifecycle",
               "lifecycle-viewmodel-compose",
@@ -648,7 +648,7 @@ class ReleasePublicationVerifierTest {
             ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
             ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
-            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.9.0"),
+            ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.11.0"),
           )
         "gezgin-test",
         "gezgin-test-android",
@@ -659,8 +659,8 @@ class ReleasePublicationVerifierTest {
         "gezgin-processor" ->
           listOf(
             ModuleDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.10"),
-            ModuleDependency("com.squareup", "kotlinpoet", "2.2.0"),
-            ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.2.0"),
+            ModuleDependency("com.squareup", "kotlinpoet", "2.3.0"),
+            ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.3.0"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
           )
         else -> error("Unknown publication: $artifactId")
