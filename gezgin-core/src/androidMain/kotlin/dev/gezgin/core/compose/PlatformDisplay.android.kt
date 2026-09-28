@@ -80,7 +80,7 @@ internal actual fun GezginNavDisplay(
     backStack = navDisplayState.backStack,
     modifier = modifier,
     entryDecorators = emptyList(),
-    sceneStrategy = sceneStrategy,
+    sceneStrategies = listOf(sceneStrategy),
     onBack = onBack,
     entryProvider = { key: Route -> navDisplayState.entriesByKey.getValue(key) },
   )
