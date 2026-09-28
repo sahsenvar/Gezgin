@@ -22,7 +22,7 @@ class PublishingConfigurationContractTest {
   fun `uses the supported release toolchain and publishing plugin`() {
     val wrapperProperties = properties("gradle/wrapper/gradle-wrapper.properties")
     assertEquals(
-      "https://services.gradle.org/distributions/gradle-9.6.0-bin.zip",
+      "https://services.gradle.org/distributions/gradle-9.6.1-bin.zip",
       wrapperProperties.getProperty("distributionUrl"),
     )
 
