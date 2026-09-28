@@ -9,6 +9,14 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ### Added
 
+- **`gezgin.wrapperDeclarations` — wrapper'ı adıyla bildirme.** `gezgin.wrapperPackages`'in
+  kullandığı `getDeclarationsFromPackage`, bir `kspCommonMainMetadata` round'unda proje
+  bağımlılığını class dosyası değil Kotlin metadata olarak gördüğü için boş döner; ekranları
+  `commonMain`'de olan bir KMP kurulumunda wrapper başka bir modüldeyse `SW9` alınırdı. Yeni seçenek
+  wrapper'ı (ya da bir `@ScreenSlot` annotation'ını) tam nitelikli adıyla çözer, ve bu yol metadata
+  classpath'inde de çalışır. Wrapper'ı adlandırmak yeter: marker'lara parametrelerindeki `@FilledBy`
+  üzerinden ulaşılır, ayrıca listelenmeleri gerekmez.
+
 - **Wrapper tip parametresi slotun dönüş tipinden bağlanır.** Slot parametrelerinden bağlanamayan
   bir tip parametresi artık doldurulan slotun dönüş tipinden okunur: `viewModel: () -> Vm<S, I, E>`
   slotu `fun detailViewModel(): DetailViewModel` ile doldurulunca `E`,

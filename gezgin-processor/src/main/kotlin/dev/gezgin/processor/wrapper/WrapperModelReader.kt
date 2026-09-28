@@ -33,6 +33,12 @@ internal data class WrapperReadResult(
  * classpath declarations by annotation — `getSymbolsWithAnnotation` only sees this round's sources.
  * Everything else about a classpath declaration (its meta-annotations, its constructor parameters,
  * its parameter annotations) does resolve, which is what makes the package-enumeration path enough.
+ *
+ * Package enumeration itself does not survive every classpath, though: in a `kspCommonMainMetadata`
+ * round a project dependency arrives as Kotlin *metadata* rather than class files, and
+ * `getDeclarationsFromPackage` returns nothing for it. Resolution *by name* does work there, so
+ * `gezgin.wrapperDeclarations` names the wrapper function outright. One name is enough for a whole
+ * vocabulary: a wrapper reaches its own `@ScreenSlot` markers through its parameters' `@FilledBy`.
  */
 internal class WrapperModelReader(
   private val resolver: Resolver,
@@ -69,6 +75,31 @@ internal class WrapperModelReader(
     }
 
     // The kind annotations are slot markers too, and always arrive from the gezgin-core classpath.
+    configuredDeclarations().forEach { fq ->
+      val (namedWrappers, namedMarkers) = resolveDeclaration(fq)
+      if (namedWrappers.isEmpty() && namedMarkers.isEmpty()) {
+        error(
+          "SW9",
+          "gezgin.wrapperDeclarations names '$fq' but it does not resolve to a @ScreenWrapper " +
+            "function or a @ScreenSlot annotation; remove it or correct the name",
+        )
+      }
+      wrapperDecls += namedWrappers
+      markerDecls += namedMarkers
+    }
+
+    // A wrapper carries its own vocabulary: every marker it uses is named by a parameter's
+    // @FilledBy, so naming the wrapper is enough even when the markers cannot be enumerated.
+    wrapperDecls
+      .flatMap { it.parameters }
+      .mapNotNull { it.filledByMarkerFq() }
+      .distinct()
+      .forEach { fq ->
+        resolver.getClassDeclarationByName(resolver.getKSNameFromString(fq))?.let {
+          markerDecls += it
+        }
+      }
+
     CONTENT_MARKER_FQS.forEach { fq ->
       resolver.getClassDeclarationByName(resolver.getKSNameFromString(fq))?.let {
         markerDecls += it
@@ -89,12 +120,35 @@ internal class WrapperModelReader(
     return WrapperReadResult(wrappers, markers) to ok
   }
 
-  private fun configuredPackages(): List<String> =
-    options["gezgin.wrapperPackages"]
-      ?.split(',')
-      ?.map(String::trim)
-      ?.filter(String::isNotEmpty)
-      .orEmpty()
+  private fun configuredPackages(): List<String> = optionList("gezgin.wrapperPackages")
+
+  private fun configuredDeclarations(): List<String> = optionList("gezgin.wrapperDeclarations")
+
+  private fun optionList(key: String): List<String> =
+    options[key]?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty()
+
+  /**
+   * Resolves one fully-qualified name to a `@ScreenWrapper` function or a `@ScreenSlot` annotation.
+   *
+   * Unlike [enumeratePackage] this works against a Kotlin metadata classpath as well as a JVM one,
+   * which is what makes a `kspCommonMainMetadata` round able to see a wrapper from another module.
+   */
+  @OptIn(KspExperimental::class)
+  private fun resolveDeclaration(
+    fq: String
+  ): Pair<List<KSFunctionDeclaration>, List<KSClassDeclaration>> {
+    val name = resolver.getKSNameFromString(fq)
+    val wrappers =
+      resolver
+        .getFunctionDeclarationsByName(name, includeTopLevel = true)
+        .filter { it.hasAnnotation(SCREEN_WRAPPER_FQ) }
+        .toList()
+    val markers =
+      listOfNotNull(
+        resolver.getClassDeclarationByName(name)?.takeIf { it.hasAnnotation(SCREEN_SLOT_FQ) }
+      )
+    return wrappers to markers
+  }
 
   @OptIn(KspExperimental::class)
   private fun enumeratePackage(
