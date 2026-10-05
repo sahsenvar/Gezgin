@@ -21,7 +21,7 @@ jb-lifecycle-nav3 = "2.11.0"
 # Bu modüller androidx.lifecycle atomik grubunda olduğundan 2.10.0, gezgin-core'un Android tarafına
 # getirdiği AndroidX 2.10.0 ile hizalanır.
 jb-lifecycle-sample = "2.10.0"
-kotlinpoet = "2.3.0"
+kotlinpoet = "2.4.0"
 kctfork = "0.13.0"
 androidx-activity-compose = "1.13.0"
 androidx-compose-bom = "2026.06.01"
