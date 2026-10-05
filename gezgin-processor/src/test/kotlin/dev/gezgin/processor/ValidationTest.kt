@@ -3,6 +3,7 @@ package dev.gezgin.processor
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import dev.gezgin.processor.CompileHarness.compileGezgin
+import dev.gezgin.processor.fixtures.LEGACY_MEMBER_NAMING
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -19,8 +20,12 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 @OptIn(ExperimentalCompilerApi::class)
 class ValidationTest {
 
-  private fun assertViolates(code: String, source: String) {
-    val result = compileGezgin(SourceFile.kotlin("Source.kt", source))
+  private fun assertViolates(
+    code: String,
+    source: String,
+    kspArgs: Map<String, String> = emptyMap(),
+  ) {
+    val result = compileGezgin(SourceFile.kotlin("Source.kt", source), kspArgs = kspArgs)
     assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
     assertContains(result.messages, "[$code]", message = result.messages)
   }
@@ -1205,6 +1210,7 @@ class ValidationTest {
       }
       """
         .trimIndent(),
+      kspArgs = LEGACY_MEMBER_NAMING,
     )
   }
 

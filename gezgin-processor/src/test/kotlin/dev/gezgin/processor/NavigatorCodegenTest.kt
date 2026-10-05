@@ -8,6 +8,7 @@ import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.Route
 import dev.gezgin.processor.CompileHarness.compileGezgin
 import dev.gezgin.processor.CompileHarness.generatedSourceFor
+import dev.gezgin.processor.fixtures.LEGACY_MEMBER_NAMING
 import dev.gezgin.processor.fixtures.RUNNER_SOURCE
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import dev.gezgin.processor.fixtures.UNDECLARED_EDGE_RUNNER_SOURCE
@@ -42,7 +43,7 @@ class NavigatorCodegenTest {
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
         SourceFile.kotlin("Runner.kt", RUNNER_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -88,7 +89,7 @@ class NavigatorCodegenTest {
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
         SourceFile.kotlin("BadRunner.kt", UNDECLARED_EDGE_RUNNER_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertTrue(
       result.exitCode != KotlinCompilation.ExitCode.OK,
@@ -132,7 +133,7 @@ class NavigatorCodegenTest {
           """
             .trimIndent(),
         ),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -148,7 +149,7 @@ class NavigatorCodegenTest {
     val result =
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -167,7 +168,7 @@ class NavigatorCodegenTest {
     val result =
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -193,7 +194,7 @@ class NavigatorCodegenTest {
     val result =
       compileGezgin(
         SourceFile.kotlin("LockedRoute.kt", source),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
     assertNull(result.generatedSourceFor("LockedNavigator.kt"))
@@ -205,7 +206,7 @@ class NavigatorCodegenTest {
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
         SourceFile.kotlin("Runner.kt", RUNNER_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -239,7 +240,7 @@ class NavigatorCodegenTest {
     val result =
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -274,7 +275,7 @@ class NavigatorCodegenTest {
     val result =
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 

@@ -9,6 +9,11 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ### Changed
 
+- **Üretilen üye adları artık hiçbir soneki atmaz (kırıcı).** Eskiden `OldPinScreenRoute` için
+  `goToOldPin` üretilirdi; artık `goToOldPinScreenRoute` üretilir. Eski adlara dönmek için
+  `ksp { arg("gezgin.naming.memberFun.stripSuffixes", "Route,Screen,Flow") }`. `XNavigator`
+  sınıf adları değişmedi (`Route` ve `Screen`/`Flow` atılmaya devam eder).
+
 - **Bağımlılık güncellemeleri.** Yayınlanan artefaktlara yansıyanlar: AndroidX Navigation 3
   `1.0.0` → `1.1.4` (`gezgin-core`), kotlinx-serialization-json `1.9.0` → `1.11.0` (`gezgin-core`),
   KotlinPoet `2.2.0` → `2.3.0` (`gezgin-processor`). Yalnız derleme/test/örnek: Gradle `9.6.1`,
@@ -17,6 +22,14 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   wrapper-validation, codecov, deploy-pages, stale `11.0.0`).
 
 ### Added
+
+- **Üretilen üye adlarındaki sonek atma ayarlanabilir.** `gezgin.naming.memberFun.stripSuffixes`
+  KSP seçeneği `goToX`/`openX`/`launchX`/`backToX` adlarını türetirken route adından hangi soneklerin
+  (sırayla, her biri en fazla bir kez) atılacağını belirler; `gezgin.naming.memberFun.<Tür>.stripSuffixes`
+  (`GoTo`, `ReplaceTo`, `QuitAndGoTo`, `GoForResult`, `BackTo`, `Open`) tek bir edge türü için listeyi
+  değiştirir. Edge'in `name=`'i yine her şeyden baskındır. Tanınmayan bir `gezgin.naming.*` seçeneği
+  `NM1` hatası verir. `Screen`'in atılıp `Dialog`/`BottomSheet`'in atılmamasındaki tutarsızlık (#65) bu
+  ayarla kullanıcının kararına bırakıldı.
 
 - **`gezgin.wrapperDeclarations` — wrapper'ı adıyla bildirme.** `gezgin.wrapperPackages`'in
   kullandığı `getDeclarationsFromPackage`, bir `kspCommonMainMetadata` round'unda proje

@@ -49,4 +49,7 @@ dependencies {
 // calls `nav.fromX()` directly (see `AppNavBehaviorTest.kt`). The `kspTestKotlin` round still
 // receives the
 // flag but no-ops there (no graphs in `test`), so there is no double emission.
-ksp { arg("gezgin.emitTestAccessors", "true") }
+ksp {
+  arg("gezgin.emitTestAccessors", "true")
+  arg("gezgin.naming.memberFun.stripSuffixes", "Route,Screen,Flow")
+}

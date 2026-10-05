@@ -18,6 +18,8 @@ import dev.gezgin.processor.model.EdgeModel
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
+import dev.gezgin.processor.naming.MemberFunNaming
+import dev.gezgin.processor.naming.MemberKind
 
 private const val CORE_PKG = "dev.gezgin.core"
 private const val FLOW_PKG = "kotlinx.coroutines.flow"
@@ -42,26 +44,31 @@ private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavi
  * one-step dismissal API used by screens and modal routes. `@NoBack` is the explicit opt-out; an
  * `@NoBack` route with no other declared operation gets no navigator at all.
  *
- * `X` is the route's simple name with a trailing `Route` stripped first, then a trailing
- * `Screen`/`Flow` kind token stripped; `Dialog`/`BottomSheet` tokens are retained (applied
- * uniformly — including graph names for `@GoForResult` flow-mode member naming, e.g. `CheckoutFlow`
- * → `Checkout`). An edge's `name=` override replaces the derived method name wholesale for
- * `@GoTo`/`@ReplaceTo`/`@QuitAndGoTo` (single method); for the `@GoForResult` triple
- * (`launchX`/`xResults`/`goToXForResult`) it substitutes for `X` itself so all three members stay
- * consistently named. `@BackTo` has no `name=` param at all (see `Annotations.kt`) — its method
- * name is always derived (`backTo` + target's `X`), never overridable.
+ * The navigator class name `XNavigator` takes `X` = the route's simple name with a trailing `Route`
+ * stripped first, then a trailing `Screen`/`Flow` kind token. Member names (`goToX`, `openX`,
+ * `launchX`, `backToX`, …) derive `X` through [MemberFunNaming]: nothing is stripped unless the
+ * `gezgin.naming.memberFun.*` options ask for it, uniformly — including graph names for
+ * `@GoForResult` flow-mode member naming. An edge's `name=` override replaces the derived method
+ * name wholesale for `@GoTo`/`@ReplaceTo`/`@QuitAndGoTo` (single method); for the `@GoForResult`
+ * triple (`launchX`/`xResults`/`goToXForResult`) it substitutes for `X` itself so all three members
+ * stay consistently named. `@BackTo` has no `name=` param at all (see `Annotations.kt`) — its
+ * method name is always derived (`backTo` + target's `X`), never overridable.
  */
 internal object NavigatorCodegen {
 
-  // Strip Screen and Flow from derived names while retaining Dialog and BottomSheet so modal kind
-  // remains visible in generated APIs.
+  // Navigator CLASS names keep stripping Route and one Screen/Flow token; member-function names are
+  // configurable through [MemberFunNaming] and strip nothing by default.
   private val KIND_SUFFIXES = listOf("Screen", "Flow")
 
-  fun generate(model: GraphModel, packageName: String): List<FileSpec> {
+  fun generate(
+    model: GraphModel,
+    packageName: String,
+    naming: MemberFunNaming = MemberFunNaming.Default,
+  ): List<FileSpec> {
     val graphsByFq = model.graphs.associateBy(GraphModelNode::fqName)
     val routesByFq = model.routes.associateBy(RouteModel::fqName)
     return model.routes.mapNotNull { route ->
-      buildNavigatorFile(route, graphsByFq, routesByFq, packageName)
+      buildNavigatorFile(route, graphsByFq, routesByFq, packageName, naming)
     }
   }
 
@@ -88,18 +95,19 @@ internal object NavigatorCodegen {
     graphsByFq: Map<String, GraphModelNode>,
     routesByFq: Map<String, RouteModel>,
     packageName: String,
+    naming: MemberFunNaming,
   ): FileSpec? {
     val members = mutableListOf<FunSpec>()
     val properties = mutableListOf<PropertySpec>()
 
     route.edges.forEach { edge ->
       when (edge.kind) {
-        EdgeKind.GO_TO -> members += goToFun(edge, graphsByFq, routesByFq)
-        EdgeKind.REPLACE_TO -> members += replaceToFun(edge, graphsByFq, routesByFq)
-        EdgeKind.QUIT_AND_GO_TO -> members += quitAndGoToFun(edge, graphsByFq, routesByFq)
-        EdgeKind.OPEN -> members += openFun(edge, graphsByFq, routesByFq)
+        EdgeKind.GO_TO -> members += goToFun(edge, graphsByFq, routesByFq, naming)
+        EdgeKind.REPLACE_TO -> members += replaceToFun(edge, graphsByFq, routesByFq, naming)
+        EdgeKind.QUIT_AND_GO_TO -> members += quitAndGoToFun(edge, graphsByFq, routesByFq, naming)
+        EdgeKind.OPEN -> members += openFun(edge, graphsByFq, routesByFq, naming)
         EdgeKind.GO_FOR_RESULT -> {
-          val (funs, props) = goForResultMembers(route, edge, graphsByFq, routesByFq)
+          val (funs, props) = goForResultMembers(route, edge, graphsByFq, routesByFq, naming)
           members += funs
           properties += props
         }
@@ -108,7 +116,7 @@ internal object NavigatorCodegen {
 
     route.backEdges.forEach { backEdge ->
       when (backEdge.kind) {
-        BackEdgeKind.BACK_TO -> members += backToFun(backEdge, routesByFq)
+        BackEdgeKind.BACK_TO -> members += backToFun(backEdge, routesByFq, naming)
         BackEdgeKind.BACK_TO_START -> members += backToStartFun(route, graphsByFq)
         BackEdgeKind.QUIT -> members += quitFun()
       }
@@ -212,9 +220,10 @@ internal object NavigatorCodegen {
     edge: EdgeModel,
     graphsByFq: Map<String, GraphModelNode>,
     routesByFq: Map<String, RouteModel>,
+    naming: MemberFunNaming,
   ): FunSpec {
     val target = resolveTarget(edge.targetFq, graphsByFq, routesByFq)
-    val name = edge.name.ifEmpty { "open" + stripSuffix(target.simpleName) }
+    val name = edge.name.ifEmpty { "open" + naming.x(MemberKind.Open, target.simpleName) }
     return FunSpec.builder(name)
       .addParameters(target.params)
       .addStatement("raw.open(%L)", target.constructCall)
@@ -225,9 +234,10 @@ internal object NavigatorCodegen {
     edge: EdgeModel,
     graphsByFq: Map<String, GraphModelNode>,
     routesByFq: Map<String, RouteModel>,
+    naming: MemberFunNaming,
   ): FunSpec {
     val target = resolveTarget(edge.targetFq, graphsByFq, routesByFq)
-    val name = edge.name.ifEmpty { "goTo" + stripSuffix(target.simpleName) }
+    val name = edge.name.ifEmpty { "goTo" + naming.x(MemberKind.GoTo, target.simpleName) }
     return FunSpec.builder(name)
       .addParameters(target.params)
       .addStatement("raw.navigate(%L, singleTop = %L)", target.constructCall, edge.singleTop)
@@ -238,9 +248,10 @@ internal object NavigatorCodegen {
     edge: EdgeModel,
     graphsByFq: Map<String, GraphModelNode>,
     routesByFq: Map<String, RouteModel>,
+    naming: MemberFunNaming,
   ): FunSpec {
     val target = resolveTarget(edge.targetFq, graphsByFq, routesByFq)
-    val name = edge.name.ifEmpty { "replaceTo" + stripSuffix(target.simpleName) }
+    val name = edge.name.ifEmpty { "replaceTo" + naming.x(MemberKind.ReplaceTo, target.simpleName) }
     val clearUpToBlock =
       edge.clearUpToFq?.let { CodeBlock.of("%T::class", ClassName.bestGuess(it)) }
         ?: CodeBlock.of("null")
@@ -259,9 +270,11 @@ internal object NavigatorCodegen {
     edge: EdgeModel,
     graphsByFq: Map<String, GraphModelNode>,
     routesByFq: Map<String, RouteModel>,
+    naming: MemberFunNaming,
   ): FunSpec {
     val target = resolveTarget(edge.targetFq, graphsByFq, routesByFq)
-    val name = edge.name.ifEmpty { "quitAndGoTo" + stripSuffix(target.simpleName) }
+    val name =
+      edge.name.ifEmpty { "quitAndGoTo" + naming.x(MemberKind.QuitAndGoTo, target.simpleName) }
     return FunSpec.builder(name)
       .addParameters(target.params)
       .addStatement("raw.quitAndGoTo(%L)", target.constructCall)
@@ -277,6 +290,7 @@ internal object NavigatorCodegen {
     edge: EdgeModel,
     graphsByFq: Map<String, GraphModelNode>,
     routesByFq: Map<String, RouteModel>,
+    naming: MemberFunNaming,
   ): Pair<List<FunSpec>, List<PropertySpec>> {
     val targetGraph = graphsByFq[edge.targetFq]
     val id = edgeId(route.fqName, edge.targetFq, edge.name)
@@ -316,7 +330,10 @@ internal object NavigatorCodegen {
     // X-substitution: a lowerCamel `name=` (e.g. "pickAddress") must still compose into
     // idiomatic member names — UpperCamel where X sits mid-identifier (launchPickAddress /
     // goToPickAddressForResult), lowerCamel where it leads (pickAddressResults).
-    val x = (edge.name.ifEmpty { stripSuffix(targetSimple) }).replaceFirstChar { it.uppercase() }
+    val x =
+      (edge.name.ifEmpty { naming.x(MemberKind.GoForResult, targetSimple) }).replaceFirstChar {
+        it.uppercase()
+      }
     val resultTypeName = ClassName.bestGuess(resultTypeFq)
     val navResultOfT = NAV_RESULT.parameterizedBy(resultTypeName)
 
@@ -367,9 +384,13 @@ internal object NavigatorCodegen {
 
   private fun backFun(): FunSpec = FunSpec.builder("back").addStatement("raw.back()").build()
 
-  private fun backToFun(backEdge: BackEdgeModel, routesByFq: Map<String, RouteModel>): FunSpec {
+  private fun backToFun(
+    backEdge: BackEdgeModel,
+    routesByFq: Map<String, RouteModel>,
+    naming: MemberFunNaming,
+  ): FunSpec {
     val target = routesByFq.getValue(requireNotNull(backEdge.targetFq))
-    val name = "backTo" + stripSuffix(target.simpleName)
+    val name = "backTo" + naming.x(MemberKind.BackTo, target.simpleName)
     return FunSpec.builder(name)
       .addStatement(
         "raw.backTo(%T::class, inclusive = %L)",

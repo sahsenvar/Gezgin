@@ -22,6 +22,7 @@ import dev.gezgin.processor.model.ModelReader
 import dev.gezgin.processor.model.RouteModel
 import dev.gezgin.processor.model.dumpText
 import dev.gezgin.processor.model.isCallbackRoute
+import dev.gezgin.processor.naming.MemberFunNaming
 import dev.gezgin.processor.wrapper.SlotProviderReader
 import dev.gezgin.processor.wrapper.WrapperBinder
 import dev.gezgin.processor.wrapper.WrapperModelReader
@@ -47,7 +48,14 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
 
       val model = ModelReader(resolver, environment.logger).read()
 
-      val validationOk = GezginValidator(model, environment.logger).validate()
+      var namingOk = true
+      val naming =
+        MemberFunNaming.fromOptions(environment.options) {
+          environment.logger.error("[NM1] $it")
+          namingOk = false
+        }
+
+      val validationOk = GezginValidator(model, environment.logger, naming).validate() && namingOk
 
       if (environment.options["gezgin.dumpModel"].toBoolean()) {
         environment.codeGenerator
@@ -116,7 +124,7 @@ internal class GezginProcessor(private val environment: SymbolProcessorEnvironme
 
           // Typed per-source navigators omit methods for undeclared edges, producing an unresolved
           // reference at the call site.
-          NavigatorCodegen.generate(model, packageName).forEach {
+          NavigatorCodegen.generate(model, packageName, naming).forEach {
             it.writeTo(environment.codeGenerator, Dependencies.ALL_FILES)
           }
 

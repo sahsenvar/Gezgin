@@ -6,6 +6,7 @@ import dev.gezgin.core.NavResult
 import dev.gezgin.processor.CompileHarness.compileGezgin
 import dev.gezgin.processor.CompileHarness.compileGezginModule
 import dev.gezgin.processor.CompileHarness.generatedSourceFor
+import dev.gezgin.processor.fixtures.LEGACY_MEMBER_NAMING
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import dev.gezgin.processor.fixtures.TEST_API_RUNNER_SOURCE
 import kotlin.test.Test
@@ -30,7 +31,9 @@ class TestApiCodegenTest {
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
         SourceFile.kotlin("TestApiRunner.kt", TEST_API_RUNNER_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false", "gezgin.emitTestAccessors" to "true"),
+        kspArgs =
+          mapOf("gezgin.emitSerializers" to "false", "gezgin.emitTestAccessors" to "true") +
+            LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -52,7 +55,9 @@ class TestApiCodegenTest {
     val result =
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false", "gezgin.emitTestAccessors" to "true"),
+        kspArgs =
+          mapOf("gezgin.emitSerializers" to "false", "gezgin.emitTestAccessors" to "true") +
+            LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
@@ -86,7 +91,9 @@ class TestApiCodegenTest {
     val navModule =
       compileGezginModule(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false", "gezgin.emitTestAccessors" to "true"),
+        kspArgs =
+          mapOf("gezgin.emitSerializers" to "false", "gezgin.emitTestAccessors" to "true") +
+            LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, navModule.exitCode, navModule.messages)
 
@@ -133,7 +140,7 @@ class TestApiCodegenTest {
     val result =
       compileGezgin(
         SourceFile.kotlin("ShopSource.kt", SHOP_SOURCE),
-        kspArgs = mapOf("gezgin.emitSerializers" to "false"),
+        kspArgs = mapOf("gezgin.emitSerializers" to "false") + LEGACY_MEMBER_NAMING,
       )
     assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
 
