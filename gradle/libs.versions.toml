@@ -22,7 +22,7 @@ jb-lifecycle-nav3 = "2.11.0"
 # getirdiği AndroidX 2.10.0 ile hizalanır.
 jb-lifecycle-sample = "2.10.0"
 kotlinpoet = "2.3.0"
-kctfork = "0.13.0"
+kctfork = "0.14.0"
 androidx-activity-compose = "1.13.0"
 androidx-compose-bom = "2026.06.01"
 # Fragment interop — androidx.fragment:fragment-compose (`AndroidFragment` composable + transitively
