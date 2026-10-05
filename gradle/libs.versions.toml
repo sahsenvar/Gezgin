@@ -24,7 +24,7 @@ jb-lifecycle-sample = "2.10.0"
 kotlinpoet = "2.3.0"
 kctfork = "0.13.0"
 androidx-activity-compose = "1.13.0"
-androidx-compose-bom = "2026.06.01"
+androidx-compose-bom = "2026.09.00"
 # Fragment interop — androidx.fragment:fragment-compose (`AndroidFragment` composable + transitively
 # `androidx.fragment.app.Fragment`/`Bundle` glue). Stable sürüm Maven metadata ile sabitlendi:
 # 1.8.9 (1.9.0-alpha* alpha, `<latest>` naifçe alpha'ya işaret ediyor → açık pin). Yalnız gezgin-core
