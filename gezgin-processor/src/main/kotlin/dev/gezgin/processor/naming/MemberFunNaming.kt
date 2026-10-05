@@ -13,22 +13,33 @@ internal enum class MemberKind {
   Open,
 }
 
+/** The two affix lists [MemberFunNaming] strips; each is configured independently per kind. */
+private enum class Affix(val option: String) {
+  Suffixes("stripSuffixes"),
+  Prefixes("stripPrefixes"),
+}
+
 /**
  * Derives the `X` of generated navigator members (`goToX`, `openX`, `launchX`, `backToX`, …) from a
- * route's simple name by stripping configured suffixes.
+ * route's simple name by stripping configured prefixes and suffixes.
  *
- * Nothing is stripped by default. [stripSuffixes] applies to every [MemberKind]; an entry in
- * [stripSuffixesByKind] replaces it for that kind. Suffixes are tried in list order and each is
- * removed at most once, and a name is never emptied. An edge's `name=` still wins over everything
- * here — this only shapes the derived name.
+ * Nothing is stripped by default. [stripSuffixes] and [stripPrefixes] apply to every [MemberKind];
+ * an entry in [stripSuffixesByKind] or [stripPrefixesByKind] replaces the matching list for that
+ * kind. Affixes are tried in list order and each is removed at most once, and a name is never
+ * emptied. An edge's `name=` still wins over everything here — this only shapes the derived name.
  */
 internal class MemberFunNaming(
   private val stripSuffixes: List<String> = emptyList(),
+  private val stripPrefixes: List<String> = emptyList(),
   private val stripSuffixesByKind: Map<MemberKind, List<String>> = emptyMap(),
+  private val stripPrefixesByKind: Map<MemberKind, List<String>> = emptyMap(),
 ) {
 
   fun x(kind: MemberKind, simpleName: String): String {
     var name = simpleName
+    for (prefix in stripPrefixesByKind[kind] ?: stripPrefixes) {
+      if (name.length > prefix.length && name.startsWith(prefix)) name = name.removePrefix(prefix)
+    }
     for (suffix in stripSuffixesByKind[kind] ?: stripSuffixes) {
       if (name.length > suffix.length && name.endsWith(suffix)) name = name.removeSuffix(suffix)
     }
@@ -40,7 +51,6 @@ internal class MemberFunNaming(
 
     private const val PREFIX = "gezgin.naming."
     private const val MEMBER_FUN = "${PREFIX}memberFun."
-    private const val STRIP_SUFFIXES = "stripSuffixes"
 
     /**
      * Reads the `gezgin.naming.memberFun.*` KSP options. Every key under `gezgin.naming.` that is
@@ -48,34 +58,43 @@ internal class MemberFunNaming(
      * default naming.
      */
     fun fromOptions(options: Map<String, String>, onError: (String) -> Unit): MemberFunNaming {
-      var general: List<String>? = null
-      val byKind = mutableMapOf<MemberKind, List<String>>()
+      val general = mutableMapOf<Affix, List<String>>()
+      val byKind = mutableMapOf<Pair<Affix, MemberKind>, List<String>>()
       options
         .filterKeys { it.startsWith(PREFIX) }
         .forEach { (key, value) ->
           val rest = key.removePrefix(MEMBER_FUN).takeIf { key.startsWith(MEMBER_FUN) }
-          val suffixes = value.split(',').map(String::trim).filter(String::isNotEmpty)
+          val affix = Affix.entries.firstOrNull { rest != null && rest.endsWith(it.option) }
+          val values = value.split(',').map(String::trim).filter(String::isNotEmpty)
           when {
-            rest == STRIP_SUFFIXES -> general = suffixes
-            rest != null && rest.endsWith(".$STRIP_SUFFIXES") -> {
+            rest == null || affix == null -> onError(unknownOption(key))
+            rest == affix.option -> general[affix] = values
+            rest.endsWith(".${affix.option}") -> {
               val kind =
-                MemberKind.entries.firstOrNull { it.name == rest.removeSuffix(".$STRIP_SUFFIXES") }
+                MemberKind.entries.firstOrNull { it.name == rest.removeSuffix(".${affix.option}") }
               if (kind != null) {
-                byKind[kind] = suffixes
+                byKind[affix to kind] = values
               } else {
                 onError(
                   "$key names no edge kind; use one of ${MemberKind.entries.joinToString { it.name }}"
                 )
               }
             }
-            else ->
-              onError(
-                "unknown naming option $key; supported: ${MEMBER_FUN}$STRIP_SUFFIXES and " +
-                  "${MEMBER_FUN}<Kind>.$STRIP_SUFFIXES"
-              )
+            else -> onError(unknownOption(key))
           }
         }
-      return MemberFunNaming(general.orEmpty(), byKind)
+      fun kindsOf(affix: Affix) =
+        byKind.filterKeys { it.first == affix }.mapKeys { (key, _) -> key.second }
+      return MemberFunNaming(
+        stripSuffixes = general[Affix.Suffixes].orEmpty(),
+        stripPrefixes = general[Affix.Prefixes].orEmpty(),
+        stripSuffixesByKind = kindsOf(Affix.Suffixes),
+        stripPrefixesByKind = kindsOf(Affix.Prefixes),
+      )
     }
+
+    private fun unknownOption(key: String) =
+      "unknown naming option $key; supported: $MEMBER_FUN{stripSuffixes,stripPrefixes} and " +
+        "$MEMBER_FUN<Kind>.{stripSuffixes,stripPrefixes}"
   }
 }

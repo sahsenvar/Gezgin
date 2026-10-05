@@ -64,6 +64,29 @@ class MemberFunNamingTest {
   }
 
   @Test
+  fun `prefixes are removed before suffixes and never empty the name`() {
+    val naming =
+      naming(
+        "gezgin.naming.memberFun.stripPrefixes" to "Screen,Dialog",
+        "gezgin.naming.memberFun.stripSuffixes" to "Route",
+      )
+    assertEquals("Academy", naming.x(MemberKind.GoTo, "ScreenAcademyRoute"))
+    assertEquals("Error", naming.x(MemberKind.Open, "DialogErrorRoute"))
+    assertEquals("Screen", naming.x(MemberKind.GoTo, "Screen"))
+  }
+
+  @Test
+  fun `a per-kind prefix list leaves the suffix list untouched`() {
+    val naming =
+      naming(
+        "gezgin.naming.memberFun.stripSuffixes" to "Route",
+        "gezgin.naming.memberFun.Open.stripPrefixes" to "Dialog",
+      )
+    assertEquals("DialogError", naming.x(MemberKind.GoTo, "DialogErrorRoute"))
+    assertEquals("Error", naming.x(MemberKind.Open, "DialogErrorRoute"))
+  }
+
+  @Test
   fun `unknown naming options are reported`() {
     val errors = mutableListOf<String>()
     naming(

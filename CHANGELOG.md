@@ -27,7 +27,8 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   KSP seçeneği `goToX`/`openX`/`launchX`/`backToX` adlarını türetirken route adından hangi soneklerin
   (sırayla, her biri en fazla bir kez) atılacağını belirler; `gezgin.naming.memberFun.<Tür>.stripSuffixes`
   (`GoTo`, `ReplaceTo`, `QuitAndGoTo`, `GoForResult`, `BackTo`, `Open`) tek bir edge türü için listeyi
-  değiştirir. Edge'in `name=`'i yine her şeyden baskındır. Tanınmayan bir `gezgin.naming.*` seçeneği
+  değiştirir. `gezgin.naming.memberFun.stripPrefixes` (ve `<Tür>.stripPrefixes`) baştaki tokenlar için
+  aynısını yapar ve soneklerden önce uygulanır. Edge'in `name=`'i yine her şeyden baskındır. Tanınmayan bir `gezgin.naming.*` seçeneği
   `NM1` hatası verir. `Screen`'in atılıp `Dialog`/`BottomSheet`'in atılmamasındaki tutarsızlık (#65) bu
   ayarla kullanıcının kararına bırakıldı.
 
