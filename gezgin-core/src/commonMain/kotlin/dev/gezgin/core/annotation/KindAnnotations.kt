@@ -30,7 +30,9 @@ public annotation class Screen(val route: KClass<out Route>)
  * @property route the route type rendered by the annotated dialog composable
  * @author @sahsenvar
  */
-@Target(AnnotationTarget.FUNCTION) public annotation class Dialog(val route: KClass<out Route>)
+@Target(AnnotationTarget.FUNCTION)
+@Repeatable
+public annotation class Dialog(val route: KClass<out Route>)
 
 /**
  * Kind: renders the route as a modal **bottom sheet** — the route may implement the optional
@@ -42,6 +44,7 @@ public annotation class Screen(val route: KClass<out Route>)
  * @author @sahsenvar
  */
 @Target(AnnotationTarget.FUNCTION)
+@Repeatable
 public annotation class BottomSheet(val route: KClass<out Route>)
 
 /**
@@ -54,4 +57,5 @@ public annotation class BottomSheet(val route: KClass<out Route>)
  * @author @sahsenvar
  */
 @Target(AnnotationTarget.FUNCTION)
+@Repeatable
 public annotation class FullscreenModal(val route: KClass<out Route>)

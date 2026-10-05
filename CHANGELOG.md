@@ -26,6 +26,11 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   classpath'inde de çalışır. Wrapper'ı adlandırmak yeter: marker'lara parametrelerindeki `@FilledBy`
   üzerinden ulaşılır, ayrıca listelenmeleri gerekmez.
 
+- **`@Dialog`, `@BottomSheet` ve `@FullscreenModal` tekrarlanabilir.** `@Screen` gibi bir modal
+  composable'ı birden çok route'a bağlar; her route için ayrı giriş üretilir. Callback taşıyan
+  route'larda composable parametreleri her route'un alanlarıyla ayrı ayrı eşleştirilir ve
+  eşleşmeyen route `CB2` hatasında adıyla anılır.
+
 - **Wrapper tip parametresi slotun dönüş tipinden bağlanır.** Slot parametrelerinden bağlanamayan
   bir tip parametresi artık doldurulan slotun dönüş tipinden okunur: `viewModel: () -> Vm<S, I, E>`
   slotu `fun detailViewModel(): DetailViewModel` ile doldurulunca `E`,
