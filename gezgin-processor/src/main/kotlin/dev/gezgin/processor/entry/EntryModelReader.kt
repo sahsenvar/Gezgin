@@ -196,8 +196,12 @@ internal class EntryModelReader(
       (resolvedRouteType.declaration as? KSClassDeclaration)?.callbackRouteFields()
     val callbackArgs =
       if (callbackRoute != null) {
-        readCallbackArgs(fn, kind, callbackRoute, resolvedRouteType.declaration.simpleName.asString())
-          ?: return null
+        readCallbackArgs(
+          fn,
+          kind,
+          callbackRoute,
+          resolvedRouteType.declaration.simpleName.asString(),
+        ) ?: return null
       } else {
         null
       }

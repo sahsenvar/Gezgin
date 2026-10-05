@@ -132,11 +132,14 @@ class CallbackModalEntryCodegenTest {
           fun FundingSheet(onSelect: (String) -> Unit) {}
           """
             .trimIndent(),
-        ),
+        )
       )
     assertFalse(result.messages.contains("[CB"), result.messages)
     assertFalse(result.messages.contains("[SC"), result.messages)
-    assertFalse(result.messages.contains("unresolved reference", ignoreCase = true), result.messages)
+    assertFalse(
+      result.messages.contains("unresolved reference", ignoreCase = true),
+      result.messages,
+    )
     val text =
       assertNotNull(result.generatedSourceFor("GezginEntries.kt"), result.messages).readText()
     assertContains(text, "TradeFundingSheet")
@@ -205,7 +208,7 @@ class CallbackModalEntryCodegenTest {
           fun Sheet(onSelect: (String) -> Unit) {}
           """
             .trimIndent(),
-        ),
+        )
       )
     assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
     assertContains(result.messages, "[CB2]", message = result.messages)

@@ -234,8 +234,16 @@ public abstract interface annotation class dev/gezgin/core/annotation/BottomShee
 	public abstract fun route ()Ljava/lang/Class;
 }
 
+public abstract interface annotation class dev/gezgin/core/annotation/BottomSheet$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/BottomSheet;
+}
+
 public abstract interface annotation class dev/gezgin/core/annotation/Dialog : java/lang/annotation/Annotation {
 	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/Dialog$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/Dialog;
 }
 
 public abstract interface annotation class dev/gezgin/core/annotation/FilledBy : java/lang/annotation/Annotation {
@@ -251,6 +259,10 @@ public abstract interface annotation class dev/gezgin/core/annotation/FragmentSc
 
 public abstract interface annotation class dev/gezgin/core/annotation/FullscreenModal : java/lang/annotation/Annotation {
 	public abstract fun route ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/FullscreenModal$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/FullscreenModal;
 }
 
 public abstract interface annotation class dev/gezgin/core/annotation/GoForResult : java/lang/annotation/Annotation {
