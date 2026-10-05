@@ -196,7 +196,12 @@ internal class EntryModelReader(
       (resolvedRouteType.declaration as? KSClassDeclaration)?.callbackRouteFields()
     val callbackArgs =
       if (callbackRoute != null) {
-        readCallbackArgs(fn, kind, callbackRoute) ?: return null
+        readCallbackArgs(
+          fn,
+          kind,
+          callbackRoute,
+          resolvedRouteType.declaration.simpleName.asString(),
+        ) ?: return null
       } else {
         null
       }
@@ -359,6 +364,7 @@ internal class EntryModelReader(
     fn: KSFunctionDeclaration,
     kind: EntryKindModel,
     fields: List<KSValueParameter>,
+    routeName: String,
   ): List<CallbackEntryArg>? {
     val fnName = fn.simpleName.asString()
     if (kind != EntryKindModel.DIALOG && kind != EntryKindModel.BOTTOM_SHEET) {
@@ -387,7 +393,7 @@ internal class EntryModelReader(
           else -> {
             error(
               "CB2",
-              "$fnName: parameter '$name' matches no field of the callback route by name and " +
+              "$fnName: parameter '$name' matches no field of the callback route $routeName by name and " +
                 "type; a callback-modal composable takes route fields (same name and type), " +
                 "route or nav",
             )

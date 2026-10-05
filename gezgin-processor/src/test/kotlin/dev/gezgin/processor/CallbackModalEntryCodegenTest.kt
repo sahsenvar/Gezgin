@@ -97,6 +97,125 @@ class CallbackModalEntryCodegenTest {
   }
 
   @Test
+  fun `repeated BottomSheet binds one callback composable to several routes`() {
+    val result =
+      compileGezgin(
+        SourceFile.kotlin(
+          "Repeated.kt",
+          """
+          package dev.gezgin.cbrep
+
+          import androidx.compose.runtime.Composable
+          import dev.gezgin.core.BottomSheetContract
+          import dev.gezgin.core.Route
+          import dev.gezgin.core.annotation.BottomSheet
+          import dev.gezgin.core.annotation.NavGraph
+          import dev.gezgin.core.annotation.Open
+
+          @NavGraph
+          sealed interface TradeGraph : Route {
+              @Open(TradeFundingSheet::class)
+              data object Trade : TradeGraph
+              data class TradeFundingSheet(val onSelect: (String) -> Unit) : TradeGraph, BottomSheetContract
+          }
+
+          @NavGraph
+          sealed interface ExerciseGraph : Route {
+              @Open(ExerciseFundingSheet::class)
+              data object Exercise : ExerciseGraph
+              data class ExerciseFundingSheet(val onSelect: (String) -> Unit) : ExerciseGraph, BottomSheetContract
+          }
+
+          @BottomSheet(TradeGraph.TradeFundingSheet::class)
+          @BottomSheet(ExerciseGraph.ExerciseFundingSheet::class)
+          @Composable
+          fun FundingSheet(onSelect: (String) -> Unit) {}
+          """
+            .trimIndent(),
+        )
+      )
+    assertFalse(result.messages.contains("[CB"), result.messages)
+    assertFalse(result.messages.contains("[SC"), result.messages)
+    assertFalse(
+      result.messages.contains("unresolved reference", ignoreCase = true),
+      result.messages,
+    )
+    val text =
+      assertNotNull(result.generatedSourceFor("GezginEntries.kt"), result.messages).readText()
+    assertContains(text, "TradeFundingSheet")
+    assertContains(text, "ExerciseFundingSheet")
+  }
+
+  @Test
+  fun `repeated Dialog binds one composable to several plain routes`() {
+    val result =
+      compileGezgin(
+        SourceFile.kotlin(
+          "RepeatedDialog.kt",
+          """
+          package dev.gezgin.dlgrep
+
+          import androidx.compose.runtime.Composable
+          import dev.gezgin.core.Route
+          import dev.gezgin.core.annotation.Dialog
+          import dev.gezgin.core.annotation.NavGraph
+
+          @NavGraph
+          sealed interface G : Route {
+              data object A : G
+              data object B : G
+          }
+
+          @Dialog(G.A::class)
+          @Dialog(G.B::class)
+          @Composable
+          fun SharedDialog() {}
+          """
+            .trimIndent(),
+        ),
+        kspArgs = mapOf("gezgin.emitEntries" to "false", "gezgin.emitSerializers" to "false"),
+      )
+    assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+  }
+
+  @Test
+  fun `CB2 names the route whose field set a repeated composable fails to match`() {
+    val result =
+      compileGezgin(
+        SourceFile.kotlin(
+          "RepeatedMismatch.kt",
+          """
+          package dev.gezgin.cbmismatch
+
+          import androidx.compose.runtime.Composable
+          import dev.gezgin.core.BottomSheetContract
+          import dev.gezgin.core.Route
+          import dev.gezgin.core.annotation.BottomSheet
+          import dev.gezgin.core.annotation.NavGraph
+          import dev.gezgin.core.annotation.Open
+
+          @NavGraph
+          sealed interface G : Route {
+              @Open(Good::class, Bad::class)
+              data object Home : G
+              data class Good(val onSelect: (String) -> Unit) : G, BottomSheetContract
+              data class Bad(val onPick: (String) -> Unit) : G, BottomSheetContract
+          }
+
+          @BottomSheet(G.Good::class)
+          @BottomSheet(G.Bad::class)
+          @Composable
+          fun Sheet(onSelect: (String) -> Unit) {}
+          """
+            .trimIndent(),
+        )
+      )
+    assertNotEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+    assertContains(result.messages, "[CB2]", message = result.messages)
+    assertContains(result.messages, "Bad", message = result.messages)
+  }
+
+  @Test
   fun `cross-module feature reads the callback route from the classpath`() {
     val navModule = CompileHarness.compileGezginModule(SourceFile.kotlin("CbGraph.kt", graphSource))
     assertEquals(KotlinCompilation.ExitCode.OK, navModule.exitCode, navModule.messages)
