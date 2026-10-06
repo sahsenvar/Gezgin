@@ -270,10 +270,63 @@ class WrapperScopeCodegenTest {
       )
     val text = result.generatedSourceFor("GezginWrapperEntries.kt")!!.readText()
 
-    assertContains(result.messages, "[SW15]")
+    assertSw15IsOnlyAWarning(result.messages, count = 1)
     assertContains(result.messages, "Hidden")
     assertFalse(text.contains("Hidden"), "skipped annotation must not be emitted:\n$text")
     assertFalse(result.messages.contains("[SW13]") || result.messages.contains("[SW14]"))
+  }
+
+  @Test
+  fun `an annotation naming a type the generated file cannot see is skipped with SW15`() {
+    val result =
+      compileGezgin(
+        source(
+          """
+          import dev.gezgin.core.annotation.ScreenWrapper
+
+          private class Secret
+
+          private object Holder {
+            annotation class Nested
+          }
+
+          annotation class Tracked(val target: KClass<*>)
+
+          @NavGraph
+          sealed interface AppGraph : Route {
+            @GoTo(OtherRoute::class) @Tracked(target = Secret::class) data object DetailRoute : AppGraph
+
+            @Holder.Nested data object OtherRoute : AppGraph
+          }
+
+          @ScreenWrapper
+          @Composable
+          fun <S> GezginWrapperScope.appRoot(
+            @FilledBy(Screen::class) content: @Composable (S) -> Unit,
+          ) = Unit
+
+          @Screen(AppGraph.DetailRoute::class)
+          @Composable
+          fun detailScreen(state: String) = Unit
+
+          @Screen(AppGraph.OtherRoute::class)
+          @Composable
+          fun otherScreen(state: String) = Unit
+          """
+        )
+      )
+    val text = result.generatedSourceFor("GezginWrapperEntries.kt")!!.readText()
+
+    assertSw15IsOnlyAWarning(result.messages, count = 2)
+    assertFalse(text.contains("Secret"), "private KClass argument leaked:\n$text")
+    assertFalse(text.contains("Nested"), "annotation inside a private object leaked:\n$text")
+    assertContains(text, "GoTo(")
+  }
+
+  private fun assertSw15IsOnlyAWarning(messages: String, count: Int) {
+    val lines = messages.lines().filter { "[SW15]" in it }
+    assertTrue(lines.size == count, "expected $count [SW15] lines:\n$messages")
+    assertTrue(lines.all { it.startsWith("w: ") }, "[SW15] must be a warning:\n$messages")
   }
 
   // endregion

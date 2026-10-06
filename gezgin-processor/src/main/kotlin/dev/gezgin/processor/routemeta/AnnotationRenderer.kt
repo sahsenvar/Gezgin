@@ -4,6 +4,7 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.Modifier
 import com.squareup.kotlinpoet.CodeBlock
@@ -81,14 +82,18 @@ internal class AnnotationRenderer(private val logger: KSPLogger) {
   }
 
   /**
-   * An internal declaration is reachable only from its own module, i.e. when it has a source file.
+   * The generated file can name a declaration only if it and every enclosing declaration are
+   * visible to it; an internal one is visible only from its own module, i.e. when it has a source.
    */
-  private fun isAccessible(declaration: KSClassDeclaration): Boolean =
-    when {
-      Modifier.PRIVATE in declaration.modifiers -> false
-      Modifier.INTERNAL in declaration.modifiers -> declaration.containingFile != null
-      else -> true
+  private fun isAccessible(declaration: KSDeclaration): Boolean {
+    var current: KSDeclaration? = declaration
+    while (current != null) {
+      if (Modifier.PRIVATE in current.modifiers) return false
+      if (Modifier.INTERNAL in current.modifiers && current.containingFile == null) return false
+      current = current.parentDeclaration
     }
+    return true
+  }
 
   private fun renderValue(value: Any?, expected: KSType?, isVararg: Boolean = false): CodeBlock? =
     when (value) {
@@ -115,14 +120,18 @@ internal class AnnotationRenderer(private val logger: KSPLogger) {
 
   private fun enumEntry(entry: KSClassDeclaration): CodeBlock? {
     val owner = entry.parentDeclaration as? KSClassDeclaration ?: return null
+    if (!isAccessible(owner)) return null
     return CodeBlock.of("%T.%L", owner.toClassName(), entry.simpleName.asString())
   }
 
   private fun typeValue(type: KSType): CodeBlock? {
     if (type.isError) return null
     val declaration = type.declaration as? KSClassDeclaration ?: return null
-    return if (declaration.classKind == ClassKind.ENUM_ENTRY) enumEntry(declaration)
-    else CodeBlock.of("%T::class", declaration.toClassName())
+    return when {
+      declaration.classKind == ClassKind.ENUM_ENTRY -> enumEntry(declaration)
+      !isAccessible(declaration) -> null
+      else -> CodeBlock.of("%T::class", declaration.toClassName())
+    }
   }
 
   /** KSP may report a vararg parameter's type as either the array type or the element type. */
