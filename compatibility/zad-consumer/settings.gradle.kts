@@ -1,8 +1,32 @@
 pluginManagement {
+  val releaseVerificationRepository =
+    providers.gradleProperty("releaseVerificationRepository").orNull
+  val gezginRepositoryUrl =
+    providers
+      .gradleProperty("gezginRepositoryUrl")
+      .getOrElse("https://repo.maven.apache.org/maven2")
+
   repositories {
+    exclusiveContent {
+      forRepository {
+        maven {
+          name = "GezginPlugin"
+          url = uri(releaseVerificationRepository ?: gezginRepositoryUrl)
+        }
+      }
+      filter {
+        includeGroup("io.github.sahsenvar")
+        includeGroup("io.github.sahsenvar.gezgin")
+      }
+    }
     google()
     mavenCentral()
     gradlePluginPortal()
+  }
+
+  plugins {
+    id("io.github.sahsenvar.gezgin") version
+      providers.gradleProperty("gezginVersion").getOrElse("0.3.0")
   }
 }
 

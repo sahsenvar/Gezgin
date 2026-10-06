@@ -12,6 +12,9 @@ import org.xml.sax.InputSource
 /** Verifies the complete repository shape produced for a public release version. */
 object ReleasePublicationVerifier {
   private const val groupId = "io.github.sahsenvar"
+  private const val pluginMarkerGroupId = "io.github.sahsenvar.gezgin"
+  private const val pluginMarkerArtifactId = "io.github.sahsenvar.gezgin.gradle.plugin"
+  private const val pluginArtifactId = "gezgin-gradle-plugin"
   private const val projectUrl = "https://github.com/sahsenvar/Gezgin"
   private const val licenseName = "The Apache License, Version 2.0"
   private const val licenseUrl = "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -80,6 +83,8 @@ object ReleasePublicationVerifier {
       }
     }
 
+    expectedSignatures.add(signatureOf(verifyPluginMarker(repository, version)))
+
     if (requireSignatures) {
       expectedSignatures.forEach { signature ->
         check(Files.isRegularFile(signature) && Files.size(signature) > 0L) {
@@ -104,7 +109,7 @@ object ReleasePublicationVerifier {
     }
 
     return VerificationSummary(
-      coordinateCount = expectedArtifacts.size,
+      coordinateCount = expectedArtifacts.size + 1,
       signatureCount = if (requireSignatures) expectedSignatures.size else 0,
     )
   }
@@ -122,36 +127,104 @@ object ReleasePublicationVerifier {
     check(hasPayload) { "$label is missing content: $path" }
   }
 
-  private fun verifyPom(path: Path, artifact: ExpectedArtifact, version: String) {
+  /**
+   * The Gradle plugin marker is a pom-only publication in the plugin id's own group. It must point
+   * at the plugin implementation and carry nothing else.
+   */
+  private fun verifyPluginMarker(repository: Path, version: String): Path {
+    val versionDirectory =
+      repository
+        .resolve(pluginMarkerGroupId.replace('.', '/'))
+        .resolve(pluginMarkerArtifactId)
+        .resolve(version)
+    val pom = versionDirectory.resolve("$pluginMarkerArtifactId-$version.pom")
+    check(Files.isRegularFile(pom) && Files.size(pom) > 0L) {
+      "missing or empty plugin marker POM: $pom"
+    }
+    val files =
+      Files.list(versionDirectory).use { paths ->
+        paths
+          .map { it.fileName.toString() }
+          .filter { name -> checksumAndSignatureSuffixes.none(name::endsWith) }
+          .toList()
+          .toSet()
+      }
+    check(files == setOf(pom.fileName.toString())) {
+      "plugin marker publication must contain only its POM, found $files"
+    }
+
+    val project = parsePom(pom)
+    val dependency = project.child("dependencies")?.children("dependency")?.singleOrNull()
+    check(
+      project.hasCentralMetadata(
+        pluginMarkerGroupId,
+        pluginMarkerArtifactId,
+        version,
+        pluginArtifactId,
+        descriptionFor(pluginArtifactId),
+      ) &&
+        project.childText("packaging") == "pom" &&
+        dependency?.childText("groupId") == groupId &&
+        dependency.childText("artifactId") == pluginArtifactId &&
+        dependency.childText("version") == version &&
+        dependency.child("scope") == null
+    ) {
+      "plugin marker POM differs for $pluginMarkerArtifactId"
+    }
+    return pom
+  }
+
+  private fun parsePom(path: Path): Element {
     val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
     val source =
       InputSource(StringReader(Files.readString(path).trimStart())).apply {
         systemId = path.toUri().toString()
       }
-    val project = factory.newDocumentBuilder().parse(source).documentElement
-    val metadataMatches =
-      project.childText("groupId") == groupId &&
-        project.childText("artifactId") == artifact.artifactId &&
-        project.childText("version") == version &&
-        project.childText("name") == artifact.projectName &&
-        project.childText("description") == artifact.description &&
-        project.childText("url") == projectUrl &&
-        project.child("licenses")?.children("license")?.singleOrNull()?.let { license ->
-          license.childText("name") == licenseName &&
-            license.childText("url") == licenseUrl &&
-            license.childText("distribution") == licenseDistribution
-        } == true &&
-        project.child("developers")?.children("developer")?.singleOrNull()?.let { developer ->
-          developer.childText("id") == developerId &&
-            developer.childText("name") == developerName &&
-            developer.childText("url") == developerUrl
-        } == true &&
-        project.child("scm")?.let { scm ->
-          scm.childText("url") == projectUrl &&
-            scm.childText("connection") == scmConnection &&
-            scm.childText("developerConnection") == scmDeveloperConnection
-        } == true
-    check(metadataMatches) { "POM metadata differs for ${artifact.artifactId}" }
+    return factory.newDocumentBuilder().parse(source).documentElement
+  }
+
+  private fun Element.hasCentralMetadata(
+    group: String,
+    artifact: String,
+    version: String,
+    name: String,
+    description: String,
+  ): Boolean =
+    childText("groupId") == group &&
+      childText("artifactId") == artifact &&
+      childText("version") == version &&
+      childText("name") == name &&
+      childText("description") == description &&
+      childText("url") == projectUrl &&
+      child("licenses")?.children("license")?.singleOrNull()?.let { license ->
+        license.childText("name") == licenseName &&
+          license.childText("url") == licenseUrl &&
+          license.childText("distribution") == licenseDistribution
+      } == true &&
+      child("developers")?.children("developer")?.singleOrNull()?.let { developer ->
+        developer.childText("id") == developerId &&
+          developer.childText("name") == developerName &&
+          developer.childText("url") == developerUrl
+      } == true &&
+      child("scm")?.let { scm ->
+        scm.childText("url") == projectUrl &&
+          scm.childText("connection") == scmConnection &&
+          scm.childText("developerConnection") == scmDeveloperConnection
+      } == true
+
+  private fun verifyPom(path: Path, artifact: ExpectedArtifact, version: String) {
+    val project = parsePom(path)
+    check(
+      project.hasCentralMetadata(
+        groupId,
+        artifact.artifactId,
+        version,
+        artifact.projectName,
+        artifact.description,
+      )
+    ) {
+      "POM metadata differs for ${artifact.artifactId}"
+    }
 
     val actualDependencies =
       project.child("dependencies")?.children("dependency").orEmpty().map { dependency ->
@@ -240,6 +313,8 @@ object ReleasePublicationVerifier {
     }
   }
 
+  private val checksumAndSignatureSuffixes = listOf(".asc", ".md5", ".sha1", ".sha256", ".sha512")
+
   private fun signatureOf(path: Path): Path = path.resolveSibling("${path.fileName}.asc")
 
   private fun Element.child(name: String): Element? =
@@ -294,6 +369,8 @@ object ReleasePublicationVerifier {
       "gezgin-test" -> "UI-free typed navigation test utilities for Gezgin applications."
       "gezgin-processor" ->
         "KSP2 processor that generates typed Gezgin navigators and entry providers."
+      "gezgin-gradle-plugin" ->
+        "Gradle plugin with a typed DSL over the Gezgin KSP processor options."
       else -> error("Unknown published project: $projectName")
     }
 
@@ -408,6 +485,8 @@ object ReleasePublicationVerifier {
           PomDependency("com.squareup", "kotlinpoet-jvm", "2.3.0", "runtime"),
           PomDependency("com.squareup", "kotlinpoet-ksp", "2.3.0", "runtime"),
         )
+      "gezgin-gradle-plugin" ->
+        setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"))
       else -> error("Unknown publication: $artifactId")
     }
 
@@ -529,6 +608,8 @@ object ReleasePublicationVerifier {
           ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.3.0"),
           ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
         )
+      "gezgin-gradle-plugin" ->
+        setOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
       else -> error("Unknown publication: $artifactId")
     }
 
@@ -610,5 +691,6 @@ object ReleasePublicationVerifier {
         moduleProjectDependency = "gezgin-core",
       ),
       ExpectedArtifact("gezgin-processor", ".jar"),
+      ExpectedArtifact("gezgin-gradle-plugin", ".jar"),
     )
 }

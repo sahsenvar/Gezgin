@@ -10,7 +10,14 @@ CURL_MAX_SECONDS=${GEZGIN_SMOKE_CURL_MAX_SECONDS:-10}
 NOW_COMMAND=${GEZGIN_SMOKE_NOW_COMMAND:-date}
 CURL_COMMAND=${GEZGIN_SMOKE_CURL_COMMAND:-curl}
 SLEEP_COMMAND=${GEZGIN_SMOKE_SLEEP_COMMAND:-sleep}
-MODULES=(gezgin-core gezgin-processor gezgin-test)
+# Paths below the group; the plugin marker lives in the plugin id's own subgroup.
+MODULES=(
+  gezgin-core
+  gezgin-processor
+  gezgin-test
+  gezgin-gradle-plugin
+  gezgin/io.github.sahsenvar.gezgin.gradle.plugin
+)
 
 now_seconds() {
   "$NOW_COMMAND" +%s
@@ -32,10 +39,11 @@ while true; do
     if ((request_timeout > remaining)); then
       request_timeout=$remaining
     fi
+    artifact=${module##*/}
     if [[ "$VERSION" == *-SNAPSHOT ]]; then
       resource="$CENTRAL_URL/$GROUP_PATH/$module/$VERSION/maven-metadata.xml"
     else
-      resource="$CENTRAL_URL/$GROUP_PATH/$module/$VERSION/$module-$VERSION.pom"
+      resource="$CENTRAL_URL/$GROUP_PATH/$module/$VERSION/$artifact-$VERSION.pom"
     fi
     if ! "$CURL_COMMAND" \
       --fail --silent --show-error --location --head \

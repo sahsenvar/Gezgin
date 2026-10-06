@@ -204,6 +204,92 @@ class ReleasePublicationVerifierTest {
     assertContains(failure.message.orEmpty(), "gezgin-processor-0.2.1.pom")
   }
 
+  @Test
+  fun `rejects a missing plugin marker`() {
+    val repository = publicationRepository(signatures = false)
+    markerPom(repository).deleteExisting()
+
+    val failure =
+      assertFailsWith<IllegalStateException> {
+        verifyRepository(repository, requireSignatures = false)
+      }
+
+    assertContains(failure.message.orEmpty(), "plugin marker POM")
+  }
+
+  @Test
+  fun `rejects a plugin marker that points at another artifact`() {
+    val repository = publicationRepository(signatures = false)
+    val pom = markerPom(repository)
+    pom.writeText(
+      pom
+        .toFile()
+        .readText()
+        .replace("<artifactId>gezgin-gradle-plugin", "<artifactId>gezgin-processor")
+    )
+
+    val failure =
+      assertFailsWith<IllegalStateException> {
+        verifyRepository(repository, requireSignatures = false)
+      }
+
+    assertContains(failure.message.orEmpty(), "plugin marker POM differs")
+  }
+
+  @Test
+  fun `rejects a plugin marker that carries more than its POM`() {
+    val repository = publicationRepository(signatures = false)
+    jar(markerPom(repository).resolveSibling("extra.jar"), "payload.bin")
+
+    val failure =
+      assertFailsWith<IllegalStateException> {
+        verifyRepository(repository, requireSignatures = false)
+      }
+
+    assertContains(failure.message.orEmpty(), "only its POM")
+  }
+
+  @Test
+  fun `requires the plugin marker signature when signing verification is enabled`() {
+    val repository = publicationRepository(signatures = true)
+    markerPom(repository).resolveSibling("${markerPom(repository).fileName}.asc").deleteExisting()
+
+    val failure =
+      assertFailsWith<IllegalStateException> {
+        verifyRepository(repository, requireSignatures = true)
+      }
+
+    assertContains(failure.message.orEmpty(), "missing signature")
+    assertContains(failure.message.orEmpty(), "io.github.sahsenvar.gezgin.gradle.plugin-0.2.1.pom")
+  }
+
+  private fun markerPom(repository: Path): Path =
+    repository.resolve(
+      "io/github/sahsenvar/gezgin/io.github.sahsenvar.gezgin.gradle.plugin/0.2.1/" +
+        "io.github.sahsenvar.gezgin.gradle.plugin-0.2.1.pom"
+    )
+
+  private fun writePluginMarker(repository: Path, signatures: Boolean) {
+    val pom = markerPom(repository).also { Files.createDirectories(it.parent) }
+    pom.writeText(
+      pom(expectedArtifacts.last())
+        .replace(
+          Regex(
+            "<groupId>io.github.sahsenvar</groupId>(\\s*)<artifactId>gezgin-gradle-plugin</artifactId>"
+          )
+        ) {
+          "<groupId>io.github.sahsenvar.gezgin</groupId>${it.groupValues[1]}" +
+            "<artifactId>io.github.sahsenvar.gezgin.gradle.plugin</artifactId>"
+        }
+        .replaceFirst("<name>", "<packaging>pom</packaging><name>")
+        .replace(Regex("<dependencies>.*</dependencies>", RegexOption.DOT_MATCHES_ALL)) {
+          "<dependencies><dependency><groupId>io.github.sahsenvar</groupId>" +
+            "<artifactId>gezgin-gradle-plugin</artifactId><version>0.2.1</version></dependency></dependencies>"
+        }
+    )
+    if (signatures) pom.resolveSibling("${pom.fileName}.asc").writeText("signature")
+  }
+
   private fun publicationRepository(signatures: Boolean): Path {
     val repository = temporaryDirectory.resolve("repository")
     expectedArtifacts.forEach { artifact ->
@@ -240,6 +326,7 @@ class ReleasePublicationVerifierTest {
         }
       }
     }
+    writePluginMarker(repository, signatures)
     return repository
   }
 
@@ -465,6 +552,8 @@ class ReleasePublicationVerifierTest {
         "gezgin-test" -> "UI-free typed navigation test utilities for Gezgin applications."
         "gezgin-processor" ->
           "KSP2 processor that generates typed Gezgin navigators and entry providers."
+        "gezgin-gradle-plugin" ->
+          "Gradle plugin with a typed DSL over the Gezgin KSP processor options."
         else -> error("Unknown published project: $projectName")
       }
 
@@ -594,6 +683,8 @@ class ReleasePublicationVerifierTest {
             PomDependency("com.squareup", "kotlinpoet-jvm", "2.3.0", "runtime"),
             PomDependency("com.squareup", "kotlinpoet-ksp", "2.3.0", "runtime"),
           )
+        "gezgin-gradle-plugin" ->
+          listOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"))
         else -> error("Unknown publication: $artifactId")
       }
 
@@ -663,6 +754,8 @@ class ReleasePublicationVerifierTest {
             ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.3.0"),
             ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
           )
+        "gezgin-gradle-plugin" ->
+          listOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
         else -> error("Unknown publication: $artifactId")
       }
 
@@ -735,6 +828,7 @@ class ReleasePublicationVerifierTest {
           moduleProjectDependency = "gezgin-core",
         ),
         ExpectedArtifact("gezgin-processor", ".jar"),
+        ExpectedArtifact("gezgin-gradle-plugin", ".jar"),
       )
   }
 }

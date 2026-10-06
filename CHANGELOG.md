@@ -23,6 +23,15 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ### Added
 
+- **`gezgin-gradle-plugin` — isimlendirme ayarı için tipli Gradle DSL.** Yeni `io.github.sahsenvar:gezgin-gradle-plugin`
+  artefaktı `io.github.sahsenvar.gezgin` plugin id'siyle yayınlanır (marker dahil). DSL, `gezgin.naming.memberFun.*`
+  KSP seçeneklerinin tipli bir cephesidir ve yeni bir davranış eklemez:
+  `gezgin { naming { memberFun { stripSuffixes = listOf("Route"); rule { kind -> if (kind == GezginAnnotation.Open) stripSuffixes += listOf("Dialog") } } } }`.
+  `rule {}` içinde listeler o tür için genel listenin kopyasıyla başlar (`+=`, `-=`, `=` yalnız o türü etkiler);
+  tüm `rule {}` blokları bildirim sırasıyla uygulanır ve build betiği yapılandırıldıktan sonra çalışır. Yalnız genel
+  listeden farklı çıkan türler için tür-bazlı seçenek üretilir. Plugin KSP'yi uygulamaz; KSP varken `ksp { arg(...) }`
+  yerine geçer, `ksp { arg(...) }` kullanımı değişmeden çalışmaya devam eder.
+
 - **Üretilen üye adlarındaki sonek atma ayarlanabilir.** `gezgin.naming.memberFun.stripSuffixes`
   KSP seçeneği `goToX`/`openX`/`launchX`/`backToX` adlarını türetirken route adından hangi soneklerin
   (sırayla, her biri en fazla bir kez) atılacağını belirler; `gezgin.naming.memberFun.<Tür>.stripSuffixes`

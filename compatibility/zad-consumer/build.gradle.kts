@@ -5,6 +5,7 @@ plugins {
   id("org.jetbrains.kotlin.plugin.compose") version "2.3.21"
   id("com.google.devtools.ksp") version "2.3.9"
   id("io.insert-koin.compiler.plugin") version "1.0.1"
+  id("io.github.sahsenvar.gezgin")
 }
 
 val gezginGroup = "io.github.sahsenvar"
@@ -57,7 +58,7 @@ configurations.configureEach {
   }
 }
 
-ksp { arg("gezgin.naming.memberFun.stripSuffixes", "Route,Screen,Flow") }
+gezgin { naming { memberFun { stripSuffixes = listOf("Route", "Screen", "Flow") } } }
 
 dependencies {
   implementation("$gezginGroup:gezgin-core:$gezginVersion")

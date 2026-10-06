@@ -1,0 +1,44 @@
+public final class dev/gezgin/gradle/GezginAnnotation : java/lang/Enum {
+	public static final field BackTo Ldev/gezgin/gradle/GezginAnnotation;
+	public static final field GoForResult Ldev/gezgin/gradle/GezginAnnotation;
+	public static final field GoTo Ldev/gezgin/gradle/GezginAnnotation;
+	public static final field Open Ldev/gezgin/gradle/GezginAnnotation;
+	public static final field QuitAndGoTo Ldev/gezgin/gradle/GezginAnnotation;
+	public static final field ReplaceTo Ldev/gezgin/gradle/GezginAnnotation;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/gezgin/gradle/GezginAnnotation;
+	public static fun values ()[Ldev/gezgin/gradle/GezginAnnotation;
+}
+
+public abstract class dev/gezgin/gradle/GezginExtension {
+	public fun <init> ()V
+	public final fun naming (Lorg/gradle/api/Action;)V
+}
+
+public final class dev/gezgin/gradle/GezginPlugin : org/gradle/api/Plugin {
+	public fun <init> ()V
+	public synthetic fun apply (Ljava/lang/Object;)V
+	public fun apply (Lorg/gradle/api/Project;)V
+}
+
+public final class dev/gezgin/gradle/MemberFunRuleScope {
+	public final fun getStripPrefixes ()Ljava/util/List;
+	public final fun getStripSuffixes ()Ljava/util/List;
+	public final fun setStripPrefixes (Ljava/util/List;)V
+	public final fun setStripSuffixes (Ljava/util/List;)V
+}
+
+public final class dev/gezgin/gradle/MemberFunSpec {
+	public fun <init> ()V
+	public final fun getStripPrefixes ()Ljava/util/List;
+	public final fun getStripSuffixes ()Ljava/util/List;
+	public final fun rule (Lkotlin/jvm/functions/Function2;)V
+	public final fun setStripPrefixes (Ljava/util/List;)V
+	public final fun setStripSuffixes (Ljava/util/List;)V
+}
+
+public final class dev/gezgin/gradle/NamingSpec {
+	public fun <init> ()V
+	public final fun memberFun (Lorg/gradle/api/Action;)V
+}
+

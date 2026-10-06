@@ -8,6 +8,11 @@ processor:
       - any-glob-to-any-file:
           - 'gezgin-processor/**'
 
+gradle-plugin:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'gezgin-gradle-plugin/**'
+
 test:
   - changed-files:
       - any-glob-to-any-file:

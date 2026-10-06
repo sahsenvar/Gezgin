@@ -26,7 +26,8 @@ plugins {
 
 val releaseGroup = providers.gradleProperty("GROUP").get()
 val releaseVersion = providers.gradleProperty("VERSION_NAME").get()
-val publishedProjectPaths = setOf(":gezgin-core", ":gezgin-test", ":gezgin-processor")
+val publishedProjectPaths =
+  setOf(":gezgin-core", ":gezgin-test", ":gezgin-processor", ":gezgin-gradle-plugin")
 val publishedProjects = publishedProjectPaths.map(::project)
 val koverMinLineCoverage = providers.gradleProperty("KOVER_MIN_LINE_COVERAGE").map(String::toInt)
 
@@ -95,6 +96,8 @@ val publishedModuleDescriptions =
     "gezgin-test" to "UI-free typed navigation test utilities for Gezgin applications.",
     "gezgin-processor" to
       "KSP2 processor that generates typed Gezgin navigators and entry providers.",
+    "gezgin-gradle-plugin" to
+      "Gradle plugin with a typed DSL over the Gezgin KSP processor options.",
   )
 
 configure(publishedProjects) {
@@ -201,6 +204,7 @@ val publicApiSourceRoots =
   mapOf(
     "gezgin-core" to listOf("commonMain", "androidMain", "nonAndroidMain", "jvmMain"),
     "gezgin-processor" to listOf("main"),
+    "gezgin-gradle-plugin" to listOf("main"),
     "gezgin-test" to listOf("commonMain", "androidMain", "jvmMain"),
   )
 
@@ -218,7 +222,12 @@ dependencies {
 tasks.register<CheckPublicApiKDocTask>("checkPublicApiKDoc") {
   projectRoot.set(layout.projectDirectory)
   expectedInventory.set(
-    mapOf("gezgin-core" to "145/18", "gezgin-processor" to "1/1", "gezgin-test" to "12/1")
+    mapOf(
+      "gezgin-core" to "145/18",
+      "gezgin-processor" to "1/1",
+      "gezgin-gradle-plugin" to "19/1",
+      "gezgin-test" to "12/1",
+    )
   )
   scannerClasspath.from(publicApiKDocScannerClasspath)
   val moduleSources =

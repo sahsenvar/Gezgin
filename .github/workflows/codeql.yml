@@ -47,6 +47,7 @@ jobs:
           :gezgin-core:compileKotlinJvm :gezgin-core:compileDebugKotlinAndroid
           :gezgin-test:compileKotlinJvm :gezgin-test:compileDebugKotlinAndroid
           :gezgin-processor:compileKotlin
+          :gezgin-gradle-plugin:compileKotlin
           :sample:navigation:compileKotlin :sample:app:compileDebugKotlin
           :sample:hello:compileDebugKotlin
           :sample:hello-shared:compileDebugKotlinAndroid

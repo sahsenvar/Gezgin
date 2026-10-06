@@ -135,13 +135,14 @@ dependencies {
 | `gezgin-core` | Required. Annotations, runtime, `GezginDisplay` (the Compose layer), modal scene strategies. DI-agnostic. |
 | `gezgin-processor` | Required. The KSP2 processor that generates the typed navigators + entry providers. |
 | `gezgin-test` | Optional (test). UI-less `GezginTestNavigator` with typed `fromX()` accessors. |
+| `gezgin-gradle-plugin` | Optional (build). Plugin id `io.github.sahsenvar.gezgin`: a typed `gezgin { }` DSL over the KSP naming options. |
 
 The two build boundaries are intentionally separate:
 
 | Boundary | Verified versions |
 |---|---|
 | Gezgin root | Gradle 9.6.1, Kotlin 2.3.21, KSP 2.3.10, AGP 9.4.0, Compose Multiplatform 1.11.1; AndroidX Navigation 3 1.1.4 + lifecycle Navigation 3 2.10.0 on Android; JetBrains Navigation 3 1.2.0-alpha02 + lifecycle Navigation 3 2.11.0 on desktop and iOS; min SDK 24; iOS targets `iosArm64` and `iosSimulatorArm64`, built on macOS. |
-| Independent ZAD-shaped consumer | Its own Gradle 9.4.1 wrapper, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.1.4 + lifecycle Navigation 3 2.10.0. It resolves all four Gezgin artifacts from one exclusive repository (Maven Central in release smoke) and does not use a composite/source substitution or Maven Local fallback. |
+| Independent ZAD-shaped consumer | Its own Gradle 9.4.1 wrapper, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.1.4 + lifecycle Navigation 3 2.10.0. It resolves the Gezgin artifacts and the `io.github.sahsenvar.gezgin` plugin from one exclusive repository (Maven Central in release smoke) and does not use a composite/source substitution or Maven Local fallback. |
 
 These are different build roles, not interchangeable upgrade instructions. Full contracts: [docs/gezgin-design.md](docs/gezgin-design.md) §15.
 
@@ -156,6 +157,48 @@ Set via `ksp { arg("<name>", "<value>") }`:
 | `gezgin.wrapperPackages` | empty | Comma-separated packages to scan for `@ScreenWrapper` functions and `@ScreenSlot` annotations compiled into a dependency rather than declared in this module. KSP cannot enumerate classpath declarations by annotation, so a multi-module setup needs this; a single-module app does not. |
 | `gezgin.wrapperDeclarations` | empty | Comma-separated fully-qualified names of the `@ScreenWrapper` function (or `@ScreenSlot` annotation) to use. Resolution by name works against a Kotlin *metadata* classpath, where package enumeration does not — so this is what a `kspCommonMainMetadata` round needs. Naming the wrapper is enough: its markers are reached through its parameters' `@FilledBy`. |
 | `gezgin.naming.memberFun.stripSuffixes` | empty | Comma-separated suffixes stripped, in order and each at most once, from the route name when deriving generated member names (`goToX`, `openX`, `launchX`, `backToX`). Nothing is stripped by default (`goToOldPinScreenRoute`); `Route,Screen,Flow` gives `goToOldPin`. `gezgin.naming.memberFun.<Kind>.stripSuffixes` (`GoTo`, `ReplaceTo`, `QuitAndGoTo`, `GoForResult`, `BackTo`, `Open`) replaces the list for one edge kind. `gezgin.naming.memberFun.stripPrefixes` (and `<Kind>.stripPrefixes`) works the same way for leading tokens and runs before the suffixes. An edge's `name=` always wins. |
+
+### Naming
+
+Generated navigator members (`goToX`, `openX`, `launchX`, `backToX`) keep the route's full simple
+name by default: `OldPinScreenRoute` becomes `goToOldPinScreenRoute`. The `gezgin` Gradle plugin is a
+typed facade over the `gezgin.naming.memberFun.*` KSP options above; apply it next to KSP:
+
+```kotlin
+import dev.gezgin.gradle.GezginAnnotation
+
+plugins {
+    id("com.google.devtools.ksp")
+    id("io.github.sahsenvar.gezgin") version "0.3.0"
+}
+
+gezgin {
+    naming {
+        memberFun {
+            stripSuffixes = listOf("Route")   // every edge kind; `stripPrefixes` works the same
+            rule { kind ->                    // evaluated once per GezginAnnotation value
+                if (kind == GezginAnnotation.Open) stripSuffixes += listOf("Dialog", "BottomSheet")
+            }
+        }
+    }
+}
+```
+
+Inside `rule { kind -> }`, `stripSuffixes` and `stripPrefixes` start as a copy of the general lists
+for that kind; `+=`, `-=` and `=` change only that kind. With the general list `["Route"]` the rule
+above gives `Route,Dialog,BottomSheet` for `Open` and leaves the other kinds on `Route`. Every
+`rule {}` block applies, in declaration order, and the lambdas run after the build script is
+configured, so statement order does not matter. Only the kinds whose result differs from the general
+list produce a per-kind KSP option.
+
+Without the plugin, set the options directly. This is exactly what the plugin generates:
+
+```kotlin
+ksp {
+    arg("gezgin.naming.memberFun.stripSuffixes", "Route")
+    arg("gezgin.naming.memberFun.Open.stripSuffixes", "Route,Dialog,BottomSheet")
+}
+```
 
 ---
 

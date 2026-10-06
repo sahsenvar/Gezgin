@@ -49,7 +49,8 @@ class MaintainedProductionCommentContractTest {
   }
 
   private companion object {
-    val publishedModules = listOf("gezgin-core", "gezgin-processor", "gezgin-test")
+    val publishedModules =
+      listOf("gezgin-core", "gezgin-processor", "gezgin-gradle-plugin", "gezgin-test")
     val productionSourceSet = Regex("/src/[^/]*main/")
   }
 }

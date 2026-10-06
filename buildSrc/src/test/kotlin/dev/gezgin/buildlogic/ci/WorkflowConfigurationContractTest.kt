@@ -282,9 +282,14 @@ class WorkflowConfigurationContractTest {
     assertContains(smoke, "wait-for-maven-central.sh")
 
     val waitForCentral = text("gradle/release/wait-for-maven-central.sh")
-    listOf("gezgin-core", "gezgin-processor", "gezgin-test").forEach {
-      assertContains(waitForCentral, it)
-    }
+    listOf(
+        "gezgin-core",
+        "gezgin-processor",
+        "gezgin-test",
+        "gezgin-gradle-plugin",
+        "gezgin/io.github.sahsenvar.gezgin.gradle.plugin",
+      )
+      .forEach { assertContains(waitForCentral, it) }
     assertContains(waitForCentral, "MAX_WAIT_SECONDS")
     assertContains(waitForCentral, ":-1800")
     assertContains(waitForCentral, "RETRY_SECONDS")
@@ -359,7 +364,7 @@ class WorkflowConfigurationContractTest {
   @Test
   fun `labeler covers published modules documentation build and CI`() {
     val labeler = text(".github/labeler.yml")
-    listOf("gezgin-core", "gezgin-processor", "gezgin-test").forEach {
+    listOf("gezgin-core", "gezgin-processor", "gezgin-gradle-plugin", "gezgin-test").forEach {
       assertContains(labeler, "'$it/**'")
     }
     assertContains(labeler, "'docs/**'")
