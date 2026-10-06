@@ -7,3 +7,6 @@ local.properties
 .DS_Store
 .superpowers/
 package-lock.json
+
+# Xcode kullanici durumu
+xcuserdata/
