@@ -12,6 +12,7 @@ import dev.gezgin.processor.fixtures.FRAGMENT_STUB
 import dev.gezgin.processor.fixtures.SHOP_SOURCE
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -70,6 +71,8 @@ class FragmentEntryCodegenTest {
     // runtime glue, and the navigator FACTORY qualified against the ROUTE's package
     // (cross-module-safe).
     assertContains(text, "import androidx.fragment.compose.AndroidFragment")
+    assertContains(text, "import androidx.compose.foundation.layout.fillMaxSize")
+    assertContains(text, "import androidx.compose.ui.Modifier")
     // mN1 — the route→Bundle encode is wrapped in `remember(route) { … }` (compose-runtime import).
     assertContains(text, "import androidx.compose.runtime.remember")
     assertContains(text, "import dev.gezgin.core.fragment.toBundle")
@@ -102,6 +105,14 @@ class FragmentEntryCodegenTest {
     )
     assertContains(text, "val nav = raw.archivedNavigator(LocalGezginEntryId.current)")
     assertContains(text, "AndroidFragment<ArchivedFragment>(")
+
+    val fragmentHostCount = Regex("AndroidFragment<[^>]+>\\(").findAll(text).count()
+    val fullSizeHostCount = Regex("modifier = Modifier\\.fillMaxSize\\(\\),").findAll(text).count()
+    assertEquals(
+      fragmentHostCount,
+      fullSizeHostCount,
+      "every generated screen-only AndroidFragment host must fill the entry bounds: $text",
+    )
   }
 
   /**
