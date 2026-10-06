@@ -360,6 +360,15 @@ public final class dev/gezgin/core/compose/GezginEntryScope {
 	public final fun getRegistry ()Ljava/util/Map;
 }
 
+public final class dev/gezgin/core/compose/GezginGraph {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Ldev/gezgin/core/compose/GraphKind;Ljava/util/List;Ldev/gezgin/core/compose/GezginGraph;)V
+	public final fun getAnnotations ()Ljava/util/List;
+	public final fun getKind ()Ldev/gezgin/core/compose/GraphKind;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getParent ()Ldev/gezgin/core/compose/GezginGraph;
+}
+
 public final class dev/gezgin/core/compose/GezginLocalsKt {
 	public static final fun currentGezginNavigator (Landroidx/compose/runtime/Composer;I)Ldev/gezgin/core/RawNavigator;
 }
@@ -390,6 +399,24 @@ public final class dev/gezgin/core/compose/GezginTransitionBuilder {
 public final class dev/gezgin/core/compose/GezginTransitionKt {
 	public static final fun navTransitions (Lkotlin/jvm/functions/Function1;)Ldev/gezgin/core/compose/GezginTransition;
 	public static final fun transition (Lkotlin/jvm/functions/Function1;)Ldev/gezgin/core/compose/GezginTransition;
+}
+
+public abstract interface class dev/gezgin/core/compose/GezginWrapperScope {
+	public abstract fun getCanGoBack ()Z
+	public abstract fun getGraph ()Ldev/gezgin/core/compose/GezginGraph;
+	public abstract fun getRoute ()Ldev/gezgin/core/Route;
+	public abstract fun getRouteAnnotations ()Ljava/util/List;
+	public abstract fun getRouteName ()Ljava/lang/String;
+	public abstract fun isAloneInBackStack ()Z
+	public abstract fun isTop ()Z
+}
+
+public final class dev/gezgin/core/compose/GraphKind : java/lang/Enum {
+	public static final field Flow Ldev/gezgin/core/compose/GraphKind;
+	public static final field Nav Ldev/gezgin/core/compose/GraphKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/gezgin/core/compose/GraphKind;
+	public static fun values ()[Ldev/gezgin/core/compose/GraphKind;
 }
 
 public final class dev/gezgin/core/compose/RegisteredEntry {
