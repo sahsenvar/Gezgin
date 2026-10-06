@@ -76,6 +76,16 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
+      # The first Kotlin/Native link on a fresh runner builds static caches of every dependency
+      # klib (about six minutes), and they live in ~/.konan together with the toolchain.
+      - name: Restore the Kotlin/Native toolchain and caches
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Set up an Android SDK
         uses: ./.github/actions/setup-android-sdk
 
@@ -153,6 +163,16 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
 
+      # The first Kotlin/Native link on a fresh runner builds static caches of every dependency
+      # klib (about six minutes), and they live in ~/.konan together with the toolchain.
+      - name: Restore the Kotlin/Native toolchain and caches
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-${{ runner.arch }}-
+
       - name: Set up an Android SDK
         uses: ./.github/actions/setup-android-sdk
 
@@ -172,7 +192,6 @@ jobs:
           raise SystemExit("no available iPhone simulator on this runner")
           ')"
           xcrun simctl boot "$udid"
-          xcrun simctl bootstatus "$udid" -b
           printf 'GEZGIN_SIMULATOR_UDID=%s\n' "$udid" >> "$GITHUB_ENV"
 
       # xcodebuild's build phase calls Gradle for the framework. Left cold that call carries the
@@ -181,6 +200,10 @@ jobs:
         run: >-
           ./gradlew :sample:hello-shared:linkDebugFrameworkIosSimulatorArm64
           --no-daemon --console=plain
+
+      # Booting runs while Gradle builds the framework; only the install needs it finished.
+      - name: Wait for the simulator
+        run: xcrun simctl bootstatus "$GEZGIN_SIMULATOR_UDID" -b
 
       - name: Build and install the sample app on the simulator
         shell: bash
