@@ -55,6 +55,7 @@ public interface GezginWrapperScope {
 public class GezginGraph(
   /** The graph interface's simple name, as declared. */
   public val name: String,
+  /** Whether the graph is a `@NavGraph` or a `@FlowGraph`. */
   public val kind: GraphKind,
   /**
    * The graph's annotations as instances, with the same rules as
