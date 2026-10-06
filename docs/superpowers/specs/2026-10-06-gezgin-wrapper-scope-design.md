@@ -1,6 +1,6 @@
 # Gezgin wrapper scope (`GezginWrapperScope`)
 
-> Status: design approved in conversation, awaiting written-spec review
+> Status: implemented on feat/wrapper-scope
 > Date: 2026-10-06
 > Baseline: `main` at `212eda0`
 > Target release: `1.1.0` (breaking for existing `@ScreenWrapper` functions, see §9)
@@ -101,12 +101,14 @@ It now emits, inside that lambda:
 val scope = rememberGezginWrapperScope(
     route = route,
     routeName = "OptionOrderChainScreenRoute",
-    routeAnnotations = remember { listOf(NoBack(), Foo(1)) },
-    graph = <graph constant>,
+    routeAnnotations = gezginRouteAnnotations_app_OptionOrderChainScreenRoute,
+    graph = gezginGraph_app_AppGraph,
     noBack = true,
 )
 scope.Wrapper<…>(slot = { … })
 ```
+
+The annotation list and graph are file-private top-level constants in the same generated file; a route with no annotations passes `emptyList()`.
 
 `rememberGezginWrapperScope` is a `@GezginInternalApi` composable in `gezgin-core`. It reads
 `LocalGezginRawNavigator` and `LocalGezginEntryId` (already provided around every entry by

@@ -347,13 +347,15 @@ marker; it must declare exactly one `KClass<out Route>` parameter, and any furth
 ignored.
 
 ```kotlin
+import dev.gezgin.core.compose.GezginWrapperScope
+
 @ScreenSlot @Repeatable annotation class ViewModelOf(val route: KClass<out Route>)
 @ScreenSlot @Repeatable annotation class Effects(val route: KClass<out Route>)
 @ScreenSlot @Repeatable annotation class TopBar(val route: KClass<out Route>)
 
 @ScreenWrapper
 @Composable
-fun <S, I, E> AppScreenRoot(
+fun <S, I, E> GezginWrapperScope.AppScreenRoot(
     @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
     @FilledBy(Effects::class)     onEffect: (E) -> Unit,
     @FilledBy(TopBar::class)      topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
@@ -392,7 +394,14 @@ and the generated entry wires them together:
 ```kotlin
 register<DetailRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
     val nav = LocalGezginRawNavigator.current.detailNavigator(LocalGezginEntryId.current)
-    AppScreenRoot<DetailUiState, DetailIntent, DetailEffect>(
+    val scope = rememberGezginWrapperScope(
+        route = route,
+        routeName = "DetailRoute",
+        routeAnnotations = emptyList(),
+        graph = gezginGraph_app_AppGraph,
+        noBack = false,
+    )
+    scope.AppScreenRoot<DetailUiState, DetailIntent, DetailEffect>(
         viewModel = { detailViewModel(route = route) },
         onEffect = { effect -> handleDetailEffect(effect = effect, nav = nav) },
         topBar = { state, onIntent -> DetailTopBar(state = state, onIntent = onIntent) },
@@ -400,6 +409,24 @@ register<DetailRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
     )
 }
 ```
+
+#### The wrapper scope
+
+Every wrapper is an extension on `GezginWrapperScope` (`dev.gezgin.core.compose`), which Gezgin fills in per entry:
+
+| Member | Meaning |
+|---|---|
+| `route` | The entry's route instance |
+| `routeName` | The route's declared name, written at compile time (R8-safe) |
+| `routeAnnotations` | The route's annotations as instances (Gezgin's and your own; compiler annotations such as `@Serializable` excluded) |
+| `graph` | The nearest graph (`GezginGraph`: `name`, `kind` = `Nav`/`Flow`, `annotations`, `parent`) |
+| `canGoBack` | `false` for a `@NoBack` route and for a lone entry |
+| `isAloneInBackStack` | The only entry on the stack (a deep-linked screen is alone) |
+| `isTop` | On top of the stack; `false` while a dialog or sheet is open over it |
+
+`canGoBack`, `isAloneInBackStack` and `isTop` are observable. App-specific helpers are plain
+extensions: `val GezginWrapperScope.isNoBack get() = routeAnnotations.any { it is NoBack }`.
+A wrapper without the receiver fails with `[SW13]`.
 
 **How a slot is filled.** A slot's function type IS the provider's signature, receiver included: a
 slot declared `ColumnScope.(S, (I) -> Unit) -> Unit` requires an extension provider on

@@ -345,13 +345,15 @@ Sözlüğü uygulama tanımlar. `@ScreenSlot`, sıradan bir annotation'ı slot m
 annotation tam olarak bir `KClass<out Route>` parametresi bildirmelidir, fazlası yok sayılır.
 
 ```kotlin
+import dev.gezgin.core.compose.GezginWrapperScope
+
 @ScreenSlot @Repeatable annotation class ViewModelOf(val route: KClass<out Route>)
 @ScreenSlot @Repeatable annotation class Effects(val route: KClass<out Route>)
 @ScreenSlot @Repeatable annotation class TopBar(val route: KClass<out Route>)
 
 @ScreenWrapper
 @Composable
-fun <S, I, E> AppScreenRoot(
+fun <S, I, E> GezginWrapperScope.AppScreenRoot(
     @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
     @FilledBy(Effects::class)     onEffect: (E) -> Unit,
     @FilledBy(TopBar::class)      topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
@@ -390,7 +392,14 @@ fun ColumnScope.DetailScreen(state: DetailUiState, onIntent: (DetailIntent) -> U
 ```kotlin
 register<DetailRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
     val nav = LocalGezginRawNavigator.current.detailNavigator(LocalGezginEntryId.current)
-    AppScreenRoot<DetailUiState, DetailIntent, DetailEffect>(
+    val scope = rememberGezginWrapperScope(
+        route = route,
+        routeName = "DetailRoute",
+        routeAnnotations = emptyList(),
+        graph = gezginGraph_app_AppGraph,
+        noBack = false,
+    )
+    scope.AppScreenRoot<DetailUiState, DetailIntent, DetailEffect>(
         viewModel = { detailViewModel(route = route) },
         onEffect = { effect -> handleDetailEffect(effect = effect, nav = nav) },
         topBar = { state, onIntent -> DetailTopBar(state = state, onIntent = onIntent) },
@@ -398,6 +407,24 @@ register<DetailRoute>(kind = EntryKind.SCREEN, noBack = false) { route ->
     )
 }
 ```
+
+#### Wrapper scope'u
+
+Her wrapper, Gezgin'in entry başına doldurduğu `GezginWrapperScope` (`dev.gezgin.core.compose`) üzerinde bir extension'dır:
+
+| Üye | Anlamı |
+|---|---|
+| `route` | Entry'nin route örneği |
+| `routeName` | Route'un bildirilen adı, derleme anında yazılır (R8'e dayanıklı) |
+| `routeAnnotations` | Route'un annotation'ları örnek olarak (Gezgin'inkiler ve kendininkiler; `@Serializable` gibi derleyici annotation'ları hariç) |
+| `graph` | En yakın graph (`GezginGraph`: `name`, `kind` = `Nav`/`Flow`, `annotations`, `parent`) |
+| `canGoBack` | `@NoBack` route'u ve tek başına duran entry için `false` |
+| `isAloneInBackStack` | Stack'teki tek entry (deep link'le açılan ekran tek başınadır) |
+| `isTop` | Stack'in tepesinde; üstünde dialog ya da sheet açıkken `false` |
+
+`canGoBack`, `isAloneInBackStack` ve `isTop` gözlemlenebilirdir. Uygulamaya özel yardımcılar sıradan
+extension'lardır: `val GezginWrapperScope.isNoBack get() = routeAnnotations.any { it is NoBack }`.
+Receiver'ı olmayan wrapper `[SW13]` ile hata verir.
 
 **Bir slot nasıl dolar.** Slot'un fonksiyon tipi, receiver dahil, sağlayıcının imzasının ta
 kendisidir: `ColumnScope.(S, (I) -> Unit) -> Unit` diye bildirilen bir slot, `ColumnScope` üzerinde
