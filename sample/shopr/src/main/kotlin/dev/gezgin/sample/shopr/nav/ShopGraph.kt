@@ -16,6 +16,18 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class OrderId(val value: String)
 
+enum class ScreenArea {
+  Catalog,
+  Checkout,
+}
+
+annotation class ScreenInfo(
+  val name: String,
+  val area: ScreenArea = ScreenArea.Catalog,
+  val tags: Array<String> = [],
+  val weight: Long = 0L,
+)
+
 @NavGraph
 sealed interface HomeGraph : Route {
 
@@ -28,6 +40,7 @@ sealed interface HomeGraph : Route {
   @ReplaceTo(OrderPlaced::class)
   data object Catalog : HomeGraph
 
+  @ScreenInfo("detail", area = ScreenArea.Checkout, tags = ["a", "b"], weight = 3L)
   data class Product(val id: String) : HomeGraph
 
   @NoBack

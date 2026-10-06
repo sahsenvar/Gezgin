@@ -15,6 +15,7 @@ import dev.gezgin.core.annotation.FilledBy
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.core.annotation.ScreenSlot
 import dev.gezgin.core.annotation.ScreenWrapper
+import dev.gezgin.core.compose.GezginWrapperScope
 import kotlin.reflect.KClass
 
 @ScreenSlot @Repeatable annotation class ViewModelOf(val route: KClass<out Route>)
@@ -30,7 +31,7 @@ import kotlin.reflect.KClass
  */
 @ScreenWrapper
 @Composable
-fun <S : UiState, I : UiIntent, E : UiEvent> AppScreenRoot(
+fun <S : UiState, I : UiIntent, E : UiEvent> GezginWrapperScope.AppScreenRoot(
   @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
   @FilledBy(EffectHandler::class) onEffect: (E) -> Unit,
   @FilledBy(TopBar::class) topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },
