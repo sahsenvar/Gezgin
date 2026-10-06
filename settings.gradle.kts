@@ -21,6 +21,8 @@ include(":gezgin-test")
 
 include(":gezgin-processor")
 
+include(":gezgin-gradle-plugin")
+
 include(":sample:hello")
 
 include(":sample:hello-shared")
