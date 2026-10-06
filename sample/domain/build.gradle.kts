@@ -3,7 +3,7 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
 }
 
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(21) }
 
 dependencies {
   // Model tipleri @Serializable — koordinat serileştirme runtime'ını (core transitively) getirir.

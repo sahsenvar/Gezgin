@@ -10,12 +10,12 @@ android {
   defaultConfig { minSdk = 24 }
   buildFeatures { compose = true }
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
   }
 }
 
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(21) }
 
 dependencies {
   // `api` so every feature module sees the wrapper, its slot markers and Gezgin's annotations.

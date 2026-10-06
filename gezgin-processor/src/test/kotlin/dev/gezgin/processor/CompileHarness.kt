@@ -40,7 +40,7 @@ object CompileHarness {
         // Task 3.4: entry codegen calls into compose-runtime/-foundation inline accessors
         // (`current`, etc) — those jars are built up to JVM 17 bytecode, which kctfork's own
         // default (1.8) can't inline into. Match the highest floor actually seen.
-        jvmTarget = "17"
+        jvmTarget = "21"
         // A lambda parameter typed `@Composable (R) -> Unit` (GezginEntryScope.register's
         // `content`) ICEs the invokedynamic lambda-metafactory backend without the real
         // compose-compiler plugin registered (no plugin here — kctfork has none, Task 3.4
@@ -79,7 +79,7 @@ object CompileHarness {
         }
         inheritClassPath = true
         classpaths += extraClasspath
-        jvmTarget = "17"
+        jvmTarget = "21"
         kotlincArguments += listOf("-Xlambdas=class", "-Xsam-conversions=class")
       }
     lastCompilation = compilation

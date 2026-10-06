@@ -12,7 +12,7 @@ plugins {
 }
 
 kotlin {
-  jvmToolchain(17)
+  jvmToolchain(21)
   androidTarget { compilerOptions { jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY) } }
   // gezgin-core ile AYNI Apple hedef kümesi; iosX64 upstream'de yayınlanmıyor.
   listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
@@ -64,7 +64,7 @@ android {
   defaultConfig { minSdk = 24 }
 
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
   }
 }
