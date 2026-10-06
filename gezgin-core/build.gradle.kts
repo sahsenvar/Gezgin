@@ -29,7 +29,7 @@ kotlin {
   // kökü
   // `internal`'a çekildi. BCV .api dump'ı bu yüzeyi kilitler.
   explicitApi()
-  jvmToolchain(17)
+  jvmToolchain(21)
   // jvm() = desktop Compose hedefi; compose.desktop.currentOs çalıştırma
   // zamanı
   // yalnız desktop uiTest'te gerekebilir, burada eklenmedi.

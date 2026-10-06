@@ -28,7 +28,7 @@ kotlin {
   // ABI-kilitli.
   // @GezginInternalApi işaretli `raw` seam'i BCV'nin nonPublicMarkers'ıyla dump'tan düşer.
   explicitApi()
-  jvmToolchain(17)
+  jvmToolchain(21)
   jvm()
   androidTarget()
   // gezgin-core ile AYNI Apple hedef kümesi (bkz. gezgin-core/build.gradle.kts). Bu modülde

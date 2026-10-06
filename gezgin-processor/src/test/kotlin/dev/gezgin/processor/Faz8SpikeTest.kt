@@ -89,7 +89,7 @@ class Faz8SpikeTest {
           configureKsp { symbolProcessorProviders += SealedProbeProvider() }
           inheritClassPath = true
           messageOutputStream = messages
-          jvmTarget = "17"
+          jvmTarget = "21"
           kotlincArguments += listOf("-Xlambdas=class", "-Xsam-conversions=class")
         }
       val result = compilation.compile()

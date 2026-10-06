@@ -13,13 +13,13 @@ android {
   defaultConfig { minSdk = 24 }
   buildFeatures { compose = true }
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
   }
   testOptions { unitTests.isIncludeAndroidResources = true }
 }
 
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(21) }
 
 dependencies {
   // The central nav module (spec §3.3) — brings gezgin-core (routes/navigators) transitively.

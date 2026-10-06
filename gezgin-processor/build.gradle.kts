@@ -21,7 +21,7 @@ kotlin {
   // `GezginProcessorProvider`'dır (ServiceLoader); geri kalan tüm codegen/model/reader tipleri
   // `internal` (yalnız bu modül + kendi testleri kullanır → API yüzeyi minimuma iner).
   explicitApi()
-  jvmToolchain(17)
+  jvmToolchain(21)
 }
 
 dependencies {

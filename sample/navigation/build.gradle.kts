@@ -3,7 +3,7 @@ plugins {
   alias(libs.plugins.ksp)
 }
 
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(21) }
 
 dependencies {
   // The central nav module owns the whole sealed graph tree; features depend on it (spec §3.3).
