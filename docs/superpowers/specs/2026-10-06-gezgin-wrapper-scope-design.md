@@ -108,7 +108,7 @@ val scope = rememberGezginWrapperScope(
 scope.Wrapper<…>(slot = { … })
 ```
 
-The annotation list and graph are file-private top-level constants in the same generated file; a route with no annotations passes `emptyList()`.
+The annotation list and graph are file-private top-level constants in the same generated file; a route with no annotations passes `emptyList()`, and a route outside any graph references the file-private `gezginGraph_none` constant. If two sanitized constant names clash, the later one gets a deterministic numeric suffix.
 
 `rememberGezginWrapperScope` is a `@GezginInternalApi` composable in `gezgin-core`. It reads
 `LocalGezginRawNavigator` and `LocalGezginEntryId` (already provided around every entry by

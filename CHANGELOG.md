@@ -166,7 +166,7 @@ akışı ve yan-etki politikası uygulamaya geri verildi.
 - `gezgin.wrapperPackages` KSP seçeneği — bir bağımlılığa derlenmiş wrapper ve marker'ların
   paketlerini bildirir. KSP classpath'teki bildirimleri annotation'la sayamadığı için çok-modüllü
   kurulumda gereklidir; tek modüllü uygulamada gerekmez.
-- `SW1`–`SW14` hata kataloğu.
+- `SW1`–`SW12` hata kataloğu.
 - `SZ1`, serializer'ı bulunamayan route parametreleri ve result türleri için açık processor hatası.
 
 ### Migration
