@@ -7,6 +7,11 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-06
+
+İlk kararlı sürüm. `0.3.0` Maven Central'a hiç yayınlanmadı; onun kırıcı değişiklikleri (aşağıdaki
+`[0.3.0]` bölümü) ve bu bölümdekiler 1.0.0 ile birlikte çıkar.
+
 ### Changed
 
 - **Üretilen üye adları artık hiçbir soneki atmaz (kırıcı).** Eskiden `OldPinScreenRoute` için
@@ -114,6 +119,8 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   sessizce atlardı.
 
 ## [0.3.0] - 2026-09-12
+
+> Yayınlanmadı; 1.0.0'a dahildir.
 
 Kırıcı sürüm. Gezgin artık bir MVI tarzı dayatmıyor: ekranın container'ı, ViewModel'i, state
 akışı ve yan-etki politikası uygulamaya geri verildi.
@@ -262,6 +269,7 @@ artefaktlarını içeriyordu.
   round-trip, predictive-back, modal iptal) gerçek cihaz/emülatörde henüz doğrulanmadı;
   bkz. [docs/gezgin-on-device-checklist.md](docs/gezgin-on-device-checklist.md).
 
+[1.0.0]: https://github.com/sahsenvar/Gezgin/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sahsenvar/Gezgin/releases/tag/v0.1.0
 [0.1.0-alpha03]: https://github.com/sahsenvar/Gezgin/compare/v0.1.0-alpha02...v0.1.0-alpha03
