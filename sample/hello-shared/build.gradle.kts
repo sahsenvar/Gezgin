@@ -45,6 +45,8 @@ kotlin {
 // commonMain'e kaynak dizini olarak eklenir; her derleme görevi o koşuma bağlanır.
 dependencies { add("kspCommonMainMetadata", project(":gezgin-processor")) }
 
+ksp { arg("gezgin.naming.memberFun.stripSuffixes", "Route,Screen,Flow") }
+
 kotlin.sourceSets.commonMain { kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin") }
 
 tasks.withType<KotlinCompilationTask<*>>().configureEach {

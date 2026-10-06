@@ -57,6 +57,8 @@ configurations.configureEach {
   }
 }
 
+ksp { arg("gezgin.naming.memberFun.stripSuffixes", "Route,Screen,Flow") }
+
 dependencies {
   implementation("$gezginGroup:gezgin-core:$gezginVersion")
   ksp("$gezginGroup:gezgin-processor:$gezginVersion")

@@ -7,6 +7,8 @@ import dev.gezgin.processor.model.EdgeKind
 import dev.gezgin.processor.model.GraphModel
 import dev.gezgin.processor.model.GraphModelNode
 import dev.gezgin.processor.model.RouteModel
+import dev.gezgin.processor.naming.MemberFunNaming
+import dev.gezgin.processor.naming.MemberKind
 import dev.gezgin.processor.serial.SerialKind
 
 /**
@@ -20,7 +22,11 @@ import dev.gezgin.processor.serial.SerialKind
  * [validate] never throws — it logs every violation it finds in one pass (rather than stopping at
  * the first) and returns whether the model was clean, purely for caller-side bookkeeping.
  */
-internal class GezginValidator(private val model: GraphModel, private val logger: KSPLogger) {
+internal class GezginValidator(
+  private val model: GraphModel,
+  private val logger: KSPLogger,
+  private val naming: MemberFunNaming = MemberFunNaming.Default,
+) {
 
   private val graphsByFq: Map<String, GraphModelNode> = model.graphs.associateBy { it.fqName }
   private val routesByFq: Map<String, RouteModel> = model.routes.associateBy { it.fqName }
@@ -498,15 +504,25 @@ internal class GezginValidator(private val model: GraphModel, private val logger
       byMember.getOrPut(member) { mutableListOf() }.add(simple(targetFq))
     }
     route.edges.forEach { edge ->
-      val derived = strip(targetSimpleName(edge.targetFq))
+      val target = targetSimpleName(edge.targetFq)
+      fun derived(kind: MemberKind) = naming.x(kind, target)
       when (edge.kind) {
-        EdgeKind.GO_TO -> record(edge.name.ifEmpty { "goTo$derived" }, edge.targetFq)
-        EdgeKind.REPLACE_TO -> record(edge.name.ifEmpty { "replaceTo$derived" }, edge.targetFq)
+        EdgeKind.GO_TO ->
+          record(edge.name.ifEmpty { "goTo${derived(MemberKind.GoTo)}" }, edge.targetFq)
+        EdgeKind.REPLACE_TO ->
+          record(edge.name.ifEmpty { "replaceTo${derived(MemberKind.ReplaceTo)}" }, edge.targetFq)
         EdgeKind.QUIT_AND_GO_TO ->
-          record(edge.name.ifEmpty { "quitAndGoTo$derived" }, edge.targetFq)
-        EdgeKind.OPEN -> record(edge.name.ifEmpty { "open$derived" }, edge.targetFq)
+          record(
+            edge.name.ifEmpty { "quitAndGoTo${derived(MemberKind.QuitAndGoTo)}" },
+            edge.targetFq,
+          )
+        EdgeKind.OPEN ->
+          record(edge.name.ifEmpty { "open${derived(MemberKind.Open)}" }, edge.targetFq)
         EdgeKind.GO_FOR_RESULT -> {
-          val x = edge.name.ifEmpty { derived }.replaceFirstChar { it.uppercase() }
+          val x =
+            edge.name
+              .ifEmpty { derived(MemberKind.GoForResult) }
+              .replaceFirstChar { it.uppercase() }
           record("launch$x", edge.targetFq)
           record(x.replaceFirstChar { it.lowercase() } + "Results", edge.targetFq)
           record("goTo${x}ForResult", edge.targetFq)
@@ -515,7 +531,8 @@ internal class GezginValidator(private val model: GraphModel, private val logger
     }
     route.backEdges.forEach { backEdge ->
       when (backEdge.kind) {
-        BackEdgeKind.BACK_TO -> backEdge.targetFq?.let { record("backTo" + strip(simple(it)), it) }
+        BackEdgeKind.BACK_TO ->
+          backEdge.targetFq?.let { record("backTo" + naming.x(MemberKind.BackTo, simple(it)), it) }
         // @BackToStart → fixed backToStart(); record it so a name= override or a @BackTo(Start)
         // that also spells backToStart() trips the size>=2 collision. (A lone @BackToStart stays
         // size 1 → no false positive — this is why backToStart is NOT in RESERVED_MEMBER_NAMES.)
@@ -710,9 +727,6 @@ internal class GezginValidator(private val model: GraphModel, private val logger
   /** A forward-edge target's simple name — the route's own name, or a graph's simple name. */
   private fun targetSimpleName(targetFq: String): String =
     routesByFq[targetFq]?.simpleName ?: simple(targetFq)
-
-  /** Route/Screen/Flow-suffix strip, byte-identical to the navigator codegen's `X` derivation. */
-  private fun strip(simpleName: String): String = NavigatorCodegen.navigatorX(simpleName)
 
   private fun EdgeKind.annotationName(): String =
     when (this) {

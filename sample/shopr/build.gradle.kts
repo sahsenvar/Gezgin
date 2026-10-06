@@ -29,6 +29,8 @@ android {
 
 kotlin { jvmToolchain(17) }
 
+ksp { arg("gezgin.naming.memberFun.stripSuffixes", "Route,Screen,Flow") }
+
 dependencies {
   implementation(project(":gezgin-core"))
   implementation(project(":sample:domain"))
