@@ -1,3 +1,4 @@
+import com.google.devtools.ksp.gradle.KspAATask
 import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 
@@ -49,8 +50,12 @@ ksp { arg("gezgin.naming.memberFun.stripSuffixes", "Route,Screen,Flow") }
 
 kotlin.sourceSets.commonMain { kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin") }
 
-tasks.withType<KotlinCompilationTask<*>>().configureEach {
-  if (name != "kspCommonMainKotlinMetadata") dependsOn("kspCommonMainKotlinMetadata")
+tasks.configureEach {
+  if (
+    (this is KotlinCompilationTask<*> || this is KspAATask) && name != "kspCommonMainKotlinMetadata"
+  ) {
+    dependsOn("kspCommonMainKotlinMetadata")
+  }
 }
 
 android {
