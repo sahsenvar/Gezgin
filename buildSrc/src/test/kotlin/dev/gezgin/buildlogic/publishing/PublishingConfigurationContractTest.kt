@@ -40,7 +40,7 @@ class PublishingConfigurationContractTest {
   fun `centralizes release coordinates and removes module-local copies`() {
     val rootProperties = properties("gradle.properties")
     assertEquals("io.github.sahsenvar", rootProperties.getProperty("GROUP"))
-    assertEquals("0.3.0-SNAPSHOT", rootProperties.getProperty("VERSION_NAME"))
+    assertEquals("1.0.0", rootProperties.getProperty("VERSION_NAME"))
 
     val rootBuild = text("build.gradle.kts")
     assertContains(rootBuild, "providers.gradleProperty(\"GROUP\")")

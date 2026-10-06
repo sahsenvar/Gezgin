@@ -325,7 +325,7 @@ class WorkflowConfigurationContractTest {
     listOf("README.md", "README.tr.md", "docs/gezgin-zad-readiness-handoff.md").forEach {
       val content = contents.getValue(it)
       listOf("gezgin-core", "gezgin-processor", "gezgin-test").forEach { module ->
-        assertContains(content, "io.github.sahsenvar:$module:0.3.0", message = it)
+        assertContains(content, "io.github.sahsenvar:$module:1.0.0", message = it)
       }
     }
     assertContains(contents.getValue("README.md"), "ExperimentalGezginMigrationApi")

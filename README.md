@@ -115,7 +115,7 @@ A good-faith summary (as of 2026; libraries evolve — corrections welcome). Leg
 Apply the KSP plugin. Apply `kotlin("plugin.serialization")` only in modules that declare
 `@Serializable` types; a graph module that only references serializable parameter or result types
 does not need it. The snippet below includes both plugins for the common case; coordinates are
-`group = io.github.sahsenvar`, `version = 0.3.0`:
+`group = io.github.sahsenvar`, `version = 1.0.0`:
 
 ```kotlin
 plugins {
@@ -124,9 +124,9 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.sahsenvar:gezgin-core:0.3.0")
-    ksp("io.github.sahsenvar:gezgin-processor:0.3.0")
-    // testImplementation("io.github.sahsenvar:gezgin-test:0.3.0")   // UI-less testing: GezginTestNavigator + typed fromX()
+    implementation("io.github.sahsenvar:gezgin-core:1.0.0")
+    ksp("io.github.sahsenvar:gezgin-processor:1.0.0")
+    // testImplementation("io.github.sahsenvar:gezgin-test:1.0.0")   // UI-less testing: GezginTestNavigator + typed fromX()
 }
 ```
 
@@ -169,7 +169,7 @@ import dev.gezgin.gradle.GezginAnnotation
 
 plugins {
     id("com.google.devtools.ksp")
-    id("io.github.sahsenvar.gezgin") version "0.3.0"
+    id("io.github.sahsenvar.gezgin") version "1.0.0"
 }
 
 gezgin {

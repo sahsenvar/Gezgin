@@ -19,9 +19,9 @@ substitution, `projectDir`, Maven Local, or a moving Gezgin checkout.
 
 ## Coordinates
 
-- `io.github.sahsenvar:gezgin-core:0.3.0`
-- `io.github.sahsenvar:gezgin-processor:0.3.0`
-- `io.github.sahsenvar:gezgin-test:0.3.0` (test source sets only)
+- `io.github.sahsenvar:gezgin-core:1.0.0`
+- `io.github.sahsenvar:gezgin-processor:1.0.0`
+- `io.github.sahsenvar:gezgin-test:1.0.0` (test source sets only)
 
 The root metadata selects the published Android/JVM variants. Each publication contains Gradle
 metadata, a POM, sources, Dokka javadoc, and detached signatures. The release workflow does not
