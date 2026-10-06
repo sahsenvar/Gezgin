@@ -22,7 +22,7 @@ class PublishingConfigurationContractTest {
   fun `uses the supported release toolchain and publishing plugin`() {
     val wrapperProperties = properties("gradle/wrapper/gradle-wrapper.properties")
     assertEquals(
-      "https://services.gradle.org/distributions/gradle-9.6.1-bin.zip",
+      "https://services.gradle.org/distributions/gradle-9.8.0-bin.zip",
       wrapperProperties.getProperty("distributionUrl"),
     )
 
@@ -178,7 +178,7 @@ class PublishingConfigurationContractTest {
     assertContains(workflow, "./gradlew -p buildSrc test")
     assertContains(workflow, "./gradle/verify-release-publications.sh")
     assertContains(workflow, "gpg --version")
-    assertContains(workflow, "java-version: '17'")
+    assertContains(workflow, "java-version: '21'")
     assertFalse(workflow.contains("MAVEN_CENTRAL_USERNAME"))
     assertFalse(workflow.contains("MAVEN_CENTRAL_PASSWORD"))
   }
