@@ -45,10 +45,10 @@ class WorkflowConfigurationContractTest {
   }
 
   @Test
-  fun `ci validates wrapper and runs complete JDK 17 gates`() {
+  fun `ci validates wrapper and runs complete JDK 21 gates`() {
     val workflow = text(".github/workflows/ci.yml")
     assertContains(workflow, "gradle/actions/wrapper-validation@")
-    assertContains(workflow, "java-version: '17'")
+    assertContains(workflow, "java-version: '21'")
     assertContains(workflow, "./gradlew -p buildSrc test")
     assertContains(workflow, "check apiCheck")
     assertContains(workflow, "checkPublicApiKDoc")
