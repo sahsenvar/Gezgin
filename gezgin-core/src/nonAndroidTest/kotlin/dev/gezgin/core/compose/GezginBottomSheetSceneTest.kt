@@ -17,7 +17,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.navigation3.runtime.NavEntry
 import dev.gezgin.core.BottomSheetDragHandleMode
 import dev.gezgin.core.RawNavigator

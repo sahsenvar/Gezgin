@@ -8,7 +8,7 @@ plugins {
 
 android {
   namespace = "dev.gezgin.sample.shopr"
-  compileSdk = 36
+  compileSdk = 37
 
   defaultConfig {
     applicationId = "dev.gezgin.sample.shopr"

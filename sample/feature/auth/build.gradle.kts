@@ -9,7 +9,7 @@ plugins {
 
 android {
   namespace = "dev.gezgin.sample.feature.auth"
-  compileSdk = 36
+  compileSdk = 37
   defaultConfig { minSdk = 24 }
   buildFeatures { compose = true }
   compileOptions {

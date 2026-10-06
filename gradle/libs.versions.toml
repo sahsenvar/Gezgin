@@ -24,7 +24,7 @@ jb-lifecycle-sample = "2.10.0"
 kotlinpoet = "2.4.0"
 kctfork = "0.14.0"
 androidx-activity-compose = "1.13.0"
-androidx-compose-bom = "2026.06.01"
+androidx-compose-bom = "2026.09.00"
 # Fragment interop — androidx.fragment:fragment-compose (`AndroidFragment` composable + transitively
 # `androidx.fragment.app.Fragment`/`Bundle` glue). Stable sürüm Maven metadata ile sabitlendi:
 # 1.8.9 (1.9.0-alpha* alpha, `<latest>` naifçe alpha'ya işaret ediyor → açık pin). Yalnız gezgin-core
@@ -34,8 +34,8 @@ androidx-fragment = "1.8.9"
 # `FragmentActivity`/`AppCompatActivity` olması ZORUNLU; aksi halde runtime crash olur. Yalnız
 # `sample:app`'in KENDİ classpath'i için (gezgin-core fragment-compose'u `implementation` tuttuğundan
 # sızmaz — kullanıcı kendi host'unu getirir). Maven metadata (dl.google.com, 2026-07-09) ile SABİTLENDİ:
-# stable 1.7.1 (1.8.0-alpha01 alpha; `<latest>`/`<release>` naifçe alpha'ya işaret ediyor → açık pin).
-androidx-appcompat = "1.7.1"
+# stable 1.8.0 (Dependabot ile güncellenir; `<latest>`/`<release>` alpha olabilir → açık pin).
+androidx-appcompat = "1.8.0"
 # gezgin-mvi DI-detection FQN'leri Maven Central ve Google Maven metadata'sıyla doğrulandı.
 # gezgin-mvi bunlara RUNTIME bağımlı DEĞİL (DI-agnostik, §15): codegen bu annotation'ları STRING-FQN ile okur
 # (gezgin-processor'ın `dev.gezgin.core.*` FQN'lerini okuduğu desen). Bu entry'ler 5.2/5.3 sample/kullanıcı içindir.

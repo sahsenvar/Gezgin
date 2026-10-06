@@ -3,7 +3,7 @@
 package dev.gezgin.core.compose
 
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.gezgin.core.GezginInternalApi
 import kotlin.test.Test
 import kotlin.test.assertFailsWith

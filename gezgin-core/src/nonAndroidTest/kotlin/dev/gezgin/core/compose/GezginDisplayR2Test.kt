@@ -16,7 +16,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.test.v2.runComposeUiTest
 import dev.gezgin.core.RawNavigator
 import dev.gezgin.core.fixtures.Catalog
 import dev.gezgin.core.fixtures.Product
