@@ -234,6 +234,7 @@ class CallbackModalEntryCodegenTest {
     val wrapperSource =
       """
       package dev.gezgin.cbui
+      import dev.gezgin.core.compose.GezginWrapperScope
 
       import androidx.compose.runtime.Composable
       import dev.gezgin.core.Route
@@ -247,7 +248,7 @@ class CallbackModalEntryCodegenTest {
 
       @ScreenWrapper
       @Composable
-      fun <S, I> dialogRoot(
+      fun <S, I> GezginWrapperScope.dialogRoot(
         @FilledBy(ViewModelOf::class) viewModel: @Composable () -> S,
         @FilledBy(Dialog::class) content: @Composable (S, (I) -> Unit) -> Unit,
       ) = Unit

@@ -18,6 +18,7 @@ internal const val SCREEN_WRAPPER_FQ = "dev.gezgin.core.annotation.ScreenWrapper
 internal const val SCREEN_SLOT_FQ = "dev.gezgin.core.annotation.ScreenSlot"
 internal const val FILLED_BY_FQ = "dev.gezgin.core.annotation.FilledBy"
 internal const val WRAPPER_ROUTE_FQ = "dev.gezgin.core.Route"
+internal const val WRAPPER_SCOPE_FQ = "dev.gezgin.core.compose.GezginWrapperScope"
 
 internal data class WrapperReadResult(
   val wrappers: List<WrapperModel>,
@@ -186,6 +187,28 @@ internal class WrapperModelReader(
     val simpleName = declaration.simpleName.asString()
     val typeParameterNames = declaration.typeParameters.map { it.name.asString() }
 
+    val receiverFq =
+      declaration.extensionReceiver?.resolve()?.declaration?.qualifiedName?.asString()
+    if (receiverFq != WRAPPER_SCOPE_FQ) {
+      error(
+        "SW13",
+        "@ScreenWrapper $packageName.$simpleName does not declare a GezginWrapperScope receiver. " +
+          "Screen wrappers reach the route, graph and back-stack state through that scope. " +
+          "Declare it as `fun <…> GezginWrapperScope.$simpleName(…)`",
+      )
+    }
+    declaration.parameters
+      .filter { !it.hasFilledBy() && !it.hasDefault }
+      .forEach { parameter ->
+        error(
+          "SW14",
+          "Parameter '${parameter.name?.asString()}' of @ScreenWrapper $packageName.$simpleName " +
+            "cannot be filled: it has no @FilledBy and no default value. Add " +
+            "@FilledBy(<Marker>::class) to make it a slot. Route, graph and back-stack data are " +
+            "read from the receiver instead (`route`, `graph`, `isTop`, …)",
+        )
+      }
+
     val slots =
       declaration.parameters.mapNotNull { parameter ->
         val markerFq = parameter.filledByMarkerFq() ?: return@mapNotNull null
@@ -249,6 +272,8 @@ private fun KSAnnotated.hasAnnotation(fq: String): Boolean = annotations.any { i
 
 private fun com.google.devtools.ksp.symbol.KSAnnotation.isNamed(fq: String): Boolean =
   annotationType.resolve().declaration.qualifiedName?.asString() == fq
+
+private fun KSValueParameter.hasFilledBy(): Boolean = annotations.any { it.isNamed(FILLED_BY_FQ) }
 
 private fun KSValueParameter.filledByMarkerFq(): String? =
   annotations
