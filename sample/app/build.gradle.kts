@@ -8,7 +8,7 @@ plugins {
 
 android {
   namespace = "dev.gezgin.sample.app"
-  compileSdk = 36
+  compileSdk = 37
 
   defaultConfig {
     applicationId = "dev.gezgin.sample.app"

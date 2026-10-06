@@ -27,7 +27,7 @@ class PublishingConfigurationContractTest {
     )
 
     val catalog = text("gradle/libs.versions.toml")
-    assertContains(catalog, "agp = \"9.4.0\"")
+    assertContains(catalog, "agp = \"9.4.1\"")
     assertContains(catalog, "vanniktech-maven-publish = \"0.37.0\"")
     assertContains(
       catalog,
@@ -186,8 +186,8 @@ class PublishingConfigurationContractTest {
   @Test
   fun `enforces Kotlin formatting and no-regression coverage for published production modules`() {
     val catalog = text("gradle/libs.versions.toml")
-    assertContains(catalog, "spotless = \"8.8.0\"")
-    assertContains(catalog, "kover = \"0.9.9\"")
+    assertContains(catalog, "spotless = \"8.10.3\"")
+    assertContains(catalog, "kover = \"0.9.11\"")
     assertContains(
       catalog,
       "spotless = { id = \"com.diffplug.spotless\", version.ref = \"spotless\" }",

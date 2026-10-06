@@ -384,7 +384,7 @@ object ReleasePublicationVerifier {
           PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1", "runtime"),
           PomDependency("org.jetbrains.compose.material3", "material3", "1.9.0", "runtime"),
           PomDependency("androidx.navigation3", "navigation3-runtime", "1.1.4", "runtime"),
-          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"),
+          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20", "runtime"),
         )
       "gezgin-core-android" ->
         setOf(
@@ -417,7 +417,7 @@ object ReleasePublicationVerifier {
           PomDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1", "compile"),
           PomDependency("org.jetbrains.compose.material3", "material3", "1.9.0", "compile"),
           PomDependency("androidx.navigation3", "navigation3-runtime-android", "1.1.4", "compile"),
-          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20", "compile"),
           PomDependency("androidx.fragment", "fragment-compose", "1.8.9", "runtime"),
         )
       "gezgin-core-jvm" ->
@@ -466,27 +466,27 @@ object ReleasePublicationVerifier {
             "1.2.0-alpha04",
             "compile",
           ),
-          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20", "compile"),
         )
       "gezgin-core-iosarm64" -> iosCorePomDependencies("iosarm64", "uikitarm64")
       "gezgin-core-iossimulatorarm64" ->
         iosCorePomDependencies("iossimulatorarm64", "uikitsimarm64")
       "gezgin-test" ->
-        setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "runtime"))
+        setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20", "runtime"))
       "gezgin-test-android",
       "gezgin-test-iosarm64",
       "gezgin-test-iossimulatorarm64",
       "gezgin-test-jvm" ->
-        setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"))
+        setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20", "compile"))
       "gezgin-processor" ->
         setOf(
-          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
-          PomDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.10", "runtime"),
-          PomDependency("com.squareup", "kotlinpoet-jvm", "2.3.0", "runtime"),
-          PomDependency("com.squareup", "kotlinpoet-ksp", "2.3.0", "runtime"),
+          PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20", "compile"),
+          PomDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.12", "runtime"),
+          PomDependency("com.squareup", "kotlinpoet-jvm", "2.4.0", "runtime"),
+          PomDependency("com.squareup", "kotlinpoet-ksp", "2.4.0", "runtime"),
         )
       "gezgin-gradle-plugin" ->
-        setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"))
+        setOf(PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20", "compile"))
       else -> error("Unknown publication: $artifactId")
     }
 
@@ -543,7 +543,7 @@ object ReleasePublicationVerifier {
         "1.2.0-alpha04",
         "compile",
       ),
-      PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21", "compile"),
+      PomDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20", "compile"),
     )
 
   private fun expectedModuleExternalDependenciesFor(artifactId: String): Set<ModuleDependency> =
@@ -554,7 +554,7 @@ object ReleasePublicationVerifier {
           ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1"),
           ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
           ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
-          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20"),
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.11.0"),
         )
@@ -568,7 +568,7 @@ object ReleasePublicationVerifier {
           ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1"),
           ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
           ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
-          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20"),
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.11.0"),
         )
@@ -591,7 +591,7 @@ object ReleasePublicationVerifier {
           ModuleDependency("org.jetbrains.compose.foundation", "foundation", "1.11.1"),
           ModuleDependency("org.jetbrains.compose.material3", "material3", "1.9.0"),
           ModuleDependency("org.jetbrains.compose.runtime", "runtime", "1.11.1"),
-          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20"),
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.11.0"),
           ModuleDependency("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.11.0"),
         )
@@ -600,16 +600,16 @@ object ReleasePublicationVerifier {
       "gezgin-test-iosarm64",
       "gezgin-test-iossimulatorarm64",
       "gezgin-test-jvm" ->
-        setOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
+        setOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20"))
       "gezgin-processor" ->
         setOf(
-          ModuleDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.10"),
-          ModuleDependency("com.squareup", "kotlinpoet", "2.3.0"),
-          ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.3.0"),
-          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"),
+          ModuleDependency("com.google.devtools.ksp", "symbol-processing-api", "2.3.12"),
+          ModuleDependency("com.squareup", "kotlinpoet", "2.4.0"),
+          ModuleDependency("com.squareup", "kotlinpoet-ksp", "2.4.0"),
+          ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20"),
         )
       "gezgin-gradle-plugin" ->
-        setOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.21"))
+        setOf(ModuleDependency("org.jetbrains.kotlin", "kotlin-stdlib", "2.4.20"))
       else -> error("Unknown publication: $artifactId")
     }
 

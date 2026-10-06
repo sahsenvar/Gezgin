@@ -21,6 +21,12 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   (örnek uygulama), CI action sürümleri (setup-java `6.0.1`, CodeQL `4.38.2`, setup-gradle,
   wrapper-validation, codecov, deploy-pages, stale `11.0.0`).
 
+- **Bağımlılık güncellemeleri (Ekim).** Yayınlanan artefaktlara yansıyanlar: Kotlin `2.3.21` →
+  `2.4.20` (kotlin-stdlib bağımlılığı dahil), KSP `2.3.10` → `2.3.12` ve KotlinPoet `2.3.0` →
+  `2.4.0` (`gezgin-processor`). Yalnız derleme/test/örnek: AGP `9.4.1`, kctfork `0.14.0`, Compose
+  BOM `2026.09.00` (testler `runComposeUiTest` v2 API'sine geçti), appcompat `1.8.0` (örnek
+  uygulama), spotless `8.10.3`, kover `0.9.11`, setup-gradle ve wrapper-validation `6.4.0`.
+
 ### Added
 
 - **`gezgin-gradle-plugin` — isimlendirme ayarı için tipli Gradle DSL.** Yeni `io.github.sahsenvar:gezgin-gradle-plugin`
