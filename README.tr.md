@@ -143,13 +143,14 @@ override val dragHandleMode: BottomSheetDragHandleMode
 | `gezgin-core` | Zorunlu. Annotation'lar, runtime, `GezginDisplay` (Compose katmanı), modal scene strategy'leri. DI-agnostik. |
 | `gezgin-processor` | Zorunlu. Tipli navigator'ları + entry provider'larını üreten KSP2 işlemcisi. |
 | `gezgin-test` | Opsiyonel (test). UI'sız `GezginTestNavigator` + tipli `fromX()` erişimcileri. |
+| `gezgin-gradle-plugin` | Opsiyonel (build). Plugin id `io.github.sahsenvar.gezgin`: KSP isimlendirme seçenekleri üzerinde tipli `gezgin { }` DSL'i. |
 
 İki build sınırı bilinçli olarak ayrıdır:
 
 | Sınır | Doğrulanan sürümler |
 |---|---|
 | Gezgin root | Gradle 9.6.1, Kotlin 2.3.21, KSP 2.3.10, AGP 9.4.0, Compose Multiplatform 1.11.1; Android'de AndroidX Navigation 3 1.1.4 + lifecycle Navigation 3 2.10.0; desktop ve iOS'ta JetBrains Navigation 3 1.2.0-alpha02 + lifecycle Navigation 3 2.11.0; min SDK 24; iOS hedefleri `iosArm64` ve `iosSimulatorArm64`, macOS'ta derlenir. |
-| Bağımsız ZAD-shaped consumer | Kendi Gradle 9.4.1 wrapper'ı, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.1.4 + lifecycle Navigation 3 2.10.0. Dört Gezgin artefaktını tek exclusive repository'den (release smoke'ta Maven Central) çözer; composite/source substitution veya Maven Local fallback kullanmaz. |
+| Bağımsız ZAD-shaped consumer | Kendi Gradle 9.4.1 wrapper'ı, Kotlin 2.3.21, KSP 2.3.9, AGP 9.2.1, JDK/JVM 21, compile/target SDK 37, Koin 4.2.2 + compiler plugin 1.0.1, AndroidX Navigation 3 1.1.4 + lifecycle Navigation 3 2.10.0. Gezgin artefaktlarını ve `io.github.sahsenvar.gezgin` plugin'ini tek exclusive repository'den (release smoke'ta Maven Central) çözer; composite/source substitution veya Maven Local fallback kullanmaz. |
 
 Bunlar birbirinin yerine uygulanacak upgrade talimatları değil, farklı build rolleridir. Tam sözleşme: [docs/gezgin-design.md](docs/gezgin-design.md) §15.
 
@@ -164,6 +165,48 @@ Bunlar birbirinin yerine uygulanacak upgrade talimatları değil, farklı build 
 | `gezgin.wrapperPackages` | boş | Bu modülde değil, bir bağımlılığa derlenmiş `@ScreenWrapper` fonksiyonları ve `@ScreenSlot` annotation'ları için taranacak paketler (virgülle ayrılır). KSP classpath'teki bildirimleri annotation'la sayamaz; çok-modüllü kurulum bunu gerektirir, tek modüllü uygulama gerektirmez. |
 | `gezgin.wrapperDeclarations` | boş | Kullanılacak `@ScreenWrapper` fonksiyonunun (ya da `@ScreenSlot` annotation'ının) tam nitelikli adları (virgülle ayrılır). İsimle çözümleme, paket taramasının çalışmadığı Kotlin *metadata* classpath'inde de çalışır — `kspCommonMainMetadata` round'unun ihtiyacı budur. Wrapper'ı adlandırmak yeter: marker'larına parametrelerindeki `@FilledBy` üzerinden ulaşılır. |
 | `gezgin.naming.memberFun.stripSuffixes` | boş | Üretilen üye adlarını (`goToX`, `openX`, `launchX`, `backToX`) türetirken route adından sırayla ve her biri en fazla bir kez atılan, virgülle ayrılmış sonekler. Varsayılanda hiçbir şey atılmaz (`goToOldPinScreenRoute`); `Route,Screen,Flow` `goToOldPin` verir. `gezgin.naming.memberFun.<Tür>.stripSuffixes` (`GoTo`, `ReplaceTo`, `QuitAndGoTo`, `GoForResult`, `BackTo`, `Open`) tek bir edge türü için listeyi değiştirir. `gezgin.naming.memberFun.stripPrefixes` (ve `<Tür>.stripPrefixes`) baştaki tokenlar için aynı şekilde çalışır ve soneklerden önce uygulanır. Edge'in `name=`'i her zaman baskındır. |
+
+### İsimlendirme
+
+Üretilen navigator üyeleri (`goToX`, `openX`, `launchX`, `backToX`) varsayılanda route'un tam basit
+adını korur: `OldPinScreenRoute` için `goToOldPinScreenRoute` üretilir. `gezgin` Gradle plugin'i,
+yukarıdaki `gezgin.naming.memberFun.*` KSP seçeneklerinin tipli bir cephesidir; KSP'nin yanında uygula:
+
+```kotlin
+import dev.gezgin.gradle.GezginAnnotation
+
+plugins {
+    id("com.google.devtools.ksp")
+    id("io.github.sahsenvar.gezgin") version "0.3.0"
+}
+
+gezgin {
+    naming {
+        memberFun {
+            stripSuffixes = listOf("Route")   // tüm edge türleri; `stripPrefixes` aynı şekilde çalışır
+            rule { kind ->                    // her GezginAnnotation değeri için bir kez çalışır
+                if (kind == GezginAnnotation.Open) stripSuffixes += listOf("Dialog", "BottomSheet")
+            }
+        }
+    }
+}
+```
+
+`rule { kind -> }` içinde `stripSuffixes` ve `stripPrefixes`, o tür için genel listelerin kopyasıyla
+başlar; `+=`, `-=` ve `=` yalnızca o türü değiştirir. Genel liste `["Route"]` iken yukarıdaki kural
+`Open` için `Route,Dialog,BottomSheet` verir, diğer türler `Route`'ta kalır. Her `rule {}` bloğu
+bildirim sırasıyla uygulanır ve lambda'lar build betiği yapılandırıldıktan sonra çalışır; yani
+betikteki ifade sırası önemli değildir. Yalnızca sonucu genel listeden farklı çıkan türler için
+tür-bazlı KSP seçeneği üretilir.
+
+Plugin olmadan seçenekleri doğrudan ver; plugin'in ürettiği şey birebir budur:
+
+```kotlin
+ksp {
+    arg("gezgin.naming.memberFun.stripSuffixes", "Route")
+    arg("gezgin.naming.memberFun.Open.stripSuffixes", "Route,Dialog,BottomSheet")
+}
+```
 
 ---
 
