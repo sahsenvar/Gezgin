@@ -32,7 +32,10 @@ public interface GezginWrapperScope {
    */
   public val routeAnnotations: List<Annotation>
 
-  /** The nearest enclosing graph, `@NavGraph` or `@FlowGraph`. */
+  /**
+   * The nearest enclosing graph, `@NavGraph` or `@FlowGraph`. For a route outside any annotated
+   * graph it is a placeholder with an empty name, kind [GraphKind.Nav] and no parent.
+   */
   public val graph: GezginGraph
 
   /** `false` for a `@NoBack` route and for an entry that is alone on the stack. */

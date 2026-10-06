@@ -417,7 +417,7 @@ Her wrapper, Gezgin'in entry başına doldurduğu `GezginWrapperScope` (`dev.gez
 | `route` | Entry'nin route örneği |
 | `routeName` | Route'un bildirilen adı, derleme anında yazılır (R8'e dayanıklı) |
 | `routeAnnotations` | Route'un annotation'ları örnek olarak (Gezgin'inkiler ve kendininkiler; `@Serializable` gibi derleyici annotation'ları hariç) |
-| `graph` | En yakın graph (`GezginGraph`: `name`, `kind` = `Nav`/`Flow`, `annotations`, `parent`) |
+| `graph` | En yakın graph (`GezginGraph`: `name`, `kind` = `Nav`/`Flow`, `annotations`, `parent`). Hiçbir anotasyonlu graph'ın içinde olmayan bir route için boş `name`, `kind` = `Nav` ve `parent`'sız bir yer tutucudur |
 | `canGoBack` | `@NoBack` route'u ve tek başına duran entry için `false` |
 | `isAloneInBackStack` | Stack'teki tek entry (deep link'le açılan ekran tek başınadır) |
 | `isTop` | Stack'in tepesinde; üstünde dialog ya da sheet açıkken `false` |

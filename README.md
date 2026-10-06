@@ -419,7 +419,7 @@ Every wrapper is an extension on `GezginWrapperScope` (`dev.gezgin.core.compose`
 | `route` | The entry's route instance |
 | `routeName` | The route's declared name, written at compile time (R8-safe) |
 | `routeAnnotations` | The route's annotations as instances (Gezgin's and your own; compiler annotations such as `@Serializable` excluded) |
-| `graph` | The nearest graph (`GezginGraph`: `name`, `kind` = `Nav`/`Flow`, `annotations`, `parent`) |
+| `graph` | The nearest graph (`GezginGraph`: `name`, `kind` = `Nav`/`Flow`, `annotations`, `parent`). For a route outside any annotated graph it is a placeholder with an empty `name`, `kind` = `Nav` and no `parent` |
 | `canGoBack` | `false` for a `@NoBack` route and for a lone entry |
 | `isAloneInBackStack` | The only entry on the stack (a deep-linked screen is alone) |
 | `isTop` | On top of the stack; `false` while a dialog or sheet is open over it |

@@ -7,6 +7,7 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.google.devtools.ksp.symbol.Modifier
+import com.google.devtools.ksp.symbol.Origin
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.joinToCode
 import com.squareup.kotlinpoet.ksp.toClassName
@@ -68,6 +69,8 @@ internal class AnnotationRenderer(private val logger: KSPLogger) {
     val type = annotation.annotationType.resolve()
     if (type.isError) return null
     val declaration = type.declaration as? KSClassDeclaration ?: return null
+    // A Java annotation is an interface; constructing it like a Kotlin annotation is not supported.
+    if (declaration.origin == Origin.JAVA || declaration.origin == Origin.JAVA_LIB) return null
     if (!isAccessible(declaration)) return null
     val parameters = declaration.primaryConstructor?.parameters.orEmpty()
     val arguments =
@@ -101,7 +104,8 @@ internal class AnnotationRenderer(private val logger: KSPLogger) {
       is Int,
       is Short,
       is Byte -> CodeBlock.of("%L", value)
-      is Long -> CodeBlock.of("%LL", value)
+      is Long ->
+        if (value == Long.MIN_VALUE) CodeBlock.of("Long.MIN_VALUE") else CodeBlock.of("%LL", value)
       is Float -> if (value.isFinite()) CodeBlock.of("%Lf", value) else null
       is Double -> if (value.isFinite()) CodeBlock.of("%L", value) else null
       is Char -> charLiteral(value)

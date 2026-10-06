@@ -323,6 +323,56 @@ class WrapperScopeCodegenTest {
     assertContains(text, "GoTo(")
   }
 
+  @Test
+  fun `a Java-declared annotation is skipped with SW15 while a Kotlin one on the route is kept`() {
+    val result =
+      compileGezgin(
+        SourceFile.java(
+          "JavaMarker.java",
+          """
+          package app;
+
+          import java.lang.annotation.Retention;
+          import java.lang.annotation.RetentionPolicy;
+
+          @Retention(RetentionPolicy.RUNTIME)
+          public @interface JavaMarker {}
+          """
+            .trimIndent(),
+        ),
+        source(
+          wrapperAndGraph
+            .replace(
+              "data class DetailRoute",
+              "@JavaMarker @Tracked(\"detail\") data class DetailRoute",
+            )
+            .replace("@NavGraph", "annotation class Tracked(val name: String)\n\n@NavGraph")
+        ),
+      )
+    val text = result.generatedSourceFor("GezginWrapperEntries.kt")!!.readText()
+
+    assertSw15IsOnlyAWarning(result.messages, count = 1)
+    assertContains(result.messages, "JavaMarker")
+    assertFalse(text.contains("JavaMarker"), "Java annotation must not be emitted:\n$text")
+    assertContains(text.flat(), "Tracked(name = \"detail\")")
+  }
+
+  @Test
+  fun `Long MIN_VALUE is rendered by name rather than as an out-of-range literal`() {
+    val result =
+      compileGezgin(
+        source(
+          wrapperAndGraph
+            .replace("data class DetailRoute", "@Weight(Long.MIN_VALUE) data class DetailRoute")
+            .replace("@NavGraph", "annotation class Weight(val value: Long)\n\n@NavGraph")
+        )
+      )
+    val text = result.generatedSourceFor("GezginWrapperEntries.kt")!!.readText().flat()
+
+    assertContains(text, "Weight(value = Long.MIN_VALUE)")
+    assertFalse(text.contains("-9223372036854775808"), text)
+  }
+
   private fun assertSw15IsOnlyAWarning(messages: String, count: Int) {
     val lines = messages.lines().filter { "[SW15]" in it }
     assertTrue(lines.size == count, "expected $count [SW15] lines:\n$messages")
