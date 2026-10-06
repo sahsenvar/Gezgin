@@ -48,6 +48,7 @@ class PublishingConfigurationContractTest {
     assertContains(rootBuild, "\":gezgin-core\"")
     assertContains(rootBuild, "\":gezgin-test\"")
     assertContains(rootBuild, "\":gezgin-processor\"")
+    assertContains(rootBuild, "\":gezgin-gradle-plugin\"")
     assertContains(rootBuild, "configure(publishedProjects)")
     assertFalse(
       rootBuild.contains("allprojects {"),
@@ -102,6 +103,12 @@ class PublishingConfigurationContractTest {
     assertContains(processorBuild, "KotlinJvm(")
     assertContains(processorBuild, "JavadocJar.Dokka(")
     assertContains(processorBuild, "SourcesJar.Sources()")
+
+    val pluginBuild = text("gezgin-gradle-plugin/build.gradle.kts")
+    assertContains(pluginBuild, "GradlePlugin(")
+    assertContains(pluginBuild, "JavadocJar.Dokka(")
+    assertContains(pluginBuild, "SourcesJar.Sources()")
+    assertContains(pluginBuild, "id = \"io.github.sahsenvar.gezgin\"")
   }
 
   @Test
@@ -118,11 +125,16 @@ class PublishingConfigurationContractTest {
       "testImplementation(\"${'$'}gezginGroup:gezgin-test:${'$'}gezginVersion\")",
     )
     assertFalse(consumerBuild.contains("useAlpha04MavenLocal"))
+    assertContains(consumerBuild, "id(\"io.github.sahsenvar.gezgin\")")
+    assertContains(consumerBuild, "gezgin { naming { memberFun {")
+    assertFalse(consumerBuild.contains("ksp { arg("), "the consumer must use the plugin DSL")
 
     val consumerSettings = text("compatibility/zad-consumer/settings.gradle.kts")
     assertContains(consumerSettings, "providers.gradleProperty(\"releaseVerificationRepository\")")
     assertContains(consumerSettings, "exclusiveContent")
     assertContains(consumerSettings, "includeGroup(\"io.github.sahsenvar\")")
+    assertContains(consumerSettings, "includeGroup(\"io.github.sahsenvar.gezgin\")")
+    assertContains(consumerSettings, "id(\"io.github.sahsenvar.gezgin\") version")
     assertContains(consumerSettings, "https://repo.maven.apache.org/maven2")
     assertContains(consumerSettings, "mavenCentral()")
     assertFalse(consumerSettings.contains("mavenLocal()"))
@@ -155,7 +167,7 @@ class PublishingConfigurationContractTest {
     assertContains(script, "--export")
     assertContains(script, "--import")
     assertContains(script, "gpg --homedir \"\$verify_home\" --batch --verify")
-    assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=63")
+    assertContains(script, "CRYPTOGRAPHIC_SIGNATURES_VERIFIED=69")
     assertContains(script, "CORRUPTION_NEGATIVE=PASS")
     assertContains(rootBuild, "\"-PgezginVersion=\$releaseVersion\"")
   }
@@ -230,6 +242,6 @@ class PublishingConfigurationContractTest {
 
   private companion object {
     val kmpModules = listOf("gezgin-core", "gezgin-test")
-    val publishedModules = kmpModules + "gezgin-processor"
+    val publishedModules = kmpModules + "gezgin-processor" + "gezgin-gradle-plugin"
   }
 }

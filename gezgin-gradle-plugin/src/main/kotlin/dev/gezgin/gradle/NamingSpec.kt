@@ -10,7 +10,7 @@ import org.gradle.api.Action
 public class NamingSpec {
   internal val memberFun = MemberFunSpec()
 
-  /** Configures how generated navigator member names (`goToX`, `openX`, ...) are derived. */
+  /** Configures how generated navigator member names such as `goToX` and `openX` are derived. */
   public fun memberFun(action: Action<in MemberFunSpec>) {
     action.execute(memberFun)
   }
