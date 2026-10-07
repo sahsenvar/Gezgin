@@ -12,6 +12,7 @@ import dev.gezgin.core.annotation.FilledBy
 import dev.gezgin.core.annotation.Screen
 import dev.gezgin.core.annotation.ScreenSlot
 import dev.gezgin.core.annotation.ScreenWrapper
+import dev.gezgin.core.compose.GezginWrapperScope
 import kotlin.reflect.KClass
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +35,7 @@ abstract class ZadBaseViewModel<S, I, E> : ViewModel() {
 
 @ScreenWrapper
 @Composable
-fun <S, I, E> ZadScreenRoot(
+fun <S, I, E> GezginWrapperScope.ZadScreenRoot(
   @FilledBy(ViewModelOf::class) viewModel: @Composable () -> ZadBaseViewModel<S, I, E>,
   @FilledBy(Effects::class) onEffect: (E) -> Unit,
   @FilledBy(TopBar::class) topBar: @Composable (S, (I) -> Unit) -> Unit = { _, _ -> },

@@ -28,6 +28,7 @@ class WrapperCrossModuleTest {
       "DesignSystem.kt",
       """
       package design
+      import dev.gezgin.core.compose.GezginWrapperScope
 
       import androidx.compose.runtime.Composable
       import dev.gezgin.core.Route
@@ -41,7 +42,7 @@ class WrapperCrossModuleTest {
 
       @ScreenWrapper
       @Composable
-      fun <S> designRoot(
+      fun <S> GezginWrapperScope.designRoot(
         @FilledBy(TopBar::class) topBar: @Composable (S) -> Unit = {},
         @FilledBy(Screen::class) content: @Composable (S) -> Unit,
       ) = Unit

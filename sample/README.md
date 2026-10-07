@@ -57,7 +57,7 @@ Uygulamanın sözlüğü ve tek ekran kökü `:sample:designsystem` içindedir; 
 
 @ScreenWrapper
 @Composable
-fun <S, I, E> ShowcaseScreenRoot(
+fun <S, I, E> GezginWrapperScope.ShowcaseScreenRoot(
     @FilledBy(ViewModelOf::class) viewModel: @Composable () -> BaseViewModel<S, I, E>,
     @FilledBy(Effects::class)     onEffect: (E, (String) -> Unit, (I) -> Unit) -> Unit,
     @FilledBy(Screen::class)      content: @Composable ColumnScope.(S, (I) -> Unit) -> Unit,

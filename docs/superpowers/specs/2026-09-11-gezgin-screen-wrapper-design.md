@@ -312,6 +312,9 @@ existing `SC`/`MV` convention with a new `SW` prefix.
 | `SW10` | a provider names a route that has a `@Screen` in this module, but no wrapper slot consumes that provider's marker |
 | `SW11` | a provider parameter does not resolve and is not this route's navigator. *Added during implementation:* in a single-module app the navigator is emitted by the same KSP round, so its type is an error type while providers are read and resolving it throws. The navigator is matched by its written name before anything is resolved; anything else that fails to resolve gets this error instead of a processor crash. |
 | `SW12` | a slot's type uses a type parameter the wrapper does not declare — one from an enclosing generic class, say. *Added during implementation:* a type variable can only be rendered into a `TypeName` with the declaring function's type-parameter resolver, which the wrapper reader does not carry, so a variable it cannot model as `SlotType.Variable` (alone, under a function type, or under a generic type's arguments) is reported here instead of crashing KotlinPoet. |
+| `SW13` | `@ScreenWrapper` declares no `GezginWrapperScope` receiver (error) |
+| `SW14` | a wrapper parameter has neither `@FilledBy` nor a default value (error) |
+| `SW15` | an annotation on a route or graph cannot be reproduced at runtime and is omitted from `routeAnnotations` / `GezginGraph.annotations` (warning) |
 
 Zero `@ScreenWrapper` in scope is not an error. Content is then called bare, exactly as core-mode
 entries are emitted today, and the double `Column` disappears for everyone.

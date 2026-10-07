@@ -17,6 +17,7 @@ class WrapperEntryCodegenTest {
       "Fixture.kt",
       """
       package app
+      import dev.gezgin.core.compose.GezginWrapperScope
 
       import androidx.compose.runtime.Composable
       import dev.gezgin.core.Route
@@ -54,7 +55,7 @@ class WrapperEntryCodegenTest {
 
       @ScreenWrapper
       @Composable
-      fun <S, I, E> appRoot(
+      fun <S, I, E> GezginWrapperScope.appRoot(
         @FilledBy(ViewModelOf::class) viewModel: @Composable () -> S,
         @FilledBy(Effects::class) onEffect: (E) -> Unit,
         @FilledBy(TopBar::class) topBar: @Composable (S) -> Unit = {},
@@ -112,6 +113,7 @@ class WrapperEntryCodegenTest {
       "TypeArgumentFixture.kt",
       """
       package app
+      import dev.gezgin.core.compose.GezginWrapperScope
 
       import androidx.compose.runtime.Composable
       import dev.gezgin.core.Route
@@ -148,7 +150,7 @@ class WrapperEntryCodegenTest {
 
       @ScreenWrapper
       @Composable
-      fun <S, I, E> appRoot(
+      fun <S, I, E> GezginWrapperScope.appRoot(
         @FilledBy(ViewModelOf::class) viewModel: @Composable () -> S,
         @FilledBy(Effects::class) onEffect: @Composable (Flow<E>, (I) -> Unit) -> Unit,
         @FilledBy(Screen::class) content: @Composable (S, (I) -> Unit) -> Unit,
@@ -190,6 +192,7 @@ class WrapperEntryCodegenTest {
       "ReturnTypeFixture.kt",
       """
       package app
+      import dev.gezgin.core.compose.GezginWrapperScope
 
       import androidx.compose.runtime.Composable
       import dev.gezgin.core.Route
@@ -230,7 +233,7 @@ class WrapperEntryCodegenTest {
 
       @ScreenWrapper
       @Composable
-      fun <S, I, E> appRoot(
+      fun <S, I, E> GezginWrapperScope.appRoot(
         @FilledBy(ViewModelOf::class) viewModel: @Composable () -> Vm<S, I, E>,
         @FilledBy(Effects::class) onEffect: @Composable (Flow<E>, (I) -> Unit) -> Unit = { _, _ -> },
         @FilledBy(Screen::class) content: @Composable (S, (I) -> Unit) -> Unit,

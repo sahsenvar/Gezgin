@@ -7,6 +7,22 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** `@ScreenWrapper` fonksiyonları artık zorunlu bir `GezginWrapperScope` receiver'ı
+  tanımlamalı (`fun <…> GezginWrapperScope.AppScreenRoot(…)`). Geçiş mekanik: her wrapper'a
+  receiver eklenir. Receiver'ı olmayan wrapper `SW13` hatası verir. `@FilledBy` taşımayan ve
+  varsayılanı olmayan wrapper parametresi artık sessizce yok sayılmaz, `SW14` hatası verir.
+  Wrapper'ı olmayan core-mode `register<R> { … }` kullanımları etkilenmez.
+
+### Added
+
+- `GezginWrapperScope`: wrapper içinde `route`, `routeName`, `routeAnnotations`, `graph`
+  (`GezginGraph`, `GraphKind`), `canGoBack`, `isAloneInBackStack` ve `isTop`. Ad ve annotation'lar
+  derleme anında üretilen sabitlerdir (reflection ve `::class.simpleName` yok, R8'e dayanıklı).
+  Gezgin'in kendi annotation'ları ile uygulamanın özel annotation'ları dahil, `@Serializable` gibi
+  derleyici/plugin annotation'ları hariçtir. Üretilemeyen bir annotation `SW15` uyarısıyla atlanır.
+
 ## [1.0.0] - 2026-10-06
 
 İlk kararlı sürüm. `0.3.0` Maven Central'a hiç yayınlanmadı; onun kırıcı değişiklikleri (aşağıdaki
@@ -150,7 +166,7 @@ akışı ve yan-etki politikası uygulamaya geri verildi.
 - `gezgin.wrapperPackages` KSP seçeneği — bir bağımlılığa derlenmiş wrapper ve marker'ların
   paketlerini bildirir. KSP classpath'teki bildirimleri annotation'la sayamadığı için çok-modüllü
   kurulumda gereklidir; tek modüllü uygulamada gerekmez.
-- `SW1`–`SW11` hata kataloğu.
+- `SW1`–`SW12` hata kataloğu.
 - `SZ1`, serializer'ı bulunamayan route parametreleri ve result türleri için açık processor hatası.
 
 ### Migration

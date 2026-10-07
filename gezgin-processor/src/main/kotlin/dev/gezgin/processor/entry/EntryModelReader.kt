@@ -103,6 +103,7 @@ internal class EntryModelReader(
 
   private val graphsByFq: Map<String, GraphModelNode> = model.graphs.associateBy { it.fqName }
   private val routesByFq: Map<String, RouteModel> = model.routes.associateBy { it.fqName }
+  private val routeMetaReader = dev.gezgin.processor.routemeta.RouteMetaReader(logger)
 
   private var ok = true
   private val seenRouteFqs =
@@ -341,6 +342,7 @@ internal class EntryModelReader(
       x = x,
       callbackArgs = callbackArgs,
       onDismissField = callbackRoute?.firstOrNull { it.isOnDismiss() }?.name?.asString(),
+      routeMeta = if (routeFq in wrappedRoutes) routeMetaReader.read(routeDecl) else null,
     )
   }
 

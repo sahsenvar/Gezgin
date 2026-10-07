@@ -18,6 +18,7 @@ class WrapperAnnotationsTest {
           "AppVocabulary.kt",
           """
           package app
+          import dev.gezgin.core.compose.GezginWrapperScope
 
           import dev.gezgin.core.Route
           import dev.gezgin.core.annotation.FilledBy
@@ -31,7 +32,7 @@ class WrapperAnnotationsTest {
           annotation class TopBar(val route: KClass<out Route>)
 
           @ScreenWrapper
-          fun appRoot(
+          fun GezginWrapperScope.appRoot(
             @FilledBy(TopBar::class) topBar: () -> Unit = {},
             @FilledBy(Screen::class) content: () -> Unit,
           ) {

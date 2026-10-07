@@ -56,6 +56,8 @@ internal data class EntryFunctionModel(
   val callbackArgs: List<CallbackEntryArg>? = null,
   /** The route's `@OnDismiss` field, wired as the container-dismissal hook. */
   val onDismissField: String? = null,
+  /** Set only for entries bound to a wrapper. */
+  val routeMeta: dev.gezgin.processor.routemeta.RouteMetaModel? = null,
 )
 
 /** One composable argument of a callback-route entry. */

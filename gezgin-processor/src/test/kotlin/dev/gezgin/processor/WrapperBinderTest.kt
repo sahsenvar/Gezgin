@@ -26,6 +26,7 @@ class WrapperBinderTest {
       import dev.gezgin.core.annotation.Screen
       import dev.gezgin.core.annotation.ScreenSlot
       import dev.gezgin.core.annotation.ScreenWrapper
+      import dev.gezgin.core.compose.GezginWrapperScope
       import kotlin.reflect.KClass
       import kotlinx.serialization.Serializable
 
@@ -56,7 +57,7 @@ class WrapperBinderTest {
 
     @ScreenWrapper
     @Composable
-    fun <S, I> appRoot(
+    fun <S, I> GezginWrapperScope.appRoot(
       @FilledBy(ViewModelOf::class) viewModel: @Composable () -> S,
       @FilledBy(Screen::class) content: @Composable (S, (I) -> Unit) -> Unit,
     ) = Unit
@@ -114,7 +115,7 @@ class WrapperBinderTest {
 
           @ScreenWrapper
           @Composable
-          fun <S, E> appRoot(
+          fun <S, E> GezginWrapperScope.appRoot(
             @FilledBy(Unused::class) onEffect: (E) -> Unit = {},
             @FilledBy(Screen::class) content: @Composable (S) -> Unit,
           ) = Unit
@@ -146,7 +147,7 @@ class WrapperBinderTest {
 
     @ScreenWrapper
     @Composable
-    fun <S, I, E> appRoot(
+    fun <S, I, E> GezginWrapperScope.appRoot(
       @FilledBy(ViewModelOf::class) viewModel: @Composable () -> Vm<S, I, E>,
       @FilledBy(EffectHandler::class) effectHandler: @Composable (E, (I) -> Unit) -> Unit = { _, _ -> },
       @FilledBy(Screen::class) content: @Composable (S, (I) -> Unit) -> Unit,
@@ -234,11 +235,11 @@ class WrapperBinderTest {
           """
           @ScreenWrapper
           @Composable
-          fun firstRoot(@FilledBy(Screen::class) content: @Composable (DetailUiState) -> Unit) = Unit
+          fun GezginWrapperScope.firstRoot(@FilledBy(Screen::class) content: @Composable (DetailUiState) -> Unit) = Unit
 
           @ScreenWrapper
           @Composable
-          fun secondRoot(@FilledBy(Screen::class) content: @Composable (DetailUiState) -> Unit) =
+          fun GezginWrapperScope.secondRoot(@FilledBy(Screen::class) content: @Composable (DetailUiState) -> Unit) =
             Unit
           """
             .trimIndent(),
@@ -285,7 +286,7 @@ class WrapperBinderTest {
 
           @ScreenWrapper
           @Composable
-          fun appRoot(@FilledBy(Screen::class) content: @Composable (DetailUiState) -> Unit) = Unit
+          fun GezginWrapperScope.appRoot(@FilledBy(Screen::class) content: @Composable (DetailUiState) -> Unit) = Unit
           """
             .trimIndent(),
           """

@@ -13,8 +13,6 @@ import com.google.devtools.ksp.symbol.Modifier
 import com.squareup.kotlinpoet.ksp.toTypeName
 import dev.gezgin.processor.serial.SerialTypeClassifier
 
-private const val NAV_GRAPH_FQ = "dev.gezgin.core.annotation.NavGraph"
-private const val FLOW_GRAPH_FQ = "dev.gezgin.core.annotation.FlowGraph"
 private const val START_DESTINATION_FQ = "dev.gezgin.core.annotation.StartDestination"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
 private const val GO_TO_FQ = "dev.gezgin.core.annotation.GoTo"
@@ -38,17 +36,13 @@ private const val RESULT_FLOW_FQ = "dev.gezgin.core.ResultFlow"
  * file is attributed correctly. Member enumeration uses [KSClassDeclaration.getSealedSubclasses]
  * (proven cross-file), unioned with lexical children so a member written `: Route` (declaring no
  * annotated supertype but nested inside an annotated graph — e.g. an intervening `@NavGraph`) keeps
- * its lexical nesting membership. See [membershipParent].
+ * its lexical nesting membership. See [GraphMembership.membershipParent].
  *
  * Flow-chain and result-type rules are documented on the individual model types in `GraphModel.kt`.
  */
 internal class ModelReader(private val resolver: Resolver, private val logger: KSPLogger) {
 
-  /**
-   * Per-read memoization of [membershipParent] — the chain walks would otherwise re-resolve
-   * supertypes.
-   */
-  private val parentCache = HashMap<String, KSClassDeclaration?>()
+  private val membership = GraphMembership()
 
   fun read(): GraphModel {
     val graphDecls = collectGraphDeclarations()
@@ -69,7 +63,7 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
     val routes =
       memberDecls
         .filter { isRouteDeclaration(it) }
-        .filter { membershipParent(it) != null }
+        .filter { membership.membershipParent(it) != null }
         .map { buildRouteModel(it) }
 
     return GraphModel(
@@ -106,65 +100,6 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
 
   // endregion
 
-  // region Membership derivation (supertype-primary, lexical-fallback)
-
-  /**
-   * The single annotated graph/flow `decl` is a member of. Primary source is the DIRECT annotated
-   * supertype (`: ParentGraph`) so a member declared in a separate file resolves correctly (the
-   * ownership model: "subtyping = nesting"). Fallback is the lexically-enclosing annotated graph,
-   * preserving lexical nesting for a member that declares no annotated supertype (e.g. an
-   * intervening `@NavGraph : Route`). When both agree — the lexical parent is itself a declared
-   * supertype (the normal nested route) — the lexical parent is chosen, so an E5-style route
-   * implementing a SECOND graph still reports its nesting graph as `graphFq`. `null` = no parent by
-   * either mechanism (a top-level root graph/flow, or an orphan).
-   */
-  private fun membershipParent(decl: KSClassDeclaration): KSClassDeclaration? {
-    val key = decl.qualifiedName?.asString() ?: return computeMembershipParent(decl)
-    if (parentCache.containsKey(key)) return parentCache[key]
-    return computeMembershipParent(decl).also { parentCache[key] = it }
-  }
-
-  private fun computeMembershipParent(decl: KSClassDeclaration): KSClassDeclaration? {
-    val directAnnotated = directAnnotatedGraphSupertypes(decl)
-    val lexParent =
-      (decl.parentDeclaration as? KSClassDeclaration)?.takeIf { it.isAnnotatedGraph() }
-    val lexFq = lexParent?.qualifiedName?.asString()
-    return when {
-      lexParent != null && directAnnotated.any { it.qualifiedName?.asString() == lexFq } ->
-        lexParent
-      directAnnotated.isNotEmpty() -> directAnnotated.first()
-      lexParent != null -> lexParent
-      else -> null
-    }
-  }
-
-  /** Enclosing annotated graphs from outermost to innermost, excluding `decl` itself. */
-  private fun enclosingGraphChain(decl: KSClassDeclaration): List<KSClassDeclaration> {
-    val chain = mutableListOf<KSClassDeclaration>()
-    val seen = mutableSetOf<String>()
-    var cur = membershipParent(decl)
-    while (cur != null) {
-      val fq = cur.qualifiedName?.asString()
-      if (fq != null && !seen.add(fq)) break // defensive: never loop on a malformed supertype cycle
-      chain.add(0, cur)
-      cur = membershipParent(cur)
-    }
-    return chain
-  }
-
-  private fun directAnnotatedGraphSupertypes(decl: KSClassDeclaration): List<KSClassDeclaration> =
-    decl.superTypes
-      .map { it.resolve().declaration }
-      .filterIsInstance<KSClassDeclaration>()
-      .filter { it.isAnnotatedGraph() }
-      .distinctBy { it.qualifiedName?.asString() }
-      .toList()
-
-  private fun KSClassDeclaration.isAnnotatedGraph(): Boolean =
-    hasAnnotation(NAV_GRAPH_FQ) || hasAnnotation(FLOW_GRAPH_FQ)
-
-  // endregion
-
   // region Graph model
 
   private fun buildGraphNode(
@@ -175,11 +110,13 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
     val isFlow = graphDecl.hasAnnotation(FLOW_GRAPH_FQ)
     val resultType = resultTypeOf(graphDecl, RESULT_FLOW_FQ)
     val resultTypeFq = resultType?.fqNameOrTypeString()
-    val members = memberDecls.filter { membershipParent(it)?.qualifiedName?.asString() == fqName }
+    val members =
+      memberDecls.filter { membership.membershipParent(it)?.qualifiedName?.asString() == fqName }
     val startFq =
       members.firstOrNull { it.hasAnnotation(START_DESTINATION_FQ) }?.requireQualifiedName()
     val parentFlowFq =
-      enclosingGraphChain(graphDecl)
+      membership
+        .enclosingGraphChain(graphDecl)
         .lastOrNull { it.hasAnnotation(FLOW_GRAPH_FQ) }
         ?.requireQualifiedName()
 
@@ -194,7 +131,7 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
       memberFq = members.map { it.requireQualifiedName() }.sorted(),
       parentFlowFq = parentFlowFq,
       directParentFqs = implementedGraphFqsOf(graphDecl),
-      membershipParentFq = membershipParent(graphDecl)?.qualifiedName?.asString(),
+      membershipParentFq = membership.membershipParent(graphDecl)?.qualifiedName?.asString(),
       isNested = graphDecl.parentDeclaration is KSClassDeclaration,
       isSealedInterface =
         graphDecl.classKind == ClassKind.INTERFACE && Modifier.SEALED in graphDecl.modifiers,
@@ -206,7 +143,7 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
   // region Route model
 
   private fun buildRouteModel(routeDecl: KSClassDeclaration): RouteModel {
-    val chain = enclosingGraphChain(routeDecl)
+    val chain = membership.enclosingGraphChain(routeDecl)
     val graphFq = chain.last().requireQualifiedName()
     val flowChainFq =
       chain.filter { it.hasAnnotation(FLOW_GRAPH_FQ) }.map { it.requireQualifiedName() }
@@ -242,7 +179,7 @@ internal class ModelReader(private val resolver: Resolver, private val logger: K
    * inheritance must not read as the route (or graph) "implementing a second graph".
    */
   private fun implementedGraphFqsOf(decl: KSClassDeclaration): List<String> =
-    directAnnotatedGraphSupertypes(decl).mapNotNull { it.qualifiedName?.asString() }
+    membership.directAnnotatedGraphSupertypes(decl).mapNotNull { it.qualifiedName?.asString() }
 
   private fun ctorParamsOf(decl: KSClassDeclaration): List<ParamModel> =
     decl.primaryConstructor?.parameters.orEmpty().map { param ->
