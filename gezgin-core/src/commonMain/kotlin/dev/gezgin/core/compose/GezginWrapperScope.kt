@@ -15,6 +15,8 @@ import dev.gezgin.core.Route
  *
  * [canGoBack], [isAloneInBackStack] and [isTop] are observable: reading them while composing
  * recomposes the wrapper when the back stack changes.
+ *
+ * @author @sahsenvar
  */
 public interface GezginWrapperScope {
   /** The route instance of this entry. */
@@ -22,7 +24,7 @@ public interface GezginWrapperScope {
 
   /**
    * The route's name as declared (for example `OptionOrderChainScreenRoute`). A constant written at
-   * compile time, so R8 cannot change it.
+   * compile time, so code shrinking or obfuscation cannot change it.
    */
   public val routeName: String
 
@@ -54,7 +56,11 @@ public interface GezginWrapperScope {
   public val isTop: Boolean
 }
 
-/** A graph a route belongs to, with the graphs enclosing it reachable through [parent]. */
+/**
+ * A graph a route belongs to, with the graphs enclosing it reachable through [parent].
+ *
+ * @author @sahsenvar
+ */
 public class GezginGraph(
   /** The graph interface's simple name, as declared. */
   public val name: String,
@@ -69,8 +75,15 @@ public class GezginGraph(
   public val parent: GezginGraph?,
 )
 
-/** Whether a [GezginGraph] is a `@NavGraph` or a `@FlowGraph`. */
+/**
+ * Whether a [GezginGraph] is a `@NavGraph` or a `@FlowGraph`.
+ *
+ * @author @sahsenvar
+ */
 public enum class GraphKind {
+  /** A transparent `@NavGraph` container. */
   Nav,
+
+  /** An opaque `@FlowGraph` unit. */
   Flow,
 }
