@@ -22,6 +22,9 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   derleme anında üretilen sabitlerdir (reflection ve `::class.simpleName` yok, R8'e dayanıklı).
   Gezgin'in kendi annotation'ları ile uygulamanın özel annotation'ları dahil, `@Serializable` gibi
   derleyici/plugin annotation'ları hariçtir. Üretilemeyen bir annotation `SW15` uyarısıyla atlanır.
+  `canGoBack`, `isAloneInBackStack` ve `isTop` ayrı türetilmiş state'lerdir: okuyan yalnızca okuduğu
+  değer değiştiğinde yeniden kompoze olur. Yığından çıkarılan entry animasyonla kaybolurken geri
+  bayrakları son değerlerini korur. `GezginWrapperScope` `@Stable`, `GezginGraph` `@Immutable`.
 
 ## [1.0.0] - 2026-10-06
 

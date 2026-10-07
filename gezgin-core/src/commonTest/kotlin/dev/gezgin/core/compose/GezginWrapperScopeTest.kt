@@ -83,6 +83,46 @@ class GezginWrapperScopeTest {
   }
 
   @Test
+  fun aPoppedEntryKeepsItsLastBackFlagsButIsNotTop() {
+    val keys =
+      mutableStateOf(listOf(GezginKey(Product("0"), id = 1), GezginKey(Product("1"), id = 2)))
+    val popped = scope(keys, entryId = 2)
+    assertTrue(popped.canGoBack)
+
+    keys.value = keys.value.dropLast(1)
+
+    assertFalse(popped.isAloneInBackStack)
+    assertTrue(popped.canGoBack)
+    assertFalse(popped.isTop)
+  }
+
+  @Test
+  fun aPoppedNoBackEntryStillCannotGoBack() {
+    val keys =
+      mutableStateOf(listOf(GezginKey(Product("0"), id = 1), GezginKey(Product("1"), id = 2)))
+    val popped = scope(keys, entryId = 2, noBack = true)
+    assertFalse(popped.canGoBack)
+
+    keys.value = keys.value.dropLast(1)
+
+    assertFalse(popped.canGoBack)
+    assertFalse(popped.isAloneInBackStack)
+  }
+
+  @Test
+  fun aPoppedEntryReadForTheFirstTimeFallsBackToTheLiveStack() {
+    val keys =
+      mutableStateOf(listOf(GezginKey(Product("0"), id = 1), GezginKey(Product("1"), id = 2)))
+    val popped = scope(keys, entryId = 2)
+
+    keys.value = keys.value.dropLast(1)
+
+    assertTrue(popped.isAloneInBackStack)
+    assertFalse(popped.canGoBack)
+    assertFalse(popped.isTop)
+  }
+
+  @Test
   fun graphParentChainIsReadableOutward() {
     val flow = GezginGraph("CheckoutFlow", GraphKind.Flow, emptyList(), graph)
 
