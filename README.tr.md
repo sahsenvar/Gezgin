@@ -422,8 +422,10 @@ Her wrapper, Gezgin'in entry başına doldurduğu `GezginWrapperScope` (`dev.gez
 | `isAloneInBackStack` | Stack'teki tek entry (deep link'le açılan ekran tek başınadır) |
 | `isTop` | Stack'in tepesinde; üstünde dialog ya da sheet açıkken `false` |
 
-`canGoBack`, `isAloneInBackStack` ve `isTop` gözlemlenebilirdir. Uygulamaya özel yardımcılar sıradan
-extension'lardır: `val GezginWrapperScope.isNoBack get() = routeAnnotations.any { it is NoBack }`.
+`canGoBack`, `isAloneInBackStack` ve `isTop` gözlemlenebilirdir: okuyan yalnızca okuduğu değer
+değiştiğinde yeniden kompoze olur, her yığın değişiminde değil. Yığından çıkarılan entry animasyonla
+kaybolurken `canGoBack` ve `isAloneInBackStack` son değerlerini korur, `isTop` ise `false` olur.
+Uygulamaya özel yardımcılar sıradan extension'lardır: `val GezginWrapperScope.isNoBack get() = routeAnnotations.any { it is NoBack }`.
 Receiver'ı olmayan wrapper `[SW13]` ile hata verir.
 
 **Bir slot nasıl dolar.** Slot'un fonksiyon tipi, receiver dahil, sağlayıcının imzasının ta

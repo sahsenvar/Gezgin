@@ -1,5 +1,7 @@
 package dev.gezgin.core.compose
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import dev.gezgin.core.Route
 
 /**
@@ -13,11 +15,14 @@ import dev.gezgin.core.Route
  * ) { … }
  * ```
  *
- * [canGoBack], [isAloneInBackStack] and [isTop] are observable: reading them while composing
- * recomposes the wrapper when the back stack changes.
+ * [canGoBack], [isAloneInBackStack] and [isTop] are observable: reading one while composing
+ * recomposes the reader when that value changes, not on every back-stack change. While a popped
+ * entry animates out, [isAloneInBackStack] and [canGoBack] keep the values it last had on the
+ * stack, and [isTop] is `false`.
  *
  * @author @sahsenvar
  */
+@Stable
 public interface GezginWrapperScope {
   /** The route instance of this entry. */
   public val route: Route
@@ -61,6 +66,7 @@ public interface GezginWrapperScope {
  *
  * @author @sahsenvar
  */
+@Immutable
 public class GezginGraph(
   /** The graph interface's simple name, as declared. */
   public val name: String,

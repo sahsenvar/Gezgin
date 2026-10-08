@@ -424,8 +424,10 @@ Every wrapper is an extension on `GezginWrapperScope` (`dev.gezgin.core.compose`
 | `isAloneInBackStack` | The only entry on the stack (a deep-linked screen is alone) |
 | `isTop` | On top of the stack; `false` while a dialog or sheet is open over it |
 
-`canGoBack`, `isAloneInBackStack` and `isTop` are observable. App-specific helpers are plain
-extensions: `val GezginWrapperScope.isNoBack get() = routeAnnotations.any { it is NoBack }`.
+`canGoBack`, `isAloneInBackStack` and `isTop` are observable: a reader recomposes only when the
+value it reads changes, not on every back-stack change. While a popped entry animates out,
+`canGoBack` and `isAloneInBackStack` keep their last values and `isTop` is `false`. App-specific
+helpers are plain extensions: `val GezginWrapperScope.isNoBack get() = routeAnnotations.any { it is NoBack }`.
 A wrapper without the receiver fails with `[SW13]`.
 
 **How a slot is filled.** A slot's function type IS the provider's signature, receiver included: a

@@ -87,8 +87,10 @@ fun <S, I, E> GezginWrapperScope.AppScreenRoot(
 | `isAloneInBackStack` | This entry is the only one on the stack. Differs from `canGoBack`: a `@NoBack` route need not be alone, and a deep-linked screen is alone. |
 | `isTop` | This entry is the top of the stack. A screen under an open sheet or dialog is still composed and RESUMED but has `isTop == false`. |
 
-`canGoBack`, `isAloneInBackStack` and `isTop` are observable: reading them in composition
-recomposes when the stack changes.
+`canGoBack`, `isAloneInBackStack` and `isTop` are observable. Each is a separate derived state of
+the stack, so a reader recomposes only when the value it reads changes. While a popped entry
+animates out, `isAloneInBackStack` and `canGoBack` keep the values the entry last had on the stack
+and `isTop` is `false`. `GezginWrapperScope` is `@Stable` and `GezginGraph` is `@Immutable`.
 
 ## 4. Generated code
 
