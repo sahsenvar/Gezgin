@@ -3,7 +3,7 @@
 > Status: implemented on feat/wrapper-scope
 > Date: 2026-10-06
 > Baseline: `main` at `212eda0`
-> Target release: `1.1.0` (breaking for existing `@ScreenWrapper` functions, see §9)
+> Target release: `1.0.0` (breaking for existing `@ScreenWrapper` functions, see §9; folded into the first stable release because `1.0.0` had not been published yet)
 > Origin: GitHub issue #87 (supersedes #85)
 
 ## 1. Purpose
@@ -187,7 +187,7 @@ the unfillable-parameter rule takes `SW14`.
 
 ## 8. Documentation
 
-`CHANGELOG.md` (new `1.1.0` entry with a breaking-change note and the migration step; also fix the
+`CHANGELOG.md` (entry in the `1.0.0` release with a breaking-change note and the migration step; also fix the
 stale `SW1`–`SW11` mention), `README.md` and `README.tr.md` wrapper sections, the SW error table in
 `docs/superpowers/specs/2026-09-11-gezgin-screen-wrapper-design.md`.
 
@@ -197,7 +197,7 @@ SW13 breaks every existing `@ScreenWrapper`. Migration is mechanical: add `Gezgi
 before the function name. Wrappers to migrate in this repository: `ShoprScreenRoot`,
 `AppScreenRoot`, `ShowcaseScreenRoot`, `ShowcaseSheetRoot` (all under `sample/`), and
 `ZadCompatibilityUi` (`compatibility/zad-consumer`). Core-mode `register<R> { … }` users are not
-affected. The change ships in `1.1.0`, a minor release carrying a breaking change on a
+affected. The change ships in `1.0.0`, folded into the first stable release, a breaking change on a
 declaration that is young (introduced in `0.3.0`); the changelog states this plainly.
 
 ## 10. Decisions log

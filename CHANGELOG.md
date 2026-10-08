@@ -7,6 +7,11 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-08
+
+İlk kararlı sürüm. `0.3.0` Maven Central'a hiç yayınlanmadı; onun kırıcı değişiklikleri (aşağıdaki
+`[0.3.0]` bölümü) ve bu bölümdekiler 1.0.0 ile birlikte çıkar.
+
 ### Changed
 
 - **BREAKING:** `@ScreenWrapper` fonksiyonları artık zorunlu bir `GezginWrapperScope` receiver'ı
@@ -14,24 +19,6 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   receiver eklenir. Receiver'ı olmayan wrapper `SW13` hatası verir. `@FilledBy` taşımayan ve
   varsayılanı olmayan wrapper parametresi artık sessizce yok sayılmaz, `SW14` hatası verir.
   Wrapper'ı olmayan core-mode `register<R> { … }` kullanımları etkilenmez.
-
-### Added
-
-- `GezginWrapperScope`: wrapper içinde `route`, `routeName`, `routeAnnotations`, `graph`
-  (`GezginGraph`, `GraphKind`), `canGoBack`, `isAloneInBackStack` ve `isTop`. Ad ve annotation'lar
-  derleme anında üretilen sabitlerdir (reflection ve `::class.simpleName` yok, R8'e dayanıklı).
-  Gezgin'in kendi annotation'ları ile uygulamanın özel annotation'ları dahil, `@Serializable` gibi
-  derleyici/plugin annotation'ları hariçtir. Üretilemeyen bir annotation `SW15` uyarısıyla atlanır.
-  `canGoBack`, `isAloneInBackStack` ve `isTop` ayrı türetilmiş state'lerdir: okuyan yalnızca okuduğu
-  değer değiştiğinde yeniden kompoze olur. Yığından çıkarılan entry animasyonla kaybolurken geri
-  bayrakları son değerlerini korur. `GezginWrapperScope` `@Stable`, `GezginGraph` `@Immutable`.
-
-## [1.0.0] - 2026-10-06
-
-İlk kararlı sürüm. `0.3.0` Maven Central'a hiç yayınlanmadı; onun kırıcı değişiklikleri (aşağıdaki
-`[0.3.0]` bölümü) ve bu bölümdekiler 1.0.0 ile birlikte çıkar.
-
-### Changed
 
 - **Üretilen üye adları artık hiçbir soneki atmaz (kırıcı).** Eskiden `OldPinScreenRoute` için
   `goToOldPin` üretilirdi; artık `goToOldPinScreenRoute` üretilir. Eski adlara dönmek için
@@ -52,6 +39,15 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   uygulama), spotless `8.10.3`, kover `0.9.11`, setup-gradle ve wrapper-validation `6.4.0`.
 
 ### Added
+
+- `GezginWrapperScope`: wrapper içinde `route`, `routeName`, `routeAnnotations`, `graph`
+  (`GezginGraph`, `GraphKind`), `canGoBack`, `isAloneInBackStack` ve `isTop`. Ad ve annotation'lar
+  derleme anında üretilen sabitlerdir (reflection ve `::class.simpleName` yok, R8'e dayanıklı).
+  Gezgin'in kendi annotation'ları ile uygulamanın özel annotation'ları dahil, `@Serializable` gibi
+  derleyici/plugin annotation'ları hariçtir. Üretilemeyen bir annotation `SW15` uyarısıyla atlanır.
+  `canGoBack`, `isAloneInBackStack` ve `isTop` ayrı türetilmiş state'lerdir: okuyan yalnızca okuduğu
+  değer değiştiğinde yeniden kompoze olur. Yığından çıkarılan entry animasyonla kaybolurken geri
+  bayrakları son değerlerini korur. `GezginWrapperScope` `@Stable`, `GezginGraph` `@Immutable`.
 
 - **`gezgin-gradle-plugin` — isimlendirme ayarı için tipli Gradle DSL.** Yeni `io.github.sahsenvar:gezgin-gradle-plugin`
   artefaktı `io.github.sahsenvar.gezgin` plugin id'siyle yayınlanır (marker dahil). DSL, `gezgin.naming.memberFun.*`
