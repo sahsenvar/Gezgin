@@ -50,7 +50,7 @@ androidx-hilt = "1.4.0" # androidx.hilt:hilt-navigation-compose — latest stabl
 #   (yeni artefakt: androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0). Codegen 5.2'de hedef paketi seçer.
 # kotlinx binary-compatibility-validator yayınlanan modüllerin ABI'sini .api dosyalarıyla kilitler
 # (apiCheck `check`'e otomatik bağlanır). Latest stable (Maven Central, 2026-07-10).
-binary-compatibility-validator = "0.18.1"
+binary-compatibility-validator = "0.18.2"
 dokka = "2.2.0"
 vanniktech-maven-publish = "0.37.0"
 spotless = "8.10.3"
