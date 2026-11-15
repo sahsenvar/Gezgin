@@ -7,10 +7,18 @@
 package dev.gezgin.core.compose
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
@@ -18,6 +26,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import dev.gezgin.core.BottomSheetDragHandleMode
 import dev.gezgin.core.RawNavigator
@@ -186,6 +195,65 @@ class GezginBottomSheetSceneTest {
     waitForIdle()
     onNodeWithText("handle-sheet").assertIsDisplayed()
     assertTrue(onAllNodes(dismissAction, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+  }
+
+  @Test
+  fun `chrome showDragHandle false Default route'ta da handle cizmez`() = runComposeUiTest {
+    val nav = RawNavigator(start = Catalog, topology = testTopology)
+    setContent {
+      CompositionLocalProvider(
+        LocalGezginBottomSheetChrome provides GezginBottomSheetChrome(showDragHandle = false)
+      ) {
+        GezginDisplay(navigator = nav) {
+          register<Catalog> { BasicText("home-screen") }
+          register<SheetDragHandleConfig>(kind = EntryKind.BOTTOM_SHEET) {
+            BasicText("chrome-sheet")
+          }
+        }
+      }
+    }
+    val dismissAction = SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)
+
+    nav.navigate(SheetDragHandleConfig(BottomSheetDragHandleMode.Default))
+    waitForIdle()
+
+    onNodeWithText("chrome-sheet").assertIsDisplayed()
+    assertTrue(onAllNodes(dismissAction, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+  }
+
+  @Test
+  fun `chrome modifier ve insets sheet yuzeyine uygulanir`() = runComposeUiTest {
+    val nav = RawNavigator(start = Catalog, topology = testTopology)
+    var outer = Rect.Zero
+    var surface = Rect.Zero
+    val chrome =
+      GezginBottomSheetChrome(
+        modifier =
+          Modifier.onGloballyPositioned { outer = it.boundsInRoot() }
+            .padding(16.dp)
+            .onGloballyPositioned { surface = it.boundsInRoot() },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = Color.White,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+      )
+    setContent {
+      CompositionLocalProvider(LocalGezginBottomSheetChrome provides chrome) {
+        GezginDisplay(navigator = nav) {
+          register<Catalog> { BasicText("home-screen") }
+          register<SheetDefault>(kind = EntryKind.BOTTOM_SHEET) { BasicText("sheet-body") }
+        }
+      }
+    }
+
+    nav.navigate(SheetDefault("x"))
+    waitForIdle()
+
+    onNodeWithText("sheet-body").assertIsDisplayed()
+    // Kabuk modifier'i yuzeyin en disinda: padding yanlarda ve altta bosluk birakir.
+    val gap = with(density) { 16.dp.toPx() }
+    assertEquals(gap, surface.left - outer.left)
+    assertEquals(gap, outer.right - surface.right)
+    assertEquals(gap, outer.bottom - surface.bottom)
   }
 
   @Test
