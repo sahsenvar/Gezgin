@@ -7,6 +7,15 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ## [Unreleased]
 
+### Added
+
+- `GezginBottomSheetChrome` + `LocalGezginBottomSheetChrome`: tüketici tüm `@BottomSheet`
+  overlay'lerinin kabuğunu (yüzey `modifier`'ı, `shape`, `containerColor`, drag handle, iç
+  `contentWindowInsets`) `GezginDisplay`'in üstünde tek yerden verir. Varsayılan değer 1.0.0'daki
+  material3 görünümünü birebir korur. Yüzen sheet (kenarlardan ve alttan boşluk) için dış padding
+  `modifier`'a, boş insets `contentWindowInsets`'e verilir. `showDragHandle = false` tüm sheet'lerde
+  handle'ı gizler; route'un `BottomSheetDragHandleMode.None` override'ı yine geçerlidir.
+
 ## [1.0.0] - 2026-10-08
 
 İlk kararlı sürüm. `0.3.0` Maven Central'a hiç yayınlanmadı; onun kırıcı değişiklikleri (aşağıdaki

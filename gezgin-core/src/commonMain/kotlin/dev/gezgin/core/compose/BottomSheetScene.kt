@@ -2,6 +2,7 @@
 
 package dev.gezgin.core.compose
 
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
@@ -142,30 +143,21 @@ internal class GezginBottomSheetScene(
         shouldDismissOnBackPress = props.dismissOnBackPress,
         shouldDismissOnClickOutside = props.dismissOnClickOutside,
       )
-    when (props.dragHandleMode) {
-      BottomSheetDragHandleMode.Default ->
-        ModalBottomSheet(
-          onDismissRequest = onBack,
-          sheetState = sheetState,
-          sheetGesturesEnabled = props.sheetGesturesEnabled,
-          properties = properties,
-        ) {
-          CompositionLocalProvider(LocalGezginSheetController provides controller) {
-            entry.Content()
-          }
-        }
-      BottomSheetDragHandleMode.None ->
-        ModalBottomSheet(
-          onDismissRequest = onBack,
-          sheetState = sheetState,
-          sheetGesturesEnabled = props.sheetGesturesEnabled,
-          dragHandle = null,
-          properties = properties,
-        ) {
-          CompositionLocalProvider(LocalGezginSheetController provides controller) {
-            entry.Content()
-          }
-        }
+    val chrome = LocalGezginBottomSheetChrome.current
+    val showDragHandle =
+      chrome.showDragHandle && props.dragHandleMode == BottomSheetDragHandleMode.Default
+    ModalBottomSheet(
+      onDismissRequest = onBack,
+      modifier = chrome.modifier,
+      sheetState = sheetState,
+      sheetGesturesEnabled = props.sheetGesturesEnabled,
+      shape = chrome.shape ?: BottomSheetDefaults.ExpandedShape,
+      containerColor = chrome.containerColor ?: BottomSheetDefaults.ContainerColor,
+      dragHandle = if (showDragHandle) ({ BottomSheetDefaults.DragHandle() }) else null,
+      contentWindowInsets = chrome.contentWindowInsets ?: { BottomSheetDefaults.windowInsets },
+      properties = properties,
+    ) {
+      CompositionLocalProvider(LocalGezginSheetController provides controller) { entry.Content() }
     }
   }
 
