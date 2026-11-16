@@ -37,7 +37,7 @@ dependencies {
 
   testImplementation(kotlin("test-junit"))
   testImplementation(libs.androidx.activity.compose)
-  testImplementation("org.robolectric:robolectric:4.16.1")
+  testImplementation("org.robolectric:robolectric:4.17")
 }
 
 // The wrapper and its slot markers are compiled into :sample:designsystem, and KSP cannot
