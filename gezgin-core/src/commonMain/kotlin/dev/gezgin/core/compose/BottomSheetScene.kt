@@ -153,6 +153,7 @@ internal class GezginBottomSheetScene(
       sheetGesturesEnabled = props.sheetGesturesEnabled,
       shape = chrome.shape ?: BottomSheetDefaults.ExpandedShape,
       containerColor = chrome.containerColor ?: BottomSheetDefaults.ContainerColor,
+      scrimColor = chrome.scrimColor ?: BottomSheetDefaults.ScrimColor,
       dragHandle = if (showDragHandle) ({ BottomSheetDefaults.DragHandle() }) else null,
       contentWindowInsets = chrome.contentWindowInsets ?: { BottomSheetDefaults.windowInsets },
       properties = properties,

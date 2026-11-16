@@ -17,12 +17,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -219,6 +222,30 @@ class GezginBottomSheetSceneTest {
 
     onNodeWithText("chrome-sheet").assertIsDisplayed()
     assertTrue(onAllNodes(dismissAction, useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+  }
+
+  @Test
+  fun `chrome scrimColor sheet'in arkasindaki perdeyi cizer`() = runComposeUiTest {
+    val nav = RawNavigator(start = Catalog, topology = testTopology)
+    setContent {
+      CompositionLocalProvider(
+        LocalGezginBottomSheetChrome provides GezginBottomSheetChrome(scrimColor = Color.Red)
+      ) {
+        GezginDisplay(navigator = nav) {
+          register<Catalog> { BasicText("home-screen") }
+          register<SheetDefault>(kind = EntryKind.BOTTOM_SHEET) { BasicText("scrim-sheet") }
+        }
+      }
+    }
+
+    nav.navigate(SheetDefault("x"))
+    waitForIdle()
+
+    onNodeWithText("scrim-sheet").assertIsDisplayed()
+    // Sheet pencerenin altinda; sol ust kose yalniz perdeyi gosterir.
+    val sheetRoot = onAllNodes(isRoot()).fetchSemanticsNodes().size - 1
+    val pixels = onAllNodes(isRoot())[sheetRoot].captureToImage().toPixelMap()
+    assertEquals(Color.Red, pixels[1, 1])
   }
 
   @Test
