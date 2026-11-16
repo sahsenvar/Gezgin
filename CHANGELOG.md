@@ -15,6 +15,9 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
   material3 görünümünü birebir korur. Yüzen sheet (kenarlardan ve alttan boşluk) için dış padding
   `modifier`'a, boş insets `contentWindowInsets`'e verilir. `showDragHandle = false` tüm sheet'lerde
   handle'ı gizler; route'un `BottomSheetDragHandleMode.None` override'ı yine geçerlidir.
+- `GezginBottomSheetChrome.scrimColor`: sheet'in arkasındaki perdeyi tüm `@BottomSheet`
+  overlay'leri için değiştirir; `null` (varsayılan) material3'ün `BottomSheetDefaults.ScrimColor`
+  perdesini korur.
 
 ## [1.0.0] - 2026-10-08
 

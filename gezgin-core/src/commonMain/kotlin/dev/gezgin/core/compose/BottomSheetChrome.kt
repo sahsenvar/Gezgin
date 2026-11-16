@@ -12,8 +12,8 @@ import androidx.compose.ui.graphics.Shape
 /**
  * App-wide visual chrome of every `@BottomSheet` overlay rendered by Gezgin. The consumer provides
  * it once through [LocalGezginBottomSheetChrome] above `GezginDisplay`, so the sheet look (floating
- * margins, corner shape, container color, drag handle) lives in one place instead of every sheet
- * content or route repeating it.
+ * margins, corner shape, container color, drag handle, scrim) lives in one place instead of every
+ * sheet content or route repeating it.
  *
  * Every field defaults to material3 `ModalBottomSheet`'s own default, so the default instance
  * renders exactly the 1.0.0 sheet.
@@ -25,6 +25,8 @@ import androidx.compose.ui.graphics.Shape
  * - [contentWindowInsets] replaces the material default insets applied inside the sheet when
  *   non-null; a floating sheet usually consumes the navigation bar in [modifier] and passes empty
  *   insets here.
+ * - [scrimColor] replaces material's scrim (32% `colorScheme.scrim`) behind every sheet when
+ *   non-null.
  *
  * Instances are compared by identity, so keep one instance per app (for example a top-level `val`
  * or a `remember`ed value).
@@ -43,6 +45,8 @@ public class GezginBottomSheetChrome(
   public val showDragHandle: Boolean = true,
   /** Insets applied inside the sheet; `null` keeps the material default. */
   public val contentWindowInsets: (@Composable () -> WindowInsets)? = null,
+  /** Scrim drawn behind the sheet; `null` keeps the material default. */
+  public val scrimColor: Color? = null,
 )
 
 /**
