@@ -225,7 +225,7 @@ tasks.register<CheckPublicApiKDocTask>("checkPublicApiKDoc") {
     mapOf(
       "gezgin-core" to "180/19",
       "gezgin-processor" to "1/1",
-      "gezgin-gradle-plugin" to "19/1",
+      "gezgin-gradle-plugin" to "20/1",
       "gezgin-test" to "12/1",
     )
   )

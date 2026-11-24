@@ -24,4 +24,7 @@ public enum class GezginAnnotation {
 
   /** `@Open` edges. */
   Open,
+
+  /** `@Switch` edges. */
+  SwitchTo,
 }
