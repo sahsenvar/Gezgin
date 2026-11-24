@@ -34,11 +34,12 @@ private val GEZGIN_NAVIGATOR_FOR = ClassName("$CORE_PKG.annotation", "GezginNavi
 
 /**
  * Emits a typed per-source `<X>Navigator` for every route that permits implicit back navigation, or
- * declares at least one forward edge (`@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo`),
- * back-navigation annotation (`@BackTo`/`@BackToStart`/`@Quit`), result contract
- * (`ResultRoute<T>`), or membership in a `ResultFlow`'s chain (which earns a `quitWith`) — this is
- * the core guarantee: an undeclared edge simply has no corresponding method, so calling it is an
- * unresolved reference (a compile error), not a runtime failure.
+ * declares at least one forward edge
+ * (`@GoTo`/`@ReplaceTo`/`@GoForResult`/`@QuitAndGoTo`/`@Switch`), back-navigation annotation
+ * (`@BackTo`/`@BackToStart`/`@Quit`), result contract (`ResultRoute<T>`), or membership in a
+ * `ResultFlow`'s chain (which earns a `quitWith`) — this is the core guarantee: an undeclared edge
+ * simply has no corresponding method, so calling it is an unresolved reference (a compile error),
+ * not a runtime failure.
  *
  * A bare route still gets a navigator whose single operation is `back()`. This is the uniform
  * one-step dismissal API used by screens and modal routes. `@NoBack` is the explicit opt-out; an
@@ -106,6 +107,7 @@ internal object NavigatorCodegen {
         EdgeKind.REPLACE_TO -> members += replaceToFun(edge, graphsByFq, routesByFq, naming)
         EdgeKind.QUIT_AND_GO_TO -> members += quitAndGoToFun(edge, graphsByFq, routesByFq, naming)
         EdgeKind.OPEN -> members += openFun(edge, graphsByFq, routesByFq, naming)
+        EdgeKind.SWITCH_TO -> members += switchToFun(edge, routesByFq, naming)
         EdgeKind.GO_FOR_RESULT -> {
           val (funs, props) = goForResultMembers(route, edge, graphsByFq, routesByFq, naming)
           members += funs
@@ -227,6 +229,22 @@ internal object NavigatorCodegen {
     return FunSpec.builder(name)
       .addParameters(target.params)
       .addStatement("raw.open(%L)", target.constructCall)
+      .build()
+  }
+
+  /**
+   * `@Switch`: brings the target tab forward. The tab root takes no caller arguments — validation
+   * (`TB4`) guarantees it is constructible without any — so it is built like a flow start.
+   */
+  private fun switchToFun(
+    edge: EdgeModel,
+    routesByFq: Map<String, RouteModel>,
+    naming: MemberFunNaming,
+  ): FunSpec {
+    val target = routesByFq.getValue(edge.targetFq)
+    val name = edge.name.ifEmpty { "switchTo" + naming.x(MemberKind.SwitchTo, target.simpleName) }
+    return FunSpec.builder(name)
+      .addStatement("raw.switchTo(%L)", constructStartCall(target))
       .build()
   }
 

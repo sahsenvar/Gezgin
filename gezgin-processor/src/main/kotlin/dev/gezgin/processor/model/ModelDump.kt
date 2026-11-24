@@ -27,7 +27,8 @@ internal fun GraphModel.dumpText(): String {
     lines +=
       "route ${route.fqName} graph=${route.graphFq} chain=${route.flowChainFq.joinOrDash()} " +
         "start=${route.isStart} noBack=${route.noBack} resultType=${route.resultTypeFq.orDash()} " +
-        "params=${route.ctorParams.joinToString(",") { it.dump() }.ifEmpty { "-" }}"
+        "params=${route.ctorParams.joinToString(",") { it.dump() }.ifEmpty { "-" }}" +
+        if (route.isTab) " tab=true" else ""
   }
 
   sortedRoutes.forEach { route ->

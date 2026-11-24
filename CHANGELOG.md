@@ -9,6 +9,22 @@ sürümleme [Semantic Versioning](https://semver.org/lang/tr/)'e dayanır.
 
 ### Added
 
+- **Sekme yığını (`@Tab` / `@Switch`).** Bir route'u `@Tab` ile işaretlemek onu sekme kökü yapar; her
+  sekmenin kendi geri yığını, pasifken de canlı kalır (kaydırma, filtre, yüklü veri ve ViewModel
+  sekme geçişinde sıfırlanmaz — entry'ler yeniden yaratılmaz, `GezginKey.id` aynı kalır).
+  `@Switch(Hedef::class)` yalnız iki `@Tab` route arasında geçerlidir ve `switchToHedef()` üretir
+  (çalışma zamanı karşılığı `RawNavigator.switchTo`). Sekme geçişi geri yığınına itilmez: geri
+  tuşu sekmeler arasında gezmez, sekme kökünde geri = `onRootBack` (uygulamadan çıkış); aynı
+  sekmeye tekrar geçmek no-op'tur. `replaceTo`/`clearUpTo` yığın kökünü değiştirince bütün
+  sekmeleri temizler. Derleme zamanı doğrulamaları: `TB1` (`@Switch` hedefi `@Tab` değil), `TB2`
+  (`@Switch` kaynağı `@Tab` değil), `TB3` (`@Tab` flow üyesi / `ResultRoute` / callback route
+  olamaz), `TB4` (`@Tab` argümansız kurulabilmeli), `SC12` (`@Tab` modal kind ile kaydedilemez).
+  Sekme geçişi için `NavEvent.TabSwitched(from, to)` yayılır; **sealed `NavEvent` üzerinde
+  kapsamlı `when` yazan tüketiciler yeni dalı ele almalı**.
+  `GezginTransition.switch { … }` sekme geçişi animasyonunu verir (route > app > yerleşik çapraz
+  solma). `rememberNavigator` süreç ölümünde sekmeleri ve aktif sekmeyi geri yükler; sekmesiz eski
+  kayıtlar tek segment olarak açılır. Sekmesiz uygulamalarda davranış değişmez.
+
 - `GezginBottomSheetChrome` + `LocalGezginBottomSheetChrome`: tüketici tüm `@BottomSheet`
   overlay'lerinin kabuğunu (yüzey `modifier`'ı, `shape`, `containerColor`, drag handle, iç
   `contentWindowInsets`) `GezginDisplay`'in üstünde tek yerden verir. Varsayılan değer 1.0.0'daki

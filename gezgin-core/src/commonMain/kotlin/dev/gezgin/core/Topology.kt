@@ -42,7 +42,9 @@ public class EdgeSpec(
  * (`GezginGenerated.kt`), so the constructor is gated behind [GezginInternalApi];
  * [flowChain]/[startOf] stay public for introspection, while [edges] is `internal` (read only by
  * the same-module runtime). [transientRoutes] lists callback routes, whose entries hold caller
- * lambdas and are therefore never written to the process-death snapshot.
+ * lambdas and are therefore never written to the process-death snapshot. [tabRoots] lists the
+ * `@Tab` routes: each one roots a tab segment that [RawNavigator.switchTo] keeps alive while it is
+ * not the active tab.
  *
  * @author @sahsenvar
  */
@@ -53,6 +55,7 @@ constructor(
   private val flowStarts: Map<String, KClass<out Route>>,
   internal val edges: Map<String, EdgeSpec>,
   internal val transientRoutes: Set<KClass<out Route>> = emptySet(),
+  internal val tabRoots: Set<KClass<out Route>> = emptySet(),
 ) {
   /** Returns the outer-to-inner flow chain enclosing [route]. */
   public fun flowChain(route: KClass<out Route>): List<FlowType> {

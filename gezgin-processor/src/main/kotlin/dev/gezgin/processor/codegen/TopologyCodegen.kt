@@ -90,6 +90,17 @@ internal object TopologyCodegen {
             add("),\n")
           }
         }
+        .apply {
+          val tabs = model.routes.filter(RouteModel::isTab).sortedBy { it.fqName }
+          if (tabs.isNotEmpty()) {
+            add("tabRoots = setOf(")
+            tabs.forEachIndexed { index, route ->
+              if (index > 0) add(", ")
+              add("%T::class", ClassName.bestGuess(route.fqName))
+            }
+            add("),\n")
+          }
+        }
         .unindent()
         .add(")")
         .build()

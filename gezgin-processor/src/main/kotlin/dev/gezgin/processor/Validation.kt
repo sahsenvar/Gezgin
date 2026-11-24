@@ -14,10 +14,10 @@ import dev.gezgin.processor.serial.SerialKind
 /**
  * Compile-time strictness gate: walks the [GraphModel] produced by
  * [dev.gezgin.processor.model.ModelReader] and reports every violation of the Global Constraints
- * rule list (`E1`-`E6`, `G1`, `N9`, `N10`, `N11`, `N12`, `N13`, `R1`, `NB1`, `SD1`, `FX1`, `FX2`)
- * as a KSP error. Each message is prefixed with its bracketed rule code (`"[E1] ..."`) so tests and
- * IDE tooling can key off it; KSP errors fail the enclosing compilation, which is the enforcement
- * mechanism.
+ * rule list (`E1`-`E6`, `G1`, `N9`, `N10`, `N11`, `N12`, `N13`, `R1`, `NB1`, `SD1`, `FX1`, `FX2`,
+ * `TB1`-`TB4`) as a KSP error. Each message is prefixed with its bracketed rule code (`"[E1] ..."`)
+ * so tests and IDE tooling can key off it; KSP errors fail the enclosing compilation, which is the
+ * enforcement mechanism.
  *
  * [validate] never throws — it logs every violation it finds in one pass (rather than stopping at
  * the first) and returns whether the model was clean, purely for caller-side bookkeeping.
@@ -57,6 +57,8 @@ internal class GezginValidator(
       checkNB1(route)
       checkFX1(route)
       checkFX2(route)
+      checkTabEdges(route)
+      checkTabRoot(route)
     }
     model.graphs.forEach { graph ->
       checkG1(graph)
@@ -518,6 +520,8 @@ internal class GezginValidator(
           )
         EdgeKind.OPEN ->
           record(edge.name.ifEmpty { "open${derived(MemberKind.Open)}" }, edge.targetFq)
+        EdgeKind.SWITCH_TO ->
+          record(edge.name.ifEmpty { "switchTo${derived(MemberKind.SwitchTo)}" }, edge.targetFq)
         EdgeKind.GO_FOR_RESULT -> {
           val x =
             edge.name
@@ -689,6 +693,71 @@ internal class GezginValidator(
 
   // endregion
 
+  // region `TB1`-`TB4` — tab roots and `@Switch` edges
+
+  /**
+   * `@Switch` is a lateral move between two tab roots: the source must itself be a `@Tab` route
+   * (`TB2`) and every target must be one too (`TB1`). A non-tab pair would have no tab segment to
+   * keep alive or to bring forward.
+   */
+  private fun checkTabEdges(route: RouteModel) {
+    val switches = route.edges.filter { it.kind == EdgeKind.SWITCH_TO }
+    if (switches.isEmpty()) return
+    if (!route.isTab) {
+      error(
+        "TB2",
+        "${route.simpleName} declares @Switch but is not a @Tab route; a tab switch starts at a " +
+          "tab root. Annotate ${route.simpleName} with @Tab or move the @Switch to a tab root",
+      )
+    }
+    switches.forEach { edge ->
+      val target = routesByFq[edge.targetFq]
+      // An unresolved target is reported by `E6`; only a resolved non-tab route violates this rule.
+      if (target != null && !target.isTab) {
+        error(
+          "TB1",
+          "@Switch target ${simple(edge.targetFq)} is not a @Tab route (source: " +
+            "${route.simpleName}); @Switch only moves between tab roots",
+        )
+      }
+    }
+  }
+
+  /**
+   * A `@Tab` route roots a tab segment that outlives its screen, so it cannot be a flow member, a
+   * result route (nothing awaits it), or a callback route (never persisted); that rules a tab out
+   * of every construct whose lifetime is bound to a caller (`TB3`). It must also be constructible
+   * without arguments (`TB4`) because the generated `switchToX()` builds it on first use. A modal
+   * kind is rejected where the kind is visible (`SC12`) and at runtime.
+   */
+  private fun checkTabRoot(route: RouteModel) {
+    if (!route.isTab) return
+    val violations =
+      listOfNotNull(
+        "a flow member".takeIf { route.flowChainFq.isNotEmpty() },
+        "a ResultRoute".takeIf { route.resultTypeFq != null },
+        "a callback route".takeIf { route.isCallbackRoute },
+      )
+    if (violations.isNotEmpty()) {
+      error(
+        "TB3",
+        "${route.simpleName} is a @Tab route but is ${violations.joinToString(" and ")}; a tab " +
+          "root must be a plain screen of a @NavGraph",
+      )
+    }
+    val requiredParams = route.ctorParams.filter { !it.hasDefault && !it.isNullable }
+    if (requiredParams.isNotEmpty()) {
+      error(
+        "TB4",
+        "${route.simpleName} is a @Tab route but cannot be constructed without arguments " +
+          "(required ctor params: ${requiredParams.joinToString { it.name }}); switchTo" +
+          "${simple(route.fqName)}() creates the tab root on first use",
+      )
+    }
+  }
+
+  // endregion
+
   // region Deliberately omitted modal guards
   //
   // A `@QuitAndGoTo(modal)` warning is NOT reliably implementable in
@@ -735,6 +804,7 @@ internal class GezginValidator(
       EdgeKind.GO_FOR_RESULT -> "GoForResult"
       EdgeKind.QUIT_AND_GO_TO -> "QuitAndGoTo"
       EdgeKind.OPEN -> "Open"
+      EdgeKind.SWITCH_TO -> "Switch"
     }
 
   private fun error(code: String, message: String) {

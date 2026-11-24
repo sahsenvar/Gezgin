@@ -333,3 +333,39 @@ Kullanıcı graph modelini yeniden düzenledi (§8.1 sonrası, Zad örneğiyle).
 - **Deep-link (tüm özellik) → V2.** V1 deep-link'siz çıkar. V2 yönü (**kesinleşmedi**): path-hiyerarşisi = back stack; `@DeepLink(segment, parent, [args])` **tekrarlanabilir**; codegen matcher + tam-URL builder + katalog (QA); URL ön-eki multi-parent zincirini seçer; içerik farkı = route arg. **`args` küçük bir düzeltmeyle kalkabilir** (kullanıcı notu) → V2'de netleşir.
 
 **Açık kalan küçükler (spec reconciliation'dan önce):** (i) NavGraph'lar start'sızsa **app-level açılış route'u** nasıl belirlenir? (ii) stand-alone NavGraph'ta `@SwitchTo` runtime'da TabGraph yoksa ne olur? (iii) `clearUpTo=Graph::class` = yalnız temizleme-sınırı (container'a `@GoTo` hedefi değil) — netleştir. (iv) `@SwitchTo` explicit mi kalsın, TabGraph üyelerinden otomatik mi üretilsin?
+
+## Sekme yığını — `@Tab` / `@Switch` (1.1.0, G30 — LM paritesi)
+
+Karar (kullanıcı onaylı): sekme durumu korunur, sekme geçişi geri yığınına itilmez, geri sekmeler
+arasında gezmez. Eski `@NestedNavGraph`/`@TabHost` taslağının (yukarıda "Kaldırıldı") yerine
+**route düzeyinde** sade bir model: `@Tab` bir route'u sekme kökü yapar, `@Switch` iki sekme kökü
+arasındaki kenardır. `@GoTo(singleTop)` bunu karşılamaz (eski sekmeyi öne almaz, yeni entry iter).
+
+- **Model:** `GezginState` yığını *segmentlere* böler (`segment` = `GezginKey.segment`, canlı
+  segmentler arasında benzersiz id). `stack` = aktif segment; push/pop/backTo/quit yalnız onda
+  çalışır. `allKeys` = pasif segmentler + aktif segment (aktif sonda). Sekmesiz uygulamada tek
+  segment → davranış düz liste ile aynı.
+- **`switchTo(tabRoot)`:** aktif segment dokunulmadan saklanır, hedef öne alınır; hiç açılmamışsa
+  `[kök]` ile kurulur. Entry yeniden yaratılmadığı için ViewModel store, `rememberSaveable` ve
+  kaydırma korunur. Aktif sekme tekrar istenirse no-op. Aktif segmentin kökü `@Tab` değilse hızlı
+  hata (kökü push ile değil `replaceTo` ile kurun).
+- **Geri:** `pop()` yalnız aktif segmentte; segment kökünde `onRootBack`. `replaceTo` kesimi
+  segment köküne ulaşırsa bütün segmentler düşer ve yeni kök segment kimliğini korur (ekran, bunu
+  sekme geçişi sanıp çapraz solma oynatmasın diye).
+- **Nav3:** `GezginDisplay` *bütün* segmentlerin entry'lerini birlikte decorate eder
+  (`rememberDecoratedNavEntries`: listede kalan entry "pop" sayılmaz → store temizlenmez), ama
+  `NavDisplay`'e yalnız aktif segmentin entry'lerini verir (sahne, geçiş ve tahmini geri başka
+  sekmeyi görmez). Doğrulama: `GezginDisplayTabTest` (VM + `rememberSaveable` korunumu, `replaceTo`
+  ile temizlenme; decorator'ı yalnız aktif listeye indirgeyen mutasyonda kırmızı).
+- **Geçiş:** sekme geçişi `NavDisplay` için "tüm liste değişti" = ileri geçiş; ekran entry'leri
+  sahnenin segmenti değişince `GezginTransition.switch` (varsayılan 150 ms çapraz solma) kullanır.
+  Yalnız sekmeli topolojide yazılır (`entry.metadata`'ya `GEZGIN_TAB_SEGMENT_KEY` + tab-aware
+  forward); sekmesiz uygulamanın metadata'sı değişmez.
+- **Süreç ölümü:** `GezginKey.segment` (varsayılan 0) + `SavedState.activeSegment` (varsayılan
+  `null`) eklendi; eski kayıt tüm anahtarları segment 0'a koyar → tek segment, geriye uyumlu.
+- **Doğrulama (processor):** `TB1` hedef `@Tab` değil, `TB2` kaynak `@Tab` değil, `TB3` flow
+  üyesi/`ResultRoute`/callback route, `TB4` argümansız kurulamaz, `SC12` modal kind. Modal kind graph
+  modülünde görünmediği için çalışma zamanında `modalRootGuard` da `switchTo`'yu korur.
+- **Bilinen sınır:** `@Switch` kaynağı olarak yalnız sekme kökü geçerli (`TB2`); alt ekrandan
+  sekme değiştirmek için o ekran sekme köküne `backTo` ile dönmeli ya da alt ekranın route'una
+  da `@Tab` verilmemeli — alt bar yalnız köklerde görünür varsayımı.

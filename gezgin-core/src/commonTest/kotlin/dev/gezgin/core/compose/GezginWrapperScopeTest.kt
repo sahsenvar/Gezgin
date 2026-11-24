@@ -52,6 +52,27 @@ class GezginWrapperScopeTest {
   }
 
   @Test
+  fun aTabRootIsAloneInItsOwnSegmentWhilePassiveTabsStayAlive() {
+    val keys =
+      mutableStateOf(
+        listOf(
+          GezginKey(Product("home"), id = 1, segment = 1),
+          GezginKey(Product("home-detail"), id = 2, segment = 1),
+          GezginKey(Product("search"), id = 3, segment = 3),
+        )
+      )
+
+    val activeRoot = scope(keys, entryId = 3)
+    val passiveTop = scope(keys, entryId = 2)
+
+    assertTrue(activeRoot.isAloneInBackStack)
+    assertFalse(activeRoot.canGoBack)
+    assertTrue(activeRoot.isTop)
+    assertFalse(passiveTop.isAloneInBackStack)
+    assertFalse(passiveTop.isTop)
+  }
+
+  @Test
   fun aNoBackEntryCannotGoBackEvenWhenNotAlone() {
     val keys =
       mutableStateOf(listOf(GezginKey(Product("0"), id = 1), GezginKey(Product("1"), id = 2)))

@@ -70,6 +70,15 @@ public sealed interface NavEvent {
    */
   public data class ReplaceToTargetMissing(val target: String) : NavEvent
 
+  /**
+   * A `@Switch`/`switchTo` brought another tab forward. The left tab keeps its stack, so nothing is
+   * removed.
+   *
+   * @property from the root route of the tab that was left
+   * @property to the root route of the tab that became active
+   */
+  public data class TabSwitched(val from: Route, val to: Route) : NavEvent
+
   /** Back was attempted at the root stack → `onRootBack` fired (the app-exit point). */
   public data object RootBack : NavEvent
 }

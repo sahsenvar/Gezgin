@@ -156,6 +156,20 @@ public final class dev/gezgin/core/NavEvent$RootBack : dev/gezgin/core/NavEvent 
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/gezgin/core/NavEvent$TabSwitched : dev/gezgin/core/NavEvent {
+	public static final field $stable I
+	public fun <init> (Ldev/gezgin/core/Route;Ldev/gezgin/core/Route;)V
+	public final fun component1 ()Ldev/gezgin/core/Route;
+	public final fun component2 ()Ldev/gezgin/core/Route;
+	public final fun copy (Ldev/gezgin/core/Route;Ldev/gezgin/core/Route;)Ldev/gezgin/core/NavEvent$TabSwitched;
+	public static synthetic fun copy$default (Ldev/gezgin/core/NavEvent$TabSwitched;Ldev/gezgin/core/Route;Ldev/gezgin/core/Route;ILjava/lang/Object;)Ldev/gezgin/core/NavEvent$TabSwitched;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFrom ()Ldev/gezgin/core/Route;
+	public final fun getTo ()Ldev/gezgin/core/Route;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface class dev/gezgin/core/NavResult {
 }
 
@@ -201,6 +215,7 @@ public final class dev/gezgin/core/RawNavigator {
 	public final fun replaceTo (Ldev/gezgin/core/Route;Lkotlin/reflect/KClass;Z)V
 	public static synthetic fun replaceTo$default (Ldev/gezgin/core/RawNavigator;Ldev/gezgin/core/Route;Lkotlin/reflect/KClass;ZILjava/lang/Object;)V
 	public final fun results (Ljava/lang/String;)Lkotlinx/coroutines/flow/Flow;
+	public final fun switchTo (Ldev/gezgin/core/Route;)V
 }
 
 public abstract interface class dev/gezgin/core/ResultFlow {
@@ -337,6 +352,18 @@ public abstract interface annotation class dev/gezgin/core/annotation/ScreenWrap
 public abstract interface annotation class dev/gezgin/core/annotation/StartDestination : java/lang/annotation/Annotation {
 }
 
+public abstract interface annotation class dev/gezgin/core/annotation/Switch : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+	public abstract fun target ()[Ljava/lang/Class;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/Switch$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Ldev/gezgin/core/annotation/Switch;
+}
+
+public abstract interface annotation class dev/gezgin/core/annotation/Tab : java/lang/annotation/Annotation {
+}
+
 public final class dev/gezgin/core/compose/BottomSheetChromeKt {
 	public static final fun getLocalGezginBottomSheetChrome ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 }
@@ -405,10 +432,12 @@ public final class dev/gezgin/core/compose/GezginTransition {
 	public static final field $stable I
 	public fun <init> ()V
 	public fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;)V
-	public synthetic fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getBackward ()Lkotlin/jvm/functions/Function1;
 	public final fun getForward ()Lkotlin/jvm/functions/Function1;
 	public final fun getPredictive ()Lkotlin/jvm/functions/Function2;
+	public final fun getSwitch ()Lkotlin/jvm/functions/Function1;
 }
 
 public final class dev/gezgin/core/compose/GezginTransitionBuilder {
@@ -417,6 +446,7 @@ public final class dev/gezgin/core/compose/GezginTransitionBuilder {
 	public final fun backward (Lkotlin/jvm/functions/Function1;)V
 	public final fun forward (Lkotlin/jvm/functions/Function1;)V
 	public final fun predictive (Lkotlin/jvm/functions/Function2;)V
+	public final fun switch (Lkotlin/jvm/functions/Function1;)V
 }
 
 public final class dev/gezgin/core/compose/GezginTransitionKt {

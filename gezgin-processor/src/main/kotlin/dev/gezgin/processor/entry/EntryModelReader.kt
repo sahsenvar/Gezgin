@@ -25,6 +25,7 @@ private const val BOTTOM_SHEET_FQ = "dev.gezgin.core.annotation.BottomSheet"
 private const val FULLSCREEN_MODAL_FQ = "dev.gezgin.core.annotation.FullscreenModal"
 private const val ROUTE_FQ = "dev.gezgin.core.Route"
 private const val NO_BACK_FQ = "dev.gezgin.core.annotation.NoBack"
+private const val TAB_FQ = "dev.gezgin.core.annotation.Tab"
 
 // Read modal contracts as string FQs; kind and no-back validation uses route supertypes.
 private const val DIALOG_CONTRACT_FQ = "dev.gezgin.core.DialogContract"
@@ -87,6 +88,9 @@ private val KIND_BY_ANNOTATION_FQ =
  * **Kind and presentation contract (`SC7`, `SC8`):** the annotation's kind must match the contract
  * the route implements, and `@NoBack` on a modal kind requires that contract so the dismissal
  * switches are not left at their permissive defaults.
+ *
+ * **Tab root kind (`SC12`):** a `@Tab` route registered under a modal kind is rejected — a modal
+ * cannot root a tab stack.
  *
  * **Annotated `@Screen` overloads (`SC11`):** repeated `@Screen` annotations belong on one
  * composable declaration. Multiple annotated declarations sharing a package and function name are
@@ -438,6 +442,16 @@ internal class EntryModelReader(
     kind: EntryKindModel,
   ): Boolean {
     val routeSimple = routeDecl.simpleName.asString()
+    // `SC12`: a tab root roots a tab segment, and a modal cannot be a stack root (OverlayScene
+    // needs an entry underneath). `@Tab` is read from the route class, so this holds cross-module.
+    if (kind != EntryKindModel.SCREEN && routeDecl.hasAnnotation(TAB_FQ)) {
+      error(
+        "SC12",
+        "$fnName: route $routeSimple is a @Tab route but is registered as @${kind.name}-kind; a " +
+          "tab root must be a @Screen because a modal cannot be the root of a tab stack",
+      )
+      return false
+    }
     val implementedContracts =
       routeDecl
         .getAllSuperTypes()
