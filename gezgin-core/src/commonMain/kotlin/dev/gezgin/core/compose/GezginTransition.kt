@@ -135,12 +135,6 @@ internal fun resolveTabSwitchTransition(
 ): GezginTransitionSpec =
   route.transition?.switch ?: appTransition?.switch ?: DefaultTabSwitchTransition
 
-/** Entry-metadata key carrying the tab segment id of an entry (a `Long`). */
-internal const val GEZGIN_TAB_SEGMENT_KEY: String = "dev.gezgin.core.tabSegment"
-
-private fun Scene<*>.tabSegment(): Long? =
-  entries.lastOrNull()?.metadata?.get(GEZGIN_TAB_SEGMENT_KEY) as? Long
-
 /**
  * Lowers the resolved cascade value into Nav3 per-entry metadata: the route becomes an entry whose
  * metadata uses the `NavDisplay.TransitionKey` family. The PUBLIC wrappers
@@ -167,16 +161,12 @@ internal fun GezginTransition?.toNavEntryMetadata(
   var metadata = emptyMap<String, Any>()
   val forward = this?.forward
   if (tabSwitch != null) {
-    // Tab-aware forward: the transition between two different tab segments is the tab-switch
-    // transition; within one segment the route's own forward (or Nav3's default, via null) runs.
+    // The entry a tab switch brings forward: the tab-switch transition replaces the route's own
+    // forward one for this single transition.
     metadata =
       metadata +
         NavDisplay.transitionSpec {
-          val scope = this as AnimatedContentTransitionScope<Scene<Route>>
-          val from = initialState.tabSegment()
-          val to = targetState.tabSegment()
-          if (from != null && to != null && from != to) tabSwitch.invoke(scope)
-          else forward?.invoke(scope)
+          tabSwitch.invoke(this as AnimatedContentTransitionScope<Scene<Route>>)
         }
   } else if (forward != null) {
     metadata =

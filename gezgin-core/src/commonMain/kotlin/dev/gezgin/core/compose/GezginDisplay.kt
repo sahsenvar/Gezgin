@@ -3,6 +3,7 @@
 package dev.gezgin.core.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -98,12 +99,26 @@ public fun GezginDisplay(
   // identity-only changes observable.
   val keys by navigator.keysState.collectAsState()
   // Rebuild per-entry metadata when the app-level transition default changes.
+  // The active segment the previous composition showed: a different one now means the top entry
+  // arrived through a tab switch and plays the tab-switch transition. A plain object, not state:
+  // it is only read while building the list and updated after the composition applied.
+  val shownSegment = remember { SegmentHolder() }
   val entryList =
     remember(keys, transitions) {
+      val top = keys.lastOrNull()
+      val shown = shownSegment.value
+      val switched = top != null && shown != null && shown != top.segment
       keys.map { key ->
-        scope.toNavEntry(key, navigator, transitions, isRoot = isSegmentRoot(keys, key.id))
+        scope.toNavEntry(
+          key,
+          navigator,
+          transitions,
+          isRoot = isSegmentRoot(keys, key.id),
+          tabSwitching = switched && key.id == top.id,
+        )
       }
     }
+  SideEffect { shownSegment.value = keys.lastOrNull()?.segment }
   // Remember the combined list as well as its decorators so entry decoration does not see a fresh
   // collection identity on every recomposition.
   val saveableDecorator = rememberSaveableStateHolderNavEntryDecorator<Route>()
@@ -180,4 +195,9 @@ private fun isRootEntry(keys: List<GezginKey>, entryId: Long): Boolean =
 private fun isSegmentRoot(keys: List<GezginKey>, entryId: Long): Boolean {
   val segment = keys.firstOrNull { it.id == entryId }?.segment ?: return false
   return keys.first { it.segment == segment }.id == entryId
+}
+
+/** Holds the active tab segment id the last applied composition showed. */
+private class SegmentHolder {
+  var value: Long? = null
 }

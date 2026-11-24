@@ -13,7 +13,6 @@ import dev.gezgin.core.fixtures.routeSwitchTransitionFixture
 import dev.gezgin.core.fixtures.tabTopology
 import dev.gezgin.core.fixtures.testTopology
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -28,15 +27,32 @@ class GezginTabTransitionTest {
     }
 
   @Test
-  fun `tab topolojisinde entry segment etiketi ve tab-aware forward tasir`() {
+  fun `sekme gecisiyle one gelen entry sekme gecisi transition'i yazar`() {
+    val nav = RawNavigator(start = HomeTab, topology = tabTopology)
+    val entry =
+      scope()
+        .toNavEntry(
+          GezginKey(HomeTab, id = 4L, segment = 4L),
+          nav,
+          transitions = null,
+          tabSwitching = true,
+        )
+
+    assertTrue(
+      forwardKey in entry.metadata,
+      "geçiş tanımı olmasa da sekme geçişi için forward yazılır",
+    )
+  }
+
+  @Test
+  fun `sekme gecisi disindaki entry metadata yazmaz ve Nav3 varsayilanina kalir`() {
     val nav = RawNavigator(start = HomeTab, topology = tabTopology)
     val entry =
       scope().toNavEntry(GezginKey(HomeTab, id = 4L, segment = 4L), nav, transitions = null)
 
-    assertEquals(4L, entry.metadata[GEZGIN_TAB_SEGMENT_KEY])
     assertTrue(
-      forwardKey in entry.metadata,
-      "geçiş tanımı olmasa da sekme geçişi için forward yazılır",
+      entry.metadata.isEmpty(),
+      "varsayılan forward'a dokunulmamalı (null dönen lambda iOS'ta çöker): ${entry.metadata.keys}",
     )
   }
 

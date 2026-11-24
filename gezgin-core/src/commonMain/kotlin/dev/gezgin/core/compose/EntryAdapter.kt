@@ -29,6 +29,7 @@ internal fun GezginEntryScope.toNavEntry(
   navigator: RawNavigator,
   transitions: GezginTransition?,
   isRoot: Boolean = false,
+  tabSwitching: Boolean = false,
 ): NavEntry<Route> {
   val registered =
     registry[key.route::class]
@@ -58,14 +59,13 @@ internal fun GezginEntryScope.toNavEntry(
     }
   }
   // Only screens receive transition metadata; modal metadata would animate the underlying scene.
-  // Tab-aware apps additionally tag every entry with its segment and let screens switch to the
-  // tab-switch transition when the scene changes segment.
-  val hasTabs = navigator.hasTabs
+  // The entry a tab switch brings to the top ([tabSwitching]) plays the tab-switch transition
+  // instead of the route's forward one; every other entry keeps Nav3's own forward default.
   val transitionMetadata =
     if (registered.kind == EntryKind.SCREEN) {
       resolveTransition(key.route, transitions)
         .toNavEntryMetadata(
-          tabSwitch = if (hasTabs) resolveTabSwitchTransition(key.route, transitions) else null
+          tabSwitch = if (tabSwitching) resolveTabSwitchTransition(key.route, transitions) else null
         )
     } else {
       emptyMap()
@@ -73,7 +73,6 @@ internal fun GezginEntryScope.toNavEntry(
   // Modal kinds are mutually exclusive and use distinct metadata keys.
   val metadata: Map<String, Any> = buildMap {
     putAll(transitionMetadata)
-    if (hasTabs) put(GEZGIN_TAB_SEGMENT_KEY, key.segment)
     if (dialogProperties != null) put(GEZGIN_DIALOG_KEY, dialogProperties)
     if (sheetProps != null) put(GEZGIN_BOTTOM_SHEET_KEY, sheetProps)
   }
