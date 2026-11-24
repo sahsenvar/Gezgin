@@ -54,7 +54,8 @@ internal constructor(
   // Mutable state lets restoration update this identity-stable facade without replacing the
   // navigator reference captured by ViewModels or the flows observed by the display.
   private var state =
-    if (restored != null) GezginState(restored.keys, restored.nextId, topology)
+    if (restored != null)
+      GezginState(restored.keys, restored.nextId, topology, restored.activeSegment)
     else GezginState(emptyList(), nextId = 0, topology = topology)
   private val bus = ResultBus()
 
@@ -87,8 +88,21 @@ internal constructor(
    */
   public val events: Flow<NavEvent> = _events
 
-  /** Raw entry view consumed by the GezginDisplay adapter. */
+  /**
+   * Raw entry view consumed by the GezginDisplay adapter: every tab segment's entries, passive
+   * segments first and the active one last. Without `@Tab` routes this is the plain stack.
+   */
   internal val keys: List<GezginKey>
+    get() = state.allKeys
+
+  /**
+   * Whether the topology declares `@Tab` routes; tab-aware display metadata is written only then.
+   */
+  internal val hasTabs: Boolean
+    get() = topology.tabRoots.isNotEmpty()
+
+  /** The active tab segment's entries — the stack that back and the typed edges act on. */
+  internal val activeKeys: List<GezginKey>
     get() = state.stack
 
   /** The route at the top of the stack (currently active). */
@@ -111,7 +125,7 @@ internal constructor(
   @Suppress("UNCHECKED_CAST")
   internal fun save(): SavedState {
     val transientIds =
-      state.stack.filter { it.route::class in topology.transientRoutes }.map { it.id }.toSet()
+      state.allKeys.filter { it.route::class in topology.transientRoutes }.map { it.id }.toSet()
     val pendingSlots =
       bus.slots
         .filter { it.callerEntryId !in transientIds && it.targetEntryId !in transientIds }
@@ -151,9 +165,10 @@ internal constructor(
           }
         }
     return SavedState(
-      keys = state.stack.filter { it.id !in transientIds },
+      keys = state.allKeys.filter { it.id !in transientIds },
       nextId = state.nextId,
       pendingSlots = pendingSlots,
+      activeSegment = state.activeSegment,
     )
   }
 
@@ -184,7 +199,7 @@ internal constructor(
     // Decode every slot before mutation. Missing edges or incompatible schemas can then fail
     // without leaving the navigator partially restored.
     val decodedSlots = restored.pendingSlots.map(::decodeSlot)
-    state = GezginState(restored.keys, restored.nextId, topology)
+    state = GezginState(restored.keys, restored.nextId, topology, restored.activeSegment)
     bus.restore(decodedSlots)
     refreshBackStack()
   }
@@ -197,6 +212,26 @@ internal constructor(
     val pushed = state.push(route, enterFlow = enterFlow, singleTop = singleTop) ?: return
     refreshBackStack()
     _events.tryEmit(NavEvent.Pushed(pushed.route))
+  }
+
+  /**
+   * Switches to the tab rooted at [tabRoot]'s type (the `@Switch` runtime). The tab being left
+   * keeps its whole stack, entries and ViewModels alive; the target tab is brought forward as it
+   * was, or created as `[tabRoot]` the first time. The switch is not a back-stack step: back never
+   * walks between tabs, and back at a tab root is [onRootBack]. Switching to the already active tab
+   * does nothing. [replaceTo] and `clearUpTo` reaching a tab root drop every tab.
+   *
+   * [tabRoot] must be a `@Tab` route and the active tab's root must be a `@Tab` route too;
+   * otherwise the call fails fast.
+   */
+  public fun switchTo(tabRoot: Route) {
+    require(!modalRootGuard(tabRoot)) {
+      "switchTo: a tab root cannot be a modal kind (${tabRoot::class.simpleName}); a modal must " +
+        "have a SCREEN entry underneath it (Nav3 OverlayScene invariant)."
+    }
+    val switch = state.switchTo(tabRoot) ?: return
+    refreshBackStack()
+    _events.tryEmit(NavEvent.TabSwitched(from = switch.from.route, to = switch.to.route))
   }
 
   /**
@@ -260,10 +295,10 @@ internal constructor(
         "a modal must have at least one SCREEN entry underneath it (Nav3 OverlayScene invariant, §7). " +
         "Do not place a modal at root with clearUpTo=root."
     }
-    val before = state.stack.toList()
+    val before = state.allKeys
     val enterFlow = resolveEnterFlow(route)
     val pushed = state.replaceUpTo(route, clearUpTo, inclusive, enterFlow = enterFlow)
-    val afterIds = state.stack.map { it.id }.toSet()
+    val afterIds = state.allKeys.map { it.id }.toSet()
     val removed = before.filter { it.id !in afterIds }
     refreshBackStack()
     _events.tryEmit(NavEvent.Replaced(removed.map { it.route }, pushed.route))
@@ -365,7 +400,7 @@ internal constructor(
    * forwarding a callback, so a late or duplicate click after the modal closed is ignored.
    */
   @GezginInternalApi
-  public fun isOnStack(entryId: Long): Boolean = state.stack.any { it.id == entryId }
+  public fun isOnStack(entryId: Long): Boolean = state.allKeys.any { it.id == entryId }
 
   /**
    * The call-time top entry id — the hook generated navigators bind to the explicit-caller
@@ -473,7 +508,9 @@ internal constructor(
 
   private fun refreshBackStack() {
     _backStack.value = state.stack.map { it.route }
-    _keysState.value = state.stack.toList() // Entry ids make same-route replacements observable.
+    // Entry ids make same-route replacements observable; passive tab segments stay in the list so
+    // the display keeps decorating (and therefore retaining) their entries.
+    _keysState.value = state.allKeys
   }
 
   private fun popTopAndEmit() {

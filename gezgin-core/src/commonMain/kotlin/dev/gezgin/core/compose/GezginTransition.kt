@@ -2,6 +2,10 @@ package dev.gezgin.core.compose
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
 import dev.gezgin.core.Route
@@ -26,10 +30,14 @@ public typealias GezginPredictiveTransitionSpec =
   AnimatedContentTransitionScope<Scene<Route>>.(Int) -> ContentTransform
 
 /**
- * The runtime transition value of a route (or of the app/graph level). All three fields are
- * optional: `null` = "this level says nothing" — the cascade falls to a higher level (graph > app >
+ * The runtime transition value of a route (or of the app/graph level). All fields are optional:
+ * `null` = "this level says nothing" — the cascade falls to a higher level (graph > app >
  * NavDisplay default) ([resolveTransition]). If `predictive` is not written, the NavDisplay wiring
  * (`GezginDisplay`) fills it from `backward` ("if predictive is not written = backward").
+ *
+ * [switch] is the tab-switch transition, used instead of [forward] when a `@Switch` edge brings
+ * another tab forward. Unlike the other fields it cascades per field (route > app > a built-in
+ * cross-fade), so an app that only customizes [forward] keeps the cross-fade for tab switches.
  *
  * @author @sahsenvar
  */
@@ -40,7 +48,16 @@ public class GezginTransition(
   public val backward: GezginTransitionSpec? = null,
   /** The predictive-back transition, or `null` to fall back to [backward]. */
   public val predictive: GezginPredictiveTransitionSpec? = null,
-)
+  /** The transition used when switching tabs, or `null` to inherit; the default is a cross-fade. */
+  public val switch: GezginTransitionSpec? = null,
+) {
+  /** Source- and binary-compatible constructor without a tab-switch transition. */
+  public constructor(
+    forward: GezginTransitionSpec?,
+    backward: GezginTransitionSpec?,
+    predictive: GezginPredictiveTransitionSpec?,
+  ) : this(forward, backward, predictive, null)
+}
 
 /**
  * Builds a [GezginTransition] from directional transition specifications.
@@ -51,6 +68,7 @@ public class GezginTransitionBuilder {
   private var forward: GezginTransitionSpec? = null
   private var backward: GezginTransitionSpec? = null
   private var predictive: GezginPredictiveTransitionSpec? = null
+  private var switch: GezginTransitionSpec? = null
 
   /** Sets the forward-navigation [spec]. */
   public fun forward(spec: GezginTransitionSpec) {
@@ -67,7 +85,12 @@ public class GezginTransitionBuilder {
     predictive = spec
   }
 
-  internal fun build(): GezginTransition = GezginTransition(forward, backward, predictive)
+  /** Sets the tab-switch [spec], used when a `@Switch` edge brings another tab forward. */
+  public fun switch(spec: GezginTransitionSpec) {
+    switch = spec
+  }
+
+  internal fun build(): GezginTransition = GezginTransition(forward, backward, predictive, switch)
 }
 
 /**
@@ -98,6 +121,20 @@ public fun navTransitions(block: GezginTransitionBuilder.() -> Unit): GezginTran
 internal fun resolveTransition(route: Route, appTransition: GezginTransition?): GezginTransition? =
   route.transition ?: appTransition
 
+/** Cross-fade used for tab switches when neither the route nor the app level supplies one. */
+private val DefaultTabSwitchTransition: GezginTransitionSpec = {
+  fadeIn(tween(TAB_SWITCH_FADE_MILLIS)) togetherWith fadeOut(tween(TAB_SWITCH_FADE_MILLIS))
+}
+
+private const val TAB_SWITCH_FADE_MILLIS = 150
+
+/** Per-field cascade for the tab-switch transition: route > app > built-in cross-fade. */
+internal fun resolveTabSwitchTransition(
+  route: Route,
+  appTransition: GezginTransition?,
+): GezginTransitionSpec =
+  route.transition?.switch ?: appTransition?.switch ?: DefaultTabSwitchTransition
+
 /**
  * Lowers the resolved cascade value into Nav3 per-entry metadata: the route becomes an entry whose
  * metadata uses the `NavDisplay.TransitionKey` family. The PUBLIC wrappers
@@ -118,15 +155,27 @@ internal fun resolveTransition(route: Route, appTransition: GezginTransition?): 
  * Gezgin's `NavDisplay<Route>` setup, the unchecked cast is safe.
  */
 @Suppress("UNCHECKED_CAST")
-internal fun GezginTransition.toNavEntryMetadata(): Map<String, Any> {
+internal fun GezginTransition?.toNavEntryMetadata(
+  tabSwitch: GezginTransitionSpec? = null
+): Map<String, Any> {
   var metadata = emptyMap<String, Any>()
-  forward?.let { spec ->
+  val forward = this?.forward
+  if (tabSwitch != null) {
+    // The entry a tab switch brings forward: the tab-switch transition replaces the route's own
+    // forward one for this single transition.
     metadata =
       metadata +
         NavDisplay.transitionSpec {
-          spec.invoke(this as AnimatedContentTransitionScope<Scene<Route>>)
+          tabSwitch.invoke(this as AnimatedContentTransitionScope<Scene<Route>>)
+        }
+  } else if (forward != null) {
+    metadata =
+      metadata +
+        NavDisplay.transitionSpec {
+          forward.invoke(this as AnimatedContentTransitionScope<Scene<Route>>)
         }
   }
+  val backward = this?.backward
   backward?.let { spec ->
     metadata =
       metadata +
@@ -135,7 +184,7 @@ internal fun GezginTransition.toNavEntryMetadata(): Map<String, Any> {
         }
   }
   val effectivePredictive: GezginPredictiveTransitionSpec? =
-    predictive
+    this?.predictive
       ?: backward?.let { b -> { _: Int -> b() } } // Fall back to the ordinary back transition.
   effectivePredictive?.let { spec ->
     metadata =

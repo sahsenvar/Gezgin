@@ -23,9 +23,12 @@ internal class GezginWrapperScopeImpl(
   private var aloneWhileOnStack: Boolean? = null
 
   // One derived state per flag: a reader is invalidated only when the flag it reads changes.
+  // "Alone" is per tab segment: the root of a tab is alone in its own stack even when other tabs
+  // are kept alive, because back there leaves the app instead of stepping to another tab.
   private val alone = derivedStateOf {
     val live = keys.value
-    if (live.any { it.id == entryId }) (live.size == 1).also { aloneWhileOnStack = it }
+    val own = live.firstOrNull { it.id == entryId }
+    if (own != null) (live.count { it.segment == own.segment } == 1).also { aloneWhileOnStack = it }
     else aloneWhileOnStack ?: (live.size == 1)
   }
 

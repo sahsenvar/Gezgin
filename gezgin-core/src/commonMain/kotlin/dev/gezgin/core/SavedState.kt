@@ -4,15 +4,18 @@ import kotlinx.serialization.Serializable
 
 /**
  * PD-safe snapshot of a [RawNavigator]: stack + id counter + in-flight/undelivered result slots.
- * `internal`: the process-death snapshot schema is not part of the public ABI — only the
- * same-module `rememberNavigator` restore path reads it, so adding a slot field later stays a
- * non-breaking change.
+ * [keys] lists every tab segment's entries (passive segments first, the active one last);
+ * [activeSegment] names the active segment and is `null` in a snapshot written before tab support,
+ * which restores as a single segment. `internal`: the process-death snapshot schema is not part of
+ * the public ABI — only the same-module `rememberNavigator` restore path reads it, so adding a slot
+ * field later stays a non-breaking change.
  */
 @Serializable
 internal class SavedState(
   val keys: List<GezginKey>,
   val nextId: Long,
   val pendingSlots: List<SavedSlot>,
+  val activeSegment: Long? = null,
 )
 
 /**

@@ -3,6 +3,7 @@
 package dev.gezgin.core.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -53,6 +54,12 @@ import dev.gezgin.core.Route
  * `null`, no metadata is written and NavDisplay uses its own defaults. A missing predictive
  * transition falls back to the backward transition.
  *
+ * **Tab segments:** with `@Tab` routes the navigator keeps one stack per tab. Every segment's
+ * entries are decorated together (so a covered tab retains its ViewModels and saved state), but
+ * only the active segment's entries reach `NavDisplay`. A tab switch is therefore a replacement of
+ * the whole visible list, which `NavDisplay` animates as a forward step; screens swap that for the
+ * tab-switch transition ([GezginTransition.switch], a cross-fade by default).
+ *
  * **The `entries` lambda is captured only on the FIRST composition** (`remember {
  * GezginEntryScope().apply (entries) }` — `entries` is NEVER called again on later recompositions):
  * its `register<R> { ... }` calls must be unconditional (a conditional register tied to an
@@ -68,15 +75,19 @@ public fun GezginDisplay(
 ) {
   val scope = remember {
     GezginEntryScope().apply(entries).also { registered ->
-      val rootRoute = navigator.keys.first().route
-      val rootKind = registered.registry[rootRoute::class]?.kind
-      // This early guard covers the start route. `toNavEntry` remains authoritative for dynamic
-      // replacement and quit-and-navigate paths.
-      require(rootKind == null || rootKind == EntryKind.SCREEN) {
-        "GezginDisplay: start route cannot be a modal kind (kind=$rootKind); §12 setup " +
-          "guard is permanent because a modal cannot be root and OverlayScene requires at " +
-          "least one underlaid entry (§7). route: ${rootRoute::class.simpleName}"
-      }
+      // This early guard covers every segment root (the start route, and each restored tab
+      // root). `toNavEntry` remains authoritative for dynamic replacement and switch paths.
+      navigator.keys
+        .filter { isSegmentRoot(navigator.keys, it.id) }
+        .forEach { root ->
+          val rootRoute = root.route
+          val rootKind = registered.registry[rootRoute::class]?.kind
+          require(rootKind == null || rootKind == EntryKind.SCREEN) {
+            "GezginDisplay: start route cannot be a modal kind (kind=$rootKind); §12 setup " +
+              "guard is permanent because a modal cannot be root and OverlayScene requires at " +
+              "least one underlaid entry (§7). route: ${rootRoute::class.simpleName}"
+          }
+        }
       // Inject kind lookup so replacement can reject a modal result root before mutation. Missing
       // registrations are reported later by toNavEntry with a more specific error.
       navigator.modalRootGuard = { route ->
@@ -84,15 +95,30 @@ public fun GezginDisplay(
       }
     }
   }
-  val keys by
-    navigator.keysState.collectAsState() // Entry ids make identity-only changes observable.
+  // Every tab segment's entries, passive first and the active segment last. Entry ids make
+  // identity-only changes observable.
+  val keys by navigator.keysState.collectAsState()
   // Rebuild per-entry metadata when the app-level transition default changes.
+  // The active segment the previous composition showed: a different one now means the top entry
+  // arrived through a tab switch and plays the tab-switch transition. A plain object, not state:
+  // it is only read while building the list and updated after the composition applied.
+  val shownSegment = remember { SegmentHolder() }
   val entryList =
     remember(keys, transitions) {
+      val top = keys.lastOrNull()
+      val shown = shownSegment.value
+      val switched = top != null && shown != null && shown != top.segment
       keys.map { key ->
-        scope.toNavEntry(key, navigator, transitions, isRoot = isRootEntry(keys, key.id))
+        scope.toNavEntry(
+          key,
+          navigator,
+          transitions,
+          isRoot = isSegmentRoot(keys, key.id),
+          tabSwitching = switched && key.id == top.id,
+        )
       }
     }
+  SideEffect { shownSegment.value = keys.lastOrNull()?.segment }
   // Remember the combined list as well as its decorators so entry decoration does not see a fresh
   // collection identity on every recomposition.
   val saveableDecorator = rememberSaveableStateHolderNavEntryDecorator<Route>()
@@ -101,7 +127,14 @@ public fun GezginDisplay(
     remember(saveableDecorator, platformDecorators) {
       listOf(saveableDecorator) + platformDecorators
     }
+  // Decorate EVERY segment's entries: an entry that stays in this list is not "popped", so a
+  // passive tab keeps its ViewModel store and saved state while it is off screen.
   val decoratedEntries = rememberDecoratedNavEntries(entryList, decorators)
+  // NavDisplay only gets the active segment (the last key's), so scenes, transitions and
+  // predictive back never see another tab's entries.
+  val visibleEntries =
+    if (keys.isEmpty() || keys.all { it.segment == keys.last().segment }) decoratedEntries
+    else decoratedEntries.filterIndexed { index, _ -> keys[index].segment == keys.last().segment }
   // Keep callback identity stable while navigator and registration scope remain unchanged.
   val onBack = remember(navigator, scope) { gezginOnBack(navigator, scope) }
   // Pin modal dismissal to its owner so duplicate or late callbacks cannot pop the next screen.
@@ -109,7 +142,7 @@ public fun GezginDisplay(
     remember(navigator, scope) { gezginModalDismiss(navigator, scope) }
   // The platform wrapper reconciles Android and desktop scene-strategy signatures.
   GezginNavDisplay(
-    entries = decoratedEntries,
+    entries = visibleEntries,
     modifier = modifier,
     onBack = onBack,
     pinnedBack = pinnedBack,
@@ -131,7 +164,7 @@ public fun GezginDisplay(
  * without a Compose setup.
  */
 internal fun gezginOnBack(navigator: RawNavigator, scope: GezginEntryScope): () -> Unit = {
-  val keys = navigator.keys
+  val keys = navigator.activeKeys
   val top = keys.lastOrNull()
   val isRoot = top == null || isRootEntry(keys, top.id)
   val topNoBack = top != null && scope.registry[top.route::class]?.noBack == true
@@ -157,3 +190,14 @@ internal fun gezginModalDismiss(navigator: RawNavigator, scope: GezginEntryScope
 /** Returns whether [entryId] belongs to the bottom entry that defines root behavior. */
 private fun isRootEntry(keys: List<GezginKey>, entryId: Long): Boolean =
   keys.firstOrNull()?.id == entryId
+
+/** Returns whether [entryId] is the bottom entry of its own tab segment within [keys]. */
+private fun isSegmentRoot(keys: List<GezginKey>, entryId: Long): Boolean {
+  val segment = keys.firstOrNull { it.id == entryId }?.segment ?: return false
+  return keys.first { it.segment == segment }.id == entryId
+}
+
+/** Holds the active tab segment id the last applied composition showed. */
+private class SegmentHolder {
+  var value: Long? = null
+}

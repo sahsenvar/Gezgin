@@ -5,6 +5,7 @@ public final class dev/gezgin/gradle/GezginAnnotation : java/lang/Enum {
 	public static final field Open Ldev/gezgin/gradle/GezginAnnotation;
 	public static final field QuitAndGoTo Ldev/gezgin/gradle/GezginAnnotation;
 	public static final field ReplaceTo Ldev/gezgin/gradle/GezginAnnotation;
+	public static final field SwitchTo Ldev/gezgin/gradle/GezginAnnotation;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Ldev/gezgin/gradle/GezginAnnotation;
 	public static fun values ()[Ldev/gezgin/gradle/GezginAnnotation;

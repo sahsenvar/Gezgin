@@ -39,6 +39,7 @@ internal enum class EdgeKind {
   GO_FOR_RESULT,
   QUIT_AND_GO_TO,
   OPEN,
+  SWITCH_TO,
 }
 
 /** The kind of a backward navigation edge declared on a route. */
@@ -98,6 +99,8 @@ internal data class RouteModel(
    * gets one emitted for it.
    */
   val isSerializable: Boolean = false,
+  /** Whether the route carries `@Tab` and therefore roots a tab segment. */
+  val isTab: Boolean = false,
 ) {
   /**
    * A callback route carries caller lambdas in its constructor. It is opened only through `@Open`,

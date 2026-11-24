@@ -11,6 +11,7 @@ internal enum class MemberKind {
   GoForResult,
   BackTo,
   Open,
+  SwitchTo,
 }
 
 /** The two affix lists [MemberFunNaming] strips; each is configured independently per kind. */

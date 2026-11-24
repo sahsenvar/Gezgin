@@ -29,6 +29,7 @@ internal fun GezginEntryScope.toNavEntry(
   navigator: RawNavigator,
   transitions: GezginTransition?,
   isRoot: Boolean = false,
+  tabSwitching: Boolean = false,
 ): NavEntry<Route> {
   val registered =
     registry[key.route::class]
@@ -58,9 +59,14 @@ internal fun GezginEntryScope.toNavEntry(
     }
   }
   // Only screens receive transition metadata; modal metadata would animate the underlying scene.
+  // The entry a tab switch brings to the top ([tabSwitching]) plays the tab-switch transition
+  // instead of the route's forward one; every other entry keeps Nav3's own forward default.
   val transitionMetadata =
     if (registered.kind == EntryKind.SCREEN) {
-      resolveTransition(key.route, transitions)?.toNavEntryMetadata().orEmpty()
+      resolveTransition(key.route, transitions)
+        .toNavEntryMetadata(
+          tabSwitch = if (tabSwitching) resolveTabSwitchTransition(key.route, transitions) else null
+        )
     } else {
       emptyMap()
     }
