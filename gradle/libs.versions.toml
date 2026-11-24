@@ -13,7 +13,7 @@ coroutines = "1.11.0"
 serialization = "1.11.0"
 androidx-navigation3 = "1.1.4"
 androidx-lifecycle = "2.10.0"
-jb-navigation3 = "1.2.0-alpha02"
+jb-navigation3 = "1.2.0-rc01"
 jb-lifecycle-nav3 = "2.11.0"
 # Örnek uygulamanın JB lifecycle hattı, kütüphaneninkinden AYRI ve daha düşük olmak ZORUNDA.
 # Compose Multiplatform 1.11.1 Android'de JB lifecycle'ı 2.9.6'ya sabitler; JetBrains 2.9.6
